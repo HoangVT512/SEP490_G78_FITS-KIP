@@ -3,12 +3,28 @@
   "WorkspaceRootPath": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|d:\\fpt\\t9\\sep490_g78\\sep490_g78_fits-kip\\fitskip.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
-      "RelativeMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|solutionrelative:fitskip.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+      "AbsoluteMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|d:\\fpt\\t9\\sep490_g78\\sep490_g78_fits-kip\\fitskip.api\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|solutionrelative:fitskip.api\\properties\\launchsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{4916E31D-540B-416E-AD81-F375A1F464F5}|FITSKIP.Domain\\FITSKIP.Domain.csproj|d:\\fpt\\t9\\sep490_g78\\sep490_g78_fits-kip\\fitskip.domain\\class1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{4916E31D-540B-416E-AD81-F375A1F464F5}|FITSKIP.Domain\\FITSKIP.Domain.csproj|solutionrelative:fitskip.domain\\class1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|d:\\fpt\\t9\\sep490_g78\\sep490_g78_fits-kip\\fitskip.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|solutionrelative:fitskip.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{D4BC7D08-C8E4-4D0F-8DE8-2FDFE143E1F7}|FITSKIP.Application\\FITSKIP.Application.csproj|d:\\fpt\\t9\\sep490_g78\\sep490_g78_fits-kip\\fitskip.application\\services\\userservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{D4BC7D08-C8E4-4D0F-8DE8-2FDFE143E1F7}|FITSKIP.Application\\FITSKIP.Application.csproj|solutionrelative:fitskip.application\\services\\userservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|d:\\fpt\\t9\\sep490_g78\\sep490_g78_fits-kip\\fitskip.api\\controllers\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|solutionrelative:fitskip.api\\controllers\\userscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|d:\\fpt\\t9\\sep490_g78\\sep490_g78_fits-kip\\fitskip.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|solutionrelative:fitskip.api\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -18,7 +34,7 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 208,
+          "SelectedChildIndex": 211,
           "Children": [
             {
               "$type": "Bookmark",
@@ -853,36 +869,6 @@
               "Name": "ST:107:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
             },
             {
-              "$type": "Document",
-              "DocumentIndex": 0,
-              "Title": "Program.cs",
-              "DocumentMoniker": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\Program.cs",
-              "RelativeDocumentMoniker": "FITSKIP.API\\Program.cs",
-              "ToolTip": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\Program.cs",
-              "RelativeToolTip": "FITSKIP.API\\Program.cs",
-              "ViewState": "AQIAAAMAAAAAAAAAAAAAABQAAABkAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
-              "WhenOpened": "2025-09-24T16:28:57.297Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:113:0:{e8034f19-ab72-4f06-83fd-f6832b41aa63}"
-            },
-            {
-              "$type": "Document",
-              "DocumentIndex": 1,
-              "Title": "appsettings.json",
-              "DocumentMoniker": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.json",
-              "RelativeDocumentMoniker": "FITSKIP.API\\appsettings.json",
-              "ToolTip": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.json",
-              "RelativeToolTip": "FITSKIP.API\\appsettings.json",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
-              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-09-24T15:38:41.757Z",
-              "EditorCaption": ""
-            },
-            {
               "$type": "Bookmark",
               "Name": "ST:17:0:{e8034f19-ab72-4f06-83fd-f6832b41aa63}"
             },
@@ -893,6 +879,84 @@
             {
               "$type": "Bookmark",
               "Name": "ST:109:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "launchSettings.json",
+              "DocumentMoniker": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\Properties\\launchSettings.json",
+              "RelativeDocumentMoniker": "FITSKIP.API\\Properties\\launchSettings.json",
+              "ToolTip": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\Properties\\launchSettings.json",
+              "RelativeToolTip": "FITSKIP.API\\Properties\\launchSettings.json",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-09-24T17:07:22.496Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Class1.cs",
+              "DocumentMoniker": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.Domain\\Class1.cs",
+              "RelativeDocumentMoniker": "FITSKIP.Domain\\Class1.cs",
+              "ToolTip": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.Domain\\Class1.cs",
+              "RelativeToolTip": "FITSKIP.Domain\\Class1.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-09-24T17:07:02.93Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "UserService.cs",
+              "DocumentMoniker": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.Application\\Services\\UserService.cs",
+              "RelativeDocumentMoniker": "FITSKIP.Application\\Services\\UserService.cs",
+              "ToolTip": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.Application\\Services\\UserService.cs",
+              "RelativeToolTip": "FITSKIP.Application\\Services\\UserService.cs",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAYAAAAnAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-09-24T17:02:39.703Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "UsersController.cs",
+              "DocumentMoniker": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\Controllers\\UsersController.cs",
+              "RelativeDocumentMoniker": "FITSKIP.API\\Controllers\\UsersController.cs",
+              "ToolTip": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\Controllers\\UsersController.cs",
+              "RelativeToolTip": "FITSKIP.API\\Controllers\\UsersController.cs",
+              "ViewState": "AQIAAAMAAAAAAAAAAAAAAAoAAAAhAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-09-24T17:01:58.56Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\Program.cs",
+              "RelativeDocumentMoniker": "FITSKIP.API\\Program.cs",
+              "ToolTip": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\Program.cs",
+              "RelativeToolTip": "FITSKIP.API\\Program.cs",
+              "ViewState": "AQIAAAUAAAAAAAAAAAAxwA0AAAA7AAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-09-24T16:28:57.297Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.json",
+              "RelativeDocumentMoniker": "FITSKIP.API\\appsettings.json",
+              "ToolTip": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.json",
+              "RelativeToolTip": "FITSKIP.API\\appsettings.json",
+              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAcAAAAVAAAA",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-09-24T15:38:41.757Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Bookmark",

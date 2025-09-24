@@ -1,3 +1,5 @@
+# Local developer-specific settings (do not commit)
+FITSKIP.API/appsettings.Local.json
 # Build results
 bin/
 obj/
