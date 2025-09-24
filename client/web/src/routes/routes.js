@@ -1,5 +1,8 @@
 import LoginPage from "../pages/AccountPage/CompactLogin";
 import ResetPasswordPage from "../pages/AccountPage/ResetPassword";
+import ProfilePage from "../pages/AccountPage/Profile";
+import EditProfilePage from "../pages/AccountPage/EditProfile";
+import ChangePasswordPage from "../pages/AccountPage/ChangePassword";
 import DashboardPage from "../pages/DashboardPage";
 
 export const routes = [
@@ -30,5 +33,26 @@ export const routes = [
     page: ResetPasswordPage,
     isShowHeader: true,
     requiredPermissions: 0,
+  },
+  {
+    path: "/profile",
+    name: "Profile",
+    page: ProfilePage,
+    isShowHeader: true,
+    requiredPermissions: 1,
+  },
+  {
+    path: "/profile/edit",
+    name: "Edit Profile",
+    page: EditProfilePage,
+    isShowHeader: true,
+    requiredPermissions: 1,
+  },
+  {
+    path: "/profile/change-password",
+    name: "Change Password",
+    page: ChangePasswordPage,
+    isShowHeader: true,
+    requiredPermissions: 1,
   },
 ];
