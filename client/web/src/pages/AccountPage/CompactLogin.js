@@ -7,11 +7,13 @@ import {
   LoginOutlined,
   SafetyOutlined,
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
 
 const { Title } = Typography;
 
 const CompactLogin = () => {
+  const navigate = useNavigate();
   const [useEmail, setUseEmail] = useState(false);
 
   const onFinish = (values) => {
@@ -229,9 +231,29 @@ const CompactLogin = () => {
               </Form.Item>
 
               <Form.Item style={{ marginBottom: "24px" }}>
-                <Form.Item name="remember" valuePropName="checked" noStyle>
-                  <Checkbox>Ghi nhớ đăng nhập</Checkbox>
-                </Form.Item>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Form.Item name="remember" valuePropName="checked" noStyle>
+                    <Checkbox>Ghi nhớ đăng nhập</Checkbox>
+                  </Form.Item>
+                  <Button
+                    type="link"
+                    onClick={() => navigate("/reset-password")}
+                    style={{
+                      padding: 0,
+                      height: "auto",
+                      color: "#2563eb",
+                      fontSize: "14px",
+                    }}
+                  >
+                    Quên mật khẩu?
+                  </Button>
+                </div>
               </Form.Item>
 
               <Form.Item style={{ marginBottom: "0" }}>

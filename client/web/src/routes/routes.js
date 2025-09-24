@@ -1,4 +1,5 @@
 import LoginPage from "../pages/AccountPage/CompactLogin";
+import ResetPasswordPage from "../pages/AccountPage/ResetPassword";
 import DashboardPage from "../pages/DashboardPage";
 
 export const routes = [
@@ -20,6 +21,13 @@ export const routes = [
     path: "/dashboard",
     name: "Dashboard",
     page: DashboardPage,
+    isShowHeader: true,
+    requiredPermissions: 0,
+  },
+  {
+    path: "/reset-password",
+    name: "Reset Password",
+    page: ResetPasswordPage,
     isShowHeader: true,
     requiredPermissions: 0,
   },
