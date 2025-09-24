@@ -1,0 +1,6 @@
+@FITSKIP.API_HostAddress = http://localhost:5201
+
+GET {{FITSKIP.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

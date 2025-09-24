@@ -1,0 +1,35 @@
+# Build results
+bin/
+obj/
+out/
+dist/
+publish/
+node_modules/
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+
+# VS Code / Rider / IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.*.local
+
+# Others
+*.db
+*.sqlite
+*.DS_Store
+Thumbs.db
