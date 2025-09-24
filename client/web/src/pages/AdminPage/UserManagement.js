@@ -38,6 +38,13 @@ import {
   ImportOutlined,
   ReloadOutlined,
   FilterOutlined,
+  CalendarOutlined,
+  EnvironmentOutlined,
+  IdcardOutlined,
+  SafetyOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
 import dayjs from "dayjs";
@@ -52,7 +59,9 @@ const UserManagement = ({ showHeader = true }) => {
   const [searchText, setSearchText] = useState("");
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [viewingUser, setViewingUser] = useState(null);
   const [form] = Form.useForm();
   const [filters, setFilters] = useState({
     status: "all",
@@ -77,6 +86,41 @@ const UserManagement = ({ showHeader = true }) => {
       lastLoginDate: "2024-01-20T10:30:00Z",
       createdDate: "2024-01-01T00:00:00Z",
       avatar: null,
+      // Thông tin chi tiết bổ sung
+      address: "123 Đường ABC, Quận 1, TP.HCM",
+      birthDate: "1985-05-15",
+      gender: "Nam",
+      nationalId: "123456789012",
+      joinDate: "2024-01-01",
+      salary: 25000000,
+      emergencyContact: {
+        name: "Nguyễn Thị Vợ",
+        relationship: "Vợ",
+        phone: "0987654321",
+      },
+      permissions: [
+        "user_management",
+        "system_settings",
+        "reports",
+        "dashboard",
+      ],
+      loginHistory: [
+        {
+          date: "2024-01-20T10:30:00Z",
+          ip: "192.168.1.100",
+          device: "Chrome/Windows",
+        },
+        {
+          date: "2024-01-19T08:15:00Z",
+          ip: "192.168.1.100",
+          device: "Chrome/Windows",
+        },
+        {
+          date: "2024-01-18T09:00:00Z",
+          ip: "192.168.1.101",
+          device: "Firefox/Windows",
+        },
+      ],
     },
     {
       id: 2,
@@ -93,6 +137,36 @@ const UserManagement = ({ showHeader = true }) => {
       lastLoginDate: "2024-01-20T09:15:00Z",
       createdDate: "2024-01-02T00:00:00Z",
       avatar: null,
+      // Thông tin chi tiết bổ sung
+      address: "456 Đường DEF, Quận 2, TP.HCM",
+      birthDate: "1990-08-22",
+      gender: "Nữ",
+      nationalId: "987654321098",
+      joinDate: "2024-01-02",
+      salary: 18000000,
+      emergencyContact: {
+        name: "Trần Văn Anh",
+        relationship: "Anh trai",
+        phone: "0912345678",
+      },
+      permissions: ["dashboard", "reports"],
+      loginHistory: [
+        {
+          date: "2024-01-20T09:15:00Z",
+          ip: "192.168.1.102",
+          device: "Chrome/MacOS",
+        },
+        {
+          date: "2024-01-19T10:30:00Z",
+          ip: "192.168.1.102",
+          device: "Chrome/MacOS",
+        },
+        {
+          date: "2024-01-18T08:45:00Z",
+          ip: "192.168.1.103",
+          device: "Safari/MacOS",
+        },
+      ],
     },
     {
       id: 3,
@@ -202,59 +276,8 @@ const UserManagement = ({ showHeader = true }) => {
   const handleUserAction = (action, user) => {
     switch (action) {
       case "view":
-        Modal.info({
-          title: "Chi tiết người dùng",
-          width: 600,
-          content: (
-            <div style={{ marginTop: 16 }}>
-              <Row gutter={[16, 8]}>
-                <Col span={8}>
-                  <Text strong>Họ tên:</Text>
-                </Col>
-                <Col span={16}>{user.fullName}</Col>
-                <Col span={8}>
-                  <Text strong>Mã nhân viên:</Text>
-                </Col>
-                <Col span={16}>{user.employeeCode}</Col>
-                <Col span={8}>
-                  <Text strong>Email:</Text>
-                </Col>
-                <Col span={16}>{user.email}</Col>
-                <Col span={8}>
-                  <Text strong>Số điện thoại:</Text>
-                </Col>
-                <Col span={16}>{user.phoneNumber}</Col>
-                <Col span={8}>
-                  <Text strong>Phòng ban:</Text>
-                </Col>
-                <Col span={16}>{user.department}</Col>
-                <Col span={8}>
-                  <Text strong>Chức vụ:</Text>
-                </Col>
-                <Col span={16}>{user.position}</Col>
-                <Col span={8}>
-                  <Text strong>Vai trò:</Text>
-                </Col>
-                <Col span={16}>
-                  <Tag color={getRoleColor(user.role)}>{user.role}</Tag>
-                </Col>
-                <Col span={8}>
-                  <Text strong>Trạng thái:</Text>
-                </Col>
-                <Col span={16}>
-                  <Badge
-                    status={getStatusColor(user.status)}
-                    text={getStatusText(user.status)}
-                  />
-                </Col>
-                <Col span={8}>
-                  <Text strong>Đăng nhập cuối:</Text>
-                </Col>
-                <Col span={16}>{formatDateTime(user.lastLoginDate)}</Col>
-              </Row>
-            </div>
-          ),
-        });
+        setViewingUser(user);
+        setIsViewModalVisible(true);
         break;
       case "edit":
         setEditingUser(user);
@@ -680,6 +703,392 @@ const UserManagement = ({ showHeader = true }) => {
             </Col>
           </Row>
         </Form>
+      </Modal>
+
+      {/* Modal xem chi tiết người dùng */}
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <Avatar
+              size={40}
+              icon={<UserOutlined />}
+              src={viewingUser?.avatar}
+              style={{ backgroundColor: "#2563eb" }}
+            />
+            <div>
+              <div style={{ fontWeight: 600, fontSize: "16px" }}>
+                {viewingUser?.fullName}
+              </div>
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#6b7280",
+                  fontWeight: "normal",
+                }}
+              >
+                {viewingUser?.employeeCode} • {viewingUser?.position}
+              </div>
+            </div>
+          </div>
+        }
+        open={isViewModalVisible}
+        onCancel={() => setIsViewModalVisible(false)}
+        width={900}
+        footer={[
+          <Button
+            key="edit"
+            type="primary"
+            icon={<EditOutlined />}
+            onClick={() => {
+              setIsViewModalVisible(false);
+              handleUserAction("edit", viewingUser);
+            }}
+          >
+            Chỉnh sửa
+          </Button>,
+          <Button key="close" onClick={() => setIsViewModalVisible(false)}>
+            Đóng
+          </Button>,
+        ]}
+      >
+        {viewingUser && (
+          <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
+            {/* Thông tin cơ bản */}
+            <Card
+              title={
+                <span
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <UserOutlined /> Thông tin cơ bản
+                </span>
+              }
+              size="small"
+              style={{ marginBottom: "16px" }}
+            >
+              <Row gutter={[24, 12]}>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">Họ và tên</Text>
+                    <div style={{ fontWeight: 500 }}>
+                      {viewingUser.fullName}
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">Mã nhân viên</Text>
+                    <div style={{ fontWeight: 500 }}>
+                      {viewingUser.employeeCode}
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">Ngày sinh</Text>
+                    <div style={{ fontWeight: 500 }}>
+                      {viewingUser.birthDate
+                        ? dayjs(viewingUser.birthDate).format("DD/MM/YYYY")
+                        : "Chưa cập nhật"}
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">Giới tính</Text>
+                    <div style={{ fontWeight: 500 }}>
+                      {viewingUser.gender || "Chưa cập nhật"}
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">CCCD/CMND</Text>
+                    <div style={{ fontWeight: 500 }}>
+                      {viewingUser.nationalId || "Chưa cập nhật"}
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">Ngày vào làm</Text>
+                    <div style={{ fontWeight: 500 }}>
+                      {viewingUser.joinDate
+                        ? dayjs(viewingUser.joinDate).format("DD/MM/YYYY")
+                        : "Chưa cập nhật"}
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">Địa chỉ</Text>
+                    <div style={{ fontWeight: 500 }}>
+                      {viewingUser.address || "Chưa cập nhật"}
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+            </Card>
+
+            {/* Thông tin liên hệ */}
+            <Card
+              title={
+                <span
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <PhoneOutlined /> Thông tin liên hệ
+                </span>
+              }
+              size="small"
+              style={{ marginBottom: "16px" }}
+            >
+              <Row gutter={[24, 12]}>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">Email</Text>
+                    <div
+                      style={{
+                        fontWeight: 500,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      {viewingUser.email}
+                      {viewingUser.emailConfirmed ? (
+                        <CheckCircleOutlined style={{ color: "#10b981" }} />
+                      ) : (
+                        <CloseCircleOutlined style={{ color: "#ef4444" }} />
+                      )}
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">Số điện thoại</Text>
+                    <div
+                      style={{
+                        fontWeight: 500,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      {viewingUser.phoneNumber}
+                      {viewingUser.phoneConfirmed ? (
+                        <CheckCircleOutlined style={{ color: "#10b981" }} />
+                      ) : (
+                        <CloseCircleOutlined style={{ color: "#ef4444" }} />
+                      )}
+                    </div>
+                  </div>
+                </Col>
+                {viewingUser.emergencyContact && (
+                  <>
+                    <Col xs={24} sm={12}>
+                      <div style={{ marginBottom: "8px" }}>
+                        <Text type="secondary">Người liên hệ khẩn cấp</Text>
+                        <div style={{ fontWeight: 500 }}>
+                          {viewingUser.emergencyContact.name} (
+                          {viewingUser.emergencyContact.relationship})
+                        </div>
+                      </div>
+                    </Col>
+                    <Col xs={24} sm={12}>
+                      <div style={{ marginBottom: "8px" }}>
+                        <Text type="secondary">SĐT khẩn cấp</Text>
+                        <div style={{ fontWeight: 500 }}>
+                          {viewingUser.emergencyContact.phone}
+                        </div>
+                      </div>
+                    </Col>
+                  </>
+                )}
+              </Row>
+            </Card>
+
+            {/* Thông tin công việc */}
+            <Card
+              title={
+                <span
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <TeamOutlined /> Thông tin công việc
+                </span>
+              }
+              size="small"
+              style={{ marginBottom: "16px" }}
+            >
+              <Row gutter={[24, 12]}>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">Phòng ban</Text>
+                    <div style={{ fontWeight: 500 }}>
+                      {viewingUser.department}
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">Chức vụ</Text>
+                    <div style={{ fontWeight: 500 }}>
+                      {viewingUser.position}
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">Vai trò hệ thống</Text>
+                    <div>
+                      <Tag color={getRoleColor(viewingUser.role)}>
+                        {viewingUser.role}
+                      </Tag>
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">Trạng thái</Text>
+                    <div>
+                      <Badge
+                        status={getStatusColor(viewingUser.status)}
+                        text={getStatusText(viewingUser.status)}
+                      />
+                    </div>
+                  </div>
+                </Col>
+                {viewingUser.salary && (
+                  <Col xs={24} sm={12}>
+                    <div style={{ marginBottom: "8px" }}>
+                      <Text type="secondary">Mức lương</Text>
+                      <div style={{ fontWeight: 500 }}>
+                        {new Intl.NumberFormat("vi-VN", {
+                          style: "currency",
+                          currency: "VND",
+                        }).format(viewingUser.salary)}
+                      </div>
+                    </div>
+                  </Col>
+                )}
+              </Row>
+            </Card>
+
+            {/* Quyền hạn */}
+            {viewingUser.permissions && viewingUser.permissions.length > 0 && (
+              <Card
+                title={
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                    }}
+                  >
+                    <SafetyOutlined /> Quyền hạn hệ thống
+                  </span>
+                }
+                size="small"
+                style={{ marginBottom: "16px" }}
+              >
+                <div>
+                  {viewingUser.permissions.map((permission) => {
+                    const permissionMap = {
+                      user_management: "Quản lý người dùng",
+                      system_settings: "Cài đặt hệ thống",
+                      reports: "Xem báo cáo",
+                      dashboard: "Truy cập Dashboard",
+                    };
+                    return (
+                      <Tag
+                        key={permission}
+                        color="blue"
+                        style={{ marginBottom: "4px" }}
+                      >
+                        {permissionMap[permission] || permission}
+                      </Tag>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+
+            {/* Hoạt động gần đây */}
+            <Card
+              title={
+                <span
+                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
+                >
+                  <ClockCircleOutlined /> Hoạt động gần đây
+                </span>
+              }
+              size="small"
+            >
+              <Row gutter={[24, 12]}>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">Đăng nhập cuối</Text>
+                    <div style={{ fontWeight: 500 }}>
+                      {dayjs(viewingUser.lastLoginDate).format(
+                        "DD/MM/YYYY HH:mm"
+                      )}
+                    </div>
+                  </div>
+                </Col>
+                <Col xs={24} sm={12}>
+                  <div style={{ marginBottom: "8px" }}>
+                    <Text type="secondary">Ngày tạo tài khoản</Text>
+                    <div style={{ fontWeight: 500 }}>
+                      {dayjs(viewingUser.createdDate).format(
+                        "DD/MM/YYYY HH:mm"
+                      )}
+                    </div>
+                  </div>
+                </Col>
+              </Row>
+
+              {viewingUser.loginHistory &&
+                viewingUser.loginHistory.length > 0 && (
+                  <div style={{ marginTop: "16px" }}>
+                    <Text type="secondary" strong>
+                      Lịch sử đăng nhập gần đây:
+                    </Text>
+                    <div style={{ marginTop: "8px" }}>
+                      {viewingUser.loginHistory
+                        .slice(0, 3)
+                        .map((login, index) => (
+                          <div
+                            key={index}
+                            style={{
+                              padding: "8px 12px",
+                              background: "#f8fafc",
+                              borderRadius: "6px",
+                              marginBottom: "4px",
+                              fontSize: "13px",
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              <span>
+                                {dayjs(login.date).format("DD/MM/YYYY HH:mm")}
+                              </span>
+                              <span style={{ color: "#6b7280" }}>
+                                IP: {login.ip}
+                              </span>
+                            </div>
+                            <div style={{ color: "#6b7280", fontSize: "12px" }}>
+                              Device: {login.device}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+            </Card>
+          </div>
+        )}
       </Modal>
     </div>
   );
