@@ -15,6 +15,8 @@ import {
   LogoutOutlined,
   SafetyOutlined,
   EditOutlined,
+  DashboardOutlined,
+  BarChartOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -133,12 +135,12 @@ const CustomHeader = () => {
           Bảo trì
         </Button>
         <Button
-          type={location.pathname === "/settings" ? "primary" : "text"}
+          type={location.pathname.startsWith("/admin") ? "primary" : "text"}
           icon={<SettingOutlined />}
-          onClick={() => navigate("/settings")}
+          onClick={() => navigate("/admin")}
           style={buttonStyles}
         >
-          Cài đặt
+          Admin Panel
         </Button>
         {isLoggedIn ? (
           <Dropdown

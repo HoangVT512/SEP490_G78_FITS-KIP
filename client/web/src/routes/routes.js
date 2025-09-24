@@ -4,6 +4,12 @@ import ProfilePage from "../pages/AccountPage/Profile";
 import EditProfilePage from "../pages/AccountPage/EditProfile";
 import ChangePasswordPage from "../pages/AccountPage/ChangePassword";
 import DashboardPage from "../pages/DashboardPage";
+import AdminLayout from "../pages/AdminPage/AdminLayout";
+// Keep individual imports for potential standalone use
+import UserManagement from "../pages/AdminPage/UserManagement";
+import AdminDashboard from "../pages/AdminPage/AdminDashboard";
+import SystemSettings from "../pages/AdminPage/SystemSettings";
+import AdminReports from "../pages/AdminPage/AdminReports";
 
 export const routes = [
   {
@@ -54,5 +60,41 @@ export const routes = [
     page: ChangePasswordPage,
     isShowHeader: true,
     requiredPermissions: 1,
+  },
+  {
+    path: "/admin",
+    name: "Admin Panel",
+    page: AdminLayout,
+    isShowHeader: false, // AdminLayout has its own header
+    requiredPermissions: 2, // Admin only
+  },
+  // Keep individual admin routes for direct access if needed
+  {
+    path: "/admin/users",
+    name: "User Management",
+    page: UserManagement,
+    isShowHeader: true,
+    requiredPermissions: 2, // Admin only
+  },
+  {
+    path: "/admin/dashboard",
+    name: "Admin Dashboard",
+    page: AdminDashboard,
+    isShowHeader: true,
+    requiredPermissions: 2, // Admin only
+  },
+  {
+    path: "/admin/settings",
+    name: "System Settings",
+    page: SystemSettings,
+    isShowHeader: true,
+    requiredPermissions: 2, // Admin only
+  },
+  {
+    path: "/admin/reports",
+    name: "Admin Reports",
+    page: AdminReports,
+    isShowHeader: true,
+    requiredPermissions: 2, // Admin only
   },
 ];
