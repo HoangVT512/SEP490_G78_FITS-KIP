@@ -7,9 +7,9 @@ namespace FITSKIP.API
 {
     public class Program
     {
-    public static async Task Main(string[] args)
-    {
-        var builder = WebApplication.CreateBuilder(args);            // Load optional local overrides without committing to git
+        public static async Task Main(string[] args)
+        {
+            var builder = WebApplication.CreateBuilder(args);            // Load optional local overrides without committing to git
             builder.Configuration
                 .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
                 .AddEnvironmentVariables();
