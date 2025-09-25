@@ -64,6 +64,8 @@ const UserManagement = ({ showHeader = true }) => {
   const [editingUser, setEditingUser] = useState(null);
   const [viewingUser, setViewingUser] = useState(null);
   const [form] = Form.useForm();
+  // Key used so load error messages replace previous one instead of stacking
+  const LOAD_USERS_ERROR_KEY = "load-users-error";
   const [filters, setFilters] = useState({
     status: "all",
     role: "all",
@@ -230,7 +232,15 @@ const UserManagement = ({ showHeader = true }) => {
       setUsers(userData);
     } catch (error) {
       console.error("Error loading users:", error);
-      message.error(error.message || "Không thể tải danh sách người dùng");
+      // Use a stable key so repeated errors replace the previous notification
+      message.error({
+        key: LOAD_USERS_ERROR_KEY,
+        content:
+          error.message ||
+          "Không thể tải danh sách người dùng. Vui lòng thử lại sau.",
+        placement: "topRight",
+        duration: 4,
+      });
       // Fallback to empty array if API fails
       setUsers([]);
     } finally {
@@ -288,13 +298,25 @@ const UserManagement = ({ showHeader = true }) => {
         break;
       case "delete":
         // Handle delete
-        message.success("Đã xóa người dùng thành công");
+        message.success({
+          content: "Đã xóa người dùng thành công",
+          placement: "topRight",
+          duration: 3,
+        });
         break;
       case "lock":
-        message.success("Đã khóa tài khoản người dùng");
+        message.success({
+          content: "Đã khóa tài khoản người dùng",
+          placement: "topRight",
+          duration: 3,
+        });
         break;
       case "unlock":
-        message.success("Đã mở khóa tài khoản người dùng");
+        message.success({
+          content: "Đã mở khóa tài khoản người dùng",
+          placement: "topRight",
+          duration: 3,
+        });
         break;
       default:
         break;
@@ -461,10 +483,18 @@ const UserManagement = ({ showHeader = true }) => {
       const values = await form.validateFields();
       if (editingUser) {
         // Update user
-        message.success("Cập nhật người dùng thành công");
+        message.success({
+          content: "Cập nhật người dùng thành công",
+          placement: "topRight",
+          duration: 3,
+        });
       } else {
         // Create new user
-        message.success("Tạo người dùng mới thành công");
+        message.success({
+          content: "Tạo người dùng mới thành công",
+          placement: "topRight",
+          duration: 3,
+        });
       }
       setIsModalVisible(false);
       setEditingUser(null);

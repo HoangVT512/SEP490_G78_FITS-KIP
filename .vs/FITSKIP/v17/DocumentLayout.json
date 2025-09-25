@@ -1,18 +1,21 @@
 {
   "Version": 1,
-  "WorkspaceRootPath": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\",
+  "WorkspaceRootPath": "D:\\FULearning\\Ky9\\SEP490\\SEP490_G78_FITS-KIP\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|d:\\fpt\\t9\\sep490_g78\\sep490_g78_fits-kip\\fitskip.api\\appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "AbsoluteMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|d:\\fulearning\\ky9\\sep490\\sep490_g78_fits-kip\\fitskip.api\\appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
       "RelativeMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|solutionrelative:fitskip.api\\appsettings.development.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|d:\\fpt\\t9\\sep490_g78\\sep490_g78_fits-kip\\fitskip.api\\appsettings.local.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
-      "RelativeMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|solutionrelative:fitskip.api\\appsettings.local.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+      "AbsoluteMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|d:\\fulearning\\ky9\\sep490\\sep490_g78_fits-kip\\fitskip.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{A35E025E-349F-49D2-B8EB-038CDC4D388D}|FITSKIP.API\\FITSKIP.API.csproj|solutionrelative:fitskip.api\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{AC23FF71-77EC-45C8-BFA1-A0A4ACB14C42}|FITSKIP.Infrastructure\\FITSKIP.Infrastructure.csproj|d:\\fpt\\t9\\sep490_g78\\sep490_g78_fits-kip\\fitskip.infrastructure\\seeddata\\seeddata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{AC23FF71-77EC-45C8-BFA1-A0A4ACB14C42}|FITSKIP.Infrastructure\\FITSKIP.Infrastructure.csproj|d:\\fulearning\\ky9\\sep490\\sep490_g78_fits-kip\\fitskip.infrastructure\\seeddata\\seeddata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{AC23FF71-77EC-45C8-BFA1-A0A4ACB14C42}|FITSKIP.Infrastructure\\FITSKIP.Infrastructure.csproj|solutionrelative:fitskip.infrastructure\\seeddata\\seeddata.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.Local.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
     }
   ],
   "DocumentGroupContainers": [
@@ -22,8 +25,36 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 211,
+          "SelectedChildIndex": 213,
           "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:131:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:129:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:130:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:131:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
+            },
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{b1e99781-ab81-11d0-b683-00aa00a3ee26}"
@@ -31,10 +62,6 @@
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{e506b91c-c606-466a-90a9-123d1d1e12b3}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:128:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
             },
             {
               "$type": "Bookmark",
@@ -50,19 +77,11 @@
             },
             {
               "$type": "Bookmark",
-              "Name": "ST:128:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
-            },
-            {
-              "$type": "Bookmark",
               "Name": "ST:128:0:{13b12e3e-c1b4-4539-9371-4fe9a0d523fc}"
             },
             {
               "$type": "Bookmark",
               "Name": "ST:130:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:131:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
             },
             {
               "$type": "Bookmark",
@@ -139,10 +158,6 @@
             {
               "$type": "Bookmark",
               "Name": "ST:3:0:{e8b06f52-6d01-11d2-aa7d-00c04f990343}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:129:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
             },
             {
               "$type": "Bookmark",
@@ -343,14 +358,6 @@
             {
               "$type": "Bookmark",
               "Name": "ST:129:0:{116d2292-e37d-41cd-a077-ebacac4c8cc4}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:130:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:131:0:{1fc202d4-d401-403c-9834-5b218574bb67}"
             },
             {
               "$type": "Bookmark",
@@ -563,10 +570,6 @@
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{9a7cebbb-dc5c-4986-bc49-962da46aa506}"
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{aa2115a1-9712-457b-9047-dbb71ca2cdd2}"
             },
             {
               "$type": "Bookmark",
@@ -869,14 +872,31 @@
               "Name": "ST:109:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
             },
             {
+              "$type": "Bookmark",
+              "Name": "ST:111:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "D:\\FULearning\\Ky9\\SEP490\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.json",
+              "RelativeDocumentMoniker": "FITSKIP.API\\appsettings.json",
+              "ToolTip": "D:\\FULearning\\Ky9\\SEP490\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.json",
+              "RelativeToolTip": "FITSKIP.API\\appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2025-09-25T09:31:18.355Z",
+              "EditorCaption": ""
+            },
+            {
               "$type": "Document",
               "DocumentIndex": 0,
               "Title": "appsettings.Development.json",
-              "DocumentMoniker": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.Development.json",
+              "DocumentMoniker": "D:\\FULearning\\Ky9\\SEP490\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.Development.json",
               "RelativeDocumentMoniker": "FITSKIP.API\\appsettings.Development.json",
-              "ToolTip": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.Development.json",
+              "ToolTip": "D:\\FULearning\\Ky9\\SEP490\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.Development.json",
               "RelativeToolTip": "FITSKIP.API\\appsettings.Development.json",
-              "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
               "WhenOpened": "2025-09-25T08:56:30.394Z",
               "EditorCaption": ""
@@ -885,11 +905,11 @@
               "$type": "Document",
               "DocumentIndex": 2,
               "Title": "SeedData.cs",
-              "DocumentMoniker": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.Infrastructure\\SeedData\\SeedData.cs",
+              "DocumentMoniker": "D:\\FULearning\\Ky9\\SEP490\\SEP490_G78_FITS-KIP\\FITSKIP.Infrastructure\\SeedData\\SeedData.cs",
               "RelativeDocumentMoniker": "FITSKIP.Infrastructure\\SeedData\\SeedData.cs",
-              "ToolTip": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.Infrastructure\\SeedData\\SeedData.cs",
+              "ToolTip": "D:\\FULearning\\Ky9\\SEP490\\SEP490_G78_FITS-KIP\\FITSKIP.Infrastructure\\SeedData\\SeedData.cs",
               "RelativeToolTip": "FITSKIP.Infrastructure\\SeedData\\SeedData.cs",
-              "ViewState": "AQIAAE8AAAAAAAAAAAAgwAAAAAAAAAAA",
+              "ViewState": "AgIAAE8AAAAAAAAAAAAgwAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-09-25T08:55:15.616Z",
               "EditorCaption": ""
@@ -904,20 +924,15 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 3,
               "Title": "appsettings.Local.json",
               "DocumentMoniker": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.Local.json",
-              "RelativeDocumentMoniker": "FITSKIP.API\\appsettings.Local.json",
+              "RelativeDocumentMoniker": "..\\..\\..\\..\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.Local.json",
               "ToolTip": "D:\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.Local.json",
-              "RelativeToolTip": "FITSKIP.API\\appsettings.Local.json",
+              "RelativeToolTip": "..\\..\\..\\..\\FPT\\T9\\SEP490_G78\\SEP490_G78_FITS-KIP\\FITSKIP.API\\appsettings.Local.json",
               "ViewState": "AQIAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
-              "WhenOpened": "2025-09-25T08:47:23.051Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:111:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+              "WhenOpened": "2025-09-25T08:47:23.051Z"
             }
           ]
         },

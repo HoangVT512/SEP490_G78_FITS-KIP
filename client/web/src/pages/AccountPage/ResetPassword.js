@@ -12,7 +12,6 @@ import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
 
 const { Title, Text } = Typography;
-const { Step } = Steps;
 
 const ResetPassword = () => {
   const navigate = useNavigate();
@@ -74,10 +73,10 @@ const ResetPassword = () => {
     borderRadius: "16px",
     boxShadow: "0 20px 40px rgba(37, 99, 235, 0.15)",
     width: "100%",
-    maxWidth: "900px",
+    maxWidth: "1100px",
     border: "1px solid #e2e8f0",
     overflow: "hidden",
-    minHeight: "600px",
+    minHeight: "650px",
   };
 
   const logoSectionStyle = {
@@ -97,12 +96,12 @@ const ResetPassword = () => {
   };
 
   const formSectionStyle = {
-    flex: "1",
-    padding: "40px",
+    flex: "1.5",
+    padding: "40px 50px",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
-    minWidth: "450px",
+    minWidth: "550px",
   };
 
   const headerStyle = {
@@ -111,7 +110,8 @@ const ResetPassword = () => {
   };
 
   const stepsStyle = {
-    marginBottom: "32px",
+    marginBottom: "50px",
+    padding: "10px 30px",
   };
 
   const backButtonStyle = {
@@ -397,11 +397,111 @@ const ResetPassword = () => {
           {/* Form Section */}
           <div style={formSectionStyle}>
             <div style={stepsStyle}>
-              <Steps current={currentStep} size="small">
-                <Step title="Yêu cầu" description="Nhập email" />
-                <Step title="Xác thực" description="Đặt mật khẩu mới" />
-                <Step title="Hoàn thành" description="Thành công" />
-              </Steps>
+              <Steps
+                current={currentStep}
+                direction="horizontal"
+                size="default"
+                style={{
+                  width: "100%",
+                  maxWidth: "600px",
+                  margin: "0 auto",
+                }}
+                items={[
+                  {
+                    title: (
+                      <div
+                        style={{
+                          fontSize: "15px",
+                          fontWeight: 600,
+                          whiteSpace: "normal",
+                          overflow: "visible",
+                          textAlign: "center",
+                          minHeight: "20px",
+                        }}
+                      >
+                        Nhập email
+                      </div>
+                    ),
+                    description: (
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#6b7280",
+                          lineHeight: "1.3",
+                          marginTop: "6px",
+                          textAlign: "center",
+                          minHeight: "18px",
+                        }}
+                      >
+                        Gửi mã xác thực
+                      </div>
+                    ),
+                    icon: <MailOutlined style={{ fontSize: "20px" }} />,
+                  },
+                  {
+                    title: (
+                      <div
+                        style={{
+                          fontSize: "15px",
+                          fontWeight: 600,
+                          whiteSpace: "normal",
+                          overflow: "visible",
+                          textAlign: "center",
+                          minHeight: "20px",
+                        }}
+                      >
+                        Xác thực
+                      </div>
+                    ),
+                    description: (
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#6b7280",
+                          lineHeight: "1.3",
+                          marginTop: "6px",
+                          textAlign: "center",
+                          minHeight: "18px",
+                        }}
+                      >
+                        Đặt mật khẩu mới
+                      </div>
+                    ),
+                    icon: <SafetyOutlined style={{ fontSize: "20px" }} />,
+                  },
+                  {
+                    title: (
+                      <div
+                        style={{
+                          fontSize: "15px",
+                          fontWeight: 600,
+                          whiteSpace: "normal",
+                          overflow: "visible",
+                          textAlign: "center",
+                          minHeight: "20px",
+                        }}
+                      >
+                        Hoàn thành
+                      </div>
+                    ),
+                    description: (
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#6b7280",
+                          lineHeight: "1.3",
+                          marginTop: "6px",
+                          textAlign: "center",
+                          minHeight: "18px",
+                        }}
+                      >
+                        Thành công
+                      </div>
+                    ),
+                    icon: <CheckCircleOutlined style={{ fontSize: "20px" }} />,
+                  },
+                ]}
+              />
             </div>
 
             {renderStepContent()}

@@ -16,7 +16,7 @@ const Layout = ({ children, showHeader = true, showFooter = true }) => {
       {showFooter && (
         <Footer css={footerStyle}>
           <Text>
-            © 2024 FITS-KIP Management System. Hệ thống quản lý bảo trì nhà máy.
+            © FITS-KIP Management System. Hệ thống quản lý bảo trì nhà máy.
           </Text>
         </Footer>
       )}

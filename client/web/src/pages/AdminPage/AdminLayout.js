@@ -7,7 +7,6 @@ import {
   Dropdown,
   Button,
   Badge,
-  Breadcrumb,
 } from "antd";
 import {
   DashboardOutlined,
@@ -20,7 +19,6 @@ import {
   BellOutlined,
   SafetyOutlined,
   EditOutlined,
-  HomeOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import "./AdminLayout.css";
@@ -28,6 +26,7 @@ import "./AdminLayout.css";
 // Import admin pages
 import AdminDashboard from "../AdminPage/AdminDashboard";
 import UserManagement from "../AdminPage/UserManagement";
+import RoleManagement from "../AdminPage/RoleManagement";
 import SystemSettings from "../AdminPage/SystemSettings";
 import AdminReports from "../AdminPage/AdminReports";
 
@@ -36,6 +35,8 @@ const { Title, Text } = Typography;
 
 const AdminLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
+  // hovered allows temporary expand when mouse is over the sider
+  const [hovered, setHovered] = useState(false);
   const [selectedKey, setSelectedKey] = useState("dashboard");
   const navigate = useNavigate();
 
@@ -58,6 +59,11 @@ const AdminLayout = () => {
       key: "users",
       icon: <UserOutlined />,
       label: "Quản lý người dùng",
+    },
+    {
+      key: "roles",
+      icon: <SafetyOutlined />,
+      label: "Quản lý vai trò",
     },
     {
       key: "reports",
@@ -111,6 +117,8 @@ const AdminLayout = () => {
         return <AdminDashboard showHeader={false} />;
       case "users":
         return <UserManagement showHeader={false} />;
+      case "roles":
+        return <RoleManagement showHeader={false} />;
       case "reports":
         return <AdminReports showHeader={false} />;
       case "settings":
@@ -136,6 +144,9 @@ const AdminLayout = () => {
     boxShadow: "2px 0 8px rgba(0,0,0,0.15)",
   };
 
+  const SIDER_EXPANDED_WIDTH = 340;
+  const SIDER_COLLAPSED_WIDTH = 64;
+
   const headerStyle = {
     background: "#fff",
     padding: "0 24px",
@@ -144,12 +155,14 @@ const AdminLayout = () => {
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    marginLeft: collapsed ? 80 : 200,
+    marginLeft:
+      collapsed && !hovered ? SIDER_COLLAPSED_WIDTH : SIDER_EXPANDED_WIDTH,
     transition: "margin-left 0.2s",
   };
 
   const contentStyle = {
-    marginLeft: collapsed ? 80 : 200,
+    marginLeft:
+      collapsed && !hovered ? SIDER_COLLAPSED_WIDTH : SIDER_EXPANDED_WIDTH,
     padding: 0,
     minHeight: "calc(100vh - 70px)",
     backgroundColor: "#f8fafc",
@@ -160,8 +173,8 @@ const AdminLayout = () => {
     height: "60px",
     display: "flex",
     alignItems: "center",
-    justifyContent: collapsed ? "center" : "flex-start",
-    padding: collapsed ? "0" : "0 16px",
+    justifyContent: collapsed && !hovered ? "center" : "flex-start",
+    padding: collapsed && !hovered ? "0" : "0 16px",
     borderBottom: "1px solid rgba(255,255,255,0.1)",
     marginBottom: "8px",
   };
@@ -194,10 +207,13 @@ const AdminLayout = () => {
       {/* Sidebar */}
       <Sider
         collapsible
-        collapsed={collapsed}
+        // collapsed visually when user collapsed and not hovering
+        collapsed={collapsed && !hovered}
         onCollapse={setCollapsed}
-        width={200}
-        collapsedWidth={80}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        width={SIDER_EXPANDED_WIDTH}
+        collapsedWidth={SIDER_COLLAPSED_WIDTH}
         style={siderStyle}
         trigger={null}
       >
@@ -220,6 +236,7 @@ const AdminLayout = () => {
         <Menu
           theme="dark"
           mode="inline"
+          inlineCollapsed={collapsed && !hovered}
           selectedKeys={[selectedKey]}
           onClick={handleMenuClick}
           style={menuStyle}
@@ -254,7 +271,6 @@ const AdminLayout = () => {
         {/* Header */}
         <Header style={headerStyle}>
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Breadcrumb items={getBreadcrumbItems()} />
             <Title level={4} style={{ margin: 0, color: "#1f2937" }}>
               {menuItems.find((item) => item.key === selectedKey)?.label ||
                 "Admin Dashboard"}

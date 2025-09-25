@@ -7,6 +7,7 @@ import DashboardPage from "../pages/DashboardPage";
 import AdminLayout from "../pages/AdminPage/AdminLayout";
 // Keep individual imports for potential standalone use
 import UserManagement from "../pages/AdminPage/UserManagement";
+import RoleManagement from "../pages/AdminPage/RoleManagement";
 import AdminDashboard from "../pages/AdminPage/AdminDashboard";
 import SystemSettings from "../pages/AdminPage/SystemSettings";
 import AdminReports from "../pages/AdminPage/AdminReports";
@@ -73,6 +74,13 @@ export const routes = [
     path: "/admin/users",
     name: "User Management",
     page: UserManagement,
+    isShowHeader: true,
+    requiredPermissions: 2, // Admin only
+  },
+  {
+    path: "/admin/roles",
+    name: "Role Management",
+    page: RoleManagement,
     isShowHeader: true,
     requiredPermissions: 2, // Admin only
   },
