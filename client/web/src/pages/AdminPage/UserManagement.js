@@ -228,7 +228,6 @@ const UserManagement = ({ showHeader = true }) => {
     try {
       const userData = await userService.getUsers();
       setUsers(userData);
-      message.success(`Đã tải ${userData.length} người dùng`);
     } catch (error) {
       console.error("Error loading users:", error);
       message.error(error.message || "Không thể tải danh sách người dùng");
