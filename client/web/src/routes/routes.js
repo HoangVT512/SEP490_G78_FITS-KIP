@@ -10,7 +10,6 @@ import UserManagement from "../pages/AdminPage/UserManagement";
 import AdminDashboard from "../pages/AdminPage/AdminDashboard";
 import SystemSettings from "../pages/AdminPage/SystemSettings";
 import AdminReports from "../pages/AdminPage/AdminReports";
-import ApiTest from "../components/ApiTest";
 
 export const routes = [
   {
@@ -97,12 +96,5 @@ export const routes = [
     page: AdminReports,
     isShowHeader: true,
     requiredPermissions: 2, // Admin only
-  },
-  {
-    path: "/test-api",
-    name: "API Test",
-    page: ApiTest,
-    isShowHeader: true,
-    requiredPermissions: 0,
   },
 ];
