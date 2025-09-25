@@ -76,4 +76,11 @@ public class UserRepository : IUserRepository
         await db.SaveChangesAsync();
         return user;
     }
+
+    public async Task<IReadOnlyList<Department>> GetDepartmentsAsync(CancellationToken cancellationToken = default)
+    {
+        return await db.Departments
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
 }

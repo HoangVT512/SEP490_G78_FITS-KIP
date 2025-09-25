@@ -10,6 +10,7 @@ public interface IUserService
     Task<User?> UpdateUserAsync(User user, CancellationToken cancellationToken = default);
     Task<User?> GetUserByIdAsync(string id, CancellationToken cancellationToken = default);
     Task<User?> DeleteUserAsync(string id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Department>> GetDepartmentsAsync(CancellationToken cancellationToken = default);
 
 }
 

@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import apiRequest from "./api";
 
 export const roleService = {
   // Get all roles

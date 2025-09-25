@@ -49,6 +49,8 @@ import {
 import Layout from "../../components/Layout/Layout";
 import dayjs from "dayjs";
 import { userService } from "../../services/userService";
+import { departmentService } from "../../services/departmentService";
+import { roleService } from "../../services/roleService";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -71,6 +73,8 @@ const UserManagement = ({ showHeader = true }) => {
     role: "all",
     department: "all",
   });
+  const [departments, setDepartments] = useState([]);
+  const [roles, setRoles] = useState([]);
 
   // Mock data - replace with API calls
   const mockUsers = [
@@ -223,7 +227,29 @@ const UserManagement = ({ showHeader = true }) => {
 
   useEffect(() => {
     loadUsers();
+    loadDepartments();
+    loadRoles();
   }, []);
+
+  const loadDepartments = async () => {
+    try {
+      const departmentData = await departmentService.getDepartments();
+      setDepartments(departmentData);
+    } catch (error) {
+      console.error("Error loading departments:", error);
+      message.error("Không thể tải danh sách phòng ban");
+    }
+  };
+
+  const loadRoles = async () => {
+    try {
+      const roleData = await roleService.getRoles();
+      setRoles(roleData);
+    } catch (error) {
+      console.error("Error loading roles:", error);
+      message.error("Không thể tải danh sách vai trò");
+    }
+  };
 
   const loadUsers = async () => {
     setLoading(true);
@@ -481,15 +507,42 @@ const UserManagement = ({ showHeader = true }) => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
+      setLoading(true);
+
       if (editingUser) {
         // Update user
+        await userService.updateUser(editingUser.id, {
+          userName: values.email, // Use email as username
+          email: values.email,
+          fullName: values.fullName,
+          employeeCode: values.employeeCode,
+          phoneNumber: values.phoneNumber,
+          position: values.position,
+          gender: values.gender || "Nam",
+          emailConfirmed: false,
+          phoneNumberConfirmed: false,
+          twoFactorEnabled: false,
+          lockoutEnabled: false,
+          accessFailedCount: 0,
+        });
         message.success({
           content: "Cập nhật người dùng thành công",
           placement: "topRight",
           duration: 3,
         });
       } else {
-        // Create new user
+        // Create new user with proper DTO
+        await userService.createUser({
+          userName: values.email, // Use email as username
+          email: values.email,
+          password: values.password,
+          fullName: values.fullName,
+          employeeCode: values.employeeCode,
+          phoneNumber: values.phoneNumber,
+          position: values.position,
+          gender: values.gender || "Nam",
+          roleIds: values.role ? [values.role] : [],
+        });
         message.success({
           content: "Tạo người dùng mới thành công",
           placement: "topRight",
@@ -499,9 +552,18 @@ const UserManagement = ({ showHeader = true }) => {
       setIsModalVisible(false);
       setEditingUser(null);
       form.resetFields();
-      loadUsers();
+      await loadUsers();
     } catch (error) {
-      console.error("Validate failed:", error);
+      console.error("Operation failed:", error);
+      message.error({
+        content: editingUser
+          ? "Cập nhật người dùng thất bại"
+          : "Tạo người dùng thất bại: " + error.message,
+        placement: "topRight",
+        duration: 3,
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -681,14 +743,15 @@ const UserManagement = ({ showHeader = true }) => {
                 label="Phòng ban"
                 rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
               >
-                <Select placeholder="Chọn phòng ban">
-                  <Option value="Quản lý">Quản lý</Option>
-                  <Option value="IT">IT</Option>
-                  <Option value="Sản xuất">Sản xuất</Option>
-                  <Option value="Nhân sự">Nhân sự</Option>
-                  <Option value="Kiểm soát chất lượng">
-                    Kiểm soát chất lượng
-                  </Option>
+                <Select
+                  placeholder="Chọn phòng ban"
+                  loading={departments.length === 0}
+                >
+                  {departments.map((dept) => (
+                    <Option key={dept.departmentId} value={dept.departmentId}>
+                      {dept.departmentName}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -709,12 +772,12 @@ const UserManagement = ({ showHeader = true }) => {
                 label="Vai trò"
                 rules={[{ required: true, message: "Vui lòng chọn vai trò" }]}
               >
-                <Select placeholder="Chọn vai trò">
-                  <Option value="Admin">Admin</Option>
-                  <Option value="Developer">Developer</Option>
-                  <Option value="Manager">Manager</Option>
-                  <Option value="Supervisor">Supervisor</Option>
-                  <Option value="User">User</Option>
+                <Select placeholder="Chọn vai trò" loading={roles.length === 0}>
+                  {roles.map((role) => (
+                    <Option key={role.id} value={role.id}>
+                      {role.name}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -730,6 +793,55 @@ const UserManagement = ({ showHeader = true }) => {
                   <Option value="active">Hoạt động</Option>
                   <Option value="inactive">Tạm ngưng</Option>
                   <Option value="locked">Bị khóa</Option>
+                </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          {!editingUser && (
+            <Row gutter={16}>
+              <Col span={12}>
+                <Form.Item
+                  name="password"
+                  label="Mật khẩu"
+                  rules={[
+                    { required: true, message: "Vui lòng nhập mật khẩu" },
+                    { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự" },
+                  ]}
+                >
+                  <Input.Password placeholder="Nhập mật khẩu" />
+                </Form.Item>
+              </Col>
+              <Col span={12}>
+                <Form.Item
+                  name="confirmPassword"
+                  label="Xác nhận mật khẩu"
+                  dependencies={["password"]}
+                  rules={[
+                    { required: true, message: "Vui lòng xác nhận mật khẩu" },
+                    ({ getFieldValue }) => ({
+                      validator(_, value) {
+                        if (!value || getFieldValue("password") === value) {
+                          return Promise.resolve();
+                        }
+                        return Promise.reject(
+                          new Error("Mật khẩu xác nhận không khớp!")
+                        );
+                      },
+                    }),
+                  ]}
+                >
+                  <Input.Password placeholder="Nhập lại mật khẩu" />
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="gender" label="Giới tính">
+                <Select placeholder="Chọn giới tính">
+                  <Option value="Nam">Nam</Option>
+                  <Option value="Nữ">Nữ</Option>
+                  <Option value="Khác">Khác</Option>
                 </Select>
               </Form.Item>
             </Col>
