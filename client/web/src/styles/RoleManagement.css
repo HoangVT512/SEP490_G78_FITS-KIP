@@ -1,0 +1,17 @@
+.role-management-page .table-container {
+  overflow: visible;
+}
+
+.role-management-page .ant-table-tbody > tr > td {
+  overflow: visible;
+}
+
+.role-management-page .ant-table-tbody > tr:hover {
+  z-index: 5;
+  position: relative;
+}
+
+.role-management-page .ant-tag,
+.role-management-page .ant-tooltip {
+  z-index: 9999;
+}

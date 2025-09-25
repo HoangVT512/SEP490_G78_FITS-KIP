@@ -46,7 +46,7 @@ import {
   StarOutlined,
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
-import "./RoleManagement.css";
+import "../../styles/RoleManagement.css";
 
 const { Title, Text } = Typography;
 const { Search } = Input;

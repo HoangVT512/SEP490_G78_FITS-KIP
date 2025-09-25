@@ -21,7 +21,7 @@ import {
   EditOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
-import "./AdminLayout.css";
+import "../../styles/AdminLayout.css";
 
 // Import admin pages
 import AdminDashboard from "../AdminPage/AdminDashboard";
