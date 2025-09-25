@@ -210,7 +210,11 @@ const AdminLayout = () => {
         // collapsed visually when user collapsed and not hovering
         collapsed={collapsed && !hovered}
         onCollapse={setCollapsed}
-        onMouseEnter={() => setHovered(true)}
+        onMouseEnter={() => {
+          // Only enable temporary hover-expand when the sider is not in collapsed state.
+          // This prevents a collapsed sider from auto-expanding on hover; user must click to expand.
+          if (!collapsed) setHovered(true);
+        }}
         onMouseLeave={() => setHovered(false)}
         width={SIDER_EXPANDED_WIDTH}
         collapsedWidth={SIDER_COLLAPSED_WIDTH}
@@ -255,7 +259,14 @@ const AdminLayout = () => {
           <Button
             type="text"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() =>
+              setCollapsed((prev) => {
+                const next = !prev;
+                // If collapsing (next === true), clear hovered so visual collapse is immediate
+                if (next) setHovered(false);
+                return next;
+              })
+            }
             style={{
               color: "#fff",
               border: "none",
