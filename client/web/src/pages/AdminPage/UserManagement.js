@@ -48,6 +48,7 @@ import {
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
 import dayjs from "dayjs";
+import { userService } from "../../services/userService";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -225,13 +226,15 @@ const UserManagement = ({ showHeader = true }) => {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      // Simulate API call
-      setTimeout(() => {
-        setUsers(mockUsers);
-        setLoading(false);
-      }, 1000);
+      const userData = await userService.getUsers();
+      setUsers(userData);
+      message.success(`Đã tải ${userData.length} người dùng`);
     } catch (error) {
-      message.error("Không thể tải danh sách người dùng");
+      console.error("Error loading users:", error);
+      message.error(error.message || "Không thể tải danh sách người dùng");
+      // Fallback to empty array if API fails
+      setUsers([]);
+    } finally {
       setLoading(false);
     }
   };

@@ -18,17 +18,6 @@ public class UserRepository : IUserRepository
     {
         return await _context.Users
             .AsNoTracking()
-            .Select(u => new User
-            {
-                Id = u.Id,
-                UserName = u.UserName,
-                Email = u.Email,
-                FullName = u.FullName,
-                Gender = u.Gender,
-                EmployeeCode = u.EmployeeCode,
-                Position = u.Position,
-                PhoneNumber = u.PhoneNumber
-            })
             .ToListAsync(cancellationToken);
     }
 }
