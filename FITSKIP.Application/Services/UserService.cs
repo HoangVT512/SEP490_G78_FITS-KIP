@@ -6,17 +6,27 @@ namespace FITSKIP.Application.Services;
 
 public class UserService : IUserService
 {
-    private readonly IUserRepository _userRepository;
+    private readonly IUserRepository userRepository;
 
     public UserService(IUserRepository userRepository)
     {
-        _userRepository = userRepository;
+        this.userRepository = userRepository;
     }
+
+    public Task<User> CreateUserAsync(User user, CancellationToken cancellationToken = default) => userRepository.CreateUserAsync(user, cancellationToken);
+
+    public Task<User?> DeleteUserAsync(string id, CancellationToken cancellationToken = default) => userRepository.DeleteUserAsync(id, cancellationToken);
 
     public Task<IReadOnlyList<User>> GetUsersAsync(CancellationToken cancellationToken = default)
     {
-        return _userRepository.GetAllAsync(cancellationToken);
+        return userRepository.GetAllAsync(cancellationToken);
     }
+    public Task<User?> GetByUsernameAsync(string fullName, CancellationToken cancellationToken = default) => userRepository.GetByUsernameAsync(fullName, cancellationToken);
+
+    public Task<User?> GetUserByIdAsync(string id, CancellationToken cancellationToken = default) => userRepository.GetUserByIdAsync(id, cancellationToken);
+
+    public Task<User?> UpdateUserAsync(User user, CancellationToken cancellationToken = default) => userRepository.UpdateUserAsync(user, cancellationToken);
 }
+
 
 

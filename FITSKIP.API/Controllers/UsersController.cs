@@ -1,6 +1,8 @@
-using Microsoft.AspNetCore.Mvc;
 using FITSKIP.Application.Interfaces;
+using FITSKIP.Application.Services;
+using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using Microsoft.AspNetCore.Mvc;
 
 namespace FITSKIP.API.Controllers;
 
@@ -8,19 +10,184 @@ namespace FITSKIP.API.Controllers;
 [Route("api/[controller]")]
 public class UsersController : ControllerBase
 {
-    private readonly IUserService _userService;
+    private readonly IUserService userService;
 
     public UsersController(IUserService userService)
     {
-        _userService = userService;
+        this.userService = userService;
     }
 
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<User>>> Get(CancellationToken cancellationToken)
     {
-        var users = await _userService.GetUsersAsync(cancellationToken);
+        var users = await userService.GetUsersAsync(cancellationToken);
         return Ok(users);
     }
+    // GET: https://localhost:7003/api/Users/{fullName}
+    [HttpGet]
+    [Route("{fullName}")]
+    public async Task<IActionResult> GetUserByFullName(string fullName, CancellationToken cancellationToken)
+    {
+        var user = await userService.GetByUsernameAsync(fullName, cancellationToken);
+        var response = new UserDTO
+        {
+            Id = user.Id,
+            UserName = user.UserName,
+            NormalizedUserName = user.NormalizedUserName,
+            NormalizedEmail = user.NormalizedEmail,
+            Email = user.Email,
+            EmailConfirmed = user.EmailConfirmed,
+            PasswordHash = user.PasswordHash,
+            SecurityStamp = user.SecurityStamp,
+            ConcurrencyStamp = user.ConcurrencyStamp,
+            PhoneNumber = user.PhoneNumber,
+            PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+            TwoFactorEnabled = user.TwoFactorEnabled,
+            LockoutEnd = user.LockoutEnd,
+            LockoutEnabled = user.LockoutEnabled,
+            AccessFailedCount = user.AccessFailedCount,
+            FullName = user.FullName,
+            Gender = user.Gender,
+            EmployeeCode = user.EmployeeCode,
+            Position = user.Position,
+        };
+        return Ok(response);
+    }
+    // POST: https://localhost:7003/api/Users
+    [HttpPost]
+    public async Task<IActionResult> CreateUser([FromBody] UserDTO user, CancellationToken cancellationToken)
+    {
+        var newUser = new User
+        {
+            UserName = user.UserName,
+            NormalizedUserName = user.NormalizedUserName,
+            NormalizedEmail = user.NormalizedEmail,
+            Email = user.Email,
+            EmailConfirmed = user.EmailConfirmed,
+            PasswordHash = user.PasswordHash,
+            SecurityStamp = user.SecurityStamp,
+            ConcurrencyStamp = user.ConcurrencyStamp,
+            PhoneNumber = user.PhoneNumber,
+            PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+            TwoFactorEnabled = user.TwoFactorEnabled,
+            LockoutEnd = user.LockoutEnd,
+            LockoutEnabled = user.LockoutEnabled,
+            AccessFailedCount = user.AccessFailedCount,
+            FullName = user.FullName,
+            Gender = user.Gender,
+            EmployeeCode = user.EmployeeCode,
+            Position = user.Position,
+        };
+        await userService.CreateUserAsync(newUser, cancellationToken);
+        var response = new UserDTO
+        {
+            Id = user.Id,
+            UserName = user.UserName,
+            NormalizedUserName = user.NormalizedUserName,
+            NormalizedEmail = user.NormalizedEmail,
+            Email = user.Email,
+            EmailConfirmed = user.EmailConfirmed,
+            PasswordHash = user.PasswordHash,
+            SecurityStamp = user.SecurityStamp,
+            ConcurrencyStamp = user.ConcurrencyStamp,
+            PhoneNumber = user.PhoneNumber,
+            PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+            TwoFactorEnabled = user.TwoFactorEnabled,
+            LockoutEnd = user.LockoutEnd,
+            LockoutEnabled = user.LockoutEnabled,
+            AccessFailedCount = user.AccessFailedCount,
+            FullName = user.FullName,
+            Gender = user.Gender,
+            EmployeeCode = user.EmployeeCode,
+            Position = user.Position,
+        };
+        return Ok(response);
+    }
+    // DELETE: https://localhost:7003/api/Users/{id}
+    [HttpDelete]
+    [Route("{id}")]
+    public async Task<IActionResult> DeleteUser(string id, CancellationToken cancellationToken)
+    {
+        var user = await userService.DeleteUserAsync(id, cancellationToken);
+        if (user == null)
+        {
+            return NotFound();
+        }
+        var response = new UserDTO
+        {
+            UserName = user.UserName,
+            NormalizedUserName = user.NormalizedUserName,
+            NormalizedEmail = user.NormalizedEmail,
+            Email = user.Email,
+            EmailConfirmed = user.EmailConfirmed,
+            PasswordHash = user.PasswordHash,
+            SecurityStamp = user.SecurityStamp,
+            ConcurrencyStamp = user.ConcurrencyStamp,
+            PhoneNumber = user.PhoneNumber,
+            PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+            TwoFactorEnabled = user.TwoFactorEnabled,
+            LockoutEnd = user.LockoutEnd,
+            LockoutEnabled = user.LockoutEnabled,
+            AccessFailedCount = user.AccessFailedCount,
+            FullName = user.FullName,
+            Gender = user.Gender,
+            EmployeeCode = user.EmployeeCode,
+            Position = user.Position,
+        };
+        return Ok(response);
+    }
+    // PUT: https://localhost:7003/api/Users/{id}
+    [HttpPut]
+    [Route("{id}")]
+    public async Task<IActionResult> UpdateUser(string id, [FromBody] UserDTO user, CancellationToken cancellationToken)
+    {
+        var updatedUser = new User
+        {
+            UserName = user.UserName,
+            NormalizedUserName = user.NormalizedUserName,
+            NormalizedEmail = user.NormalizedEmail,
+            Email = user.Email,
+            EmailConfirmed = user.EmailConfirmed,
+            PasswordHash = user.PasswordHash,
+            SecurityStamp = user.SecurityStamp,
+            ConcurrencyStamp = user.ConcurrencyStamp,
+            PhoneNumber = user.PhoneNumber,
+            PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+            TwoFactorEnabled = user.TwoFactorEnabled,
+            LockoutEnd = user.LockoutEnd,
+            LockoutEnabled = user.LockoutEnabled,
+            AccessFailedCount = user.AccessFailedCount,
+            FullName = user.FullName,
+            Gender = user.Gender,
+            EmployeeCode = user.EmployeeCode,
+            Position = user.Position,
+        };
+        updatedUser = await userService.UpdateUserAsync(updatedUser, cancellationToken);
+        var response = new UserDTO
+        {
+            Id = updatedUser.Id,
+            UserName = updatedUser.UserName,
+            NormalizedUserName = updatedUser.NormalizedUserName,
+            NormalizedEmail = updatedUser.NormalizedEmail,
+            Email = updatedUser.Email,
+            EmailConfirmed = updatedUser.EmailConfirmed,
+            PasswordHash = updatedUser.PasswordHash,
+            SecurityStamp = updatedUser.SecurityStamp,
+            ConcurrencyStamp = updatedUser.ConcurrencyStamp,
+            PhoneNumber = updatedUser.PhoneNumber,
+            PhoneNumberConfirmed = updatedUser.PhoneNumberConfirmed,
+            TwoFactorEnabled = updatedUser.TwoFactorEnabled,
+            LockoutEnd = updatedUser.LockoutEnd,
+            LockoutEnabled = updatedUser.LockoutEnabled,
+            AccessFailedCount = updatedUser.AccessFailedCount,
+            FullName = updatedUser.FullName,
+            Gender = updatedUser.Gender,
+            EmployeeCode = updatedUser.EmployeeCode,
+            Position = updatedUser.Position,
+        };
+        return Ok(response);
+    }
 }
+
 
 
