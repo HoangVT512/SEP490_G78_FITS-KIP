@@ -46,6 +46,7 @@ import {
   StarOutlined,
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
+import "./RoleManagement.css";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -735,7 +736,7 @@ const RoleManagement = ({ showHeader = true }) => {
 
   return (
     <Layout showHeader={showHeader}>
-      <div style={{ padding: "24px" }}>
+      <div className="role-management-page" style={{ padding: "24px" }}>
         <Card>
           <div style={{ marginBottom: 24 }}>
             <Title
@@ -849,28 +850,30 @@ const RoleManagement = ({ showHeader = true }) => {
           </Row>
 
           {/* Table */}
-          <Table
-            columns={columns}
-            dataSource={filteredRoles}
-            rowKey="id"
-            loading={loading}
-            scroll={{ x: 1200 }}
-            rowSelection={{
-              selectedRowKeys,
-              onChange: setSelectedRowKeys,
-              getCheckboxProps: (record) => ({
-                disabled: record.isSystemRole,
-              }),
-            }}
-            pagination={{
-              total: filteredRoles.length,
-              pageSize: 10,
-              showSizeChanger: true,
-              showQuickJumper: true,
-              showTotal: (total, range) =>
-                `${range[0]}-${range[1]} của ${total} vai trò`,
-            }}
-          />
+          <div className="table-container" style={{ overflow: "visible" }}>
+            <Table
+              columns={columns}
+              dataSource={filteredRoles}
+              rowKey="id"
+              loading={loading}
+              scroll={{ x: 1200 }}
+              rowSelection={{
+                selectedRowKeys,
+                onChange: setSelectedRowKeys,
+                getCheckboxProps: (record) => ({
+                  disabled: record.isSystemRole,
+                }),
+              }}
+              pagination={{
+                total: filteredRoles.length,
+                pageSize: 10,
+                showSizeChanger: true,
+                showQuickJumper: true,
+                showTotal: (total, range) =>
+                  `${range[0]}-${range[1]} của ${total} vai trò`,
+              }}
+            />
+          </div>
         </Card>
 
         {/* Create/Edit Modal */}
