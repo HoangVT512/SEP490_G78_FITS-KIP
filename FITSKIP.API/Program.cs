@@ -32,7 +32,7 @@ namespace FITSKIP.API
             {
                 options.AddPolicy("AllowFrontend",
                     policy => policy
-                        .WithOrigins("http://localhost:5173") // React web
+                        .WithOrigins("http://localhost:3000") // React web
                         .AllowAnyHeader()
                         .AllowAnyMethod());
             });
