@@ -512,18 +512,25 @@ const UserManagement = ({ showHeader = true }) => {
       if (editingUser) {
         // Update user
         await userService.updateUser(editingUser.id, {
-          userName: values.email, // Use email as username
+          id: editingUser.id,
+          userName: values.email,
+          normalizedUserName: values.email.toUpperCase(),
           email: values.email,
-          fullName: values.fullName,
-          employeeCode: values.employeeCode,
+          normalizedEmail: values.email.toUpperCase(),
+          emailConfirmed: editingUser.emailConfirmed || false,
+          passwordHash: editingUser.passwordHash || null,
+          securityStamp: editingUser.securityStamp || null,
+          concurrencyStamp: editingUser.concurrencyStamp || null,
           phoneNumber: values.phoneNumber,
-          position: values.position,
+          phoneNumberConfirmed: editingUser.phoneNumberConfirmed || false,
+          twoFactorEnabled: editingUser.twoFactorEnabled || false,
+          lockoutEnd: editingUser.lockoutEnd || null,
+          lockoutEnabled: editingUser.lockoutEnabled || false,
+          accessFailedCount: editingUser.accessFailedCount || 0,
+          fullName: values.fullName,
           gender: values.gender || "Nam",
-          emailConfirmed: false,
-          phoneNumberConfirmed: false,
-          twoFactorEnabled: false,
-          lockoutEnabled: false,
-          accessFailedCount: 0,
+          employeeCode: values.employeeCode,
+          position: values.position,
         });
         message.success({
           content: "Cập nhật người dùng thành công",

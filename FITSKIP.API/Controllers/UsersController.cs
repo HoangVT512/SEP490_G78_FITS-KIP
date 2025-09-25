@@ -29,6 +29,45 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> GetUserByFullName(string fullName, CancellationToken cancellationToken)
     {
         var user = await userService.GetByUsernameAsync(fullName, cancellationToken);
+        if (user == null)
+        {
+            return NotFound();
+        }
+        var response = new UserDTO
+        {
+            Id = user.Id,
+            UserName = user.UserName,
+            NormalizedUserName = user.NormalizedUserName,
+            NormalizedEmail = user.NormalizedEmail,
+            Email = user.Email,
+            EmailConfirmed = user.EmailConfirmed,
+            PasswordHash = user.PasswordHash,
+            SecurityStamp = user.SecurityStamp,
+            ConcurrencyStamp = user.ConcurrencyStamp,
+            PhoneNumber = user.PhoneNumber,
+            PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+            TwoFactorEnabled = user.TwoFactorEnabled,
+            LockoutEnd = user.LockoutEnd,
+            LockoutEnabled = user.LockoutEnabled,
+            AccessFailedCount = user.AccessFailedCount,
+            FullName = user.FullName,
+            Gender = user.Gender,
+            EmployeeCode = user.EmployeeCode,
+            Position = user.Position,
+        };
+        return Ok(response);
+    }
+
+    // GET: https://localhost:7003/api/Users/id/{id}
+    [HttpGet]
+    [Route("id/{id}")]
+    public async Task<IActionResult> GetUserById(string id, CancellationToken cancellationToken)
+    {
+        var user = await userService.GetUserByIdAsync(id, cancellationToken);
+        if (user == null)
+        {
+            return NotFound();
+        }
         var response = new UserDTO
         {
             Id = user.Id,
@@ -112,7 +151,13 @@ public class UsersController : ControllerBase
             EmployeeCode = user.EmployeeCode,
             Position = user.Position,
         };
+        // Ensure the Id from the route is applied so the repository can find the existing entity
+        updatedUser.Id = id;
         updatedUser = await userService.UpdateUserAsync(updatedUser, cancellationToken);
+        if (updatedUser == null)
+        {
+            return NotFound();
+        }
         var response = new UserDTO
         {
             Id = updatedUser.Id,

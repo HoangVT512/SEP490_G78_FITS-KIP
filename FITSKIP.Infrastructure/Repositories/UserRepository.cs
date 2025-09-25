@@ -28,14 +28,14 @@ public class UserRepository : IUserRepository
 
     public async Task<User?> DeleteUserAsync(string id, CancellationToken cancellationToken = default)
     {
-        var existingUser = db.Users.FirstOrDefaultAsync(u => u.Id == id);
+        var existingUser = await db.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
         if (existingUser == null)
         {
             return null;
         }
-        db.Users.Remove(await existingUser);
+        db.Users.Remove(existingUser);
         await db.SaveChangesAsync(cancellationToken);
-        return await existingUser;
+        return existingUser;
     }
 
     public async Task<IReadOnlyList<User>> GetAllAsync(CancellationToken cancellationToken = default)
@@ -73,8 +73,8 @@ public class UserRepository : IUserRepository
             throw new ArgumentException("A user with the same ID does not exist.");
         }
         db.Users.Entry(existingUser).CurrentValues.SetValues(user);
-        await db.SaveChangesAsync();
-        return user;
+        await db.SaveChangesAsync(cancellationToken);
+        return existingUser;
     }
 
     public async Task<IReadOnlyList<Department>> GetDepartmentsAsync(CancellationToken cancellationToken = default)
