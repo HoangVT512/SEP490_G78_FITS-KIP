@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
-namespace FITSKIP.Infrastructure.DbContexts;
+namespace FITSKIP.Domain.Entities;
 
 public partial class MaintenanceAssignment
 {
@@ -19,5 +19,5 @@ public partial class MaintenanceAssignment
 
     public virtual ErrorHistory Error { get; set; } = null!;
 
-    public virtual AspNetUser Technician { get; set; } = null!;
+    public virtual User? Technician { get; set; }
 }

@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
-namespace FITSKIP.Infrastructure.DbContexts;
+namespace FITSKIP.Domain.Entities;
 
 public partial class UserLine
 {
@@ -15,5 +15,5 @@ public partial class UserLine
 
     public virtual Line Line { get; set; } = null!;
 
-    public virtual AspNetUser User { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
 }

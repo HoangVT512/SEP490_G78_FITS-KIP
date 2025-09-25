@@ -10,8 +10,8 @@ public static class SeedData
     public static async Task SeedAsync(FitskipDbContext context)
     {
         // Clear existing data to seed fresh Vietnamese data
-        if (await context.AspNetRoles.AnyAsync()) context.AspNetRoles.RemoveRange(await context.AspNetRoles.ToListAsync());
-        if (await context.AspNetUsers.AnyAsync()) context.AspNetUsers.RemoveRange(await context.AspNetUsers.ToListAsync());
+        if (await context.Roles.AnyAsync()) context.Roles.RemoveRange(await context.Roles.ToListAsync());
+        if (await context.Users.AnyAsync()) context.Users.RemoveRange(await context.Users.ToListAsync());
         if (await context.Departments.AnyAsync()) context.Departments.RemoveRange(await context.Departments.ToListAsync());
         if (await context.Equipment.AnyAsync()) context.Equipment.RemoveRange(await context.Equipment.ToListAsync());
         if (await context.SpareParts.AnyAsync()) context.SpareParts.RemoveRange(await context.SpareParts.ToListAsync());
@@ -22,25 +22,25 @@ public static class SeedData
         await context.SaveChangesAsync();
 
         // Seed Roles
-        if (!await context.AspNetRoles.AnyAsync())
+        if (!await context.Roles.AnyAsync())
         {
-            var roles = new List<AspNetRole>
+            var roles = new List<IdentityRole>
             {
-                new AspNetRole { Id = Guid.NewGuid().ToString(), Name = "Quản trị viên", NormalizedName = "QUANTRI" },
-                new AspNetRole { Id = Guid.NewGuid().ToString(), Name = "Quản lý", NormalizedName = "QUANLY" },
-                new AspNetRole { Id = Guid.NewGuid().ToString(), Name = "Người dùng", NormalizedName = "NGUOIDUNG" }
+                new IdentityRole { Id = Guid.NewGuid().ToString(), Name = "Quản trị viên", NormalizedName = "QUANTRI" },
+                new IdentityRole { Id = Guid.NewGuid().ToString(), Name = "Quản lý", NormalizedName = "QUANLY" },
+                new IdentityRole { Id = Guid.NewGuid().ToString(), Name = "Người dùng", NormalizedName = "NGUOIDUNG" }
             };
-            await context.AspNetRoles.AddRangeAsync(roles);
+            await context.Roles.AddRangeAsync(roles);
         }
 
         // Seed Users
-        if (!await context.AspNetUsers.AnyAsync())
+        if (!await context.Users.AnyAsync())
         {
-            var passwordHasher = new PasswordHasher<AspNetUser>();
+            var passwordHasher = new PasswordHasher<User>();
 
-            var users = new List<AspNetUser>
+            var users = new List<User>
             {
-                new AspNetUser
+                new User
                 {
                     Id = Guid.NewGuid().ToString(),
                     UserName = "admin@congty.com",
@@ -53,7 +53,7 @@ public static class SeedData
                     FullName = "Nguyễn Văn Admin",
                     EmployeeCode = "ADM001"
                 },
-                new AspNetUser
+                new User
                 {
                     Id = Guid.NewGuid().ToString(),
                     UserName = "quanly@congty.com",
@@ -66,7 +66,7 @@ public static class SeedData
                     FullName = "Trần Thị Quản lý",
                     EmployeeCode = "QLY001"
                 },
-                new AspNetUser
+                new User
                 {
                     Id = Guid.NewGuid().ToString(),
                     UserName = "nguoidung@congty.com",
@@ -87,7 +87,7 @@ public static class SeedData
                 user.PasswordHash = passwordHasher.HashPassword(user, "Matkhau123!");
             }
 
-            await context.AspNetUsers.AddRangeAsync(users);
+            await context.Users.AddRangeAsync(users);
         }
 
         // Seed Departments
@@ -145,7 +145,7 @@ public static class SeedData
         if (!await context.MaintenanceAssignments.AnyAsync())
         {
             var error = await context.ErrorHistories.FirstOrDefaultAsync();
-            var technician = await context.AspNetUsers.FirstOrDefaultAsync(u => u.UserName == "quanly@congty.com");
+            var technician = await context.Users.FirstOrDefaultAsync(u => u.UserName == "quanly@congty.com");
 
             if (error != null && technician != null)
             {
@@ -162,7 +162,7 @@ public static class SeedData
         if (!await context.PurchaseRequests.AnyAsync())
         {
             var sparePart = await context.SpareParts.FirstOrDefaultAsync();
-            var requester = await context.AspNetUsers.FirstOrDefaultAsync(u => u.UserName == "quanly@congty.com");
+            var requester = await context.Users.FirstOrDefaultAsync(u => u.UserName == "quanly@congty.com");
 
             if (sparePart != null && requester != null)
             {
@@ -173,6 +173,20 @@ public static class SeedData
                 };
                 await context.PurchaseRequests.AddRangeAsync(purchaseRequests);
             }
+        }
+
+        // Seed Users table
+        if (!await context.Users.AnyAsync())
+        {
+            var users = new List<User>
+            {
+                new User { Id = "1", UserName = "nguyenvana", EmployeeCode = "U001", FullName = "Nguyễn Văn A", Email = "a@example.com" },
+                new User { Id = "2", UserName = "tranthib", EmployeeCode = "U002", FullName = "Trần Thị B", Email = "b@example.com" },
+                new User { Id = "3", UserName = "levanc", EmployeeCode = "U003", FullName = "Lê Văn C", Email = "c@example.com" },
+                new User { Id = "4", UserName = "phamthid", EmployeeCode = "U004", FullName = "Phạm Thị D", Email = "d@example.com" },
+                new User { Id = "5", UserName = "hoangvane", EmployeeCode = "U005", FullName = "Hoàng Văn E", Email = "e@example.com" }
+            };
+            await context.Users.AddRangeAsync(users);
         }
 
         await context.SaveChangesAsync();

@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
-namespace FITSKIP.Infrastructure.DbContexts;
+namespace FITSKIP.Domain.Entities;
 
 public partial class PurchaseRequest
 {
@@ -23,9 +23,9 @@ public partial class PurchaseRequest
 
     public DateTime? ApprovedAt { get; set; }
 
-    public virtual AspNetUser? ApprovedByNavigation { get; set; }
+    public virtual User? ApprovedByNavigation { get; set; }
 
     public virtual SparePart Part { get; set; } = null!;
 
-    public virtual AspNetUser RequestedByNavigation { get; set; } = null!;
+    public virtual User RequestedByNavigation { get; set; } = null!;
 }

@@ -20,8 +20,13 @@ namespace FITSKIP.API
             // Add DbContext
             builder.Services.AddDbContext<FITSKIP.Infrastructure.DbContexts.FitskipDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            // Add Identity
+            builder.Services.AddIdentity<FITSKIP.Domain.Entities.User, Microsoft.AspNetCore.Identity.IdentityRole>()
+                .AddEntityFrameworkStores<FITSKIP.Infrastructure.DbContexts.FitskipDbContext>();
+
             // DI registrations for sample endpoint
-            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IUserRepository, FITSKIP.Infrastructure.Repositories.InMemoryUserRepository>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IUserRepository, FITSKIP.Infrastructure.Repositories.UserRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IUserService, FITSKIP.Application.Services.UserService>();
             builder.Services.AddCors(options =>
             {

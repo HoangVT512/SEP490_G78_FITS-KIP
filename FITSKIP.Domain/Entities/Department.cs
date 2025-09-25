@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
-namespace FITSKIP.Infrastructure.DbContexts;
+namespace FITSKIP.Domain.Entities;
 
 public partial class Department
 {
@@ -13,7 +13,7 @@ public partial class Department
 
     public string? Description { get; set; }
 
-    public virtual AspNetUser? Manager { get; set; }
+    public virtual User? Manager { get; set; }
 
     public virtual ICollection<Room> Rooms { get; set; } = new List<Room>();
 }

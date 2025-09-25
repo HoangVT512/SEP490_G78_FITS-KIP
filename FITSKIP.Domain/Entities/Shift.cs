@@ -1,7 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
-namespace FITSKIP.Infrastructure.DbContexts;
+namespace FITSKIP.Domain.Entities;
 
 public partial class Shift
 {

@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using FITSKIP.Domain.Entities;
 
 namespace FITSKIP.Infrastructure.DbContexts;
 
-public partial class FitskipDbContext : DbContext
+public partial class FitskipDbContext : IdentityDbContext<User>
 {
     public FitskipDbContext()
     {
@@ -14,18 +16,6 @@ public partial class FitskipDbContext : DbContext
         : base(options)
     {
     }
-
-    public virtual DbSet<AspNetRole> AspNetRoles { get; set; }
-
-    public virtual DbSet<AspNetRoleClaim> AspNetRoleClaims { get; set; }
-
-    public virtual DbSet<AspNetUser> AspNetUsers { get; set; }
-
-    public virtual DbSet<AspNetUserClaim> AspNetUserClaims { get; set; }
-
-    public virtual DbSet<AspNetUserLogin> AspNetUserLogins { get; set; }
-
-    public virtual DbSet<AspNetUserToken> AspNetUserTokens { get; set; }
 
     public virtual DbSet<Department> Departments { get; set; }
 
@@ -64,94 +54,18 @@ public partial class FitskipDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<AspNetRole>(entity =>
+        base.OnModelCreating(modelBuilder); // Important: Call base để Identity có thể configure
+
+        // Configure custom User properties
+        modelBuilder.Entity<User>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__AspNetRo__3214EC07B5BF2996");
-
-            entity.Property(e => e.Name).HasMaxLength(256);
-            entity.Property(e => e.NormalizedName).HasMaxLength(256);
-        });
-
-        modelBuilder.Entity<AspNetRoleClaim>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__AspNetRo__3214EC07FC6E9DBD");
-
-            entity.Property(e => e.RoleId).HasMaxLength(450);
-
-            entity.HasOne(d => d.Role).WithMany(p => p.AspNetRoleClaims)
-                .HasForeignKey(d => d.RoleId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__AspNetRol__RoleI__59063A47");
-        });
-
-        modelBuilder.Entity<AspNetUser>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__AspNetUs__3214EC075196AD25");
-
-            entity.Property(e => e.Email).HasMaxLength(256);
-            entity.Property(e => e.EmployeeCode).HasMaxLength(50);
-            entity.Property(e => e.FullName).HasMaxLength(100);
+            entity.Property(e => e.FullName).HasMaxLength(250);
             entity.Property(e => e.Gender).HasMaxLength(10);
-            entity.Property(e => e.LockoutEnabled).HasDefaultValue(true);
-            entity.Property(e => e.NormalizedEmail).HasMaxLength(256);
-            entity.Property(e => e.NormalizedUserName).HasMaxLength(256);
-            entity.Property(e => e.PhoneNumber).HasMaxLength(20);
-            entity.Property(e => e.Position).HasMaxLength(100);
-            entity.Property(e => e.UserName).HasMaxLength(256);
-
-            entity.HasMany(d => d.Roles).WithMany(p => p.Users)
-                .UsingEntity<Dictionary<string, object>>(
-                    "AspNetUserRole",
-                    r => r.HasOne<AspNetRole>().WithMany()
-                        .HasForeignKey("RoleId")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("FK__AspNetUse__RoleI__534D60F1"),
-                    l => l.HasOne<AspNetUser>().WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.ClientSetNull)
-                        .HasConstraintName("FK__AspNetUse__UserI__52593CB8"),
-                    j =>
-                    {
-                        j.HasKey("UserId", "RoleId").HasName("PK__AspNetUs__AF2760ADE8FDAD09");
-                        j.ToTable("AspNetUserRoles");
-                    });
+            entity.Property(e => e.EmployeeCode).HasMaxLength(50);
+            entity.Property(e => e.Position).HasMaxLength(250);
         });
 
-        modelBuilder.Entity<AspNetUserClaim>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK__AspNetUs__3214EC07305DEDA8");
-
-            entity.Property(e => e.UserId).HasMaxLength(450);
-
-            entity.HasOne(d => d.User).WithMany(p => p.AspNetUserClaims)
-                .HasForeignKey(d => d.UserId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__AspNetUse__UserI__5629CD9C");
-        });
-
-        modelBuilder.Entity<AspNetUserLogin>(entity =>
-        {
-            entity.HasKey(e => new { e.LoginProvider, e.ProviderKey }).HasName("PK__AspNetUs__2B2C5B520838E94C");
-
-            entity.Property(e => e.ProviderDisplayName).HasMaxLength(100);
-            entity.Property(e => e.UserId).HasMaxLength(450);
-
-            entity.HasOne(d => d.User).WithMany(p => p.AspNetUserLogins)
-                .HasForeignKey(d => d.UserId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__AspNetUse__UserI__5BE2A6F2");
-        });
-
-        modelBuilder.Entity<AspNetUserToken>(entity =>
-        {
-            entity.HasKey(e => new { e.UserId, e.LoginProvider, e.Name }).HasName("PK__AspNetUs__8CC49841F97A0C97");
-
-            entity.HasOne(d => d.User).WithMany(p => p.AspNetUserTokens)
-                .HasForeignKey(d => d.UserId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__AspNetUse__UserI__5EBF139D");
-        });
-
+        // Department configuration
         modelBuilder.Entity<Department>(entity =>
         {
             entity.HasKey(e => e.DepartmentId).HasName("PK__Departme__B2079BCDAEAF02C2");
@@ -405,6 +319,14 @@ public partial class FitskipDbContext : DbContext
 
             entity.Property(e => e.TypeId).HasColumnName("TypeID");
             entity.Property(e => e.TypeName).HasMaxLength(250);
+        });
+
+        modelBuilder.Entity<User>(entity =>
+        {
+            entity.Property(e => e.FullName).HasMaxLength(250);
+            entity.Property(e => e.Gender).HasMaxLength(10);
+            entity.Property(e => e.EmployeeCode).HasMaxLength(50);
+            entity.Property(e => e.Position).HasMaxLength(250);
         });
 
         modelBuilder.Entity<UserLine>(entity =>
