@@ -13,17 +13,21 @@
   "description": "",
   "dependencies": {
     "@ant-design/icons": "^6.0.2",
+    "@ant-design/plots": "^2.6.5",
     "@emotion/react": "^11.14.0",
     "antd": "^5.27.4",
     "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",
+    "dayjs": "^1.11.18",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.2",
     "morgan": "^1.10.1",
-    "react-router-dom": "^7.9.2",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.26.2",
     "react-scripts": "^5.0.1"
   },
   "devDependencies": {

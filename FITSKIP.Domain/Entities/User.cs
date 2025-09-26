@@ -1,11 +1,20 @@
+using Microsoft.AspNetCore.Identity;
+
 namespace FITSKIP.Domain.Entities;
 
-public class User
+public class User : IdentityUser
 {
-    public int Id { get; set; }
-    public string Code { get; set; } = string.Empty;
-    public string FullName { get; set; } = string.Empty;
-    public string? Email { get; set; }
+    public string? FullName { get; set; }
+    public string? Gender { get; set; }
+    public string? EmployeeCode { get; set; }
+    public string? Position { get; set; }
+
+    // Navigation properties
+    public virtual ICollection<Department> Departments { get; set; } = new List<Department>();
+    public virtual ICollection<MaintenanceAssignment> MaintenanceAssignments { get; set; } = new List<MaintenanceAssignment>();
+    public virtual ICollection<PurchaseRequest> PurchaseRequestApprovedByNavigations { get; set; } = new List<PurchaseRequest>();
+    public virtual ICollection<PurchaseRequest> PurchaseRequestRequestedByNavigations { get; set; } = new List<PurchaseRequest>();
+    public virtual ICollection<UserLine> UserLines { get; set; } = new List<UserLine>();
 }
 
 
