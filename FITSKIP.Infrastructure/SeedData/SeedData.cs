@@ -9,124 +9,134 @@ public static class SeedData
 {
     public static async Task SeedAsync(FitskipDbContext context)
     {
-        // Clear existing data to seed fresh Vietnamese data
-        if (await context.Roles.AnyAsync()) context.Roles.RemoveRange(await context.Roles.ToListAsync());
-        if (await context.Users.AnyAsync()) context.Users.RemoveRange(await context.Users.ToListAsync());
-        if (await context.Departments.AnyAsync()) context.Departments.RemoveRange(await context.Departments.ToListAsync());
-        if (await context.Equipment.AnyAsync()) context.Equipment.RemoveRange(await context.Equipment.ToListAsync());
-        if (await context.SpareParts.AnyAsync()) context.SpareParts.RemoveRange(await context.SpareParts.ToListAsync());
-        if (await context.ErrorHistories.AnyAsync()) context.ErrorHistories.RemoveRange(await context.ErrorHistories.ToListAsync());
-        if (await context.MaintenanceAssignments.AnyAsync()) context.MaintenanceAssignments.RemoveRange(await context.MaintenanceAssignments.ToListAsync());
-        if (await context.PurchaseRequests.AnyAsync()) context.PurchaseRequests.RemoveRange(await context.PurchaseRequests.ToListAsync());
+        // NOTE: Do NOT remove existing data. Make seeding idempotent and additive only.
+
+        // Seed Roles (only add missing)
+        var rolesToEnsure = new[]
+        {
+            new { Name = "Quản trị viên", Normalized = "QUANTRI" },
+            new { Name = "Quản lý", Normalized = "QUANLY" },
+            new { Name = "Người dùng", Normalized = "NGUOIDUNG" }
+        };
+
+        foreach (var r in rolesToEnsure)
+        {
+            if (!await context.Roles.AnyAsync(x => x.Name == r.Name))
+            {
+                await context.Roles.AddAsync(new IdentityRole { Id = Guid.NewGuid().ToString(), Name = r.Name, NormalizedName = r.Normalized });
+            }
+        }
 
         await context.SaveChangesAsync();
 
-        // Seed Roles
-        if (!await context.Roles.AnyAsync())
+        // Seed core users (admin, manager, basic user) - add only if missing
+        var passwordHasher = new PasswordHasher<User>();
+
+        var coreUsers = new[]
         {
-            var roles = new List<IdentityRole>
-            {
-                new IdentityRole { Id = Guid.NewGuid().ToString(), Name = "Quản trị viên", NormalizedName = "QUANTRI" },
-                new IdentityRole { Id = Guid.NewGuid().ToString(), Name = "Quản lý", NormalizedName = "QUANLY" },
-                new IdentityRole { Id = Guid.NewGuid().ToString(), Name = "Người dùng", NormalizedName = "NGUOIDUNG" }
-            };
-            await context.Roles.AddRangeAsync(roles);
-        }
+            new { UserName = "admin@congty.com", Email = "admin@congty.com", FullName = "Nguyễn Văn Admin", EmployeeCode = "ADM001", Password = "Matkhau123!" },
+            new { UserName = "quanly@congty.com", Email = "quanly@congty.com", FullName = "Trần Thị Quản lý", EmployeeCode = "QLY001", Password = "Matkhau123!" },
+            new { UserName = "nguoidung@congty.com", Email = "nguoidung@congty.com", FullName = "Lê Văn Người dùng", EmployeeCode = "USR001", Password = "Matkhau123!" }
+        };
 
-        // Seed Users
-        if (!await context.Users.AnyAsync())
+        foreach (var u in coreUsers)
         {
-            var passwordHasher = new PasswordHasher<User>();
-
-            var users = new List<User>
+            var normalizedEmail = u.Email.ToUpperInvariant();
+            var exists = await context.Users.AnyAsync(x => x.NormalizedEmail == normalizedEmail || x.UserName == u.UserName);
+            if (!exists)
             {
-                new User
+                var newUser = new User
                 {
                     Id = Guid.NewGuid().ToString(),
-                    UserName = "admin@congty.com",
-                    NormalizedUserName = "ADMIN@CONGTY.COM",
-                    Email = "admin@congty.com",
-                    NormalizedEmail = "ADMIN@CONGTY.COM",
+                    UserName = u.UserName,
+                    NormalizedUserName = u.UserName.ToUpperInvariant(),
+                    Email = u.Email,
+                    NormalizedEmail = normalizedEmail,
                     EmailConfirmed = true,
                     SecurityStamp = Guid.NewGuid().ToString(),
                     ConcurrencyStamp = Guid.NewGuid().ToString(),
-                    FullName = "Nguyễn Văn Admin",
-                    EmployeeCode = "ADM001"
-                },
-                new User
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    UserName = "quanly@congty.com",
-                    NormalizedUserName = "QUANLY@CONGTY.COM",
-                    Email = "quanly@congty.com",
-                    NormalizedEmail = "QUANLY@CONGTY.COM",
-                    EmailConfirmed = true,
-                    SecurityStamp = Guid.NewGuid().ToString(),
-                    ConcurrencyStamp = Guid.NewGuid().ToString(),
-                    FullName = "Trần Thị Quản lý",
-                    EmployeeCode = "QLY001"
-                },
-                new User
-                {
-                    Id = Guid.NewGuid().ToString(),
-                    UserName = "nguoidung@congty.com",
-                    NormalizedUserName = "NGUOIDUNG@CONGTY.COM",
-                    Email = "nguoidung@congty.com",
-                    NormalizedEmail = "NGUOIDUNG@CONGTY.COM",
-                    EmailConfirmed = true,
-                    SecurityStamp = Guid.NewGuid().ToString(),
-                    ConcurrencyStamp = Guid.NewGuid().ToString(),
-                    FullName = "Lê Văn Người dùng",
-                    EmployeeCode = "USR001"
-                }
-            };
+                    FullName = u.FullName,
+                    EmployeeCode = u.EmployeeCode
+                };
 
-            // Hash passwords
-            foreach (var user in users)
-            {
-                user.PasswordHash = passwordHasher.HashPassword(user, "Matkhau123!");
+                newUser.PasswordHash = passwordHasher.HashPassword(newUser, u.Password);
+                await context.Users.AddAsync(newUser);
             }
-
-            await context.Users.AddRangeAsync(users);
         }
 
-        // Seed Departments
-        if (!await context.Departments.AnyAsync())
+        await context.SaveChangesAsync();
+
+        // Assign roles to core users if not already assigned
+        async Task EnsureUserRole(string email, string roleName)
         {
-            var departments = new List<Department>
+            var user = await context.Users.FirstOrDefaultAsync(x => x.NormalizedEmail == email.ToUpperInvariant());
+            var role = await context.Roles.FirstOrDefaultAsync(x => x.Name == roleName);
+            if (user != null && role != null)
             {
-                new Department { DepartmentName = "Công nghệ thông tin", Description = "Quản lý hệ thống CNTT" },
-                new Department { DepartmentName = "Nhân sự", Description = "Quản lý nhân viên và tổ chức" },
-                new Department { DepartmentName = "Sản xuất", Description = "Quản lý quy trình sản xuất" }
-            };
-            await context.Departments.AddRangeAsync(departments);
+                var already = await context.UserRoles.AnyAsync(ur => ur.UserId == user.Id && ur.RoleId == role.Id);
+                if (!already)
+                {
+                    context.UserRoles.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = role.Id });
+                }
+            }
         }
 
-        // Seed Equipment
-        if (!await context.Equipment.AnyAsync())
+        await EnsureUserRole("admin@congty.com", "Quản trị viên");
+        await EnsureUserRole("quanly@congty.com", "Quản lý");
+
+        await context.SaveChangesAsync();
+
+        // Seed Departments (add if missing by name)
+        var departmentsToEnsure = new[]
         {
-            var equipment = new List<Equipment>
-            {
-                new Equipment { EquipmentCode = "CNC001", EquipmentName = "Máy CNC 001", Origin = "Nhật Bản", Yom = 2022, IsActive = true },
-                new Equipment { EquipmentCode = "LASER001", EquipmentName = "Máy hàn laser", Origin = "Đức", Yom = 2023, IsActive = true },
-                new Equipment { EquipmentCode = "CONVEYOR001", EquipmentName = "Hệ thống băng tải", Origin = "Việt Nam", Yom = 2021, IsActive = false }
-            };
-            await context.Equipment.AddRangeAsync(equipment);
-        }
+            new Department { DepartmentName = "Công nghệ thông tin", Description = "Quản lý hệ thống CNTT" },
+            new Department { DepartmentName = "Nhân sự", Description = "Quản lý nhân viên và tổ chức" },
+            new Department { DepartmentName = "Sản xuất", Description = "Quản lý quy trình sản xuất" }
+        };
 
-        // Seed Spare Parts
-        if (!await context.SpareParts.AnyAsync())
+        foreach (var d in departmentsToEnsure)
         {
-            var spareParts = new List<SparePart>
+            if (!await context.Departments.AnyAsync(x => x.DepartmentName == d.DepartmentName))
             {
-                new SparePart { PartNumber = "SERVO001", PartName = "Động cơ servo", Quantity = 5, Location = "Kho linh kiện A", Status = "Sẵn sàng" },
-                new SparePart { PartNumber = "FILTER001", PartName = "Bộ lọc dầu", Quantity = 10, Location = "Kho linh kiện B", Status = "Sẵn sàng" },
-                new SparePart { PartNumber = "SENSOR001", PartName = "Cảm biến nhiệt độ", Quantity = 8, Location = "Kho linh kiện A", Status = "Sẵn sàng" }
-            };
-            await context.SpareParts.AddRangeAsync(spareParts);
+                await context.Departments.AddAsync(d);
+            }
         }
 
-        // Seed Error History (Corrective Maintenance)
+        // Seed Equipment (add if missing by code)
+        var equipmentsToEnsure = new[]
+        {
+            new Equipment { EquipmentCode = "CNC001", EquipmentName = "Máy CNC 001", Origin = "Nhật Bản", Yom = 2022, IsActive = true },
+            new Equipment { EquipmentCode = "LASER001", EquipmentName = "Máy hàn laser", Origin = "Đức", Yom = 2023, IsActive = true },
+            new Equipment { EquipmentCode = "CONVEYOR001", EquipmentName = "Hệ thống băng tải", Origin = "Việt Nam", Yom = 2021, IsActive = false }
+        };
+
+        foreach (var e in equipmentsToEnsure)
+        {
+            if (!await context.Equipment.AnyAsync(x => x.EquipmentCode == e.EquipmentCode))
+            {
+                await context.Equipment.AddAsync(e);
+            }
+        }
+
+        // Seed Spare Parts (add if missing by part number)
+        var partsToEnsure = new[]
+        {
+            new SparePart { PartNumber = "SERVO001", PartName = "Động cơ servo", Quantity = 5, Location = "Kho linh kiện A", Status = "Sẵn sàng" },
+            new SparePart { PartNumber = "FILTER001", PartName = "Bộ lọc dầu", Quantity = 10, Location = "Kho linh kiện B", Status = "Sẵn sàng" },
+            new SparePart { PartNumber = "SENSOR001", PartName = "Cảm biến nhiệt độ", Quantity = 8, Location = "Kho linh kiện A", Status = "Sẵn sàng" }
+        };
+
+        foreach (var p in partsToEnsure)
+        {
+            if (!await context.SpareParts.AnyAsync(x => x.PartNumber == p.PartNumber))
+            {
+                await context.SpareParts.AddAsync(p);
+            }
+        }
+
+        await context.SaveChangesAsync();
+
+        // Seed an example error history and related assignments/purchase requests only if not present
         if (!await context.ErrorHistories.AnyAsync())
         {
             var equipment = await context.Equipment.FirstOrDefaultAsync();
@@ -134,31 +144,24 @@ public static class SeedData
             {
                 var errorHistories = new List<ErrorHistory>
                 {
-                    new ErrorHistory { EquipmentId = equipment.EquipmentId, ErrorDescription = "Máy bị kẹt băng tải", StartTime = DateTime.Now.AddDays(-2), EndTime = DateTime.Now.AddDays(-1), Reason = "Bộ lọc bị tắc", Solution = "Thay thế bộ lọc và vệ sinh băng tải", Duration = 2.5m },
-                    new ErrorHistory { EquipmentId = equipment.EquipmentId, ErrorDescription = "Động cơ servo bị quá nhiệt", StartTime = DateTime.Now.AddDays(-1), EndTime = null, Reason = "Hệ thống làm mát hỏng", Solution = null, Duration = null }
+                    new ErrorHistory { EquipmentId = equipment.EquipmentId, ErrorDescription = "Máy bị kẹt băng tải", StartTime = DateTime.Now.AddDays(-2), EndTime = DateTime.Now.AddDays(-1), Reason = "Bộ lọc bị tắc", Solution = "Thay thế bộ lọc và vệ sinh băng tải", Duration = 2.5m }
                 };
                 await context.ErrorHistories.AddRangeAsync(errorHistories);
-            }
-        }
+                await context.SaveChangesAsync();
 
-        // Seed Maintenance Assignments
-        if (!await context.MaintenanceAssignments.AnyAsync())
-        {
-            var error = await context.ErrorHistories.FirstOrDefaultAsync();
-            var technician = await context.Users.FirstOrDefaultAsync(u => u.UserName == "quanly@congty.com");
-
-            if (error != null && technician != null)
-            {
-                var assignments = new List<MaintenanceAssignment>
+                var error = await context.ErrorHistories.FirstOrDefaultAsync();
+                var technician = await context.Users.FirstOrDefaultAsync(u => u.UserName == "quanly@congty.com");
+                if (error != null && technician != null && !await context.MaintenanceAssignments.AnyAsync())
                 {
-                    new MaintenanceAssignment { ErrorId = error.ErrorId, TechnicianId = technician.Id, AssignedAt = DateTime.Now.AddDays(-2), CompletedAt = DateTime.Now.AddDays(-1), ResolutionDetail = "Đã thay thế linh kiện và kiểm tra hệ thống" },
-                    new MaintenanceAssignment { ErrorId = error.ErrorId, TechnicianId = technician.Id, AssignedAt = DateTime.Now, CompletedAt = null, ResolutionDetail = null }
-                };
-                await context.MaintenanceAssignments.AddRangeAsync(assignments);
+                    var assignments = new List<MaintenanceAssignment>
+                    {
+                        new MaintenanceAssignment { ErrorId = error.ErrorId, TechnicianId = technician.Id, AssignedAt = DateTime.Now.AddDays(-2), CompletedAt = DateTime.Now.AddDays(-1), ResolutionDetail = "Đã thay thế linh kiện và kiểm tra hệ thống" }
+                    };
+                    await context.MaintenanceAssignments.AddRangeAsync(assignments);
+                }
             }
         }
 
-        // Seed Purchase Requests
         if (!await context.PurchaseRequests.AnyAsync())
         {
             var sparePart = await context.SpareParts.FirstOrDefaultAsync();
@@ -168,25 +171,10 @@ public static class SeedData
             {
                 var purchaseRequests = new List<PurchaseRequest>
                 {
-                    new PurchaseRequest { PartId = sparePart.PartId, RequestedBy = requester.Id, Quantity = 5, Urgency = "Cao", Reason = "Tồn kho thấp", Status = "Đã duyệt", ApprovedBy = requester.Id, ApprovedAt = DateTime.Now.AddDays(-2) },
-                    new PurchaseRequest { PartId = sparePart.PartId, RequestedBy = requester.Id, Quantity = 3, Urgency = "Thấp", Reason = "Dự phòng", Status = "Chờ duyệt", ApprovedBy = null, ApprovedAt = null }
+                    new PurchaseRequest { PartId = sparePart.PartId, RequestedBy = requester.Id, Quantity = 5, Urgency = "Cao", Reason = "Tồn kho thấp", Status = "Đã duyệt", ApprovedBy = requester.Id, ApprovedAt = DateTime.Now.AddDays(-2) }
                 };
                 await context.PurchaseRequests.AddRangeAsync(purchaseRequests);
             }
-        }
-
-        // Seed Users table
-        if (!await context.Users.AnyAsync())
-        {
-            var users = new List<User>
-            {
-                new User { Id = "1", UserName = "nguyenvana", EmployeeCode = "U001", FullName = "Nguyễn Văn A", Email = "a@example.com" },
-                new User { Id = "2", UserName = "tranthib", EmployeeCode = "U002", FullName = "Trần Thị B", Email = "b@example.com" },
-                new User { Id = "3", UserName = "levanc", EmployeeCode = "U003", FullName = "Lê Văn C", Email = "c@example.com" },
-                new User { Id = "4", UserName = "phamthid", EmployeeCode = "U004", FullName = "Phạm Thị D", Email = "d@example.com" },
-                new User { Id = "5", UserName = "hoangvane", EmployeeCode = "U005", FullName = "Hoàng Văn E", Email = "e@example.com" }
-            };
-            await context.Users.AddRangeAsync(users);
         }
 
         await context.SaveChangesAsync();
