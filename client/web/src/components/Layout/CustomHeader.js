@@ -5,6 +5,7 @@ import {
   Button,
   Dropdown,
   Avatar,
+  message,
 } from "antd";
 import {
   HomeOutlined,
@@ -19,6 +20,7 @@ import {
   BarChartOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 
 const { Header } = AntLayout;
 const { Text } = Typography;
@@ -26,13 +28,22 @@ const { Text } = Typography;
 const CustomHeader = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated, user, logout, isAdmin } = useAuth();
 
-  // Mock user authentication state - replace with real auth later
-  const isLoggedIn = false; // Set to true to test user menu
-  const currentUser = {
-    name: "Nguyễn Văn Admin",
-    email: "admin@congty.com",
-    avatar: null,
+  const handleLogout = async () => {
+    try {
+      console.log('Starting logout process...');
+      await logout();
+      console.log('Logout completed, navigating to /login');
+      message.success("Đăng xuất thành công!");
+      // Add small delay before navigating to ensure logout state has propagated
+      setTimeout(() => {
+        navigate("/login", { replace: true });
+      }, 200);
+    } catch (error) {
+      console.error('Logout error:', error);
+      message.error("Đã có lỗi xảy ra khi đăng xuất!");
+    }
   };
 
   const headerStyles = {
@@ -102,11 +113,7 @@ const CustomHeader = () => {
       key: "logout",
       icon: <LogoutOutlined />,
       label: "Đăng xuất",
-      onClick: () => {
-        // TODO: Implement logout logic
-        console.log("Logging out...");
-        navigate("/login");
-      },
+      onClick: handleLogout,
     },
   ];
 
@@ -134,15 +141,17 @@ const CustomHeader = () => {
         >
           Bảo trì
         </Button>
-        <Button
-          type={location.pathname.startsWith("/admin") ? "primary" : "text"}
-          icon={<SettingOutlined />}
-          onClick={() => navigate("/admin")}
-          style={buttonStyles}
-        >
-          Admin Panel
-        </Button>
-        {isLoggedIn ? (
+        {isAdmin && (
+          <Button
+            type={location.pathname.startsWith("/admin") ? "primary" : "text"}
+            icon={<SettingOutlined />}
+            onClick={() => navigate("/admin")}
+            style={buttonStyles}
+          >
+            Admin Panel
+          </Button>
+        )}
+        {user ? (
           <Dropdown
             menu={{ items: userMenuItems }}
             placement="bottomRight"
@@ -164,11 +173,10 @@ const CustomHeader = () => {
               <Avatar
                 size="small"
                 icon={<UserOutlined />}
-                src={currentUser.avatar}
                 style={{ backgroundColor: "#fff", color: "#2563eb" }}
               />
               <span style={{ fontSize: "14px", fontWeight: "500" }}>
-                {currentUser.name}
+                {user.fullName || user.email}
               </span>
             </div>
           </Dropdown>

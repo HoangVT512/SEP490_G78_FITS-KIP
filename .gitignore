@@ -16,6 +16,8 @@ node_modules/
 *.swp
 
 # VS Code / Rider / IDE
+.dtbcache/
+.futdcache/
 .vs/
 .vscode/
 .idea/
