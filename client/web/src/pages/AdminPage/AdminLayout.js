@@ -147,7 +147,7 @@ const AdminLayout = () => {
     boxShadow: "2px 0 8px rgba(0,0,0,0.15)",
   };
 
-  const SIDER_EXPANDED_WIDTH = 340;
+  const SIDER_EXPANDED_WIDTH = 280;
   const SIDER_COLLAPSED_WIDTH = 64;
 
   const headerStyle = {
