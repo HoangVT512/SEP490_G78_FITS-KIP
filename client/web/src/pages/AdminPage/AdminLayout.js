@@ -21,6 +21,7 @@ import {
   SafetyOutlined,
   EditOutlined,
   GroupOutlined,
+  NodeIndexOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -31,6 +32,7 @@ import AdminDashboard from "../AdminPage/AdminDashboard";
 import UserManagement from "../AdminPage/UserManagement";
 import DepartmentManagement from "../AdminPage/DepartmentManagement";
 import LineGroupManagement from "../AdminPage/LineGroupManagement";
+import StageManagement from "../AdminPage/StageManagement";
 import RoleManagement from "../AdminPage/RoleManagement";
 import SystemSettings from "../AdminPage/SystemSettings";
 import AdminReports from "../AdminPage/AdminReports";
@@ -75,6 +77,11 @@ const AdminLayout = () => {
       key: "linegroups",
       icon: <GroupOutlined />,
       label: "Quản lý nhóm dây chuyền",
+    },
+    {
+      key: "stages",
+      icon: <NodeIndexOutlined />,
+      label: "Quản lý giai đoạn",
     },
     {
       key: "roles",
@@ -138,6 +145,8 @@ const AdminLayout = () => {
         return <DepartmentManagement showHeader={false} />;
       case "linegroups":
         return <LineGroupManagement showHeader={false} />;
+      case "stages":
+        return <StageManagement showHeader={false} />;
       case "roles":
         return <RoleManagement showHeader={false} />;
       case "reports":

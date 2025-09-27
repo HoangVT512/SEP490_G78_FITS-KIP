@@ -77,3 +77,60 @@
   border-color: var(--primary-color);
   box-shadow: 0 0 0 2px rgba(51, 71, 102, 0.1);
 }
+
+/* Stage Management Styles */
+.stage-management-table .ant-table-thead > tr > th {
+  background-color: #f8fafc;
+  color: var(--primary-color);
+  font-weight: 600;
+  border-bottom: 2px solid var(--primary-color);
+}
+
+.stage-management-table .ant-table-tbody > tr:hover > td {
+  background-color: rgba(51, 71, 102, 0.05);
+}
+
+.stage-management-table .ant-table-tbody > tr.bottleneck-row > td {
+  background-color: rgba(255, 77, 79, 0.05);
+  border-left: 4px solid #ff4d4f;
+}
+
+.stage-management-table .ant-pagination-item-active {
+  border-color: var(--primary-color);
+  background-color: var(--primary-color);
+}
+
+.stage-management-table .ant-pagination-item-active a {
+  color: white;
+}
+
+.stage-management-table .ant-pagination-item:hover {
+  border-color: var(--primary-color);
+}
+
+.stage-management-table .ant-pagination-item:hover a {
+  color: var(--primary-color);
+}
+
+.stage-management-table .ant-pagination-next:hover .ant-pagination-item-link,
+.stage-management-table .ant-pagination-prev:hover .ant-pagination-item-link {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.stage-management-table .ant-select-selector:focus,
+.stage-management-table .ant-select-focused .ant-select-selector {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(51, 71, 102, 0.1);
+}
+
+/* Bottleneck warning animation */
+@keyframes bottleneck-pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
+}
+
+.bottleneck-indicator {
+  animation: bottleneck-pulse 2s ease-in-out infinite;
+}
