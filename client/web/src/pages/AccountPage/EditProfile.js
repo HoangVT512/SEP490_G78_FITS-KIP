@@ -94,7 +94,7 @@ const EditProfile = () => {
   };
 
   const headerStyle = {
-    background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+    background: "linear-gradient(135deg, #334766 0%, #283652 100%)",
     borderRadius: "12px",
     padding: "24px",
     marginBottom: "24px",
@@ -125,7 +125,7 @@ const EditProfile = () => {
     width: "36px",
     height: "36px",
     borderRadius: "50%",
-    backgroundColor: "#2563eb",
+    backgroundColor: "#334766",
     border: "2px solid #fff",
     display: "flex",
     alignItems: "center",
@@ -248,7 +248,7 @@ const EditProfile = () => {
             <Card
               title={
                 <Space>
-                  <EditOutlined style={{ color: "#2563eb" }} />
+                  <EditOutlined style={{ color: "#334766" }} />
                   Thông tin cá nhân
                 </Space>
               }
@@ -450,8 +450,8 @@ const EditProfile = () => {
                       size="large"
                       icon={<SaveOutlined />}
                       style={{
-                        background: "#2563eb",
-                        borderColor: "#2563eb",
+                        background: "#334766",
+                        borderColor: "#334766",
                       }}
                     >
                       Lưu thay đổi

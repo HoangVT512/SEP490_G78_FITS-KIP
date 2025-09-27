@@ -143,7 +143,7 @@ const AdminLayout = () => {
     left: 0,
     top: 0,
     bottom: 0,
-    background: "linear-gradient(180deg, #1e40af 0%, #1d4ed8 100%)",
+    background: "linear-gradient(180deg, #283652 0%, #283652 100%)",
     boxShadow: "2px 0 8px rgba(0,0,0,0.15)",
   };
 
@@ -312,7 +312,7 @@ const AdminLayout = () => {
                   size="small"
                   icon={<UserOutlined />}
                   src={adminUser.avatar}
-                  style={{ backgroundColor: "#2563eb" }}
+                  style={{ backgroundColor: "#334766" }}
                 />
                 <div className="user-info">
                   <div className="user-name">{adminUser.name}</div>

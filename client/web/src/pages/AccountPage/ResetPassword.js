@@ -96,7 +96,7 @@ const ResetPassword = () => {
 
   const logoSectionStyle = {
     flex: "1",
-    background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+    background: "linear-gradient(135deg, #334766 0%, #283652 100%)",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
@@ -138,8 +138,8 @@ const ResetPassword = () => {
     height: "44px",
     fontSize: "15px",
     fontWeight: "600",
-    background: "#2563eb",
-    borderColor: "#2563eb",
+    background: "#334766",
+    borderColor: "#334766",
     borderRadius: "8px",
   };
 
@@ -156,7 +156,7 @@ const ResetPassword = () => {
           >
             <div style={headerStyle}>
               <Space direction="vertical" size="small">
-                <KeyOutlined style={{ fontSize: "36px", color: "#2563eb" }} />
+                <KeyOutlined style={{ fontSize: "36px", color: "#334766" }} />
                 <Title
                   level={2}
                   style={{
@@ -216,7 +216,7 @@ const ResetPassword = () => {
                     style={{
                       border:
                         contactType === "email"
-                          ? "2px solid #2563eb"
+                          ? "2px solid #334766"
                           : "1px solid #e5e7eb",
                       cursor: "pointer",
                     }}
@@ -227,7 +227,7 @@ const ResetPassword = () => {
                   >
                     <Radio value="email" style={{ marginRight: "12px" }} />
                     <MailOutlined
-                      style={{ marginRight: "8px", color: "#2563eb" }}
+                      style={{ marginRight: "8px", color: "#334766" }}
                     />
                     <strong>Gửi OTP qua Email</strong>
                     <div
@@ -246,7 +246,7 @@ const ResetPassword = () => {
                     style={{
                       border:
                         contactType === "phone"
-                          ? "2px solid #2563eb"
+                          ? "2px solid #334766"
                           : "1px solid #e5e7eb",
                       cursor: "pointer",
                     }}
@@ -335,7 +335,7 @@ const ResetPassword = () => {
               <Button
                 type="link"
                 onClick={() => navigate("/login")}
-                style={{ color: "#2563eb" }}
+                style={{ color: "#334766" }}
                 icon={<ArrowLeftOutlined />}
               >
                 Quay lại đăng nhập

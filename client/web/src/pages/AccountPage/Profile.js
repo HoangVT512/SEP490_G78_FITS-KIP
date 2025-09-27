@@ -86,7 +86,7 @@ const Profile = () => {
   };
 
   const profileHeaderStyle = {
-    background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+    background: "linear-gradient(135deg, #334766 0%, #283652 100%)",
     borderRadius: "12px",
     padding: "32px",
     marginBottom: "24px",
@@ -113,7 +113,7 @@ const Profile = () => {
     success: "#059669",
     warning: "#d97706",
     error: "#dc2626",
-    info: "#2563eb",
+    info: "#334766",
   };
 
   const handleEditProfile = () => {
@@ -180,7 +180,7 @@ const Profile = () => {
             <Card
               title={
                 <Space>
-                  <IdcardOutlined style={{ color: "#2563eb" }} />
+                  <IdcardOutlined style={{ color: "#334766" }} />
                   Thông tin cá nhân
                 </Space>
               }
@@ -219,7 +219,7 @@ const Profile = () => {
                         </Descriptions.Item>
                         <Descriptions.Item label="Email">
                           <Space>
-                            <MailOutlined style={{ color: "#2563eb" }} />
+                            <MailOutlined style={{ color: "#334766" }} />
                             {userInfo.email}
                             {userInfo.emailConfirmed && (
                               <CheckCircleOutlined
@@ -230,7 +230,7 @@ const Profile = () => {
                         </Descriptions.Item>
                         <Descriptions.Item label="Số điện thoại">
                           <Space>
-                            <PhoneOutlined style={{ color: "#2563eb" }} />
+                            <PhoneOutlined style={{ color: "#334766" }} />
                             {userInfo.phoneNumber || "Chưa cập nhật"}
                             {userInfo.phoneNumberConfirmed &&
                               userInfo.phoneNumber && (
@@ -245,7 +245,7 @@ const Profile = () => {
                         </Descriptions.Item>
                         <Descriptions.Item label="Phòng ban" span={2}>
                           <Space>
-                            <TeamOutlined style={{ color: "#2563eb" }} />
+                            <TeamOutlined style={{ color: "#334766" }} />
                             {userInfo.department}
                           </Space>
                         </Descriptions.Item>
@@ -375,7 +375,7 @@ const Profile = () => {
             <Card
               title={
                 <Space>
-                  <ClockCircleOutlined style={{ color: "#2563eb" }} />
+                  <ClockCircleOutlined style={{ color: "#334766" }} />
                   Hoạt động gần đây
                 </Space>
               }

@@ -107,7 +107,7 @@ const CompactLogin = () => {
 
   const logoSectionStyle = {
     flex: "1",
-    background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+    background: "linear-gradient(135deg, #334766 0%, #283652 100%)",
     display: "flex",
     flexDirection: "column",
     justifyContent: "center",
@@ -172,8 +172,8 @@ const CompactLogin = () => {
     height: "44px",
     fontSize: "15px",
     fontWeight: "600",
-    background: "#2563eb",
-    borderColor: "#2563eb",
+    background: "#334766",
+    borderColor: "#334766",
     borderRadius: "8px",
   };
 
@@ -205,7 +205,7 @@ const CompactLogin = () => {
               <div style={formHeaderStyle}>
                 <Space direction="vertical" size="small">
                   <SafetyOutlined
-                    style={{ fontSize: "36px", color: "#2563eb" }}
+                    style={{ fontSize: "36px", color: "#334766" }}
                   />
                   <Title level={2} style={titleStyle}>
                     Đăng nhập hệ thống
@@ -266,7 +266,7 @@ const CompactLogin = () => {
                     style={{
                       padding: 0,
                       height: "auto",
-                      color: "#2563eb",
+                      color: "#334766",
                       fontSize: "14px",
                     }}
                   >

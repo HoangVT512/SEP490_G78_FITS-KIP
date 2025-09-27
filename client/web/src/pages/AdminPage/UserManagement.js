@@ -391,7 +391,7 @@ const UserManagement = ({ showHeader = true }) => {
           <Avatar
             size="large"
             icon={<UserOutlined />}
-            style={{ backgroundColor: "#2563eb" }}
+            style={{ backgroundColor: "#334766" }}
           />
           <div>
             <div style={{ fontWeight: 600, color: "#1f2937" }}>
@@ -411,7 +411,7 @@ const UserManagement = ({ showHeader = true }) => {
       render: (_, record) => (
         <div>
           <div style={{ marginBottom: 4 }}>
-            <MailOutlined style={{ color: "#2563eb", marginRight: 6 }} />
+            <MailOutlined style={{ color: "#334766", marginRight: 6 }} />
             <Text style={{ fontSize: "13px" }}>{record.email}</Text>
             {record.emailConfirmed && (
               <Badge
@@ -422,7 +422,7 @@ const UserManagement = ({ showHeader = true }) => {
             )}
           </div>
           <div>
-            <PhoneOutlined style={{ color: "#2563eb", marginRight: 6 }} />
+            <PhoneOutlined style={{ color: "#334766", marginRight: 6 }} />
             <Text style={{ fontSize: "13px" }}>{record.phoneNumber}</Text>
             {record.phoneConfirmed && (
               <Badge
@@ -442,7 +442,7 @@ const UserManagement = ({ showHeader = true }) => {
       width: 150,
       render: (department) => (
         <div>
-          <TeamOutlined style={{ color: "#2563eb", marginRight: 6 }} />
+          <TeamOutlined style={{ color: "#334766", marginRight: 6 }} />
           <Text>{department}</Text>
         </div>
       ),
@@ -598,7 +598,7 @@ const UserManagement = ({ showHeader = true }) => {
       <Card style={cardStyle}>
         <div style={{ marginBottom: "24px" }}>
           <Title level={3} style={{ margin: 0, color: "#1f2937" }}>
-            <UserOutlined style={{ marginRight: "8px", color: "#2563eb" }} />
+            <UserOutlined style={{ marginRight: "8px", color: "#334766" }} />
             Quản lý người dùng
           </Title>
           <Text type="secondary">
@@ -864,7 +864,7 @@ const UserManagement = ({ showHeader = true }) => {
               size={40}
               icon={<UserOutlined />}
               src={viewingUser?.avatar}
-              style={{ backgroundColor: "#2563eb" }}
+              style={{ backgroundColor: "#334766" }}
             />
             <div>
               <div style={{ fontWeight: 600, fontSize: "16px" }}>

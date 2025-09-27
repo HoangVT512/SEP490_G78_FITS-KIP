@@ -5,7 +5,7 @@ export const layoutContainer = css`
 `;
 
 export const headerStyle = css`
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+  background: var(--gradient-primary) !important;
   padding: 0 32px !important;
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15) !important;
   height: 70px !important;
@@ -67,7 +67,7 @@ export const headerStyle = css`
       .login-button {
         margin-left: 12px;
         background: #fff;
-        color: #2563eb;
+        color: #334766;
         border: 1px solid #fff;
         font-weight: 600;
         font-size: 14px;
@@ -77,18 +77,18 @@ export const headerStyle = css`
 
         &:hover {
           background: #f8fafc !important;
-          color: #1d4ed8 !important;
+          color: var(--primary-dark) !important;
           border-color: #f8fafc !important;
         }
 
         &.ant-btn-primary {
-          background: #1d4ed8;
+          background: var(--primary-dark);
           color: #fff;
-          border-color: #1d4ed8;
+          border-color: var(--primary-dark);
 
           &:hover {
-            background: #1e40af !important;
-            border-color: #1e40af !important;
+            background: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
           }
         }
       }

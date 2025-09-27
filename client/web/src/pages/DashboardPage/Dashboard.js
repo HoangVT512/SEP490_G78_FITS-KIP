@@ -45,7 +45,7 @@ const Dashboard = () => {
         <Card css={welcomeCard}>
           <Row justify="space-between" align="middle">
             <Col>
-              <Title level={2} style={{ margin: 0, color: "#1e40af" }}>
+              <Title level={2} style={{ margin: 0, color: "#283652" }}>
                 🏭 Hệ thống quản lý bảo trì FITS-KIP
               </Title>
               <Text

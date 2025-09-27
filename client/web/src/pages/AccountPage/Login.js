@@ -73,7 +73,7 @@ const Login = () => {
               <div style={{ textAlign: "center", marginBottom: "24px" }}>
                 <Space direction="vertical" size="small">
                   <SafetyOutlined
-                    style={{ fontSize: "36px", color: "#2563eb" }}
+                    style={{ fontSize: "36px", color: "#334766" }}
                   />
                   <Title level={2} css={title}>
                     Đăng nhập hệ thống
@@ -156,8 +156,8 @@ const Login = () => {
                     height: "44px",
                     fontSize: "15px",
                     fontWeight: "600",
-                    background: "#2563eb",
-                    borderColor: "#2563eb",
+                    background: "#334766",
+                    borderColor: "#334766",
                   }}
                 >
                   Đăng nhập vào hệ thống

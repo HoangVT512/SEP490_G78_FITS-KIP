@@ -169,7 +169,7 @@ const AdminReports = ({ showHeader = true }) => {
       xField: "date",
       yField: "logins",
       point: { size: 5, shape: "diamond" },
-      color: "#2563eb",
+      color: "#334766",
       smooth: true,
     };
 
@@ -181,7 +181,7 @@ const AdminReports = ({ showHeader = true }) => {
               <Statistic
                 title="Tổng đăng nhập"
                 value={data.summary.totalLogins}
-                prefix={<UserOutlined style={{ color: "#2563eb" }} />}
+                prefix={<UserOutlined style={{ color: "#334766" }} />}
               />
             </Card>
           </Col>
@@ -284,7 +284,7 @@ const AdminReports = ({ showHeader = true }) => {
               <Statistic
                 title="Tổng sự kiện"
                 value={data.summary.totalEvents}
-                prefix={<SafetyOutlined style={{ color: "#2563eb" }} />}
+                prefix={<SafetyOutlined style={{ color: "#334766" }} />}
               />
             </Card>
           </Col>
@@ -345,7 +345,7 @@ const AdminReports = ({ showHeader = true }) => {
       data: data.data,
       xField: "department",
       yField: "users",
-      color: "#2563eb",
+      color: "#334766",
       columnWidthRatio: 0.6,
     };
 
@@ -455,7 +455,7 @@ const AdminReports = ({ showHeader = true }) => {
       xField: "time",
       yField: "cpu",
       smooth: true,
-      color: "#2563eb",
+      color: "#334766",
       areaStyle: {
         fillOpacity: 0.3,
       },
@@ -541,7 +541,7 @@ const AdminReports = ({ showHeader = true }) => {
     <div style={contentStyle}>
       <div style={{ marginBottom: "24px" }}>
         <Title level={3} style={{ margin: 0, color: "#1f2937" }}>
-          <BarChartOutlined style={{ marginRight: "8px", color: "#2563eb" }} />
+          <BarChartOutlined style={{ marginRight: "8px", color: "#334766" }} />
           Báo cáo & Thống kê
         </Title>
         <Text type="secondary">

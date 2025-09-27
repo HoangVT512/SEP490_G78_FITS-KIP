@@ -30,12 +30,12 @@ export const statsCard = css`
   transition: all 0.3s ease;
 
   &:hover {
-    border-color: #1e40af;
+    border-color: #283652;
     box-shadow: 0 4px 12px rgba(30, 64, 175, 0.1);
   }
 
   h4 {
-    color: #1e40af;
+    color: #283652;
     margin-bottom: 8px;
   }
 
@@ -53,11 +53,11 @@ export const quickStatsCard = css`
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 8px 25px rgba(37, 99, 235, 0.08);
-    border-color: #2563eb;
+    border-color: #334766;
   }
 
   &.equipment-card {
-    border-left: 4px solid #2563eb;
+    border-left: 4px solid #334766;
   }
 
   &.incident-card {

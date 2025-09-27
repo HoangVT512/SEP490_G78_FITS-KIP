@@ -47,7 +47,7 @@ const CustomHeader = () => {
   };
 
   const headerStyles = {
-    background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+    background: "linear-gradient(135deg, #334766 0%, #283652 100%)",
     height: "70px",
     padding: "0 32px",
     boxShadow: "0 4px 12px rgba(37, 99, 235, 0.15)",
@@ -78,7 +78,7 @@ const CustomHeader = () => {
 
   const loginButtonStyles = {
     background: "#fff",
-    color: "#2563eb",
+    color: "#334766",
     border: "1px solid #fff",
     fontWeight: "600",
     fontSize: "14px",
@@ -173,7 +173,7 @@ const CustomHeader = () => {
               <Avatar
                 size="small"
                 icon={<UserOutlined />}
-                style={{ backgroundColor: "#fff", color: "#2563eb" }}
+                style={{ backgroundColor: "#fff", color: "#334766" }}
               />
               <span style={{ fontSize: "14px", fontWeight: "500" }}>
                 {user.fullName || user.email}

@@ -40,7 +40,7 @@ const ChangePassword = () => {
   };
 
   const headerStyle = {
-    background: "linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)",
+    background: "linear-gradient(135deg, #334766 0%, #283652 100%)",
     borderRadius: "12px",
     padding: "32px",
     marginBottom: "24px",
@@ -179,7 +179,7 @@ const ChangePassword = () => {
             <Card
               title={
                 <Space>
-                  <SafetyOutlined style={{ color: "#2563eb" }} />
+                  <SafetyOutlined style={{ color: "#334766" }} />
                   Thay đổi mật khẩu
                 </Space>
               }
@@ -362,8 +362,8 @@ const ChangePassword = () => {
                       size="large"
                       icon={<SafetyOutlined />}
                       style={{
-                        background: "#2563eb",
-                        borderColor: "#2563eb",
+                        background: "#334766",
+                        borderColor: "#334766",
                       }}
                     >
                       Đổi mật khẩu

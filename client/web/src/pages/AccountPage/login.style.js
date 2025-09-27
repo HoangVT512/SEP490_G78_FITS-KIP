@@ -23,7 +23,7 @@ export const loginWrapper = css`
 
 export const logoSection = css`
   flex: 1;
-  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  background: var(--gradient-primary);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -98,15 +98,15 @@ export const loginForm = css`
   }
 
   .ant-btn-primary {
-    background: #2563eb;
-    border-color: #2563eb;
+    background: #334766;
+    border-color: #334766;
     font-weight: 600;
     height: 44px;
     border-radius: 8px;
 
     &:hover {
-      background: #1d4ed8;
-      border-color: #1d4ed8;
+      background: var(--primary-dark);
+      border-color: var(--primary-dark);
     }
   }
 `;
@@ -141,8 +141,8 @@ export const toggleGroup = css`
       }
 
       &.ant-radio-button-wrapper-checked {
-        background: #2563eb !important;
-        border-color: #2563eb !important;
+        background: #334766 !important;
+        border-color: #334766 !important;
         color: #fff !important;
       }
     }

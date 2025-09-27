@@ -79,7 +79,7 @@ const SystemSettings = ({ showHeader = true }) => {
     databaseOptimization: true,
 
     // Theme & UI
-    primaryColor: "#2563eb",
+    primaryColor: "#334766",
     logo: null,
     favicon: null,
     darkMode: false,
@@ -705,7 +705,7 @@ const SystemSettings = ({ showHeader = true }) => {
     <div style={contentStyle}>
       <div style={{ marginBottom: "24px" }}>
         <Title level={3} style={{ margin: 0, color: "#1f2937" }}>
-          <SettingOutlined style={{ marginRight: "8px", color: "#2563eb" }} />
+          <SettingOutlined style={{ marginRight: "8px", color: "#334766" }} />
           Cài đặt hệ thống
         </Title>
         <Text type="secondary">

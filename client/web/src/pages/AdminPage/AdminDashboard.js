@@ -174,7 +174,7 @@ const AdminDashboard = ({ showHeader = true }) => {
       size: 5,
       shape: "diamond",
     },
-    color: "#2563eb",
+    color: "#334766",
     label: {
       style: {
         fill: "#aaa",
@@ -189,7 +189,7 @@ const AdminDashboard = ({ showHeader = true }) => {
     radius: 0.8,
     label: false, // Tắt label để tránh lỗi
     interactions: [{ type: "element-selected" }, { type: "element-active" }],
-    color: ["#2563eb", "#7c3aed", "#dc2626", "#ea580c", "#16a34a"],
+    color: ["#334766", "#7c3aed", "#dc2626", "#ea580c", "#16a34a"],
     legend: {
       position: "right",
     },
@@ -212,7 +212,7 @@ const AdminDashboard = ({ showHeader = true }) => {
     <div style={contentStyle}>
       <div style={{ marginBottom: "24px" }}>
         <Title level={3} style={{ margin: 0, color: "#1f2937" }}>
-          <DashboardOutlined style={{ marginRight: "8px", color: "#2563eb" }} />
+          <DashboardOutlined style={{ marginRight: "8px", color: "#334766" }} />
           Dashboard quản trị viên
         </Title>
         <Text type="secondary">
@@ -227,7 +227,7 @@ const AdminDashboard = ({ showHeader = true }) => {
             <Statistic
               title="Tổng người dùng"
               value={stats.totalUsers}
-              prefix={<UserOutlined style={{ color: "#2563eb" }} />}
+              prefix={<UserOutlined style={{ color: "#334766" }} />}
               valueStyle={{ color: "#1f2937" }}
             />
             <Text type="secondary" style={{ fontSize: "12px" }}>
