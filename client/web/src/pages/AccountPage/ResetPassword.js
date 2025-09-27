@@ -1,5 +1,16 @@
 import React, { useState } from "react";
-import { Form, Input, Button, Steps, Typography, Space, Result } from "antd";
+import {
+  Form,
+  Input,
+  Button,
+  Steps,
+  Typography,
+  Space,
+  Result,
+  Radio,
+  Alert,
+  Card,
+} from "antd";
 import {
   MailOutlined,
   SafetyOutlined,
@@ -7,6 +18,8 @@ import {
   CheckCircleOutlined,
   ArrowLeftOutlined,
   KeyOutlined,
+  PhoneOutlined,
+  InfoCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
@@ -16,7 +29,8 @@ const { Title, Text } = Typography;
 const ResetPassword = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(0);
-  const [resetEmail, setResetEmail] = useState("");
+  const [resetContact, setResetContact] = useState("");
+  const [contactType, setContactType] = useState("email"); // "email" or "phone"
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
 
@@ -25,8 +39,9 @@ const ResetPassword = () => {
     setLoading(true);
     try {
       // TODO: API call to request password reset
-      console.log("Requesting reset for:", values.email);
-      setResetEmail(values.email);
+      const contact = contactType === "email" ? values.email : values.phone;
+      console.log("Requesting reset for:", contact, "via", contactType);
+      setResetContact(contact);
 
       // Simulate API delay
       setTimeout(() => {
@@ -153,26 +168,150 @@ const ResetPassword = () => {
                   Quên mật khẩu
                 </Title>
                 <Text style={{ color: "#64748b", fontSize: "14px" }}>
-                  Nhập email để nhận liên kết đặt lại mật khẩu
+                  Chọn phương thức nhận mã OTP để đặt lại mật khẩu
                 </Text>
               </Space>
             </div>
 
+            {/* Hướng dẫn các bước */}
+            <Alert
+              message="Hướng dẫn khôi phục mật khẩu"
+              description={
+                <div>
+                  <p style={{ margin: "8px 0" }}>
+                    <strong>Bước 1:</strong> Chọn phương thức nhận mã OTP (Email
+                    hoặc SMS)
+                  </p>
+                  <p style={{ margin: "8px 0" }}>
+                    <strong>Bước 2:</strong> Nhập email hoặc số điện thoại đã
+                    đăng ký
+                  </p>
+                  <p style={{ margin: "8px 0" }}>
+                    <strong>Bước 3:</strong> Nhập mã OTP 6 số và đặt mật khẩu
+                    mới
+                  </p>
+                </div>
+              }
+              type="info"
+              icon={<InfoCircleOutlined />}
+              style={{ marginBottom: "24px" }}
+            />
+
+            {/* Chọn phương thức nhận OTP */}
             <Form.Item
-              name="email"
-              label="Email công ty"
-              rules={[
-                { required: true, message: "Vui lòng nhập email!" },
-                { type: "email", message: "Email không hợp lệ!" },
-              ]}
+              label="Chọn phương thức nhận mã OTP"
               style={{ marginBottom: "20px" }}
             >
-              <Input
-                prefix={<MailOutlined />}
-                placeholder="Nhập email đã đăng ký trong hệ thống"
-                size="large"
-              />
+              <Radio.Group
+                value={contactType}
+                onChange={(e) => {
+                  setContactType(e.target.value);
+                  form.resetFields(["email", "phone"]);
+                }}
+                style={{ width: "100%" }}
+              >
+                <Space direction="vertical" style={{ width: "100%" }}>
+                  <Card
+                    hoverable
+                    style={{
+                      border:
+                        contactType === "email"
+                          ? "2px solid #2563eb"
+                          : "1px solid #e5e7eb",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      setContactType("email");
+                      form.resetFields(["email", "phone"]);
+                    }}
+                  >
+                    <Radio value="email" style={{ marginRight: "12px" }} />
+                    <MailOutlined
+                      style={{ marginRight: "8px", color: "#2563eb" }}
+                    />
+                    <strong>Gửi OTP qua Email</strong>
+                    <div
+                      style={{
+                        marginLeft: "32px",
+                        color: "#64748b",
+                        fontSize: "13px",
+                      }}
+                    >
+                      Mã OTP sẽ được gửi đến email của bạn
+                    </div>
+                  </Card>
+
+                  <Card
+                    hoverable
+                    style={{
+                      border:
+                        contactType === "phone"
+                          ? "2px solid #2563eb"
+                          : "1px solid #e5e7eb",
+                      cursor: "pointer",
+                    }}
+                    onClick={() => {
+                      setContactType("phone");
+                      form.resetFields(["email", "phone"]);
+                    }}
+                  >
+                    <Radio value="phone" style={{ marginRight: "12px" }} />
+                    <PhoneOutlined
+                      style={{ marginRight: "8px", color: "#059669" }}
+                    />
+                    <strong>Gửi OTP qua SMS</strong>
+                    <div
+                      style={{
+                        marginLeft: "32px",
+                        color: "#64748b",
+                        fontSize: "13px",
+                      }}
+                    >
+                      Mã OTP sẽ được gửi đến số điện thoại của bạn
+                    </div>
+                  </Card>
+                </Space>
+              </Radio.Group>
             </Form.Item>
+
+            {/* Input theo phương thức được chọn */}
+            {contactType === "email" ? (
+              <Form.Item
+                name="email"
+                label="Email công ty"
+                rules={[
+                  { required: true, message: "Vui lòng nhập email!" },
+                  { type: "email", message: "Email không hợp lệ!" },
+                ]}
+                style={{ marginBottom: "20px" }}
+              >
+                <Input
+                  prefix={<MailOutlined />}
+                  placeholder="Nhập email đã đăng ký trong hệ thống"
+                  size="large"
+                />
+              </Form.Item>
+            ) : (
+              <Form.Item
+                name="phone"
+                label="Số điện thoại"
+                rules={[
+                  { required: true, message: "Vui lòng nhập số điện thoại!" },
+                  {
+                    pattern: /^[0-9]{10,11}$/,
+                    message: "Số điện thoại phải có 10-11 chữ số!",
+                  },
+                ]}
+                style={{ marginBottom: "20px" }}
+              >
+                <Input
+                  prefix={<PhoneOutlined />}
+                  placeholder="Nhập số điện thoại đã đăng ký (VD: 0123456789)"
+                  size="large"
+                  maxLength={11}
+                />
+              </Form.Item>
+            )}
 
             <Form.Item style={{ marginBottom: "16px" }}>
               <Button
@@ -180,9 +319,15 @@ const ResetPassword = () => {
                 htmlType="submit"
                 loading={loading}
                 style={buttonStyle}
-                icon={<MailOutlined />}
+                icon={
+                  contactType === "email" ? <MailOutlined /> : <PhoneOutlined />
+                }
               >
-                Gửi liên kết đặt lại mật khẩu
+                {loading
+                  ? "Đang gửi mã OTP..."
+                  : `Gửi mã OTP qua ${
+                      contactType === "email" ? "Email" : "SMS"
+                    }`}
               </Button>
             </Form.Item>
 
@@ -220,27 +365,48 @@ const ResetPassword = () => {
                     fontSize: "22px",
                   }}
                 >
-                  Đặt lại mật khẩu
+                  Nhập mã OTP
                 </Title>
                 <Text style={{ color: "#64748b", fontSize: "14px" }}>
-                  Email đã được gửi tới <strong>{resetEmail}</strong>
+                  Mã OTP đã được gửi tới <strong>{resetContact}</strong>
                   <br />
-                  Nhập mã xác thực và mật khẩu mới
+                  qua {contactType === "email" ? "Email" : "SMS"}. Nhập mã OTP
+                  và đặt mật khẩu mới.
                 </Text>
               </Space>
             </div>
 
+            <Alert
+              message={
+                <span>
+                  <InfoCircleOutlined style={{ marginRight: "8px" }} />
+                  Kiểm tra{" "}
+                  {contactType === "email" ? "hộp thư" : "tin nhắn SMS"}
+                </span>
+              }
+              description={
+                contactType === "email"
+                  ? "Mã OTP có thể nằm trong thư mục spam/junk. Mã có hiệu lực trong 5 phút."
+                  : "Mã OTP 6 số đã được gửi đến số điện thoại của bạn. Mã có hiệu lực trong 5 phút."
+              }
+              type="warning"
+              style={{ marginBottom: "20px" }}
+            />
+
             <Form.Item
               name="token"
-              label="Mã xác thực"
+              label="Mã OTP (6 số)"
               rules={[
-                { required: true, message: "Vui lòng nhập mã xác thực!" },
-                { len: 6, message: "Mã xác thực phải có 6 ký tự!" },
+                { required: true, message: "Vui lòng nhập mã OTP!" },
+                {
+                  pattern: /^[0-9]{6}$/,
+                  message: "Mã OTP phải là 6 chữ số!",
+                },
               ]}
               style={{ marginBottom: "20px" }}
             >
               <Input
-                placeholder="Nhập mã 6 ký tự từ email"
+                placeholder="Nhập mã OTP 6 số"
                 size="large"
                 maxLength={6}
                 style={{
@@ -306,13 +472,23 @@ const ResetPassword = () => {
             </Form.Item>
 
             <div style={{ textAlign: "center" }}>
-              <Button
-                type="link"
-                onClick={() => setCurrentStep(0)}
-                style={{ color: "#64748b" }}
-              >
-                Gửi lại mã xác thực
-              </Button>
+              <Space>
+                <Button
+                  type="link"
+                  onClick={() => setCurrentStep(0)}
+                  style={{ color: "#64748b" }}
+                >
+                  Gửi lại mã OTP
+                </Button>
+                <span style={{ color: "#e5e7eb" }}>|</span>
+                <Button
+                  type="link"
+                  onClick={() => setCurrentStep(0)}
+                  style={{ color: "#64748b" }}
+                >
+                  Thay đổi phương thức
+                </Button>
+              </Space>
             </div>
           </Form>
         );
@@ -382,13 +558,16 @@ const ResetPassword = () => {
               {/* Security features */}
               <div style={{ marginTop: "40px", textAlign: "left" }}>
                 <div style={{ marginBottom: "12px", fontSize: "14px" }}>
-                  ✓ Mã xác thực được gửi qua email
+                  ✓ Mã OTP được gửi qua Email/SMS
                 </div>
                 <div style={{ marginBottom: "12px", fontSize: "14px" }}>
-                  ✓ Liên kết có hiệu lực trong 15 phút
+                  ✓ Mã OTP có hiệu lực trong 5 phút
+                </div>
+                <div style={{ marginBottom: "12px", fontSize: "14px" }}>
+                  ✓ Xác thực 2 lớp an toàn
                 </div>
                 <div style={{ fontSize: "14px" }}>
-                  ✓ Mật khẩu được mã hóa an toàn
+                  ✓ Mật khẩu được mã hóa bảo mật
                 </div>
               </div>
             </div>
@@ -419,7 +598,7 @@ const ResetPassword = () => {
                           minHeight: "20px",
                         }}
                       >
-                        Nhập email
+                        Chọn phương thức
                       </div>
                     ),
                     description: (
@@ -433,10 +612,10 @@ const ResetPassword = () => {
                           minHeight: "18px",
                         }}
                       >
-                        Gửi mã xác thực
+                        Email hoặc SMS
                       </div>
                     ),
-                    icon: <MailOutlined style={{ fontSize: "20px" }} />,
+                    icon: <KeyOutlined style={{ fontSize: "20px" }} />,
                   },
                   {
                     title: (
@@ -450,7 +629,7 @@ const ResetPassword = () => {
                           minHeight: "20px",
                         }}
                       >
-                        Xác thực
+                        Nhập mã OTP
                       </div>
                     ),
                     description: (
@@ -464,7 +643,7 @@ const ResetPassword = () => {
                           minHeight: "18px",
                         }}
                       >
-                        Đặt mật khẩu mới
+                        Và mật khẩu mới
                       </div>
                     ),
                     icon: <SafetyOutlined style={{ fontSize: "20px" }} />,
