@@ -767,6 +767,7 @@ const UserManagement = ({ showHeader = true }) => {
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} của ${total} người dùng`,
           }}
+          className="user-management-table"
           rowSelection={{
             selectedRowKeys,
             onChange: setSelectedRowKeys,
@@ -828,6 +829,9 @@ const UserManagement = ({ showHeader = true }) => {
         width={800}
         okText={editingUser ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
+        okButtonProps={{
+          style: { backgroundColor: "#334766", borderColor: "#334766" },
+        }}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Row gutter={16}>

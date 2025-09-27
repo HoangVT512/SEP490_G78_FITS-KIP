@@ -27,6 +27,36 @@
   padding: 40px 20px;
 }
 
+/* User Management Table Pagination Styles */
+.user-management-table .ant-pagination-item {
+  border-color: #334766;
+}
+
+.user-management-table .ant-pagination-item a {
+  color: #334766;
+}
+
+.user-management-table .ant-pagination-item-active {
+  background-color: #334766;
+  border-color: #334766;
+}
+
+.user-management-table .ant-pagination-item-active a {
+  color: #fff;
+}
+
+.user-management-table .ant-pagination-prev .ant-pagination-item-link,
+.user-management-table .ant-pagination-next .ant-pagination-item-link {
+  color: #334766;
+  border-color: #334766;
+}
+
+.user-management-table .ant-pagination-prev:hover .ant-pagination-item-link,
+.user-management-table .ant-pagination-next:hover .ant-pagination-item-link {
+  color: #334766;
+  border-color: #334766;
+}
+
 .not-found-content {
   text-align: center;
   background: #fff;
