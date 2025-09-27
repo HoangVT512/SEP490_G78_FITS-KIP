@@ -21,6 +21,7 @@ import {
   EditOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useAuth } from "../../contexts/AuthContext";
 import "../../styles/AdminLayout.css";
 
 // Import admin pages
@@ -39,13 +40,14 @@ const AdminLayout = () => {
   const [hovered, setHovered] = useState(false);
   const [selectedKey, setSelectedKey] = useState("dashboard");
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
 
-  // Mock admin user info
+  // Get admin user info from context
   const adminUser = {
-    name: "Nguyễn Văn Admin",
-    email: "admin@fitskip.com",
+    name: user?.fullName || "Admin User",
+    email: user?.email || "admin@fitskip.com",
     avatar: null,
-    role: "System Administrator",
+    role: user?.roles?.[0] || "System Administrator",
   };
 
   // Menu items cho sidebar
@@ -104,7 +106,8 @@ const AdminLayout = () => {
       key: "logout",
       icon: <LogoutOutlined />,
       label: "Đăng xuất",
-      onClick: () => {
+      onClick: async () => {
+        await logout();
         navigate("/login");
       },
     },

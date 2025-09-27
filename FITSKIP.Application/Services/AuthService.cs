@@ -64,7 +64,8 @@ public class AuthService : IAuthService
                 TwoFactorEnabled = user.TwoFactorEnabled,
                 LockoutEnd = user.LockoutEnd?.DateTime,
                 LockoutEnabled = user.LockoutEnabled,
-                AccessFailedCount = user.AccessFailedCount
+                AccessFailedCount = user.AccessFailedCount,
+                Roles = roles.ToList()
             }
         };
     }

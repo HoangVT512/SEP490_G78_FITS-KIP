@@ -6,9 +6,6 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
 
-using FITSKIP.Infrastructure.DbContexts;
-using FITSKIP.Infrastructure.SeedData;
-using Microsoft.EntityFrameworkCore;
 
 namespace FITSKIP.API
 {
@@ -172,12 +169,9 @@ namespace FITSKIP.API
             }
 
             app.UseHttpsRedirection();
-
-<<<<<<< HEAD
             // Enable CORS
             app.UseCors("AllowFrontend");
 
-=======
             app.UseRouting();
 
             // Enable CORS
@@ -185,7 +179,6 @@ namespace FITSKIP.API
 
             // Authentication & Authorization
             app.UseAuthentication();
->>>>>>> feature/auth-frontend
             app.UseAuthorization();
 
             app.MapControllers();

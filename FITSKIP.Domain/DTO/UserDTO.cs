@@ -45,5 +45,7 @@ namespace FITSKIP.Domain.DTO
         public string? EmployeeCode { get; set; }
 
         public string? Position { get; set; }
+
+        public List<string>? Roles { get; set; }
     }
 }
