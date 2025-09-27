@@ -20,6 +20,7 @@ import {
   BellOutlined,
   SafetyOutlined,
   EditOutlined,
+  GroupOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -29,6 +30,7 @@ import "../../styles/AdminLayout.css";
 import AdminDashboard from "../AdminPage/AdminDashboard";
 import UserManagement from "../AdminPage/UserManagement";
 import DepartmentManagement from "../AdminPage/DepartmentManagement";
+import LineGroupManagement from "../AdminPage/LineGroupManagement";
 import RoleManagement from "../AdminPage/RoleManagement";
 import SystemSettings from "../AdminPage/SystemSettings";
 import AdminReports from "../AdminPage/AdminReports";
@@ -68,6 +70,11 @@ const AdminLayout = () => {
       key: "departments",
       icon: <TeamOutlined />,
       label: "Quản lý phòng ban",
+    },
+    {
+      key: "linegroups",
+      icon: <GroupOutlined />,
+      label: "Quản lý nhóm dây chuyền",
     },
     {
       key: "roles",
@@ -129,6 +136,8 @@ const AdminLayout = () => {
         return <UserManagement showHeader={false} />;
       case "departments":
         return <DepartmentManagement showHeader={false} />;
+      case "linegroups":
+        return <LineGroupManagement showHeader={false} />;
       case "roles":
         return <RoleManagement showHeader={false} />;
       case "reports":

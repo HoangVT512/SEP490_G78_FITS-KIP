@@ -36,3 +36,44 @@
 .primary-bg { background-color: var(--primary-color) !important; }
 .primary-border { border-color: var(--primary-color) !important; }
 .gradient-bg { background: var(--gradient-primary) !important; }
+
+/* Line Group Management Styles */
+.linegroup-management-table .ant-table-thead > tr > th {
+  background-color: #f8fafc;
+  color: var(--primary-color);
+  font-weight: 600;
+  border-bottom: 2px solid var(--primary-color);
+}
+
+.linegroup-management-table .ant-table-tbody > tr:hover > td {
+  background-color: rgba(51, 71, 102, 0.05);
+}
+
+.linegroup-management-table .ant-pagination-item-active {
+  border-color: var(--primary-color);
+  background-color: var(--primary-color);
+}
+
+.linegroup-management-table .ant-pagination-item-active a {
+  color: white;
+}
+
+.linegroup-management-table .ant-pagination-item:hover {
+  border-color: var(--primary-color);
+}
+
+.linegroup-management-table .ant-pagination-item:hover a {
+  color: var(--primary-color);
+}
+
+.linegroup-management-table .ant-pagination-next:hover .ant-pagination-item-link,
+.linegroup-management-table .ant-pagination-prev:hover .ant-pagination-item-link {
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.linegroup-management-table .ant-select-selector:focus,
+.linegroup-management-table .ant-select-focused .ant-select-selector {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(51, 71, 102, 0.1);
+}

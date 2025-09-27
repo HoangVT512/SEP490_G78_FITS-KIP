@@ -10,14 +10,11 @@ import {
 import {
   HomeOutlined,
   LoginOutlined,
-  ToolOutlined,
   SettingOutlined,
   UserOutlined,
   LogoutOutlined,
   SafetyOutlined,
   EditOutlined,
-  DashboardOutlined,
-  BarChartOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -32,16 +29,16 @@ const CustomHeader = () => {
 
   const handleLogout = async () => {
     try {
-      console.log('Starting logout process...');
+      console.log("Starting logout process...");
       await logout();
-      console.log('Logout completed, navigating to /login');
+      console.log("Logout completed, navigating to /login");
       message.success("Đăng xuất thành công!");
       // Add small delay before navigating to ensure logout state has propagated
       setTimeout(() => {
         navigate("/login", { replace: true });
       }, 200);
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error("Logout error:", error);
       message.error("Đã có lỗi xảy ra khi đăng xuất!");
     }
   };
@@ -50,7 +47,7 @@ const CustomHeader = () => {
     background: "linear-gradient(135deg, #334766 0%, #283652 100%)",
     height: "70px",
     padding: "0 32px",
-    boxShadow: "0 4px 12px rgba(37, 99, 235, 0.15)",
+    boxShadow: "0 4px 12px rgba(51, 71, 102, 0.15)",
     borderBottom: "1px solid #e2e8f0",
     display: "flex",
     alignItems: "center",
@@ -121,34 +118,46 @@ const CustomHeader = () => {
     <Header style={headerStyles}>
       <Text style={titleStyles}>🏭 FITS-KIP Factory Management</Text>
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <Button
-          type={
-            location.pathname === "/dashboard" || location.pathname === "/"
-              ? "primary"
-              : "text"
-          }
-          icon={<HomeOutlined />}
-          onClick={() => navigate("/dashboard")}
-          style={buttonStyles}
-        >
-          Trang chủ
-        </Button>
-        <Button
-          type={location.pathname === "/maintenance" ? "primary" : "text"}
-          icon={<ToolOutlined />}
-          onClick={() => navigate("/maintenance")}
-          style={buttonStyles}
-        >
-          Bảo trì
-        </Button>
+        {isAuthenticated && (
+          <Button
+            type={
+              location.pathname === "/dashboard" || location.pathname === "/"
+                ? "primary"
+                : "text"
+            }
+            icon={<HomeOutlined />}
+            onClick={() => navigate("/dashboard")}
+            style={{
+              ...buttonStyles,
+              backgroundColor:
+                location.pathname === "/dashboard" || location.pathname === "/"
+                  ? "#334766"
+                  : "transparent",
+              borderColor:
+                location.pathname === "/dashboard" || location.pathname === "/"
+                  ? "#334766"
+                  : "transparent",
+            }}
+          >
+            Trang chủ
+          </Button>
+        )}
         {isAdmin && (
           <Button
             type={location.pathname.startsWith("/admin") ? "primary" : "text"}
             icon={<SettingOutlined />}
             onClick={() => navigate("/admin")}
-            style={buttonStyles}
+            style={{
+              ...buttonStyles,
+              backgroundColor: location.pathname.startsWith("/admin")
+                ? "#334766"
+                : "transparent",
+              borderColor: location.pathname.startsWith("/admin")
+                ? "#334766"
+                : "transparent",
+            }}
           >
-            Admin Panel
+            Quản trị
           </Button>
         )}
         {user ? (
