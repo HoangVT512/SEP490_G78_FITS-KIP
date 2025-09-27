@@ -20,6 +20,7 @@ import {
   message,
   Tooltip,
   DatePicker,
+  Upload,
 } from "antd";
 import {
   SearchOutlined,
@@ -45,12 +46,14 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
 import dayjs from "dayjs";
 import { userService } from "../../services/userService";
 import { departmentService } from "../../services/departmentService";
 import { roleService } from "../../services/roleService";
+import * as XLSX from "xlsx";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -75,6 +78,8 @@ const UserManagement = ({ showHeader = true }) => {
   });
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [isImportModalVisible, setIsImportModalVisible] = useState(false);
+  const [importing, setImporting] = useState(false);
 
   // Mock data - replace with API calls
   const mockUsers = [
@@ -381,6 +386,72 @@ const UserManagement = ({ showHeader = true }) => {
     },
   ];
 
+  const handleImport = (file) => {
+    setImporting(true);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        // Validate and process the data
+        const processedUsers = jsonData.map((row, index) => ({
+          fullName: row["Họ và tên"] || row["Full Name"],
+          employeeCode: row["Mã nhân viên"] || row["Employee Code"],
+          email: row["Email"],
+          phoneNumber: row["Số điện thoại"] || row["Phone Number"],
+          department: row["Phòng ban"] || row["Department"],
+          position: row["Chức vụ"] || row["Position"],
+          role: row["Vai trò"] || row["Role"] || "User",
+          status: row["Trạng thái"] || row["Status"] || "active",
+        }));
+
+        // Validate required fields
+        const invalidRows = [];
+        processedUsers.forEach((user, index) => {
+          if (!user.fullName || !user.employeeCode || !user.email) {
+            invalidRows.push(index + 1);
+          }
+        });
+
+        if (invalidRows.length > 0) {
+          message.error(
+            `Dữ liệu không hợp lệ ở các dòng: ${invalidRows.join(", ")}`
+          );
+          setImporting(false);
+          return;
+        }
+
+        // Import users via API
+        userService
+          .importUsers(processedUsers)
+          .then(() => {
+            message.success(
+              `Đã nhập thành công ${processedUsers.length} người dùng`
+            );
+            loadUsers();
+            setIsImportModalVisible(false);
+          })
+          .catch((error) => {
+            console.error("Import error:", error);
+            message.error("Lỗi khi nhập dữ liệu người dùng");
+          })
+          .finally(() => {
+            setImporting(false);
+          });
+      } catch (error) {
+        console.error("Error reading file:", error);
+        message.error("Lỗi khi đọc file Excel");
+        setImporting(false);
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    return false; // Prevent default upload behavior
+  };
+
   const columns = [
     {
       title: "Người dùng",
@@ -644,8 +715,15 @@ const UserManagement = ({ showHeader = true }) => {
               <Option value="User">User</Option>
             </Select>
           </Col>
-          <Col xs={24} sm={12} md={8}>
-            <Space>
+        </Row>
+
+        <Row
+          style={{ marginTop: "16px" }}
+          gutter={[8, 8]}
+          justify="space-between"
+        >
+          <Col>
+            <Space wrap>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
@@ -654,11 +732,22 @@ const UserManagement = ({ showHeader = true }) => {
                   form.resetFields();
                   setIsModalVisible(true);
                 }}
+                style={{ backgroundColor: "#334766", borderColor: "#334766" }}
               >
                 Thêm người dùng
               </Button>
               <Button icon={<ReloadOutlined />} onClick={loadUsers}>
                 Làm mới
+              </Button>
+            </Space>
+          </Col>
+          <Col>
+            <Space wrap>
+              <Button
+                icon={<ImportOutlined />}
+                onClick={() => setIsImportModalVisible(true)}
+              >
+                Nhập từ Excel
               </Button>
               <Button icon={<ExportOutlined />}>Xuất Excel</Button>
             </Space>
@@ -685,6 +774,51 @@ const UserManagement = ({ showHeader = true }) => {
           scroll={{ x: 1200 }}
         />
       </Card>
+
+      <Modal
+        title="Nhập danh sách người dùng từ Excel"
+        open={isImportModalVisible}
+        onCancel={() => setIsImportModalVisible(false)}
+        footer={null}
+        width={600}
+      >
+        <div style={{ padding: "20px 0" }}>
+          <div style={{ marginBottom: "16px" }}>
+            <Text>
+              Chọn file Excel chứa danh sách người dùng. File phải có các cột:
+              <br />
+              - Họ và tên (bắt buộc)
+              <br />
+              - Mã nhân viên (bắt buộc)
+              <br />
+              - Email (bắt buộc)
+              <br />
+              - Số điện thoại
+              <br />
+              - Phòng ban
+              <br />
+              - Chức vụ
+              <br />
+              - Vai trò (mặc định: User)
+              <br />- Trạng thái (mặc định: active)
+            </Text>
+          </div>
+          <Upload
+            accept=".xlsx,.xls"
+            beforeUpload={handleImport}
+            showUploadList={false}
+            disabled={importing}
+          >
+            <Button
+              icon={<UploadOutlined />}
+              loading={importing}
+              style={{ width: "100%" }}
+            >
+              {importing ? "Đang nhập dữ liệu..." : "Chọn file Excel"}
+            </Button>
+          </Upload>
+        </div>
+      </Modal>
 
       <Modal
         title={editingUser ? "Chỉnh sửa người dùng" : "Thêm người dùng mới"}
@@ -894,6 +1028,7 @@ const UserManagement = ({ showHeader = true }) => {
               setIsViewModalVisible(false);
               handleUserAction("edit", viewingUser);
             }}
+            style={{ backgroundColor: "#334766", borderColor: "#334766" }}
           >
             Chỉnh sửa
           </Button>,

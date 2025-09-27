@@ -82,6 +82,19 @@ export const userService = {
       throw new Error("Không thể xóa người dùng.");
     }
   },
+
+  // Import users from Excel
+  importUsers: async (usersData) => {
+    try {
+      return await apiRequest("/Users/import", {
+        method: "POST",
+        body: JSON.stringify(usersData),
+      });
+    } catch (error) {
+      console.error("Error importing users:", error);
+      throw new Error("Không thể import người dùng từ Excel.");
+    }
+  },
 };
 
 export default userService;
