@@ -55,24 +55,25 @@ const EditProfile = () => {
     avatar: null,
   });
 
-  // Department options - replace with API call
-  const departmentOptions = [
-    { value: "IT", label: "Phòng IT" },
-    { value: "HR", label: "Phòng Nhân sự" },
-    { value: "PRODUCTION", label: "Phòng Sản xuất" },
-    { value: "QC", label: "Phòng Kiểm tra chất lượng" },
-    { value: "MAINTENANCE", label: "Phòng Bảo trì" },
-    { value: "FINANCE", label: "Phòng Tài chính" },
-  ];
+  // Department options - no longer needed for display only
+  // const departmentOptions = [
+  //   { value: "IT", label: "Phòng IT" },
+  //   { value: "HR", label: "Phòng Nhân sự" },
+  //   { value: "PRODUCTION", label: "Phòng Sản xuất" },
+  //   { value: "QC", label: "Phòng Kiểm tra chất lượng" },
+  //   { value: "MAINTENANCE", label: "Phòng Bảo trì" },
+  //   { value: "FINANCE", label: "Phòng Tài chính" },
+  // ];
 
-  const positionOptions = [
-    { value: "Quản trị viên hệ thống", label: "Quản trị viên hệ thống" },
-    { value: "Quản lý", label: "Quản lý" },
-    { value: "Kỹ sư", label: "Kỹ sư" },
-    { value: "Kỹ thuật viên", label: "Kỹ thuật viên" },
-    { value: "Nhân viên", label: "Nhân viên" },
-    { value: "Thực tập sinh", label: "Thực tập sinh" },
-  ];
+  // Position options - no longer needed for display only
+  // const positionOptions = [
+  //   { value: "Quản trị viên hệ thống", label: "Quản trị viên hệ thống" },
+  //   { value: "Quản lý", label: "Quản lý" },
+  //   { value: "Kỹ sư", label: "Kỹ sư" },
+  //   { value: "Kỹ thuật viên", label: "Kỹ thuật viên" },
+  //   { value: "Nhân viên", label: "Nhân viên" },
+  //   { value: "Thực tập sinh", label: "Thực tập sinh" },
+  // ];
 
   useEffect(() => {
     // Initialize form with current user data
@@ -80,9 +81,8 @@ const EditProfile = () => {
       fullName: currentUser.fullName,
       email: currentUser.email,
       phoneNumber: currentUser.phoneNumber,
-      position: currentUser.position,
       gender: currentUser.gender,
-      department: currentUser.department,
+      // Note: department and position are disabled and managed by Admin
     });
   }, [currentUser, form]);
 
@@ -137,8 +137,17 @@ const EditProfile = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
+      // Prepare data to update (exclude admin-managed fields)
+      const updateData = {
+        fullName: values.fullName,
+        email: values.email,
+        phoneNumber: values.phoneNumber,
+        gender: values.gender,
+        // Note: department and position are managed by Admin only
+      };
+
       // TODO: API call to update profile
-      console.log("Updating profile:", values);
+      console.log("Updating profile:", updateData);
 
       // Simulate API delay
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -228,7 +237,8 @@ const EditProfile = () => {
                     fontSize: "14px",
                   }}
                 >
-                  Cập nhật thông tin để giữ hồ sơ của bạn luôn chính xác
+                  Cập nhật thông tin cá nhân của bạn. Phòng ban và chức vụ do
+                  Admin quản lý.
                 </Text>
               </Space>
             </div>
@@ -253,8 +263,33 @@ const EditProfile = () => {
               }
             >
               <Alert
-                message="Lưu ý quan trọng"
-                description="Một số thông tin như mã nhân viên và email không thể thay đổi. Vui lòng liên hệ phòng Nhân sự nếu cần cập nhật."
+                message="Hướng dẫn chỉnh sửa thông tin"
+                description={
+                  <div>
+                    <p style={{ margin: "8px 0", fontWeight: "bold" }}>
+                      ✅ Có thể chỉnh sửa:
+                    </p>
+                    <ul style={{ margin: "8px 0", paddingLeft: "20px" }}>
+                      <li>Họ và tên</li>
+                      <li>Email</li>
+                      <li>Số điện thoại</li>
+                      <li>Giới tính</li>
+                      <li>Ảnh đại diện</li>
+                    </ul>
+                    <p style={{ margin: "8px 0", fontWeight: "bold" }}>
+                      👁️ Chỉ xem (do Admin quản lý):
+                    </p>
+                    <ul style={{ margin: "8px 0", paddingLeft: "20px" }}>
+                      <li>Mã nhân viên</li>
+                      <li>Phòng ban</li>
+                      <li>Chức vụ</li>
+                    </ul>
+                    <p style={{ margin: "8px 0", color: "#059669" }}>
+                      💡 Liên hệ phòng Nhân sự nếu cần thay đổi thông tin do
+                      Admin quản lý.
+                    </p>
+                  </div>
+                }
                 type="info"
                 showIcon
                 style={{ marginBottom: "24px" }}
@@ -309,9 +344,16 @@ const EditProfile = () => {
                     <Form.Item
                       label="Email"
                       name="email"
-                      tooltip="Email không thể thay đổi, liên hệ phòng Nhân sự nếu cần"
+                      rules={[
+                        { required: true, message: "Vui lòng nhập email!" },
+                        { type: "email", message: "Email không hợp lệ!" },
+                      ]}
                     >
-                      <Input prefix={<MailOutlined />} disabled size="large" />
+                      <Input
+                        prefix={<MailOutlined />}
+                        placeholder="Nhập email công ty"
+                        size="large"
+                      />
                     </Form.Item>
                   </Col>
 
@@ -368,41 +410,26 @@ const EditProfile = () => {
                   </Col>
 
                   <Col xs={24} md={8}>
-                    <Form.Item
-                      label="Phòng ban"
-                      name="department"
-                      rules={[
-                        { required: true, message: "Vui lòng chọn phòng ban!" },
-                      ]}
-                    >
-                      <Select placeholder="Chọn phòng ban" size="large">
-                        {departmentOptions.map((dept) => (
-                          <Option key={dept.value} value={dept.value}>
-                            <Space>
-                              <TeamOutlined />
-                              {dept.label}
-                            </Space>
-                          </Option>
-                        ))}
-                      </Select>
+                    <Form.Item label="Phòng ban" name="department">
+                      <Input
+                        prefix={<TeamOutlined />}
+                        value={currentUser.department}
+                        disabled
+                        size="large"
+                        style={{ backgroundColor: "#f8fafc", color: "#64748b" }}
+                      />
                     </Form.Item>
                   </Col>
 
                   <Col xs={24} md={8}>
-                    <Form.Item
-                      label="Chức vụ"
-                      name="position"
-                      rules={[
-                        { required: true, message: "Vui lòng chọn chức vụ!" },
-                      ]}
-                    >
-                      <Select placeholder="Chọn chức vụ" size="large">
-                        {positionOptions.map((pos) => (
-                          <Option key={pos.value} value={pos.value}>
-                            {pos.label}
-                          </Option>
-                        ))}
-                      </Select>
+                    <Form.Item label="Chức vụ" name="position">
+                      <Input
+                        prefix={<IdcardOutlined />}
+                        value={currentUser.position}
+                        disabled
+                        size="large"
+                        style={{ backgroundColor: "#f8fafc", color: "#64748b" }}
+                      />
                     </Form.Item>
                   </Col>
                 </Row>
