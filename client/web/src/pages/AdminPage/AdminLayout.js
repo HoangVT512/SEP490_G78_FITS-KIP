@@ -11,6 +11,7 @@ import {
 import {
   DashboardOutlined,
   UserOutlined,
+  TeamOutlined,
   SettingOutlined,
   BarChartOutlined,
   MenuFoldOutlined,
@@ -27,6 +28,7 @@ import "../../styles/AdminLayout.css";
 // Import admin pages
 import AdminDashboard from "../AdminPage/AdminDashboard";
 import UserManagement from "../AdminPage/UserManagement";
+import DepartmentManagement from "../AdminPage/DepartmentManagement";
 import RoleManagement from "../AdminPage/RoleManagement";
 import SystemSettings from "../AdminPage/SystemSettings";
 import AdminReports from "../AdminPage/AdminReports";
@@ -61,6 +63,11 @@ const AdminLayout = () => {
       key: "users",
       icon: <UserOutlined />,
       label: "Quản lý người dùng",
+    },
+    {
+      key: "departments",
+      icon: <TeamOutlined />,
+      label: "Quản lý phòng ban",
     },
     {
       key: "roles",
@@ -120,6 +127,8 @@ const AdminLayout = () => {
         return <AdminDashboard showHeader={false} />;
       case "users":
         return <UserManagement showHeader={false} />;
+      case "departments":
+        return <DepartmentManagement showHeader={false} />;
       case "roles":
         return <RoleManagement showHeader={false} />;
       case "reports":
