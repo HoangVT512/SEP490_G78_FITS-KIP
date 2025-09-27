@@ -160,6 +160,22 @@ export const rememberGroup = css`
     color: #595959;
     font-size: 14px;
   }
+
+  /* Custom checkbox checked color */
+  .ant-checkbox-checked .ant-checkbox-inner {
+    background: #334766;
+    border-color: #334766;
+  }
+
+  /* Ensure the check mark is visible (white) */
+  .ant-checkbox-checked .ant-checkbox-inner::after {
+    border-color: #fff;
+  }
+
+  /* Hover state */
+  .ant-checkbox:hover .ant-checkbox-inner {
+    border-color: #334766;
+  }
 `;
 
 export const loginBtn = css`
