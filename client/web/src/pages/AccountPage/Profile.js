@@ -167,8 +167,11 @@ const Profile = () => {
                   }
                 />
                 <Tag
-                  color="rgba(255, 255, 255, 0.2)"
-                  style={{ color: "#fff", border: "none" }}
+                  style={{
+                    backgroundColor: "rgba(255, 255, 255, 0.2)",
+                    color: "#fff",
+                    border: "none",
+                  }}
                 >
                   {userInfo.role}
                 </Tag>
@@ -190,6 +193,7 @@ const Profile = () => {
                   type="primary"
                   icon={<EditOutlined />}
                   onClick={handleEditProfile}
+                  style={{ backgroundColor: "#334766", borderColor: "#334766" }}
                 >
                   Chỉnh sửa
                 </Button>
@@ -197,6 +201,9 @@ const Profile = () => {
             >
               <Tabs
                 defaultActiveKey="1"
+                style={{
+                  "--ant-primary-color": "#334766",
+                }}
                 items={[
                   {
                     key: "1",
@@ -212,7 +219,7 @@ const Profile = () => {
                           <Text strong>{userInfo.fullName}</Text>
                         </Descriptions.Item>
                         <Descriptions.Item label="Mã nhân viên">
-                          <Tag color="blue">{userInfo.employeeCode}</Tag>
+                          <Tag color="#334766">{userInfo.employeeCode}</Tag>
                         </Descriptions.Item>
                         <Descriptions.Item label="Giới tính">
                           {userInfo.gender}
@@ -353,6 +360,10 @@ const Profile = () => {
                             type="primary"
                             icon={<SafetyOutlined />}
                             onClick={handleChangePassword}
+                            style={{
+                              backgroundColor: "#334766",
+                              borderColor: "#334766",
+                            }}
                           >
                             Đổi mật khẩu
                           </Button>
