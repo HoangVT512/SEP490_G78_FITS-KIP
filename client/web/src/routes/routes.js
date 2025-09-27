@@ -15,8 +15,8 @@ import AdminReports from "../pages/AdminPage/AdminReports";
 export const routes = [
   {
     path: "/",
-    name: "Home",
-    page: DashboardPage,
+    name: "Login",
+    page: LoginPage,
     isShowHeader: true,
     requiredPermissions: 0,
   },

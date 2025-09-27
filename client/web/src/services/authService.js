@@ -14,15 +14,15 @@ export const authService = {
       });
 
       if (response.token) {
-        // Store token and user info
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('tokenExpiration', response.expiration);
-        localStorage.setItem('currentUser', JSON.stringify(response.user));
-        
+        // Store token and user info in sessionStorage (cleared when browser closes)
+        sessionStorage.setItem("token", response.token);
+        sessionStorage.setItem("tokenExpiration", response.expiration);
+        sessionStorage.setItem("currentUser", JSON.stringify(response.user));
+
         return response;
       }
-      
-      throw new Error('Invalid response from server');
+
+      throw new Error("Invalid response from server");
     } catch (error) {
       console.error("Login error:", error);
       throw new Error(error.message || "Đăng nhập thất bại");
@@ -32,8 +32,8 @@ export const authService = {
   // Logout
   logout: async () => {
     try {
-      const token = localStorage.getItem('token');
-      
+      const token = localStorage.getItem("token");
+
       if (token) {
         await apiRequest("/Auth/logout", {
           method: "POST",
@@ -42,10 +42,10 @@ export const authService = {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      // Always clear local storage
-      localStorage.removeItem('token');
-      localStorage.removeItem('tokenExpiration');
-      localStorage.removeItem('currentUser');
+      // Always clear session storage
+      sessionStorage.removeItem("token");
+      sessionStorage.removeItem("tokenExpiration");
+      sessionStorage.removeItem("currentUser");
     }
   },
 
@@ -63,41 +63,41 @@ export const authService = {
 
   // Check if user is logged in
   isLoggedIn: () => {
-    const token = localStorage.getItem('token');
-    const expiration = localStorage.getItem('tokenExpiration');
-    
+    const token = sessionStorage.getItem("token");
+    const expiration = sessionStorage.getItem("tokenExpiration");
+
     if (!token || !expiration) {
       return false;
     }
-    
+
     // Check if token is expired
     const now = new Date();
     const expirationDate = new Date(expiration);
-    
+
     if (now >= expirationDate) {
       authService.clearAuthData();
       return false;
     }
-    
+
     return true;
   },
 
   // Get stored user
   getStoredUser: () => {
-    const userStr = localStorage.getItem('currentUser');
+    const userStr = sessionStorage.getItem("currentUser");
     return userStr ? JSON.parse(userStr) : null;
   },
 
   // Get stored token
   getToken: () => {
-    return localStorage.getItem('token');
+    return sessionStorage.getItem("token");
   },
 
   // Clear authentication data
   clearAuthData: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('tokenExpiration');
-    localStorage.removeItem('currentUser');
+    sessionStorage.removeItem("token");
+    sessionStorage.removeItem("tokenExpiration");
+    sessionStorage.removeItem("currentUser");
   },
 
   // Check if user has admin role
@@ -106,16 +106,19 @@ export const authService = {
     if (!user || !authService.isLoggedIn()) {
       return false;
     }
-    
+
     // Check if user has admin role
-    return user.roles && (user.roles.includes('Quản trị viên') || user.roles.includes('QUANTRI'));
+    return (
+      user.roles &&
+      (user.roles.includes("Quản trị viên") || user.roles.includes("QUANTRI"))
+    );
   },
 
   // Get user roles
   getUserRoles: () => {
     const user = authService.getStoredUser();
     return user?.roles || [];
-  }
+  },
 };
 
 export default authService;

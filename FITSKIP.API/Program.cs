@@ -168,7 +168,7 @@ namespace FITSKIP.API
             }
 
             app.UseHttpsRedirection();
-            
+
             app.UseRouting();
 
             // Enable CORS

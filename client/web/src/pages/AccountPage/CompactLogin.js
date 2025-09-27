@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { Form, Input, Button, Radio, Checkbox, Typography, Space, message } from "antd";
+import {
+  Form,
+  Input,
+  Button,
+  Checkbox,
+  Typography,
+  Space,
+  message,
+} from "antd";
 import {
   UserOutlined,
   LockOutlined,
-  MailOutlined,
   LoginOutlined,
   SafetyOutlined,
 } from "@ant-design/icons";
@@ -16,29 +23,31 @@ const { Title } = Typography;
 const CompactLogin = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated, user, isAdmin, isLoggingOut } = useAuth();
-  const [useEmail, setUseEmail] = useState(false);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Don't auto-redirect if currently logging out
     if (isLoggingOut) {
-      console.log('Logout in progress, skipping auto-redirect');
+      console.log("Logout in progress, skipping auto-redirect");
       return;
     }
-    
+
     // Only redirect if both isAuthenticated is true AND user data exists with roles
     // This prevents redirect during logout process when isAuthenticated becomes false
     if (isAuthenticated && user && user.roles) {
-      console.log('Auto-redirecting authenticated user...');
-      console.log('Checking roles for redirect:', user.roles);
-      const isUserAdmin = user.roles && (user.roles.includes('Quản trị viên') || user.roles.includes('QUANTRI'));
-      console.log('Is admin:', isUserAdmin);
-      
+      console.log("Auto-redirecting authenticated user...");
+      console.log("Checking roles for redirect:", user.roles);
+      const isUserAdmin =
+        user.roles &&
+        (user.roles.includes("Quản trị viên") ||
+          user.roles.includes("QUANTRI"));
+      console.log("Is admin:", isUserAdmin);
+
       if (isUserAdmin) {
-        console.log('Redirecting to admin page');
+        console.log("Redirecting to admin page");
         navigate("/admin");
       } else {
-        console.log('Redirecting to dashboard');
+        console.log("Redirecting to dashboard");
         navigate("/dashboard");
       }
     }
@@ -47,21 +56,24 @@ const CompactLogin = () => {
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      const loginId = useEmail ? values.email : values.employeeCode;
+      const loginId = values.loginId; // Nhận cả email hoặc mã nhân viên
       const response = await login(loginId, values.password, values.remember);
-      
+
       message.success("Đăng nhập thành công!");
-      
+
       // Redirect based on user role
-      console.log('Checking roles for redirect:', response.user?.roles);
-      const isAdmin = response.user.roles && (response.user.roles.includes('Quản trị viên') || response.user.roles.includes('QUANTRI'));
-      console.log('Is admin:', isAdmin);
-      
+      console.log("Checking roles for redirect:", response.user?.roles);
+      const isAdmin =
+        response.user.roles &&
+        (response.user.roles.includes("Quản trị viên") ||
+          response.user.roles.includes("QUANTRI"));
+      console.log("Is admin:", isAdmin);
+
       if (isAdmin) {
-        console.log('Redirecting to admin page');
+        console.log("Redirecting to admin page");
         navigate("/admin");
       } else {
-        console.log('Redirecting to dashboard');
+        console.log("Redirecting to dashboard");
         navigate("/dashboard");
       }
     } catch (error) {
@@ -151,17 +163,6 @@ const CompactLogin = () => {
     fontSize: "22px !important",
   };
 
-  const toggleGroupStyle = {
-    marginBottom: "20px",
-    width: "100%",
-  };
-
-  const radioGroupStyle = {
-    width: "100%",
-    display: "flex",
-    justifyContent: "center",
-  };
-
   const inputStyle = {
     marginBottom: "16px",
   };
@@ -217,49 +218,23 @@ const CompactLogin = () => {
                 </Space>
               </div>
 
-              <div style={toggleGroupStyle}>
-                <Radio.Group
-                  value={useEmail ? "email" : "employeeCode"}
-                  onChange={(e) => setUseEmail(e.target.value === "email")}
-                  style={radioGroupStyle}
-                >
-                  <Radio value="employeeCode">Mã nhân viên</Radio>
-                  <Radio value="email">Email</Radio>
-                </Radio.Group>
-              </div>
-
-              {!useEmail ? (
-                <Form.Item
-                  name="employeeCode"
-                  rules={[
-                    { required: true, message: "Vui lòng nhập mã nhân viên!" },
-                  ]}
-                  style={inputStyle}
-                  label="Mã nhân viên"
-                >
-                  <Input
-                    prefix={<UserOutlined />}
-                    placeholder="Nhập mã nhân viên (VD: ADM001)"
-                    size="large"
-                  />
-                </Form.Item>
-              ) : (
-                <Form.Item
-                  name="email"
-                  rules={[
-                    { required: true, message: "Vui lòng nhập email!" },
-                    { type: "email", message: "Email không hợp lệ!" },
-                  ]}
-                  style={inputStyle}
-                  label="Email"
-                >
-                  <Input
-                    prefix={<MailOutlined />}
-                    placeholder="Nhập email công ty"
-                    size="large"
-                  />
-                </Form.Item>
-              )}
+              <Form.Item
+                name="loginId"
+                rules={[
+                  {
+                    required: true,
+                    message: "Vui lòng nhập email hoặc mã nhân viên!",
+                  },
+                ]}
+                style={inputStyle}
+                label="Email hoặc Mã nhân viên"
+              >
+                <Input
+                  prefix={<UserOutlined />}
+                  placeholder="Nhập email hoặc mã nhân viên (VD: admin@company.com hoặc ADM001)"
+                  size="large"
+                />
+              </Form.Item>
 
               <Form.Item
                 name="password"

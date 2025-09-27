@@ -17,16 +17,10 @@ function App() {
         <Routes>
           {routes.map((route, idx) => {
             const element = <route.page showHeader={route.isShowHeader} />;
-            
+
             if (route.requiredPermissions === 0) {
               // Public routes
-              return (
-                <Route
-                  key={idx}
-                  path={route.path}
-                  element={element}
-                />
-              );
+              return <Route key={idx} path={route.path} element={element} />;
             } else if (route.requiredPermissions === 1) {
               // Authenticated user routes
               return (
@@ -42,7 +36,11 @@ function App() {
                 <Route
                   key={idx}
                   path={route.path}
-                  element={<ProtectedRoute requireAdmin={true}>{element}</ProtectedRoute>}
+                  element={
+                    <ProtectedRoute requireAdmin={true}>
+                      {element}
+                    </ProtectedRoute>
+                  }
                 />
               );
             }
