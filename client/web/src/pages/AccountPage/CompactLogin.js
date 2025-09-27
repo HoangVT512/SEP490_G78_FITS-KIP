@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Form, Input, Button, Radio, Checkbox, Typography, Space } from "antd";
+import React, { useState, useEffect } from "react";
+import { Form, Input, Button, Radio, Checkbox, Typography, Space, message } from "antd";
 import {
   UserOutlined,
   LockOutlined,
@@ -9,22 +9,66 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
+import { useAuth } from "../../contexts/AuthContext";
 
 const { Title } = Typography;
 
 const CompactLogin = () => {
   const navigate = useNavigate();
+  const { login, isAuthenticated, user, isAdmin, isLoggingOut } = useAuth();
   const [useEmail, setUseEmail] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const onFinish = (values) => {
-    // TODO: Implement login logic here
-    const loginId = useEmail ? values.email : values.employeeCode;
-    console.log("Thông tin đăng nhập:", {
-      loaiDangNhap: useEmail ? "Email" : "Mã nhân viên",
-      taiKhoan: loginId,
-      matKhau: values.password,
-      ghinhoMatKhau: values.remember,
-    });
+  useEffect(() => {
+    // Don't auto-redirect if currently logging out
+    if (isLoggingOut) {
+      console.log('Logout in progress, skipping auto-redirect');
+      return;
+    }
+    
+    // Only redirect if both isAuthenticated is true AND user data exists with roles
+    // This prevents redirect during logout process when isAuthenticated becomes false
+    if (isAuthenticated && user && user.roles) {
+      console.log('Auto-redirecting authenticated user...');
+      console.log('Checking roles for redirect:', user.roles);
+      const isUserAdmin = user.roles && (user.roles.includes('Quản trị viên') || user.roles.includes('QUANTRI'));
+      console.log('Is admin:', isUserAdmin);
+      
+      if (isUserAdmin) {
+        console.log('Redirecting to admin page');
+        navigate("/admin");
+      } else {
+        console.log('Redirecting to dashboard');
+        navigate("/dashboard");
+      }
+    }
+  }, [isAuthenticated, user, navigate, isLoggingOut]);
+
+  const onFinish = async (values) => {
+    setLoading(true);
+    try {
+      const loginId = useEmail ? values.email : values.employeeCode;
+      const response = await login(loginId, values.password, values.remember);
+      
+      message.success("Đăng nhập thành công!");
+      
+      // Redirect based on user role
+      console.log('Checking roles for redirect:', response.user?.roles);
+      const isAdmin = response.user.roles && (response.user.roles.includes('Quản trị viên') || response.user.roles.includes('QUANTRI'));
+      console.log('Is admin:', isAdmin);
+      
+      if (isAdmin) {
+        console.log('Redirecting to admin page');
+        navigate("/admin");
+      } else {
+        console.log('Redirecting to dashboard');
+        navigate("/dashboard");
+      }
+    } catch (error) {
+      message.error(error.message || "Đăng nhập thất bại!");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Inline styles to bypass cache
@@ -261,10 +305,11 @@ const CompactLogin = () => {
                   type="primary"
                   htmlType="submit"
                   size="large"
-                  icon={<LoginOutlined />}
+                  loading={loading}
+                  icon={!loading && <LoginOutlined />}
                   style={buttonStyle}
                 >
-                  Đăng nhập vào hệ thống
+                  {loading ? "Đang đăng nhập..." : "Đăng nhập vào hệ thống"}
                 </Button>
               </Form.Item>
             </Form>
