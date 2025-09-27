@@ -149,13 +149,6 @@ namespace FITSKIP.API
 
             var app = builder.Build();
 
-            // Seed data
-            using (var scope = app.Services.CreateScope())
-            {
-                var context = scope.ServiceProvider.GetRequiredService<FitskipDbContext>();
-                await SeedData.SeedAsync(context);
-            }
-
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
@@ -184,7 +177,7 @@ namespace FITSKIP.API
             using (var scope = app.Services.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<FitskipDbContext>();
-                await SeedData.SeedAsync(context);
+                await SeedData.SeedAllData(context);
             }
 
             app.Run();
