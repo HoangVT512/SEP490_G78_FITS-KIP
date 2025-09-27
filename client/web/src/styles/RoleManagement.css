@@ -1,17 +1,55 @@
 .role-management-page .table-container {
-  overflow: visible;
+  overflow: auto;
 }
 
 .role-management-page .ant-table-tbody > tr > td {
-  overflow: visible;
+  overflow: hidden;
+  position: relative;
 }
 
-.role-management-page .ant-table-tbody > tr:hover {
-  z-index: 5;
-  position: relative;
+.role-management-page .ant-table-tbody > tr:hover > td {
+  z-index: 1;
 }
 
 .role-management-page .ant-tag,
 .role-management-page .ant-tooltip {
-  z-index: 9999;
+  z-index: 1000;
+}
+
+.role-management-page .ant-dropdown {
+  z-index: 1050;
+}
+
+.role-management-page .ant-modal {
+  z-index: 1100;
+}
+
+/* Custom pagination colors */
+.role-management-page .ant-pagination-item {
+  border-color: #334766;
+}
+
+.role-management-page .ant-pagination-item a {
+  color: #334766;
+}
+
+.role-management-page .ant-pagination-item-active {
+  background-color: #334766;
+  border-color: #334766;
+}
+
+.role-management-page .ant-pagination-item-active a {
+  color: #fff;
+}
+
+.role-management-page .ant-pagination-prev .ant-pagination-item-link,
+.role-management-page .ant-pagination-next .ant-pagination-item-link {
+  color: #334766;
+  border-color: #334766;
+}
+
+.role-management-page .ant-pagination-prev:hover .ant-pagination-item-link,
+.role-management-page .ant-pagination-next:hover .ant-pagination-item-link {
+  color: #334766;
+  border-color: #334766;
 }

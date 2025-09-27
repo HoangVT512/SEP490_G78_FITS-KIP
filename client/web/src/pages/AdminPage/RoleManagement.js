@@ -592,7 +592,7 @@ const RoleManagement = ({ showHeader = true }) => {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      width: 120,
+      width: 150,
       render: (status, record) => (
         <Space direction="vertical" size={2}>
           <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>
@@ -611,7 +611,7 @@ const RoleManagement = ({ showHeader = true }) => {
       width: 120,
       align: "center",
       render: (count) => (
-        <Badge count={count} showZero style={{ backgroundColor: "#52c41a" }} />
+        <Badge count={count} showZero style={{ backgroundColor: "#334766" }} />
       ),
     },
     {
@@ -743,7 +743,7 @@ const RoleManagement = ({ showHeader = true }) => {
               level={2}
               style={{ margin: 0, display: "flex", alignItems: "center" }}
             >
-              <SafetyOutlined style={{ marginRight: 8, color: "#1890ff" }} />
+              <SafetyOutlined style={{ marginRight: 8, color: "#334766" }} />
               Quản lý vai trò
             </Title>
             <Text type="secondary">
@@ -754,14 +754,25 @@ const RoleManagement = ({ showHeader = true }) => {
           {/* Action Bar */}
           <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
             <Col xs={24} sm={12} md={8} lg={6}>
-              <Search
-                placeholder="Tìm kiếm vai trò..."
-                allowClear
-                enterButton={<SearchOutlined />}
-                size="large"
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-              />
+              <Input.Group compact>
+                <Input
+                  placeholder="Tìm kiếm vai trò..."
+                  size="large"
+                  value={searchText}
+                  onChange={(e) => setSearchText(e.target.value)}
+                  style={{ width: "calc(100% - 40px)" }}
+                />
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<SearchOutlined />}
+                  style={{
+                    backgroundColor: "#334766",
+                    borderColor: "#334766",
+                    width: "40px",
+                  }}
+                />
+              </Input.Group>
             </Col>
             <Col xs={24} sm={12} md={16} lg={18}>
               <div
@@ -781,6 +792,7 @@ const RoleManagement = ({ showHeader = true }) => {
                     form.resetFields();
                     setIsModalVisible(true);
                   }}
+                  style={{ backgroundColor: "#334766", borderColor: "#334766" }}
                 >
                   Tạo vai trò mới
                 </Button>
@@ -810,7 +822,7 @@ const RoleManagement = ({ showHeader = true }) => {
             <Col span={6}>
               <Card size="small" style={{ textAlign: "center" }}>
                 <div
-                  style={{ fontSize: 24, fontWeight: 600, color: "#1890ff" }}
+                  style={{ fontSize: 24, fontWeight: 600, color: "#334766" }}
                 >
                   {roles.length}
                 </div>
@@ -850,7 +862,7 @@ const RoleManagement = ({ showHeader = true }) => {
           </Row>
 
           {/* Table */}
-          <div className="table-container" style={{ overflow: "visible" }}>
+          <div className="table-container" style={{ overflow: "auto" }}>
             <Table
               columns={columns}
               dataSource={filteredRoles}
@@ -888,6 +900,11 @@ const RoleManagement = ({ showHeader = true }) => {
           onOk={() => form.submit()}
           width={600}
           destroyOnClose
+          okText={editingRole ? "Cập nhật" : "Tạo mới"}
+          cancelText="Hủy"
+          okButtonProps={{
+            style: { backgroundColor: "#334766", borderColor: "#334766" },
+          }}
         >
           <Form form={form} layout="vertical" onFinish={handleModalSubmit}>
             <Form.Item
@@ -1040,6 +1057,11 @@ const RoleManagement = ({ showHeader = true }) => {
           onOk={() => permissionForm.submit()}
           width={900}
           destroyOnClose
+          okText="Lưu thay đổi"
+          cancelText="Hủy"
+          okButtonProps={{
+            style: { backgroundColor: "#334766", borderColor: "#334766" },
+          }}
         >
           {viewingRole?.isSystemRole && (
             <Alert
@@ -1073,7 +1095,7 @@ const RoleManagement = ({ showHeader = true }) => {
                   <div key={category.category} style={{ marginBottom: 24 }}>
                     <Title
                       level={5}
-                      style={{ marginBottom: 12, color: "#1890ff" }}
+                      style={{ marginBottom: 12, color: "#334766" }}
                     >
                       {category.category}
                     </Title>
