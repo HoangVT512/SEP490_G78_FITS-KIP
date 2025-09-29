@@ -48,14 +48,7 @@ const NotFoundPage = ({
           <Paragraph className="error-message">{message}</Paragraph>
 
           <div className="path-info">
-            <Text
-              strong
-              style={{
-                color: "#374151",
-                display: "block",
-                marginBottom: "8px",
-              }}
-            >
+            <Text strong className="notfound-path-label">
               Đường dẫn hiện tại:
             </Text>
             <Text code className="path-code">
@@ -63,8 +56,12 @@ const NotFoundPage = ({
             </Text>
           </div>
 
-          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-            <Text style={{ color: "#6b7280", fontSize: "14px" }}>
+          <Space
+            direction="vertical"
+            size="middle"
+            className="notfound-full-width"
+          >
+            <Text className="notfound-suggestion-text">
               Bạn có thể thử các hành động sau:
             </Text>
 

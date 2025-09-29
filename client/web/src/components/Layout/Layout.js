@@ -1,6 +1,6 @@
 import React from "react";
 import { Layout as AntLayout, Typography } from "antd";
-import { layoutContainer, footerStyle, contentStyle } from "./layout.style";
+import "../../styles/components/Layout.css";
 import CustomHeader from "./CustomHeader";
 
 const { Footer, Content } = AntLayout;
@@ -8,13 +8,13 @@ const { Text } = Typography;
 
 const Layout = ({ children, showHeader = true, showFooter = true }) => {
   return (
-    <AntLayout css={layoutContainer}>
+    <AntLayout className="layout-container">
       {showHeader && <CustomHeader />}
 
-      <Content css={contentStyle}>{children}</Content>
+      <Content className="layout-content">{children}</Content>
 
       {showFooter && (
-        <Footer css={footerStyle}>
+        <Footer className="layout-footer">
           <Text>
             © FITS-KIP Management System. Hệ thống quản lý bảo trì nhà máy.
           </Text>

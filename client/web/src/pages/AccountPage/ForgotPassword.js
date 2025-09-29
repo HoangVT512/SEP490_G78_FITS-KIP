@@ -19,7 +19,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
-import { styles } from "./forgotPassword.styles";
+import "../../styles/pages/ForgotPassword.css";
 
 const { Title, Text } = Typography;
 
@@ -56,7 +56,7 @@ const ForgotPassword = ({ onRequestReset }) => {
       layout="vertical"
       autoComplete="off"
     >
-      <div style={styles.headerStyle}>
+      <div className="auth-header">
         <Space direction="vertical" size="small">
           <KeyOutlined style={{ fontSize: "36px", color: "#334766" }} />
           <Title
@@ -81,16 +81,14 @@ const ForgotPassword = ({ onRequestReset }) => {
         description={
           <div>
             <p style={{ margin: "8px 0" }}>
-              <strong>Bước 1:</strong> Chọn phương thức nhận mã OTP (Email
-              hoặc SMS)
+              <strong>Bước 1:</strong> Chọn phương thức nhận mã OTP (Email hoặc
+              SMS)
             </p>
             <p style={{ margin: "8px 0" }}>
-              <strong>Bước 2:</strong> Nhập email hoặc số điện thoại đã
-              đăng ký
+              <strong>Bước 2:</strong> Nhập email hoặc số điện thoại đã đăng ký
             </p>
             <p style={{ margin: "8px 0" }}>
-              <strong>Bước 3:</strong> Nhập mã OTP 6 số và đặt mật khẩu
-              mới
+              <strong>Bước 3:</strong> Nhập mã OTP 6 số và đặt mật khẩu mới
             </p>
           </div>
         }
@@ -115,36 +113,40 @@ const ForgotPassword = ({ onRequestReset }) => {
           <Space direction="vertical" style={{ width: "100%" }}>
             <Card
               hoverable
-              style={styles.methodCardStyle(contactType === "email")}
+              className={`method-card ${
+                contactType === "email"
+                  ? "method-card-selected"
+                  : "method-card-default"
+              }`}
               onClick={() => {
                 setContactType("email");
                 form.resetFields(["email", "phone"]);
               }}
             >
               <Radio value="email" style={{ marginRight: "12px" }} />
-              <MailOutlined
-                style={{ marginRight: "8px", color: "#334766" }}
-              />
+              <MailOutlined style={{ marginRight: "8px", color: "#334766" }} />
               <strong>Gửi OTP qua Email</strong>
-              <div style={styles.methodCardDescriptionStyle}>
+              <div className="method-card-description">
                 Mã OTP sẽ được gửi đến email của bạn
               </div>
             </Card>
 
             <Card
               hoverable
-              style={styles.methodCardStyle(contactType === "phone")}
+              className={`method-card ${
+                contactType === "phone"
+                  ? "method-card-selected"
+                  : "method-card-default"
+              }`}
               onClick={() => {
                 setContactType("phone");
                 form.resetFields(["email", "phone"]);
               }}
             >
               <Radio value="phone" style={{ marginRight: "12px" }} />
-              <PhoneOutlined
-                style={{ marginRight: "8px", color: "#059669" }}
-              />
+              <PhoneOutlined style={{ marginRight: "8px", color: "#059669" }} />
               <strong>Gửi OTP qua SMS</strong>
-              <div style={styles.methodCardDescriptionStyle}>
+              <div className="method-card-description">
                 Mã OTP sẽ được gửi đến số điện thoại của bạn
               </div>
             </Card>
@@ -196,16 +198,12 @@ const ForgotPassword = ({ onRequestReset }) => {
           type="primary"
           htmlType="submit"
           loading={loading}
-          style={styles.buttonStyle}
-          icon={
-            contactType === "email" ? <MailOutlined /> : <PhoneOutlined />
-          }
+          className="auth-button"
+          icon={contactType === "email" ? <MailOutlined /> : <PhoneOutlined />}
         >
           {loading
             ? "Đang gửi mã OTP..."
-            : `Gửi mã OTP qua ${
-                contactType === "email" ? "Email" : "SMS"
-              }`}
+            : `Gửi mã OTP qua ${contactType === "email" ? "Email" : "SMS"}`}
         </Button>
       </Form.Item>
 

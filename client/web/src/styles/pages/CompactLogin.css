@@ -1,0 +1,40 @@
+/* CompactLogin.css */
+
+.compact-login-icon {
+  font-size: 36px !important;
+  color: #334766 !important;
+}
+
+.compact-login-description {
+  color: #64748b !important;
+  font-size: 14px !important;
+}
+
+.compact-login-form-item-large {
+  margin-bottom: 24px !important;
+}
+
+.compact-login-form-item-no-margin {
+  margin-bottom: 0 !important;
+}
+
+.compact-login-button {
+  width: 100%;
+  height: 44px;
+  font-size: 15px;
+  font-weight: 600;
+  background: #334766;
+  border-color: #334766;
+  border-radius: 8px;
+}
+
+.compact-login-forgot-link {
+  color: #334766;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.compact-login-forgot-link:hover {
+  color: #1e293b !important;
+  text-decoration: underline !important;
+}

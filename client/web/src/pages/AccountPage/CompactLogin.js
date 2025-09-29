@@ -47,8 +47,8 @@ const CompactLogin = () => {
         console.log("Redirecting to admin page");
         navigate("/admin");
       } else {
-        console.log("Redirecting to dashboard");
-        navigate("/dashboard");
+        console.log("Redirecting to admin");
+        navigate("/admin");
       }
     }
   }, [isAuthenticated, user, navigate, isLoggingOut]);
@@ -61,21 +61,9 @@ const CompactLogin = () => {
 
       message.success("Đăng nhập thành công!");
 
-      // Redirect based on user role
-      console.log("Checking roles for redirect:", response.user?.roles);
-      const isAdmin =
-        response.user.roles &&
-        (response.user.roles.includes("Quản trị viên") ||
-          response.user.roles.includes("QUANTRI"));
-      console.log("Is admin:", isAdmin);
-
-      if (isAdmin) {
-        console.log("Redirecting to admin page");
-        navigate("/admin");
-      } else {
-        console.log("Redirecting to dashboard");
-        navigate("/dashboard");
-      }
+      // Redirect all authenticated users to admin
+      console.log("Redirecting to admin page for all users");
+      navigate("/admin");
     } catch (error) {
       message.error(error.message || "Đăng nhập thất bại!");
     } finally {

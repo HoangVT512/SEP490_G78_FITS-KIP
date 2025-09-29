@@ -1,0 +1,97 @@
+/* Profile.css */
+
+.profile-page-container {
+  padding: 24px;
+  background-color: #f8fafc;
+  min-height: calc(100vh - 70px);
+}
+
+.profile-header-card {
+  background: linear-gradient(135deg, #334766 0%, #1e293b 100%);
+  border: none;
+  border-radius: 16px;
+  margin-bottom: 24px;
+}
+
+.profile-header-title {
+  color: #fff !important;
+  margin-bottom: 8px !important;
+}
+
+.profile-header-subtitle {
+  font-size: 16px !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+.profile-header-status-space {
+  margin-top: 16px !important;
+}
+
+.profile-status-text {
+  color: #fff !important;
+}
+
+.profile-edit-button {
+  background: rgba(255, 255, 255, 0.2) !important;
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  color: #fff !important;
+}
+
+.profile-edit-button:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+  border-color: rgba(255, 255, 255, 0.4) !important;
+  color: #fff !important;
+}
+
+.profile-change-password-button {
+  background-color: #334766 !important;
+  border-color: #334766 !important;
+}
+
+.profile-avatar-section {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.profile-save-button {
+  background-color: #334766 !important;
+  border-color: #334766 !important;
+  margin-top: 16px !important;
+}
+
+.profile-timeline-section {
+  margin-bottom: 24px !important;
+}
+
+.profile-timeline-empty {
+  text-align: center !important;
+}
+
+/* Contact Info Icons */
+.profile-icon-email {
+  color: #334766 !important;
+}
+
+.profile-icon-phone {
+  color: #334766 !important;
+}
+
+.profile-icon-department {
+  color: #334766 !important;
+}
+
+.profile-icon-activity {
+  color: #334766 !important;
+}
+
+.profile-icon-verified {
+  color: #059669 !important;
+}
+
+.profile-timeline-icon {
+  font-size: 16px !important;
+}
+
+.profile-timeline-date {
+  font-size: 12px !important;
+}

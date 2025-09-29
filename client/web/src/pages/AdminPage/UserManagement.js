@@ -48,6 +48,7 @@ import {
   ClockCircleOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
+import "../../styles/pages/UserManagement.css";
 import Layout from "../../components/Layout/Layout";
 import dayjs from "dayjs";
 import { userService } from "../../services/userService";
@@ -651,25 +652,12 @@ const UserManagement = ({ showHeader = true }) => {
     form.resetFields();
   };
 
-  const cardStyle = {
-    background: "#ffffff",
-    borderRadius: "12px",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
-    border: "1px solid #e2e8f0",
-  };
-
-  const contentStyle = {
-    padding: "24px",
-    backgroundColor: "#f8fafc",
-    minHeight: "calc(100vh - 70px)",
-  };
-
   const content = (
-    <div style={contentStyle}>
-      <Card style={cardStyle}>
-        <div style={{ marginBottom: "24px" }}>
-          <Title level={3} style={{ margin: 0, color: "#1f2937" }}>
-            <UserOutlined style={{ marginRight: "8px", color: "#334766" }} />
+    <div className="user-management-container">
+      <Card className="user-management-card">
+        <div className="user-management-header">
+          <Title level={3} className="user-management-title">
+            <UserOutlined className="user-management-title-icon" />
             Quản lý người dùng
           </Title>
           <Text type="secondary">
@@ -677,21 +665,21 @@ const UserManagement = ({ showHeader = true }) => {
           </Text>
         </div>
 
-        <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+        <Row gutter={[16, 16]} className="user-search-controls">
           <Col xs={24} sm={12} md={8}>
             <Search
               placeholder="Tìm kiếm theo tên, email, mã NV..."
               allowClear
               onSearch={handleSearch}
               onChange={(e) => setSearchText(e.target.value)}
-              style={{ width: "100%" }}
+              className="user-search-input"
             />
           </Col>
           <Col xs={24} sm={12} md={4}>
             <Select
               value={filters.status}
               onChange={(value) => setFilters({ ...filters, status: value })}
-              style={{ width: "100%" }}
+              className="user-search-input"
               placeholder="Trạng thái"
             >
               <Option value="all">Tất cả trạng thái</Option>

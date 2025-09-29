@@ -18,6 +18,22 @@
   }
 }
 
+/* Additional utility classes for inline style replacement */
+.notfound-path-label {
+  color: #374151;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.notfound-suggestion-text {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.notfound-full-width {
+  width: 100%;
+}
+
 .not-found-container {
   min-height: calc(100vh - 140px);
   display: flex;

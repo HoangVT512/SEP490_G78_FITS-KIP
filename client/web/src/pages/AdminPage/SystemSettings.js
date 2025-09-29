@@ -38,6 +38,7 @@ import {
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
 import dayjs from "dayjs";
+import "../../styles/pages/SystemSettings.css";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;

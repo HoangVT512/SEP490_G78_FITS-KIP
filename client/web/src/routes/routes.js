@@ -3,7 +3,6 @@ import ResetPasswordPage from "../pages/AccountPage/ResetPassword";
 import ProfilePage from "../pages/AccountPage/Profile";
 import EditProfilePage from "../pages/AccountPage/EditProfile";
 import ChangePasswordPage from "../pages/AccountPage/ChangePassword";
-import DashboardPage from "../pages/DashboardPage";
 import AdminLayout from "../pages/AdminPage/AdminLayout";
 // Keep individual imports for potential standalone use
 import UserManagement from "../pages/AdminPage/UserManagement";
@@ -24,13 +23,6 @@ export const routes = [
     path: "/login",
     name: "Login",
     page: LoginPage,
-    isShowHeader: true,
-    requiredPermissions: 0,
-  },
-  {
-    path: "/dashboard",
-    name: "Dashboard",
-    page: DashboardPage,
     isShowHeader: true,
     requiredPermissions: 0,
   },

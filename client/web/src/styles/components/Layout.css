@@ -1,0 +1,44 @@
+/* Layout Component Styles */
+
+.layout-container {
+  min-height: 100vh;
+}
+
+.layout-header {
+  background: linear-gradient(135deg, #334766 0%, #283652 100%) !important;
+  padding: 0 32px !important;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15) !important;
+  height: 70px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.layout-header .header-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+}
+
+.layout-header .company-name {
+  color: #fff !important;
+  font-size: 20px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.layout-content {
+  background: #f0f2f5;
+  min-height: calc(100vh - 134px);
+}
+
+.layout-footer {
+  text-align: center;
+  background: #fafafa;
+  border-top: 1px solid #e8e8e8;
+}
+
+.layout-footer span {
+  color: #8c8c8c;
+  font-size: 12px;
+}

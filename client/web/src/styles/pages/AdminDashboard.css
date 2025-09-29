@@ -1,0 +1,84 @@
+/* AdminDashboard.css */
+
+.admin-dashboard-container {
+  padding: 24px;
+  background-color: #f8fafc;
+  min-height: calc(100vh - 70px);
+}
+
+.admin-dashboard-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+}
+
+.admin-dashboard-header {
+  margin-bottom: 24px;
+}
+
+.admin-dashboard-title {
+  margin: 0 !important;
+  color: #1f2937 !important;
+}
+
+.admin-dashboard-title-icon {
+  margin-right: 8px;
+  color: #334766;
+}
+
+.admin-dashboard-stats-row {
+  margin-bottom: 24px;
+}
+
+.admin-dashboard-stat-value {
+  color: #1f2937 !important;
+}
+
+.admin-dashboard-stat-description {
+  font-size: 12px !important;
+}
+
+.admin-dashboard-trend-positive {
+  color: #10b981 !important;
+  margin-right: 4px !important;
+}
+
+/* Activity Log Icons */
+.activity-icon-login {
+  color: #52c41a !important;
+}
+
+.activity-icon-logout {
+  color: #1890ff !important;
+}
+
+.activity-icon-update {
+  color: #722ed1 !important;
+}
+
+.activity-icon-failed-login {
+  color: #fa8c16 !important;
+}
+
+.activity-icon-account-locked {
+  color: #ff4d4f !important;
+}
+
+/* Stats Icons */
+.stats-icon-users {
+  color: #334766 !important;
+}
+
+.stats-icon-active {
+  color: #10b981 !important;
+}
+
+.stats-icon-departments {
+  color: #7c3aed !important;
+}
+
+.stats-icon-security {
+  color: #dc2626 !important;
+}

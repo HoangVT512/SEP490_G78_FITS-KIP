@@ -1,0 +1,152 @@
+/* UserManagement.css */
+
+.user-management-container {
+  padding: 24px;
+  background-color: #f8fafc;
+  min-height: calc(100vh - 70px);
+}
+
+.user-management-card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.user-management-header {
+  margin-bottom: 24px;
+}
+
+.user-management-title {
+  margin: 0 !important;
+  color: #1f2937 !important;
+}
+
+.user-management-title-icon {
+  margin-right: 8px;
+  color: #334766;
+}
+
+.user-search-controls {
+  margin-bottom: 24px;
+}
+
+.user-search-input {
+  width: 100%;
+}
+
+.user-action-buttons {
+  margin-top: 16px;
+}
+
+.user-primary-button {
+  background-color: #334766 !important;
+  border-color: #334766 !important;
+}
+
+.user-modal-content {
+  padding: 20px 0;
+}
+
+.user-modal-search {
+  margin-bottom: 16px;
+}
+
+.user-modal-search-input {
+  width: 100%;
+}
+
+.user-form-container {
+  margin-top: 16px;
+}
+
+.user-details-container {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.user-detail-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-detail-section {
+  margin-bottom: 16px;
+}
+
+.user-detail-item {
+  margin-bottom: 8px;
+}
+
+.user-detail-label {
+  font-weight: 500;
+}
+
+.user-avatar-primary {
+  background-color: #334766;
+}
+
+.user-name-display {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.user-role-display {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.user-contact-item {
+  margin-bottom: 4px;
+}
+
+.user-contact-icon {
+  color: #334766;
+  margin-right: 6px;
+}
+
+.user-contact-text {
+  font-size: 13px;
+}
+
+.user-contact-copy {
+  margin-left: 6px;
+}
+
+.user-department-icon {
+  color: #334766;
+  margin-right: 6px;
+}
+
+.user-datetime-text {
+  font-size: 13px;
+}
+
+.user-info-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-info-avatar {
+  background-color: #334766;
+}
+
+.user-info-name {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.user-info-meta {
+  margin-top: 4px;
+  font-size: 13px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-info-separator {
+  color: #e5e7eb;
+}
