@@ -25,7 +25,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import "../../styles/AdminLayout.css";
+import "../../styles/components/AdminLayout.css";
 
 // Import admin pages
 import AdminDashboard from "../AdminPage/AdminDashboard";

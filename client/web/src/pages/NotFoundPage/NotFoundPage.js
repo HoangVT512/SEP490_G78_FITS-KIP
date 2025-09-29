@@ -8,7 +8,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import Layout from "../../components/Layout";
-import "../../styles/NotFoundPage.css";
+import "../../styles/pages/NotFoundPage.css";
 
 const { Title, Text, Paragraph } = Typography;
 
