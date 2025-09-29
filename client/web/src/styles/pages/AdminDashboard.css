@@ -82,3 +82,34 @@
 .stats-icon-security {
   color: #dc2626 !important;
 }
+
+/* Activity and Alert Lists */
+.admin-dashboard-activity-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.admin-dashboard-activity-time {
+  font-size: 12px;
+}
+
+.admin-dashboard-alert-time {
+  font-size: 12px;
+}
+
+/* System Status */
+.admin-dashboard-system-status-row {
+  margin-top: 24px;
+}
+
+.admin-dashboard-progress-container {
+  text-align: center;
+}
+
+.admin-dashboard-progress-label {
+  margin-top: 8px;
+}
+
+.admin-dashboard-progress-title {
+  font-weight: bold;
+}

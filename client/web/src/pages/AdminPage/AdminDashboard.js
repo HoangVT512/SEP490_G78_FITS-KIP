@@ -34,6 +34,7 @@ import {
 import Layout from "../../components/Layout/Layout";
 import { Line, Column, Pie } from "@ant-design/plots";
 import dayjs from "dayjs";
+import "../../styles/pages/AdminDashboard.css";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -195,24 +196,11 @@ const AdminDashboard = ({ showHeader = true }) => {
     },
   };
 
-  const cardStyle = {
-    background: "#ffffff",
-    borderRadius: "12px",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
-    border: "1px solid #e2e8f0",
-  };
-
-  const contentStyle = {
-    padding: "24px",
-    backgroundColor: "#f8fafc",
-    minHeight: "calc(100vh - 70px)",
-  };
-
   const content = (
-    <div style={contentStyle}>
-      <div style={{ marginBottom: "24px" }}>
-        <Title level={3} style={{ margin: 0, color: "#1f2937" }}>
-          <DashboardOutlined style={{ marginRight: "8px", color: "#334766" }} />
+    <div className="admin-dashboard-container">
+      <div className="admin-dashboard-header">
+        <Title level={3} className="admin-dashboard-title">
+          <DashboardOutlined className="admin-dashboard-title-icon" />
           Dashboard quản trị viên
         </Title>
         <Text type="secondary">
@@ -221,37 +209,37 @@ const AdminDashboard = ({ showHeader = true }) => {
       </div>
 
       {/* Statistics Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+      <Row gutter={[16, 16]} className="admin-dashboard-stats-row">
         <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle}>
+          <Card className="admin-dashboard-card">
             <Statistic
               title="Tổng người dùng"
               value={stats.totalUsers}
               prefix={<UserOutlined style={{ color: "#334766" }} />}
               valueStyle={{ color: "#1f2937" }}
             />
-            <Text type="secondary" style={{ fontSize: "12px" }}>
+            <Text type="secondary" className="admin-dashboard-stat-description">
               <RiseOutlined style={{ color: "#10b981", marginRight: 4 }} />+
               {stats.newUsersToday} hôm nay
             </Text>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle}>
+          <Card className="admin-dashboard-card">
             <Statistic
               title="Đang hoạt động"
               value={stats.activeUsers}
               prefix={<CheckCircleOutlined style={{ color: "#10b981" }} />}
               valueStyle={{ color: "#1f2937" }}
             />
-            <Text type="secondary" style={{ fontSize: "12px" }}>
+            <Text type="secondary" className="admin-dashboard-stat-description">
               {((stats.activeUsers / stats.totalUsers) * 100).toFixed(1)}% tổng
               số
             </Text>
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle}>
+          <Card className="admin-dashboard-card">
             <Statistic
               title="Phiên đang kết nối"
               value={stats.activeSessions}
@@ -264,14 +252,14 @@ const AdminDashboard = ({ showHeader = true }) => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card style={cardStyle}>
+          <Card className="admin-dashboard-card">
             <Statistic
               title="Tài khoản bị khóa"
               value={stats.lockedAccounts}
               prefix={<SafetyOutlined style={{ color: "#dc2626" }} />}
               valueStyle={{ color: "#1f2937" }}
             />
-            <Text type="secondary" style={{ fontSize: "12px" }}>
+            <Text type="secondary" className="admin-dashboard-stat-description">
               Cần xem xét
             </Text>
           </Card>
@@ -279,14 +267,20 @@ const AdminDashboard = ({ showHeader = true }) => {
       </Row>
 
       {/* Charts Row */}
-      <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
+      <Row gutter={[16, 16]} className="admin-dashboard-chart-container">
         <Col xs={24} lg={16}>
-          <Card title="Hoạt động người dùng theo thời gian" style={cardStyle}>
+          <Card
+            title="Hoạt động người dùng theo thời gian"
+            className="admin-dashboard-card"
+          >
             <Line {...userActivityConfig} height={300} />
           </Card>
         </Col>
         <Col xs={24} lg={8}>
-          <Card title="Phân bố vai trò người dùng" style={cardStyle}>
+          <Card
+            title="Phân bố vai trò người dùng"
+            className="admin-dashboard-card"
+          >
             <Pie {...roleDistributionConfig} height={300} />
           </Card>
         </Col>
@@ -297,7 +291,7 @@ const AdminDashboard = ({ showHeader = true }) => {
         <Col xs={24} lg={12}>
           <Card
             title="Hoạt động gần đây"
-            style={cardStyle}
+            className="admin-dashboard-card"
             extra={
               <Button type="link" icon={<EyeOutlined />}>
                 Xem tất cả
@@ -313,7 +307,10 @@ const AdminDashboard = ({ showHeader = true }) => {
                     title={
                       <Space>
                         <Text strong>{activity.user}</Text>
-                        <Text type="secondary" style={{ fontSize: "12px" }}>
+                        <Text
+                          type="secondary"
+                          className="admin-dashboard-activity-time"
+                        >
                           {dayjs(activity.time).format("HH:mm:ss")}
                         </Text>
                       </Space>
@@ -322,7 +319,7 @@ const AdminDashboard = ({ showHeader = true }) => {
                   />
                 </List.Item>
               )}
-              style={{ maxHeight: "400px", overflowY: "auto" }}
+              className="admin-dashboard-activity-list"
             />
           </Card>
         </Col>
@@ -330,7 +327,7 @@ const AdminDashboard = ({ showHeader = true }) => {
         <Col xs={24} lg={12}>
           <Card
             title="Cảnh báo hệ thống"
-            style={cardStyle}
+            className="admin-dashboard-card"
             extra={
               <Button type="link" icon={<BellOutlined />}>
                 Xem tất cả
@@ -356,7 +353,10 @@ const AdminDashboard = ({ showHeader = true }) => {
                     title={
                       <Space>
                         <Text strong>{alert.title}</Text>
-                        <Text type="secondary" style={{ fontSize: "12px" }}>
+                        <Text
+                          type="secondary"
+                          className="admin-dashboard-alert-time"
+                        >
                           {dayjs(alert.time).format("DD/MM HH:mm")}
                         </Text>
                       </Space>
@@ -365,19 +365,19 @@ const AdminDashboard = ({ showHeader = true }) => {
                   />
                 </List.Item>
               )}
-              style={{ maxHeight: "400px", overflowY: "auto" }}
+              className="admin-dashboard-activity-list"
             />
           </Card>
         </Col>
       </Row>
 
       {/* System Status Row */}
-      <Row gutter={[16, 16]} style={{ marginTop: "24px" }}>
+      <Row gutter={[16, 16]} className="admin-dashboard-system-status-row">
         <Col xs={24}>
-          <Card title="Tình trạng hệ thống" style={cardStyle}>
+          <Card title="Tình trạng hệ thống" className="admin-dashboard-card">
             <Row gutter={[24, 16]}>
               <Col xs={24} sm={12} md={6}>
-                <div style={{ textAlign: "center" }}>
+                <div className="admin-dashboard-progress-container">
                   <Progress
                     type="circle"
                     percent={99.9}
@@ -385,13 +385,15 @@ const AdminDashboard = ({ showHeader = true }) => {
                     strokeColor="#52c41a"
                     size={80}
                   />
-                  <div style={{ marginTop: 8 }}>
-                    <Text strong>Thời gian hoạt động</Text>
+                  <div className="admin-dashboard-progress-label">
+                    <Text strong className="admin-dashboard-progress-title">
+                      Thời gian hoạt động
+                    </Text>
                   </div>
                 </div>
               </Col>
               <Col xs={24} sm={12} md={6}>
-                <div style={{ textAlign: "center" }}>
+                <div className="admin-dashboard-progress-container">
                   <Progress
                     type="circle"
                     percent={15}
@@ -399,8 +401,10 @@ const AdminDashboard = ({ showHeader = true }) => {
                     strokeColor="#1890ff"
                     size={80}
                   />
-                  <div style={{ marginTop: 8 }}>
-                    <Text strong>Sử dụng CPU</Text>
+                  <div className="admin-dashboard-progress-label">
+                    <Text strong className="admin-dashboard-progress-title">
+                      Sử dụng CPU
+                    </Text>
                   </div>
                 </div>
               </Col>
@@ -413,13 +417,15 @@ const AdminDashboard = ({ showHeader = true }) => {
                     strokeColor="#fa8c16"
                     size={80}
                   />
-                  <div style={{ marginTop: 8 }}>
-                    <Text strong>Sử dụng RAM</Text>
+                  <div className="admin-dashboard-progress-label">
+                    <Text strong className="admin-dashboard-progress-title">
+                      Sử dụng RAM
+                    </Text>
                   </div>
                 </div>
               </Col>
               <Col xs={24} sm={12} md={6}>
-                <div style={{ textAlign: "center" }}>
+                <div className="admin-dashboard-progress-container">
                   <Progress
                     type="circle"
                     percent={85}
@@ -427,8 +433,10 @@ const AdminDashboard = ({ showHeader = true }) => {
                     strokeColor="#ff4d4f"
                     size={80}
                   />
-                  <div style={{ marginTop: 8 }}>
-                    <Text strong>Dung lượng ổ cứng</Text>
+                  <div className="admin-dashboard-progress-label">
+                    <Text strong className="admin-dashboard-progress-title">
+                      Dung lượng ổ cứng
+                    </Text>
                   </div>
                 </div>
               </Col>
