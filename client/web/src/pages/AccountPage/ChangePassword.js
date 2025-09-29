@@ -23,6 +23,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
+import "../../styles/pages/ChangePassword.css";
 
 const { Title, Text } = Typography;
 
@@ -31,28 +32,6 @@ const ChangePassword = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
-
-  // Inline styles for consistency
-  const containerStyle = {
-    padding: "24px",
-    backgroundColor: "#f8fafc",
-    minHeight: "calc(100vh - 70px)",
-  };
-
-  const headerStyle = {
-    background: "linear-gradient(135deg, #334766 0%, #283652 100%)",
-    borderRadius: "12px",
-    padding: "32px",
-    marginBottom: "24px",
-    color: "#fff",
-    textAlign: "center",
-  };
-
-  const cardStyle = {
-    borderRadius: "12px",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)",
-    border: "1px solid #e2e8f0",
-  };
 
   // Password strength checker
   const checkPasswordStrength = (password) => {
@@ -78,6 +57,13 @@ const ChangePassword = () => {
     if (strength < 60) return "#faad14";
     if (strength < 80) return "#1890ff";
     return "#52c41a";
+  };
+
+  const getPasswordStrengthClass = (strength) => {
+    if (strength < 30) return "password-strength-weak";
+    if (strength < 60) return "password-strength-medium";
+    if (strength < 80) return "password-strength-strong";
+    return "password-strength-very-strong";
   };
 
   const getPasswordStrengthText = (strength) => {
@@ -153,22 +139,17 @@ const ChangePassword = () => {
 
   return (
     <Layout>
-      <div style={containerStyle}>
+      <div className="change-password-container">
         <Row gutter={[24, 24]}>
           <Col span={24}>
             {/* Header */}
-            <div style={headerStyle}>
+            <div className="change-password-header">
               <Space direction="vertical" align="center">
-                <div style={{ fontSize: "64px", marginBottom: "16px" }}>🔐</div>
-                <Title level={2} style={{ color: "#fff", marginBottom: "8px" }}>
+                <div className="change-password-header-emoji">🔐</div>
+                <Title level={2} className="change-password-header-title">
                   Đổi mật khẩu
                 </Title>
-                <Text
-                  style={{
-                    color: "rgba(255, 255, 255, 0.9)",
-                    fontSize: "14px",
-                  }}
-                >
+                <Text className="change-password-header-text">
                   Tạo mật khẩu mạnh để bảo vệ tài khoản của bạn
                 </Text>
               </Space>
@@ -179,11 +160,11 @@ const ChangePassword = () => {
             <Card
               title={
                 <Space>
-                  <SafetyOutlined style={{ color: "#334766" }} />
+                  <SafetyOutlined className="change-password-card-title-icon" />
                   Thay đổi mật khẩu
                 </Space>
               }
-              style={cardStyle}
+              className="change-password-card"
               extra={
                 <Button
                   icon={<ArrowLeftOutlined />}
@@ -198,7 +179,7 @@ const ChangePassword = () => {
                 description="Sau khi đổi mật khẩu, bạn sẽ cần đăng nhập lại. Đảm bảo nhớ mật khẩu mới trước khi lưu thay đổi."
                 type="warning"
                 showIcon
-                style={{ marginBottom: "24px" }}
+                className="change-password-alert"
               />
 
               <Form
@@ -254,24 +235,15 @@ const ChangePassword = () => {
 
                 {/* Password Strength Indicator */}
                 {newPassword && (
-                  <div style={{ marginBottom: "16px" }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      <Text style={{ fontSize: "14px", fontWeight: "500" }}>
+                  <div className="change-password-strength-container">
+                    <div className="change-password-strength-header">
+                      <Text className="change-password-strength-label">
                         Độ mạnh mật khẩu:
                       </Text>
                       <Text
-                        style={{
-                          color: getPasswordStrengthColor(passwordStrength),
-                          fontSize: "14px",
-                          fontWeight: "600",
-                        }}
+                        className={`change-password-strength-text ${getPasswordStrengthClass(
+                          passwordStrength
+                        )}`}
                       >
                         {getPasswordStrengthText(passwordStrength)}
                       </Text>
@@ -318,26 +290,21 @@ const ChangePassword = () => {
                   <Card
                     size="small"
                     title="Yêu cầu mật khẩu"
-                    style={{ marginBottom: "24px", backgroundColor: "#f8fafc" }}
+                    className="change-password-requirements-card"
                   >
                     <Row gutter={[16, 8]}>
                       {requirements.map((req, index) => (
                         <Col xs={24} sm={12} key={index}>
                           <Space>
                             {req.met ? (
-                              <CheckCircleOutlined
-                                style={{ color: "#52c41a" }}
-                              />
+                              <CheckCircleOutlined className="change-password-requirement-icon met" />
                             ) : (
-                              <ExclamationCircleOutlined
-                                style={{ color: "#ff4d4f" }}
-                              />
+                              <ExclamationCircleOutlined className="change-password-requirement-icon unmet" />
                             )}
                             <Text
-                              style={{
-                                color: req.met ? "#52c41a" : "#8c8c8c",
-                                fontSize: "13px",
-                              }}
+                              className={`change-password-requirement-text ${
+                                req.met ? "met" : "unmet"
+                              }`}
                             >
                               {req.text}
                             </Text>
@@ -361,10 +328,7 @@ const ChangePassword = () => {
                       loading={loading}
                       size="large"
                       icon={<SafetyOutlined />}
-                      style={{
-                        background: "#334766",
-                        borderColor: "#334766",
-                      }}
+                      className="change-password-submit-button"
                     >
                       Đổi mật khẩu
                     </Button>

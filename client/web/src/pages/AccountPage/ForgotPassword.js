@@ -58,18 +58,11 @@ const ForgotPassword = ({ onRequestReset }) => {
     >
       <div className="auth-header">
         <Space direction="vertical" size="small">
-          <KeyOutlined style={{ fontSize: "36px", color: "#334766" }} />
-          <Title
-            level={2}
-            style={{
-              marginBottom: "8px",
-              color: "#262626",
-              fontSize: "22px",
-            }}
-          >
+          <KeyOutlined className="forgot-password-icon" />
+          <Title level={2} className="forgot-password-title">
             Quên mật khẩu
           </Title>
-          <Text style={{ color: "#64748b", fontSize: "14px" }}>
+          <Text className="forgot-password-subtitle">
             Chọn phương thức nhận mã OTP để đặt lại mật khẩu
           </Text>
         </Space>
@@ -80,27 +73,27 @@ const ForgotPassword = ({ onRequestReset }) => {
         message="Hướng dẫn khôi phục mật khẩu"
         description={
           <div>
-            <p style={{ margin: "8px 0" }}>
+            <p className="forgot-password-guide-step">
               <strong>Bước 1:</strong> Chọn phương thức nhận mã OTP (Email hoặc
               SMS)
             </p>
-            <p style={{ margin: "8px 0" }}>
+            <p className="forgot-password-guide-step">
               <strong>Bước 2:</strong> Nhập email hoặc số điện thoại đã đăng ký
             </p>
-            <p style={{ margin: "8px 0" }}>
+            <p className="forgot-password-guide-step">
               <strong>Bước 3:</strong> Nhập mã OTP 6 số và đặt mật khẩu mới
             </p>
           </div>
         }
         type="info"
         icon={<InfoCircleOutlined />}
-        style={{ marginBottom: "24px" }}
+        className="forgot-password-guide-alert"
       />
 
       {/* Chọn phương thức nhận OTP */}
       <Form.Item
         label="Chọn phương thức nhận mã OTP"
-        style={{ marginBottom: "20px" }}
+        className="forgot-password-method-label"
       >
         <Radio.Group
           value={contactType}
@@ -108,9 +101,9 @@ const ForgotPassword = ({ onRequestReset }) => {
             setContactType(e.target.value);
             form.resetFields(["email", "phone"]);
           }}
-          style={{ width: "100%" }}
+          className="forgot-password-method-group"
         >
-          <Space direction="vertical" style={{ width: "100%" }}>
+          <Space direction="vertical" className="forgot-password-method-space">
             <Card
               hoverable
               className={`method-card ${
@@ -123,8 +116,8 @@ const ForgotPassword = ({ onRequestReset }) => {
                 form.resetFields(["email", "phone"]);
               }}
             >
-              <Radio value="email" style={{ marginRight: "12px" }} />
-              <MailOutlined style={{ marginRight: "8px", color: "#334766" }} />
+              <Radio value="email" className="forgot-password-method-radio" />
+              <MailOutlined className="forgot-password-method-icon email-icon" />
               <strong>Gửi OTP qua Email</strong>
               <div className="method-card-description">
                 Mã OTP sẽ được gửi đến email của bạn
@@ -143,8 +136,8 @@ const ForgotPassword = ({ onRequestReset }) => {
                 form.resetFields(["email", "phone"]);
               }}
             >
-              <Radio value="phone" style={{ marginRight: "12px" }} />
-              <PhoneOutlined style={{ marginRight: "8px", color: "#059669" }} />
+              <Radio value="phone" className="forgot-password-method-radio" />
+              <PhoneOutlined className="forgot-password-method-icon phone-icon" />
               <strong>Gửi OTP qua SMS</strong>
               <div className="method-card-description">
                 Mã OTP sẽ được gửi đến số điện thoại của bạn
@@ -163,7 +156,7 @@ const ForgotPassword = ({ onRequestReset }) => {
             { required: true, message: "Vui lòng nhập email!" },
             { type: "email", message: "Email không hợp lệ!" },
           ]}
-          style={{ marginBottom: "20px" }}
+          className="forgot-password-input-item"
         >
           <Input
             prefix={<MailOutlined />}
@@ -182,7 +175,7 @@ const ForgotPassword = ({ onRequestReset }) => {
               message: "Số điện thoại phải có 10-11 chữ số!",
             },
           ]}
-          style={{ marginBottom: "20px" }}
+          className="forgot-password-input-item"
         >
           <Input
             prefix={<PhoneOutlined />}
@@ -193,7 +186,7 @@ const ForgotPassword = ({ onRequestReset }) => {
         </Form.Item>
       )}
 
-      <Form.Item style={{ marginBottom: "16px" }}>
+      <Form.Item className="forgot-password-submit-item">
         <Button
           type="primary"
           htmlType="submit"
@@ -207,11 +200,11 @@ const ForgotPassword = ({ onRequestReset }) => {
         </Button>
       </Form.Item>
 
-      <div style={{ textAlign: "center" }}>
+      <div className="forgot-password-back-container">
         <Button
           type="link"
           onClick={() => navigate("/login")}
-          style={{ color: "#334766" }}
+          className="forgot-password-back-button"
           icon={<ArrowLeftOutlined />}
         >
           Quay lại đăng nhập

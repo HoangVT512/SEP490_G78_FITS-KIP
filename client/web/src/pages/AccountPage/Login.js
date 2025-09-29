@@ -17,10 +17,11 @@ import {
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
 import { useAuth } from "../../contexts/AuthContext";
+import "../../styles/pages/Login.css";
 
 const { Title } = Typography;
 
-const CompactLogin = () => {
+const Login = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated, user, isAdmin, isLoggingOut } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -71,110 +72,16 @@ const CompactLogin = () => {
     }
   };
 
-  // Inline styles to bypass cache
-  const loginContainerStyle = {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    minHeight: "calc(100vh - 70px)",
-    padding: "60px 20px",
-    background: "linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)",
-  };
-
-  const loginWrapperStyle = {
-    display: "flex",
-    background: "#fff",
-    borderRadius: "16px",
-    boxShadow: "0 20px 40px rgba(37, 99, 235, 0.15)",
-    width: "100%",
-    maxWidth: "800px",
-    maxHeight: "600px",
-    border: "1px solid #e2e8f0",
-    overflow: "hidden",
-  };
-
-  const logoSectionStyle = {
-    flex: "1",
-    background: "linear-gradient(135deg, #334766 0%, #283652 100%)",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: "32px",
-    color: "#fff",
-    minWidth: "350px",
-  };
-
-  const logoContentStyle = {
-    textAlign: "center",
-  };
-
-  const factoryIconStyle = {
-    fontSize: "64px",
-    marginBottom: "20px",
-    color: "#fff",
-  };
-
-  const companyTitleStyle = {
-    fontSize: "28px",
-    fontWeight: "700",
-    marginBottom: "12px",
-    color: "#fff",
-  };
-
-  const companySubtitleStyle = {
-    fontSize: "15px",
-    color: "rgba(255, 255, 255, 0.9)",
-    lineHeight: "1.5",
-  };
-
-  const loginFormStyle = {
-    flex: "1",
-    padding: "36px",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    minWidth: "380px",
-    maxWidth: "450px",
-  };
-
-  const formHeaderStyle = {
-    textAlign: "center",
-    marginBottom: "24px",
-  };
-
-  const titleStyle = {
-    textAlign: "center",
-    marginBottom: "24px !important",
-    color: "#262626 !important",
-    fontWeight: "700",
-    fontSize: "22px !important",
-  };
-
-  const inputStyle = {
-    marginBottom: "16px",
-  };
-
-  const buttonStyle = {
-    width: "100%",
-    height: "44px",
-    fontSize: "15px",
-    fontWeight: "600",
-    background: "#334766",
-    borderColor: "#334766",
-    borderRadius: "8px",
-  };
-
   return (
     <Layout>
-      <div style={loginContainerStyle}>
-        <div style={loginWrapperStyle}>
+      <div className="login-container">
+        <div className="login-wrapper">
           {/* Logo Section */}
-          <div style={logoSectionStyle}>
-            <div style={logoContentStyle}>
-              <div style={factoryIconStyle}>🏭</div>
-              <div style={companyTitleStyle}>FITS-KIP</div>
-              <div style={companySubtitleStyle}>
+          <div className="login-logo-section">
+            <div className="login-logo-content">
+              <div className="login-factory-icon">🏭</div>
+              <div className="login-company-title">FITS-KIP</div>
+              <div className="login-company-subtitle">
                 Hệ thống quản lý bảo trì nhà máy hiện đại
                 <br />
                 Giải pháp toàn diện cho doanh nghiệp
@@ -183,24 +90,20 @@ const CompactLogin = () => {
           </div>
 
           {/* Login Form Section */}
-          <div style={loginFormStyle}>
+          <div className="login-form-section">
             <Form
               name="login"
               initialValues={{ remember: true }}
               onFinish={onFinish}
               layout="vertical"
             >
-              <div style={formHeaderStyle}>
+              <div className="login-form-header">
                 <Space direction="vertical" size="small">
-                  <SafetyOutlined
-                    style={{ fontSize: "36px", color: "#334766" }}
-                  />
-                  <Title level={2} style={titleStyle}>
+                  <SafetyOutlined className="login-header-icon" />
+                  <Title level={2} className="login-title">
                     Đăng nhập hệ thống
                   </Title>
-                  <Typography.Text
-                    style={{ color: "#64748b", fontSize: "14px" }}
-                  >
+                  <Typography.Text className="login-header-subtitle">
                     Vui lòng đăng nhập để tiếp tục
                   </Typography.Text>
                 </Space>
@@ -214,7 +117,7 @@ const CompactLogin = () => {
                     message: "Vui lòng nhập email hoặc mã nhân viên!",
                   },
                 ]}
-                style={inputStyle}
+                className="login-form-item"
                 label="Email hoặc Mã nhân viên"
               >
                 <Input
@@ -227,7 +130,7 @@ const CompactLogin = () => {
               <Form.Item
                 name="password"
                 rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}
-                style={inputStyle}
+                className="login-form-item"
                 label="Mật khẩu"
               >
                 <Input.Password
@@ -237,40 +140,29 @@ const CompactLogin = () => {
                 />
               </Form.Item>
 
-              <Form.Item style={{ marginBottom: "24px" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
+              <Form.Item className="login-form-item-checkbox">
+                <div className="login-remember-row">
                   <Form.Item name="remember" valuePropName="checked" noStyle>
                     <Checkbox>Ghi nhớ đăng nhập</Checkbox>
                   </Form.Item>
                   <Button
                     type="link"
                     onClick={() => navigate("/reset-password")}
-                    style={{
-                      padding: 0,
-                      height: "auto",
-                      color: "#334766",
-                      fontSize: "14px",
-                    }}
+                    className="login-forgot-link"
                   >
                     Quên mật khẩu?
                   </Button>
                 </div>
               </Form.Item>
 
-              <Form.Item style={{ marginBottom: "0" }}>
+              <Form.Item className="login-form-item-submit">
                 <Button
                   type="primary"
                   htmlType="submit"
                   size="large"
                   loading={loading}
                   icon={!loading && <LoginOutlined />}
-                  style={buttonStyle}
+                  className="login-submit-button"
                 >
                   {loading ? "Đang đăng nhập..." : "Đăng nhập vào hệ thống"}
                 </Button>
@@ -283,4 +175,4 @@ const CompactLogin = () => {
   );
 };
 
-export default CompactLogin;
+export default Login;

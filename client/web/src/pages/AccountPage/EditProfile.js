@@ -31,6 +31,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
+import "../../styles/pages/EditProfile.css";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -85,54 +86,6 @@ const EditProfile = () => {
       // Note: department and position are disabled and managed by Admin
     });
   }, [currentUser, form]);
-
-  // Inline styles for consistency
-  const containerStyle = {
-    padding: "24px",
-    backgroundColor: "#f8fafc",
-    minHeight: "calc(100vh - 70px)",
-  };
-
-  const headerStyle = {
-    background: "linear-gradient(135deg, #334766 0%, #283652 100%)",
-    borderRadius: "12px",
-    padding: "24px",
-    marginBottom: "24px",
-    color: "#fff",
-    textAlign: "center",
-  };
-
-  const cardStyle = {
-    borderRadius: "12px",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)",
-    border: "1px solid #e2e8f0",
-  };
-
-  const avatarStyle = {
-    width: "120px",
-    height: "120px",
-    fontSize: "40px",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    border: "4px solid rgba(255, 255, 255, 0.3)",
-    marginBottom: "16px",
-    position: "relative",
-  };
-
-  const uploadButtonStyle = {
-    position: "absolute",
-    bottom: "0",
-    right: "0",
-    width: "36px",
-    height: "36px",
-    borderRadius: "50%",
-    backgroundColor: "#334766",
-    border: "2px solid #fff",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    color: "#fff",
-  };
 
   const handleSubmit = async (values) => {
     setLoading(true);
@@ -201,18 +154,18 @@ const EditProfile = () => {
 
   return (
     <Layout>
-      <div style={containerStyle}>
+      <div className="edit-profile-container edit-profile">
         <Row gutter={[24, 24]}>
           <Col span={24}>
             {/* Header */}
-            <div style={headerStyle}>
+            <div className="edit-profile-header">
               <Space direction="vertical" align="center">
-                <div style={{ position: "relative" }}>
+                <div className="edit-profile-avatar-container">
                   <Avatar
                     size={120}
                     icon={<UserOutlined />}
                     src={avatarUrl || currentUser.avatar}
-                    style={avatarStyle}
+                    className="edit-profile-avatar"
                   />
                   <Upload
                     name="avatar"
@@ -223,20 +176,15 @@ const EditProfile = () => {
                     beforeUpload={beforeUpload}
                     onChange={handleAvatarChange}
                   >
-                    <div style={uploadButtonStyle}>
+                    <div className="edit-profile-upload-button">
                       <CameraOutlined />
                     </div>
                   </Upload>
                 </div>
-                <Title level={2} style={{ color: "#fff", marginBottom: "0" }}>
+                <Title level={2} className="edit-profile-header-title">
                   Chỉnh sửa thông tin cá nhân
                 </Title>
-                <Text
-                  style={{
-                    color: "rgba(255, 255, 255, 0.9)",
-                    fontSize: "14px",
-                  }}
-                >
+                <Text className="edit-profile-header-subtitle">
                   Cập nhật thông tin cá nhân của bạn. Phòng ban và chức vụ do
                   Admin quản lý.
                 </Text>
@@ -248,11 +196,11 @@ const EditProfile = () => {
             <Card
               title={
                 <Space>
-                  <EditOutlined style={{ color: "#334766" }} />
+                  <EditOutlined className="edit-profile-card-title-icon" />
                   Thông tin cá nhân
                 </Space>
               }
-              style={cardStyle}
+              className="edit-profile-card"
               extra={
                 <Button
                   icon={<ArrowLeftOutlined />}
@@ -266,25 +214,25 @@ const EditProfile = () => {
                 message="Hướng dẫn chỉnh sửa thông tin"
                 description={
                   <div>
-                    <p style={{ margin: "8px 0", fontWeight: "bold" }}>
+                    <p className="edit-profile-alert-title">
                       ✅ Có thể chỉnh sửa:
                     </p>
-                    <ul style={{ margin: "8px 0", paddingLeft: "20px" }}>
+                    <ul className="edit-profile-alert-list">
                       <li>Họ và tên</li>
                       <li>Email</li>
                       <li>Số điện thoại</li>
                       <li>Giới tính</li>
                       <li>Ảnh đại diện</li>
                     </ul>
-                    <p style={{ margin: "8px 0", fontWeight: "bold" }}>
+                    <p className="edit-profile-alert-title">
                       👁️ Chỉ xem (do Admin quản lý):
                     </p>
-                    <ul style={{ margin: "8px 0", paddingLeft: "20px" }}>
+                    <ul className="edit-profile-alert-list">
                       <li>Mã nhân viên</li>
                       <li>Phòng ban</li>
                       <li>Chức vụ</li>
                     </ul>
-                    <p style={{ margin: "8px 0", color: "#059669" }}>
+                    <p className="edit-profile-alert-note">
                       💡 Liên hệ phòng Nhân sự nếu cần thay đổi thông tin do
                       Admin quản lý.
                     </p>
@@ -292,7 +240,7 @@ const EditProfile = () => {
                 }
                 type="info"
                 showIcon
-                style={{ marginBottom: "24px" }}
+                className="edit-profile-alert"
               />
 
               <Form
@@ -300,6 +248,7 @@ const EditProfile = () => {
                 layout="vertical"
                 onFinish={handleSubmit}
                 autoComplete="off"
+                className="edit-profile-form"
               >
                 <Row gutter={16}>
                   <Col xs={24} md={12}>
@@ -416,7 +365,7 @@ const EditProfile = () => {
                         value={currentUser.department}
                         disabled
                         size="large"
-                        style={{ backgroundColor: "#f8fafc", color: "#64748b" }}
+                        className="edit-profile-disabled-field"
                       />
                     </Form.Item>
                   </Col>
@@ -428,7 +377,7 @@ const EditProfile = () => {
                         value={currentUser.position}
                         disabled
                         size="large"
-                        style={{ backgroundColor: "#f8fafc", color: "#64748b" }}
+                        className="edit-profile-disabled-field"
                       />
                     </Form.Item>
                   </Col>
@@ -449,10 +398,7 @@ const EditProfile = () => {
                       loading={loading}
                       size="large"
                       icon={<SaveOutlined />}
-                      style={{
-                        background: "#334766",
-                        borderColor: "#334766",
-                      }}
+                      className="edit-profile-submit-button"
                     >
                       Lưu thay đổi
                     </Button>

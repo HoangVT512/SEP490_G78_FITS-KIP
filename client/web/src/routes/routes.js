@@ -1,4 +1,4 @@
-import LoginPage from "../pages/AccountPage/CompactLogin";
+import LoginPage from "../pages/AccountPage/Login";
 import ResetPasswordPage from "../pages/AccountPage/ResetPassword";
 import ProfilePage from "../pages/AccountPage/Profile";
 import EditProfilePage from "../pages/AccountPage/EditProfile";

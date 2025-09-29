@@ -30,6 +30,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
+import "../../styles/pages/Profile.css";
 
 const { Title, Text } = Typography;
 
@@ -78,44 +79,6 @@ const Profile = () => {
     },
   ]);
 
-  // Inline styles for consistency
-  const containerStyle = {
-    padding: "24px",
-    backgroundColor: "#f8fafc",
-    minHeight: "calc(100vh - 70px)",
-  };
-
-  const profileHeaderStyle = {
-    background: "linear-gradient(135deg, #334766 0%, #283652 100%)",
-    borderRadius: "12px",
-    padding: "32px",
-    marginBottom: "24px",
-    color: "#fff",
-    textAlign: "center",
-  };
-
-  const cardStyle = {
-    borderRadius: "12px",
-    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.05)",
-    border: "1px solid #e2e8f0",
-  };
-
-  const avatarStyle = {
-    width: "100px",
-    height: "100px",
-    fontSize: "36px",
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    border: "4px solid rgba(255, 255, 255, 0.3)",
-    marginBottom: "16px",
-  };
-
-  const statusColors = {
-    success: "#059669",
-    warning: "#d97706",
-    error: "#dc2626",
-    info: "#334766",
-  };
-
   const handleEditProfile = () => {
     navigate("/profile/edit");
   };
@@ -144,37 +107,32 @@ const Profile = () => {
 
   return (
     <Layout>
-      <div style={containerStyle}>
+      <div className="profile-container">
         <Row gutter={[24, 24]}>
           <Col span={24}>
             {/* Profile Header */}
-            <div style={profileHeaderStyle}>
-              <Avatar size={100} icon={<UserOutlined />} style={avatarStyle} />
-              <Title level={2} style={{ color: "#fff", marginBottom: "8px" }}>
+            <div className="profile-header-card">
+              <Avatar
+                size={100}
+                icon={<UserOutlined />}
+                className="profile-header-avatar"
+              />
+              <Title level={2} className="profile-header-title">
                 {userInfo.fullName}
               </Title>
-              <Text
-                style={{ fontSize: "16px", color: "rgba(255, 255, 255, 0.9)" }}
-              >
+              <Text className="profile-header-subtitle">
                 {userInfo.position} • {userInfo.department}
               </Text>
-              <br />
-              <Space style={{ marginTop: "16px" }}>
+              <Space className="profile-header-badges">
                 <Badge
                   status={getUserStatusColor()}
                   text={
-                    <span style={{ color: "#fff" }}>{getUserStatusText()}</span>
+                    <span className="profile-badge-text">
+                      {getUserStatusText()}
+                    </span>
                   }
                 />
-                <Tag
-                  style={{
-                    backgroundColor: "rgba(255, 255, 255, 0.2)",
-                    color: "#fff",
-                    border: "none",
-                  }}
-                >
-                  {userInfo.role}
-                </Tag>
+                <Tag className="profile-role-tag">{userInfo.role}</Tag>
               </Space>
             </div>
           </Col>
@@ -183,17 +141,17 @@ const Profile = () => {
             <Card
               title={
                 <Space>
-                  <IdcardOutlined style={{ color: "#334766" }} />
+                  <IdcardOutlined className="profile-icon-idcard" />
                   Thông tin cá nhân
                 </Space>
               }
-              style={cardStyle}
+              className="profile-info-card"
               extra={
                 <Button
                   type="primary"
                   icon={<EditOutlined />}
                   onClick={handleEditProfile}
-                  style={{ backgroundColor: "#334766", borderColor: "#334766" }}
+                  className="profile-edit-button"
                 >
                   Chỉnh sửa
                 </Button>
@@ -201,9 +159,7 @@ const Profile = () => {
             >
               <Tabs
                 defaultActiveKey="1"
-                style={{
-                  "--ant-primary-color": "#334766",
-                }}
+                className="profile-tabs"
                 items={[
                   {
                     key: "1",
@@ -219,31 +175,29 @@ const Profile = () => {
                           <Text strong>{userInfo.fullName}</Text>
                         </Descriptions.Item>
                         <Descriptions.Item label="Mã nhân viên">
-                          <Tag color="#334766">{userInfo.employeeCode}</Tag>
+                          <Tag className="profile-tag-employee-code">
+                            {userInfo.employeeCode}
+                          </Tag>
                         </Descriptions.Item>
                         <Descriptions.Item label="Giới tính">
                           {userInfo.gender}
                         </Descriptions.Item>
                         <Descriptions.Item label="Email">
                           <Space>
-                            <MailOutlined style={{ color: "#334766" }} />
+                            <MailOutlined className="profile-icon-email" />
                             {userInfo.email}
                             {userInfo.emailConfirmed && (
-                              <CheckCircleOutlined
-                                style={{ color: "#059669" }}
-                              />
+                              <CheckCircleOutlined className="profile-icon-verified" />
                             )}
                           </Space>
                         </Descriptions.Item>
                         <Descriptions.Item label="Số điện thoại">
                           <Space>
-                            <PhoneOutlined style={{ color: "#334766" }} />
+                            <PhoneOutlined className="profile-icon-phone" />
                             {userInfo.phoneNumber || "Chưa cập nhật"}
                             {userInfo.phoneNumberConfirmed &&
                               userInfo.phoneNumber && (
-                                <CheckCircleOutlined
-                                  style={{ color: "#059669" }}
-                                />
+                                <CheckCircleOutlined className="profile-icon-verified" />
                               )}
                           </Space>
                         </Descriptions.Item>
@@ -252,7 +206,7 @@ const Profile = () => {
                         </Descriptions.Item>
                         <Descriptions.Item label="Phòng ban" span={2}>
                           <Space>
-                            <TeamOutlined style={{ color: "#334766" }} />
+                            <TeamOutlined className="profile-icon-team" />
                             {userInfo.department}
                           </Space>
                         </Descriptions.Item>
@@ -280,7 +234,7 @@ const Profile = () => {
                               : "warning"
                           }
                           showIcon
-                          style={{ marginBottom: "24px" }}
+                          className="profile-security-alert"
                         />
 
                         <Descriptions column={2} bordered>
@@ -341,12 +295,11 @@ const Profile = () => {
                             span={2}
                           >
                             <Text
-                              style={{
-                                color:
-                                  userInfo.accessFailedCount > 0
-                                    ? "#dc2626"
-                                    : "#059669",
-                              }}
+                              className={`profile-failed-count ${
+                                userInfo.accessFailedCount > 0
+                                  ? "error"
+                                  : "success"
+                              }`}
                             >
                               {userInfo.accessFailedCount} lần
                             </Text>
@@ -360,10 +313,7 @@ const Profile = () => {
                             type="primary"
                             icon={<SafetyOutlined />}
                             onClick={handleChangePassword}
-                            style={{
-                              backgroundColor: "#334766",
-                              borderColor: "#334766",
-                            }}
+                            className="profile-change-password-button"
                           >
                             Đổi mật khẩu
                           </Button>
@@ -386,21 +336,23 @@ const Profile = () => {
             <Card
               title={
                 <Space>
-                  <ClockCircleOutlined style={{ color: "#334766" }} />
+                  <ClockCircleOutlined className="profile-icon-clock" />
                   Hoạt động gần đây
                 </Space>
               }
-              style={cardStyle}
+              className="profile-activity-card"
             >
               <Timeline
                 items={activityLog.map((activity, index) => ({
-                  color: statusColors[activity.status],
-                  dot: <CheckCircleOutlined style={{ fontSize: "16px" }} />,
+                  color: activity.status === "success" ? "#059669" : "#d97706",
+                  dot: (
+                    <CheckCircleOutlined className="profile-timeline-icon" />
+                  ),
                   children: (
                     <div>
                       <Text strong>{activity.action}</Text>
                       <br />
-                      <Text type="secondary" style={{ fontSize: "12px" }}>
+                      <Text type="secondary" className="profile-timeline-date">
                         {formatDateTime(activity.date)}
                       </Text>
                     </div>
@@ -410,19 +362,19 @@ const Profile = () => {
 
               <Divider />
 
-              <div style={{ textAlign: "center" }}>
+              <div className="profile-view-all-container">
                 <Button type="link">Xem tất cả hoạt động</Button>
               </div>
             </Card>
 
             <Card
               title="Thông tin hệ thống"
-              style={{ ...cardStyle, marginTop: "24px" }}
+              className="profile-system-card"
               size="small"
             >
               <Descriptions column={1} size="small">
                 <Descriptions.Item label="ID người dùng">
-                  <Text code style={{ fontSize: "11px" }}>
+                  <Text code className="profile-user-id">
                     {userInfo.id}
                   </Text>
                 </Descriptions.Item>

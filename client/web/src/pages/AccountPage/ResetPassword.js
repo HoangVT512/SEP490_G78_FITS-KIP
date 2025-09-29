@@ -129,7 +129,7 @@ const ResetPassword = () => {
               <Alert
                 message={
                   <span>
-                    <InfoCircleOutlined style={{ marginRight: "8px" }} />
+                    <InfoCircleOutlined className="reset-password-alert-icon" />
                     Kiểm tra{" "}
                     {contactType === "email" ? "hộp thư" : "tin nhắn SMS"}
                   </span>
@@ -179,7 +179,7 @@ const ResetPassword = () => {
                   }`}
                   suffix={
                     otpVerified ? (
-                      <CheckCircleOutlined style={{ color: "#52c41a" }} />
+                      <CheckCircleOutlined className="reset-password-otp-verified-icon" />
                     ) : null
                   }
                 />
@@ -282,11 +282,11 @@ const ResetPassword = () => {
                       setOtpValue("");
                       form.resetFields();
                     }}
-                    style={{ color: "#64748b" }}
+                    className="reset-password-nav-button"
                   >
                     Gửi lại mã OTP
                   </Button>
-                  <span style={{ color: "#e5e7eb" }}>|</span>
+                  <span className="reset-password-nav-separator">|</span>
                   <Button
                     type="link"
                     onClick={() => {
@@ -295,7 +295,7 @@ const ResetPassword = () => {
                       setOtpValue("");
                       form.resetFields();
                     }}
-                    style={{ color: "#64748b" }}
+                    className="reset-password-nav-button"
                   >
                     Thay đổi phương thức
                   </Button>

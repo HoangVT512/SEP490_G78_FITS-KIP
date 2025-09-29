@@ -26,9 +26,9 @@ const NotFoundPage = ({
   // Determine appropriate home route based on current path
   const getHomeRoute = () => {
     if (location.pathname.startsWith("/admin")) {
-      return "/admin/dashboard";
+      return "/admin";
     }
-    return "/dashboard";
+    return "/login";
   };
 
   return (
@@ -99,10 +99,10 @@ const NotFoundPage = ({
               <Button
                 size="large"
                 icon={<SettingOutlined />}
-                onClick={() => navigate("/dashboard")}
+                onClick={() => navigate("/admin")}
                 className="secondary-button"
               >
-                Dashboard
+                Quản trị
               </Button>
             </div>
           </Space>

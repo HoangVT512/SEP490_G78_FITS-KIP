@@ -11,6 +11,8 @@
   border: none;
   border-radius: 16px;
   margin-bottom: 24px;
+  padding: 32px;
+  text-align: center;
 }
 
 .profile-header-title {
@@ -18,9 +20,32 @@
   margin-bottom: 8px !important;
 }
 
+.profile-header-avatar {
+  margin-bottom: 16px;
+  background-color: rgba(255, 255, 255, 0.2);
+  border: 4px solid rgba(255, 255, 255, 0.3);
+}
+
 .profile-header-subtitle {
   font-size: 16px !important;
   color: rgba(255, 255, 255, 0.9) !important;
+  display: block;
+  margin-bottom: 16px !important;
+}
+
+.profile-header-badges {
+  margin-top: 16px !important;
+  justify-content: center !important;
+}
+
+.profile-badge-text {
+  color: #fff !important;
+}
+
+.profile-role-tag {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+  border: none !important;
 }
 
 .profile-header-status-space {
@@ -32,20 +57,39 @@
 }
 
 .profile-edit-button {
-  background: rgba(255, 255, 255, 0.2) !important;
-  border-color: rgba(255, 255, 255, 0.3) !important;
+  background-color: #334766 !important;
+  border-color: #334766 !important;
   color: #fff !important;
 }
 
 .profile-edit-button:hover {
-  background: rgba(255, 255, 255, 0.3) !important;
-  border-color: rgba(255, 255, 255, 0.4) !important;
+  background-color: #283652 !important;
+  border-color: #283652 !important;
+  color: #fff !important;
+}
+
+.profile-edit-button:focus {
+  background-color: #334766 !important;
+  border-color: #334766 !important;
   color: #fff !important;
 }
 
 .profile-change-password-button {
   background-color: #334766 !important;
   border-color: #334766 !important;
+  color: #fff !important;
+}
+
+.profile-change-password-button:hover {
+  background-color: #283652 !important;
+  border-color: #283652 !important;
+  color: #fff !important;
+}
+
+.profile-change-password-button:focus {
+  background-color: #334766 !important;
+  border-color: #334766 !important;
+  color: #fff !important;
 }
 
 .profile-avatar-section {
@@ -68,12 +112,82 @@
 }
 
 /* Contact Info Icons */
-.profile-icon-email {
+.profile-icon-email,
+.profile-icon-phone,
+.profile-icon-team,
+.profile-icon-idcard,
+.profile-icon-clock {
   color: #334766 !important;
 }
 
-.profile-icon-phone {
-  color: #334766 !important;
+.profile-icon-verified {
+  color: #059669 !important;
+}
+
+/* Card styling */
+.profile-info-card,
+.profile-activity-card,
+.profile-system-card {
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+}
+
+.profile-system-card {
+  margin-top: 24px;
+}
+
+/* Timeline styling */
+.profile-timeline-icon {
+  font-size: 16px;
+}
+
+.profile-timeline-date {
+  font-size: 12px;
+}
+
+/* View all container */
+.profile-view-all-container {
+  text-align: center;
+}
+
+/* User ID styling */
+.profile-user-id {
+  font-size: 11px;
+}
+
+/* Failed count styling */
+.profile-failed-count.error {
+  color: #dc2626;
+}
+
+.profile-failed-count.success {
+  color: #059669;
+}
+
+/* Tags */
+.profile-tag-employee-code {
+  color: #334766;
+  background-color: #f1f5f9;
+  border-color: #334766;
+}
+
+/* Tabs styling */
+.profile-tabs .ant-tabs-tab {
+  color: #64748b;
+}
+
+.profile-tabs .ant-tabs-tab-active {
+  color: #334766;
+}
+
+.profile-tabs .ant-tabs-ink-bar {
+  background-color: #334766;
+}
+
+/* Security alert */
+.profile-security-alert {
+  margin-bottom: 24px;
 }
 
 .profile-icon-department {
