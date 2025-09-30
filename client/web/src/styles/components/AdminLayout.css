@@ -12,7 +12,6 @@
   margin: 4px 8px;
   border-radius: 8px;
   font-weight: 500;
-  transition: all 0.3s ease;
 }
 
 .admin-layout .ant-menu-dark .ant-menu-item .ant-menu-title-content {
@@ -36,26 +35,17 @@
 .admin-layout .ant-layout-sider-collapsed .ant-menu-item-selected {
   background: #334766 !important;
   border-right: 3px solid #5a7a9d;
-  transition: all 0.3s ease;
 }
 
-.admin-layout .ant-layout-sider-collapsed .ant-menu-item-selected:hover {
-  background: #3d4f6a !important;
-  transition: all 0.3s ease;
-}
+
 
 .admin-layout .ant-menu-dark.ant-menu-inline .ant-menu-item-selected {
   background: #334766 !important;
   color: #fff !important;
   box-shadow: 0 2px 8px rgba(51, 71, 102, 0.3);
-  transition: all 0.3s ease;
 }
 
-.admin-layout .ant-menu-dark.ant-menu-inline .ant-menu-item:hover {
-  background: rgba(51, 71, 102, 0.6);
-  color: #fff;
-  transition: all 0.3s ease;
-}
+
 
 .admin-layout .ant-layout-header {
   padding: 0 24px;
@@ -102,10 +92,7 @@
   border-radius: 8px;
 }
 
-.admin-layout .collapse-button:hover {
-  background: rgba(255, 255, 255, 0.2) !important;
-  color: #fff !important;
-}
+
 
 .admin-layout .user-dropdown {
   display: flex;
@@ -116,13 +103,9 @@
   cursor: pointer;
   background-color: #f9fafb;
   border: 1px solid #e5e7eb;
-  transition: all 0.2s;
 }
 
-.admin-layout .user-dropdown:hover {
-  background-color: #f3f4f6;
-  border-color: #d1d5db;
-}
+
 
 .admin-layout .user-info {
   text-align: left;
@@ -168,9 +151,7 @@
   }
 }
 
-.admin-layout .admin-content {
-  transition: all 0.3s ease;
-}
+
 
 .admin-layout .page-header {
   margin-bottom: 24px;
@@ -203,6 +184,4 @@
   border-radius: 3px;
 }
 
-.admin-layout .ant-layout-sider::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
-}
+

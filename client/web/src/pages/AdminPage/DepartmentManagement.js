@@ -15,6 +15,7 @@ import {
   message,
   Tooltip,
   Descriptions,
+  Select,
 } from "antd";
 import {
   SearchOutlined,
@@ -30,6 +31,7 @@ import {
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
 import { departmentService } from "../../services/departmentService";
+import { userService } from "../../services/userService";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -38,11 +40,14 @@ const DepartmentManagement = ({ showHeader = true }) => {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState(null);
   const [viewingDepartment, setViewingDepartment] = useState(null);
+  const [managers, setManagers] = useState([]);
+  const [loadingManagers, setLoadingManagers] = useState(false);
   const [form] = Form.useForm();
 
   // API data structure: departmentId, departmentName, managerId, description, manager, rooms
@@ -54,12 +59,53 @@ const DepartmentManagement = ({ showHeader = true }) => {
   const loadDepartments = async () => {
     setLoading(true);
     try {
-      const data = await departmentService.getDepartments();
-      setDepartments(data);
+      const [departmentsData, managersData] = await Promise.all([
+        departmentService.getDepartments(),
+        userService.getManagers(),
+      ]);
+
+      // Map manager names to departments
+      const departmentsWithManagerNames = departmentsData.map((dept) => {
+        const manager = managersData.find((m) => m.id === dept.managerId);
+        return {
+          ...dept,
+          managerName: manager ? manager.fullName : null,
+        };
+      });
+
+      setDepartments(departmentsWithManagerNames);
+      setManagers(managersData);
       setLoading(false);
     } catch (error) {
       console.error("Error loading departments:", error);
       message.error("Không thể tải danh sách phòng ban");
+      setLoading(false);
+    }
+  };
+
+  const loadManagers = async () => {
+    setLoadingManagers(true);
+    try {
+      const managersData = await userService.getManagers();
+      setManagers(managersData);
+    } catch (error) {
+      console.error("Error loading managers:", error);
+      message.error("Không thể tải danh sách quản lý");
+    } finally {
+      setLoadingManagers(false);
+    }
+  };
+
+  const handleDelete = async (departmentId) => {
+    try {
+      setLoading(true);
+      await departmentService.deleteDepartment(departmentId);
+      message.success("Đã xóa phòng ban thành công");
+      loadDepartments(); // Reload danh sách
+    } catch (error) {
+      console.error("Error deleting department:", error);
+      message.error("Không thể xóa phòng ban. Vui lòng thử lại.");
+    } finally {
       setLoading(false);
     }
   };
@@ -91,7 +137,14 @@ const DepartmentManagement = ({ showHeader = true }) => {
         setIsModalVisible(true);
         break;
       case "delete":
-        message.success("Đã xóa phòng ban thành công");
+        Modal.confirm({
+          title: "Xác nhận xóa phòng ban",
+          content: `Bạn có chắc chắn muốn xóa phòng ban "${department.departmentName}"?`,
+          okText: "Xóa",
+          cancelText: "Hủy",
+          okType: "danger",
+          onOk: () => handleDelete(department.departmentId),
+        });
         break;
       default:
         break;
@@ -182,24 +235,31 @@ const DepartmentManagement = ({ showHeader = true }) => {
             <UserOutlined style={{ marginRight: "4px", color: "#334766" }} />
             {record.managerName || "Chưa có"}
           </div>
-          {record.managerId && (
-            <div style={{ fontSize: "12px", color: "#6b7280" }}>
-              ID: {record.managerId}
-            </div>
-          )}
         </div>
       ),
     },
     {
-      title: "Số phòng",
-      key: "rooms",
+      title: "Số dây chuyền",
+      key: "lines",
       width: 120,
       align: "center",
       render: (_, record) => (
         <Badge
-          count={record.rooms ? record.rooms.length : 0}
+          count={record.lines ? record.lines.length : 0}
           showZero
           style={{ backgroundColor: "#334766" }}
+        />
+      ),
+    },
+    {
+      title: "Trạng thái",
+      key: "isActive",
+      width: 120,
+      align: "center",
+      render: (_, record) => (
+        <Badge
+          status={record.isActive ? "success" : "error"}
+          text={record.isActive ? "Hoạt động" : "Ngừng hoạt động"}
         />
       ),
     },
@@ -223,7 +283,12 @@ const DepartmentManagement = ({ showHeader = true }) => {
         dept.managerName.toLowerCase().includes(searchText.toLowerCase())) ||
       dept.description.toLowerCase().includes(searchText.toLowerCase());
 
-    return matchesSearch;
+    const matchesStatus =
+      statusFilter === "all" ||
+      (statusFilter === "active" && dept.isActive) ||
+      (statusFilter === "inactive" && !dept.isActive);
+
+    return matchesSearch && matchesStatus;
   });
 
   const handleModalOk = async () => {
@@ -232,8 +297,23 @@ const DepartmentManagement = ({ showHeader = true }) => {
       console.log("Form values:", values);
 
       if (editingDepartment) {
+        // Update existing department
+        await departmentService.updateDepartment(
+          editingDepartment.departmentId,
+          {
+            departmentName: values.departmentName,
+            managerId: values.managerId || null,
+            description: values.description || "",
+          }
+        );
         message.success("Cập nhật phòng ban thành công!");
       } else {
+        // Create new department
+        await departmentService.createDepartment({
+          departmentName: values.departmentName,
+          managerId: values.managerId || null,
+          description: values.description || "",
+        });
         message.success("Tạo phòng ban mới thành công!");
       }
 
@@ -242,7 +322,12 @@ const DepartmentManagement = ({ showHeader = true }) => {
       form.resetFields();
       loadDepartments();
     } catch (error) {
-      console.error("Validation failed:", error);
+      console.error("Operation failed:", error);
+      message.error(
+        editingDepartment
+          ? "Cập nhật phòng ban thất bại!"
+          : "Tạo phòng ban thất bại!"
+      );
     }
   };
 
@@ -278,10 +363,10 @@ const DepartmentManagement = ({ showHeader = true }) => {
         </div>
 
         <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
-          <Col xs={24} sm={12} md={12}>
+          <Col xs={24} sm={12} md={8}>
             <Input.Group compact>
               <Input
-                placeholder="Tìm kiếm theo tên phòng ban, mô tả hoặc tên quản lý..."
+                placeholder="Tìm kiếm theo tên phòng ban, mô tả, tên quản lý..."
                 size="large"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
@@ -299,7 +384,21 @@ const DepartmentManagement = ({ showHeader = true }) => {
               />
             </Input.Group>
           </Col>
-          <Col xs={24} sm={12} md={12}>
+          <Col xs={24} sm={6} md={4}>
+            <Select
+              placeholder="Trạng thái"
+              size="large"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              style={{ width: "100%" }}
+              options={[
+                { value: "all", label: "Tất cả" },
+                { value: "active", label: "Hoạt động" },
+                { value: "inactive", label: "Ngừng hoạt động" },
+              ]}
+            />
+          </Col>
+          <Col xs={24} sm={6} md={12}>
             <Space style={{ float: "right" }}>
               <Button
                 type="primary"
@@ -382,10 +481,18 @@ const DepartmentManagement = ({ showHeader = true }) => {
           </Row>
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item name="managerId" label="ID Quản lý">
-                <Input
-                  type="number"
-                  placeholder="Nhập ID người quản lý (tùy chọn)"
+              <Form.Item name="managerId" label="Người quản lý">
+                <Select
+                  placeholder="Chọn người quản lý (tùy chọn)"
+                  allowClear
+                  loading={loadingManagers}
+                  options={managers}
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.label ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
                 />
               </Form.Item>
             </Col>
@@ -439,10 +546,6 @@ const DepartmentManagement = ({ showHeader = true }) => {
               </Descriptions.Item>
               <Descriptions.Item label="Tên quản lý">
                 {viewingDepartment.managerName || "Chưa có"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Số phòng" span={2}>
-                {viewingDepartment.rooms ? viewingDepartment.rooms.length : 0}{" "}
-                phòng
               </Descriptions.Item>
             </Descriptions>
           </div>

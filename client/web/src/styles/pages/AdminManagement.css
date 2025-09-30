@@ -40,15 +40,9 @@
   box-shadow: 0 4px 24px rgba(0,0,0,0.08);
   border: 1px solid #e5e7eb;
   overflow: hidden;
-  transition: all 0.3s ease;
 }
 
-.admin-management-filter-card:hover,
-.admin-management-actions-card:hover,
-.admin-management-table-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-}
+
 
 .admin-management-filter-card .ant-card-body {
   padding: 20px;
@@ -82,27 +76,18 @@
   border: none;
   border-radius: 10px;
   box-shadow: 0 4px 16px rgba(51, 71, 102, 0.3);
-  transition: all 0.3s ease;
   font-weight: 500;
 }
 
-.ant-btn-primary:hover {
-  background: linear-gradient(135deg, #4f5a7a 0%, #334766 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(51, 71, 102, 0.4);
-}
+
 
 .ant-btn {
   border-radius: 8px;
   border: 1px solid #d1d5db;
-  transition: all 0.3s ease;
   font-weight: 500;
 }
 
-.ant-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
+
 
 /* Enhanced Input Styles */
 .ant-input,
@@ -139,14 +124,9 @@
   text-align: center;
 }
 
-.ant-table-tbody > tr {
-  transition: all 0.3s ease;
-}
 
-.ant-table-tbody > tr:hover {
-  background: linear-gradient(145deg, #f8fafc 0%, #e5e7eb 100%);
-  transform: scale(1.01);
-}
+
+
 
 .ant-table-tbody > tr > td {
   padding: 12px 16px;
@@ -165,11 +145,6 @@
   letter-spacing: 0.5px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
   transition: all 0.3s ease;
-}
-
-.ant-tag:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
 
 /* Green status - Working */
@@ -200,16 +175,13 @@
 .ant-switch {
   background: #d1d5db;
   border-radius: 16px;
-  transition: all 0.3s ease;
 }
 
 .ant-switch-checked {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
 }
 
-.ant-switch:hover {
-  transform: scale(1.05);
-}
+
 
 /* Modal Enhancement */
 .ant-modal {
@@ -281,13 +253,9 @@
 /* Action Button Enhancement */
 .ant-btn-text {
   border-radius: 8px;
-  transition: all 0.3s ease;
 }
 
-.ant-btn-text:hover {
-  background: rgba(51, 71, 102, 0.1);
-  transform: scale(1.1);
-}
+
 
 .ant-btn-text.ant-btn-dangerous:hover {
   background: rgba(239, 68, 68, 0.1);
@@ -315,13 +283,9 @@
 .ant-pagination-item {
   border-radius: 8px;
   border: 1px solid #d1d5db;
-  transition: all 0.3s ease;
 }
 
-.ant-pagination-item:hover {
-  border-color: #334766;
-  transform: translateY(-1px);
-}
+
 
 .ant-pagination-item-active {
   background: linear-gradient(135deg, #334766 0%, #4f5a7a 100%);

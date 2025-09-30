@@ -241,6 +241,30 @@ public class UsersController : ControllerBase
             return StatusCode(500, $"Internal server error: {ex.Message}");
         }
     }
+
+    // GET: https://localhost:7003/api/Users/managers
+    [HttpGet("managers")]
+    public async Task<ActionResult<IReadOnlyList<UserDTO>>> GetManagers()
+    {
+        try
+        {
+            var managers = await userService.GetUsersByRoleAsync("Quan ly");
+            var managerDTOs = managers.Select(manager => new UserDTO
+            {
+                Id = manager.Id,
+                UserName = manager.UserName,
+                Email = manager.Email,
+                PhoneNumber = manager.PhoneNumber,
+                FullName = manager.FullName
+            }).ToList();
+
+            return Ok(managerDTOs);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Internal server error: {ex.Message}");
+        }
+    }
 }
 
 

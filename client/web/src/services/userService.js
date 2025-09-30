@@ -95,6 +95,23 @@ export const userService = {
       throw new Error("Không thể import người dùng từ Excel.");
     }
   },
+
+  // Get managers for department dropdown
+  getManagers: async () => {
+    try {
+      const managers = await apiRequest("/Users/managers");
+      return managers.map((manager) => ({
+        value: manager.id,
+        label: manager.fullName || manager.userName,
+        id: manager.id,
+        fullName: manager.fullName,
+        employeeCode: manager.employeeCode,
+      }));
+    } catch (error) {
+      console.error("Error fetching managers:", error);
+      throw new Error("Không thể lấy danh sách quản lý.");
+    }
+  },
 };
 
 export default userService;

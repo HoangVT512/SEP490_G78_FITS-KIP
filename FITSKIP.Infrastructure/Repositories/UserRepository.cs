@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
 using FITSKIP.Infrastructure.DbContexts;
@@ -8,10 +9,12 @@ namespace FITSKIP.Infrastructure.Repositories;
 public class UserRepository : IUserRepository
 {
     private readonly FitskipDbContext db;
+    private readonly UserManager<User> userManager;
 
-    public UserRepository(FitskipDbContext db)
+    public UserRepository(FitskipDbContext db, UserManager<User> userManager)
     {
         this.db = db;
+        this.userManager = userManager;
     }
 
     public async Task<User> CreateUserAsync(User user, CancellationToken cancellationToken = default)
@@ -82,5 +85,26 @@ public class UserRepository : IUserRepository
         return await db.Departments
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<User>> GetUsersByRoleAsync(string roleName, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Handle specific encoding issues for Vietnamese role names
+            var actualRoleName = roleName;
+            if (roleName == "Quản lý")
+                actualRoleName = "Quan ly";
+
+            var usersInRole = await userManager.GetUsersInRoleAsync(actualRoleName);
+            var activeUsers = usersInRole.Where(u => u.IsActive).ToList();
+
+            return activeUsers;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error in GetUsersByRoleAsync: {ex.Message}");
+            return new List<User>();
+        }
     }
 }
