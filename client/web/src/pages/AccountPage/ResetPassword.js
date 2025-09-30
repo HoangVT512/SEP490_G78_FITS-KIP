@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Form,
   Input,
@@ -34,14 +34,41 @@ const ResetPassword = () => {
   const [loading, setLoading] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
   const [otpValue, setOtpValue] = useState("");
+  // For 6-digit OTP input boxes
+  const otpInputs = Array(6).fill(0);
+  const otpRefs = Array.from({ length: 6 }, () => useRef());
   const [form] = Form.useForm();
+  // Timer state for OTP countdown
+  const [otpTimer, setOtpTimer] = useState(300); // 5 minutes in seconds
+  const timerRef = useRef(null);
 
   // Step 1: Handle request reset from ForgotPassword component
   const handleRequestReset = (contact, type) => {
     setResetContact(contact);
     setContactType(type);
     setCurrentStep(1);
+    setOtpTimer(300); // Reset timer to 5 minutes
   };
+  // Start/clear timer when entering OTP step
+  useEffect(() => {
+    if (currentStep === 1 && !otpVerified) {
+      if (timerRef.current) clearInterval(timerRef.current);
+      timerRef.current = setInterval(() => {
+        setOtpTimer((prev) => {
+          if (prev <= 1) {
+            clearInterval(timerRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [currentStep, otpVerified]);
 
   // Handle OTP verification
   const handleOtpVerification = async (otp) => {
@@ -61,14 +88,38 @@ const ResetPassword = () => {
     }
   };
 
-  // Handle OTP input change
-  const handleOtpChange = (e) => {
-    const value = e.target.value;
-    setOtpValue(value);
-
+  // Handle OTP input change for each box
+  const handleOtpBoxChange = (e, idx) => {
+    const val = e.target.value.replace(/[^0-9]/g, "");
+    if (!val) return;
+    let newOtp = otpValue.split("");
+    newOtp[idx] = val[val.length - 1]; // Only last digit
+    // Fill empty for others
+    newOtp = Array(6).fill("").map((_, i) => newOtp[i] || "");
+    setOtpValue(newOtp.join(""));
+    // Move focus to next
+    if (idx < 5 && val) {
+      otpRefs[idx + 1].current && otpRefs[idx + 1].current.focus();
+    }
     // Auto-verify when 6 digits are entered
-    if (value.length === 6) {
-      handleOtpVerification(value);
+    if (newOtp.join("").length === 6) {
+      handleOtpVerification(newOtp.join(""));
+    }
+  };
+
+  // Handle backspace for OTP boxes
+  const handleOtpBoxKeyDown = (e, idx) => {
+    if (e.key === "Backspace") {
+      let newOtp = otpValue.split("");
+      if (newOtp[idx]) {
+        newOtp[idx] = "";
+        setOtpValue(newOtp.join(""));
+      } else if (idx > 0) {
+        otpRefs[idx - 1].current && otpRefs[idx - 1].current.focus();
+        let prevOtp = otpValue.split("");
+        prevOtp[idx - 1] = "";
+        setOtpValue(prevOtp.join(""));
+      }
     }
   };
 
@@ -126,24 +177,30 @@ const ResetPassword = () => {
             </div>
 
             {!otpVerified && (
-              <Alert
-                message={
-                  <span>
-                    <InfoCircleOutlined className="reset-password-alert-icon" />
-                    Kiểm tra{" "}
-                    {contactType === "email" ? "hộp thư" : "tin nhắn SMS"}
-                  </span>
-                }
-                description={
-                  contactType === "email"
-                    ? "Mã OTP có thể nằm trong thư mục spam/junk. Mã có hiệu lực trong 5 phút."
-                    : "Mã OTP 6 số đã được gửi đến số điện thoại của bạn. Mã có hiệu lực trong 5 phút."
-                }
-                type="warning"
-                className={`alert-with-animation ${
-                  otpVerified ? "alert-fade-out" : ""
-                }`}
-              />
+              <>
+                <Alert
+                  message={
+                    <span>
+                      <InfoCircleOutlined className="reset-password-alert-icon" />
+                      Kiểm tra{" "}
+                      {contactType === "email" ? "hộp thư" : "tin nhắn SMS"}
+                    </span>
+                  }
+                  description={
+                    contactType === "email"
+                      ? "Mã OTP có thể nằm trong thư mục spam/junk. Mã có hiệu lực trong 5 phút."
+                      : "Mã OTP 6 số đã được gửi đến số điện thoại của bạn. Mã có hiệu lực trong 5 phút."
+                  }
+                  type="warning"
+                  className={`alert-with-animation ${
+                    otpVerified ? "alert-fade-out" : ""
+                  }`}
+                />
+                {/* Countdown Timer UI */}
+                <div style={{ marginTop: 12, textAlign: "center", fontWeight: 500, color: "#d97706", fontSize: 16 }}>
+                  Thời gian còn lại để nhập mã OTP: {`${String(Math.floor(otpTimer / 60)).padStart(2, "0")}:${String(otpTimer % 60).padStart(2, "0")}`}
+                </div>
+              </>
             )}
 
             {/* OTP Section - Initially visible, hidden after verification */}
@@ -163,26 +220,39 @@ const ResetPassword = () => {
                   },
                 ]}
               >
-                <Input
-                  placeholder="Nhập mã OTP 6 số"
-                  size="large"
-                  maxLength={6}
-                  value={otpValue}
-                  onChange={handleOtpChange}
-                  loading={loading}
-                  className={`otp-input ${
-                    otpVerified
-                      ? "otp-input-verified"
-                      : loading
-                      ? "otp-input-loading"
-                      : "otp-input-default"
-                  }`}
-                  suffix={
-                    otpVerified ? (
-                      <CheckCircleOutlined className="reset-password-otp-verified-icon" />
-                    ) : null
-                  }
-                />
+                <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 8 }}>
+                  {otpInputs.map((_, idx) => (
+                    <input
+                      key={idx}
+                      ref={otpRefs[idx]}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={otpValue[idx] || ""}
+                      onChange={e => handleOtpBoxChange(e, idx)}
+                      onKeyDown={e => handleOtpBoxKeyDown(e, idx)}
+                      disabled={otpVerified || loading}
+                      style={{
+                        width: 40,
+                        height: 48,
+                        fontSize: 24,
+                        textAlign: "center",
+                        border: otpVerified ? "2px solid #52c41a" : "1.5px solid #bdbdbd",
+                        borderRadius: 8,
+                        background: otpVerified ? "#f0fff4" : "#fff",
+                        outline: "none",
+                        transition: "border 0.2s, background 0.2s",
+                        boxShadow: loading ? "0 0 0 2px #fde68a" : undefined,
+                        color: otpVerified ? "#16a34a" : "#1f2937",
+                        caretColor: "#334766",
+                      }}
+                      autoFocus={idx === 0}
+                    />
+                  ))}
+                  {otpVerified && (
+                    <CheckCircleOutlined style={{ color: "#16a34a", fontSize: 28, marginLeft: 8, alignSelf: "center" }} />
+                  )}
+                </div>
               </Form.Item>
             </div>
 

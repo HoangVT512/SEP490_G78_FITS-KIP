@@ -25,6 +25,8 @@ const Login = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated, user, isAdmin, isLoggingOut } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [form] = Form.useForm();
 
   useEffect(() => {
     // Don't auto-redirect if currently logging out
@@ -54,8 +56,15 @@ const Login = () => {
     }
   }, [isAuthenticated, user, navigate, isLoggingOut]);
 
+  const isEmailFormat = (value) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(value);
+  };
+
   const onFinish = async (values) => {
     setLoading(true);
+    setLoginError(""); // Clear previous errors
+    
     try {
       const loginId = values.loginId; // Nhận cả email hoặc mã nhân viên
       const response = await login(loginId, values.password, values.remember);
@@ -66,7 +75,17 @@ const Login = () => {
       console.log("Redirecting to admin page for all users");
       navigate("/admin");
     } catch (error) {
-      message.error(error.message || "Đăng nhập thất bại!");
+      // Determine if user entered email or employee code
+      const isEmail = isEmailFormat(values.loginId);
+      
+      // Set specific error message based on input type
+      if (isEmail) {
+        setLoginError("Email hoặc mật khẩu không đúng!");
+      } else {
+        setLoginError("Mã nhân viên hoặc mật khẩu không đúng!");
+      }
+      
+      // Don't show the general error message - only show red text under input
     } finally {
       setLoading(false);
     }
@@ -92,6 +111,7 @@ const Login = () => {
           {/* Login Form Section */}
           <div className="login-form-section">
             <Form
+              form={form}
               name="login"
               initialValues={{ remember: true }}
               onFinish={onFinish}
@@ -124,6 +144,7 @@ const Login = () => {
                   prefix={<UserOutlined />}
                   placeholder="Nhập email hoặc mã nhân viên (VD: admin@company.com hoặc ADM001)"
                   size="large"
+                  onChange={() => setLoginError("")} // Clear error when user types
                 />
               </Form.Item>
 
@@ -132,11 +153,14 @@ const Login = () => {
                 rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}
                 className="login-form-item"
                 label="Mật khẩu"
+                validateStatus={loginError ? "error" : ""}
+                help={loginError}
               >
                 <Input.Password
                   prefix={<LockOutlined />}
                   placeholder="Nhập mật khẩu"
                   size="large"
+                  onChange={() => setLoginError("")} // Clear error when user types
                 />
               </Form.Item>
 

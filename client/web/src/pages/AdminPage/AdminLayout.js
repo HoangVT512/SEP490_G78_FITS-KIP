@@ -7,6 +7,7 @@ import {
   Dropdown,
   Button,
   Badge,
+  message,
 } from "antd";
 import {
   DashboardOutlined,
@@ -129,6 +130,7 @@ const AdminLayout = () => {
       label: "Đăng xuất",
       onClick: async () => {
         await logout();
+        message.success("Đăng xuất thành công!");
         navigate("/login");
       },
     },
