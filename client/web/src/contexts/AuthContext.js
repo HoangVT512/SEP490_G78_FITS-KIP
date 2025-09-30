@@ -19,22 +19,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     checkAuthStatus();
-
-    // Clear authentication data when window is closed or tab is closed
-    const handleBeforeUnload = () => {
-      // This ensures all auth data is cleared when user closes browser/tab
-      authService.clearAuthData();
-    };
-
-    // Add event listeners for when the page is being closed
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    window.addEventListener("unload", handleBeforeUnload);
-
-    // Cleanup event listeners
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      window.removeEventListener("unload", handleBeforeUnload);
-    };
+    // No longer clear authentication data on reload/close
   }, []);
 
   const checkAuthStatus = () => {

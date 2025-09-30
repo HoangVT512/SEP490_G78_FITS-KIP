@@ -14,10 +14,10 @@ export const authService = {
       });
 
       if (response.token) {
-        // Store token and user info in sessionStorage (cleared when browser closes)
-        sessionStorage.setItem("token", response.token);
-        sessionStorage.setItem("tokenExpiration", response.expiration);
-        sessionStorage.setItem("currentUser", JSON.stringify(response.user));
+        // Store token and user info in localStorage (persists after reload)
+        localStorage.setItem("token", response.token);
+        localStorage.setItem("tokenExpiration", response.expiration);
+        localStorage.setItem("currentUser", JSON.stringify(response.user));
 
         return response;
       }
@@ -42,10 +42,10 @@ export const authService = {
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-      // Always clear session storage
-      sessionStorage.removeItem("token");
-      sessionStorage.removeItem("tokenExpiration");
-      sessionStorage.removeItem("currentUser");
+  // Always clear local storage
+  localStorage.removeItem("token");
+  localStorage.removeItem("tokenExpiration");
+  localStorage.removeItem("currentUser");
     }
   },
 
@@ -63,8 +63,8 @@ export const authService = {
 
   // Check if user is logged in
   isLoggedIn: () => {
-    const token = sessionStorage.getItem("token");
-    const expiration = sessionStorage.getItem("tokenExpiration");
+  const token = localStorage.getItem("token");
+  const expiration = localStorage.getItem("tokenExpiration");
 
     if (!token || !expiration) {
       return false;
@@ -84,20 +84,20 @@ export const authService = {
 
   // Get stored user
   getStoredUser: () => {
-    const userStr = sessionStorage.getItem("currentUser");
-    return userStr ? JSON.parse(userStr) : null;
+  const userStr = localStorage.getItem("currentUser");
+  return userStr ? JSON.parse(userStr) : null;
   },
 
   // Get stored token
   getToken: () => {
-    return sessionStorage.getItem("token");
+  return localStorage.getItem("token");
   },
 
   // Clear authentication data
   clearAuthData: () => {
-    sessionStorage.removeItem("token");
-    sessionStorage.removeItem("tokenExpiration");
-    sessionStorage.removeItem("currentUser");
+  localStorage.removeItem("token");
+  localStorage.removeItem("tokenExpiration");
+  localStorage.removeItem("currentUser");
   },
 
   // Check if user has admin role
