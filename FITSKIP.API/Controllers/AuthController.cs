@@ -120,4 +120,46 @@ public class AuthController : ControllerBase
             return BadRequest(new { message = "Không thể lấy thông tin user", details = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Gửi OTP đặt lại mật khẩu qua email
+    /// </summary>
+    [HttpPost("forgot-password/send-otp")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SendForgotPasswordOtp([FromBody] ForgotPasswordRequest request)
+    {
+        try
+        {
+            var ok = await _authService.SendForgotPasswordOtpAsync(request);
+            return Ok(new { success = ok });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { message = "Không thể gửi OTP", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Xác thực OTP
+    /// </summary>
+    [HttpPost("forgot-password/verify-otp")]
+    [AllowAnonymous]
+    public async Task<IActionResult> VerifyOtp([FromBody] VerifyOtpRequest request)
+    {
+        var ok = await _authService.VerifyOtpAsync(request);
+        if (!ok) return BadRequest(new { success = false, message = "OTP không hợp lệ hoặc đã hết hạn" });
+        return Ok(new { success = true });
+    }
+
+    /// <summary>
+    /// Đặt lại mật khẩu bằng OTP
+    /// </summary>
+    [HttpPost("forgot-password/reset")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResetPasswordWithOtp([FromBody] ResetPasswordWithOtpRequest request)
+    {
+        var ok = await _authService.ResetPasswordWithOtpAsync(request);
+        if (!ok) return BadRequest(new { success = false, message = "OTP không hợp lệ hoặc thao tác thất bại" });
+        return Ok(new { success = true });
+    }
 }
