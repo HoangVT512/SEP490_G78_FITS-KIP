@@ -23,6 +23,7 @@ import {
   EditOutlined,
   GroupOutlined,
   NodeIndexOutlined,
+  ToolOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -37,6 +38,7 @@ import StageManagement from "../AdminPage/StageManagement";
 import RoleManagement from "../AdminPage/RoleManagement";
 import SystemSettings from "../AdminPage/SystemSettings";
 import AdminReports from "../AdminPage/AdminReports";
+import EquipmentManagement from "../AdminPage/EquipmentManagement";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -82,7 +84,12 @@ const AdminLayout = () => {
     {
       key: "stages",
       icon: <NodeIndexOutlined />,
-      label: "Quản lý giai đoạn",
+      label: "Quản lý công đoạn",
+    },
+    {
+      key: "equipment",
+      icon: <ToolOutlined />,
+      label: "Quản lý thiết bị",
     },
     {
       key: "roles",
@@ -149,6 +156,8 @@ const AdminLayout = () => {
         return <LineGroupManagement showHeader={false} />;
       case "stages":
         return <StageManagement showHeader={false} />;
+      case "equipment":
+        return <EquipmentManagement showHeader={false} />;
       case "roles":
         return <RoleManagement showHeader={false} />;
       case "reports":

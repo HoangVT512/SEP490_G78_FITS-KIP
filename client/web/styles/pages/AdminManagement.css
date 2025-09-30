@@ -1,0 +1,81 @@
+/* Equipment Management Page Styles */
+.admin-management-container {
+  padding: 24px;
+  background: #f8fafc;
+  min-height: 100vh;
+}
+
+.admin-management-header {
+  margin-bottom: 16px;
+}
+
+.admin-management-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #334766;
+}
+
+.admin-management-title-icon {
+  color: #334766;
+  font-size: 28px;
+}
+
+.admin-management-filter-card,
+.admin-management-actions-card,
+.admin-management-table-card {
+  margin-bottom: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.admin-management-summary {
+  margin-top: 8px;
+}
+
+/* Table styles */
+.ant-table-thead > tr > th {
+  background: #e5e7eb;
+  color: #334766;
+  font-weight: 600;
+}
+
+.ant-table-row {
+  font-size: 15px;
+}
+
+/* Modal styles */
+.ant-modal-title {
+  color: #334766;
+  font-weight: 600;
+}
+
+/* Form styles */
+.ant-form-item-label > label {
+  color: #334766;
+  font-weight: 500;
+}
+
+/* Status tags */
+.ant-tag {
+  font-size: 14px;
+  padding: 4px 12px;
+  border-radius: 8px;
+}
+
+/* Switch styles */
+.ant-switch {
+  background: #e5e7eb;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .admin-management-container {
+    padding: 8px;
+  }
+  .admin-management-header {
+    margin-bottom: 8px;
+  }
+  .admin-management-title {
+    font-size: 20px;
+  }
+}

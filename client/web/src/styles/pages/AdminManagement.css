@@ -1,0 +1,503 @@
+/* Equipment Management Page Styles */
+.admin-management-container {
+  padding: 24px;
+  background: linear-gradient(135deg, #f8fafc 0%, #e5e7eb 100%);
+  min-height: 100vh;
+}
+
+.admin-management-header {
+  margin-bottom: 24px;
+  padding: 20px 0;
+  text-align: center;
+  background: linear-gradient(135deg, #334766 0%, #4f5a7a 100%);
+  border-radius: 16px;
+  color: white;
+  box-shadow: 0 8px 32px rgba(51, 71, 102, 0.3);
+}
+
+.admin-management-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #ffffff !important;
+  margin-bottom: 8px !important;
+  font-size: 28px !important;
+  font-weight: 700;
+}
+
+.admin-management-title-icon {
+  color: #ffffff;
+  font-size: 32px;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+.admin-management-filter-card,
+.admin-management-actions-card,
+.admin-management-table-card {
+  margin-bottom: 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.admin-management-filter-card:hover,
+.admin-management-actions-card:hover,
+.admin-management-table-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.admin-management-filter-card .ant-card-body {
+  padding: 20px;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.admin-management-actions-card {
+  background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%);
+}
+
+.admin-management-actions-card .ant-card-body {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+}
+
+.admin-management-summary {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: rgba(51, 71, 102, 0.05);
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(51, 71, 102, 0.1);
+}
+
+/* Enhanced Button Styles */
+.ant-btn-primary {
+  background: linear-gradient(135deg, #334766 0%, #4f5a7a 100%);
+  border: none;
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(51, 71, 102, 0.3);
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.ant-btn-primary:hover {
+  background: linear-gradient(135deg, #4f5a7a 0%, #334766 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(51, 71, 102, 0.4);
+}
+
+.ant-btn {
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.ant-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/* Enhanced Input Styles */
+.ant-input,
+.ant-select-selector {
+  border-radius: 10px;
+  border: 1.5px solid #d1d5db;
+  transition: all 0.3s ease;
+  background: #ffffff;
+}
+
+.ant-input:focus,
+.ant-select-focused .ant-select-selector {
+  border-color: #334766;
+  box-shadow: 0 0 0 3px rgba(51, 71, 102, 0.1);
+}
+
+/* Table Enhancement */
+.admin-management-table-card .ant-card-body {
+  padding: 0;
+  background: #ffffff;
+}
+
+.ant-table {
+  border-radius: 0;
+}
+
+.ant-table-thead > tr > th {
+  background: linear-gradient(135deg, #334766 0%, #4f5a7a 100%);
+  color: #ffffff;
+  font-weight: 600;
+  border: none;
+  padding: 16px;
+  font-size: 14px;
+  text-align: center;
+}
+
+.ant-table-tbody > tr {
+  transition: all 0.3s ease;
+}
+
+.ant-table-tbody > tr:hover {
+  background: linear-gradient(145deg, #f8fafc 0%, #e5e7eb 100%);
+  transform: scale(1.01);
+}
+
+.ant-table-tbody > tr > td {
+  padding: 12px 16px;
+  border-bottom: 1px solid #e5e7eb;
+  vertical-align: middle;
+}
+
+/* Enhanced Status Tags */
+.ant-tag {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: none;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.ant-tag:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Green status - Working */
+.ant-tag-green {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+}
+
+/* Orange status - Maintenance */
+.ant-tag-orange {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: white;
+}
+
+/* Red status - Inactive */
+.ant-tag-red {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+}
+
+/* Yellow status - Issues */
+.ant-tag-yellow {
+  background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+  color: white;
+}
+
+/* Enhanced Switch Styles */
+.ant-switch {
+  background: #d1d5db;
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.ant-switch-checked {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.ant-switch:hover {
+  transform: scale(1.05);
+}
+
+/* Modal Enhancement */
+.ant-modal {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.ant-modal-header {
+  background: linear-gradient(135deg, #334766 0%, #4f5a7a 100%);
+  border-bottom: none;
+  padding: 20px 24px;
+}
+
+.ant-modal-title {
+  color: #ffffff !important;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.ant-modal-close {
+  color: #ffffff;
+  font-size: 18px;
+}
+
+.ant-modal-close:hover {
+  color: #e5e7eb;
+}
+
+.ant-modal-body {
+  padding: 24px;
+  background: #ffffff;
+}
+
+.ant-modal-footer {
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+  padding: 16px 24px;
+}
+
+/* Form Enhancement */
+.ant-form-item-label > label {
+  color: #334766;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.ant-form-item {
+  margin-bottom: 20px;
+}
+
+/* Badge Enhancement */
+.admin-management-summary .ant-badge-status-dot {
+  width: 10px;
+  height: 10px;
+}
+
+.admin-management-summary .ant-badge-status-success {
+  background: #10b981;
+}
+
+.admin-management-summary .ant-badge-status-processing {
+  background: #3b82f6;
+}
+
+.admin-management-summary .ant-badge-status-warning {
+  background: #f59e0b;
+}
+
+/* Action Button Enhancement */
+.ant-btn-text {
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.ant-btn-text:hover {
+  background: rgba(51, 71, 102, 0.1);
+  transform: scale(1.1);
+}
+
+.ant-btn-text.ant-btn-dangerous:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+/* Tooltip Enhancement */
+.ant-tooltip-inner {
+  background: #334766;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.ant-tooltip-arrow-content {
+  background: #334766;
+}
+
+/* Pagination Enhancement */
+.ant-pagination {
+  margin-top: 20px;
+  text-align: center;
+}
+
+.ant-pagination-item {
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  transition: all 0.3s ease;
+}
+
+.ant-pagination-item:hover {
+  border-color: #334766;
+  transform: translateY(-1px);
+}
+
+.ant-pagination-item-active {
+  background: linear-gradient(135deg, #334766 0%, #4f5a7a 100%);
+  border-color: #334766;
+}
+
+.ant-pagination-item-active a {
+  color: #ffffff;
+}
+
+/* Search Input Enhancement */
+.ant-input-affix-wrapper {
+  border-radius: 10px;
+  border: 1.5px solid #d1d5db;
+  transition: all 0.3s ease;
+  background: #ffffff;
+}
+
+.ant-input-affix-wrapper:focus,
+.ant-input-affix-wrapper-focused {
+  border-color: #334766;
+  box-shadow: 0 0 0 3px rgba(51, 71, 102, 0.1);
+}
+
+.ant-input-affix-wrapper .ant-input-prefix {
+  color: #6b7280;
+}
+
+/* Select Enhancement */
+.ant-select-dropdown {
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.ant-select-item {
+  border-radius: 8px;
+  margin: 4px 8px;
+  transition: all 0.3s ease;
+}
+
+.ant-select-item-option-active {
+  background: rgba(51, 71, 102, 0.1);
+}
+
+.ant-select-item-option-selected {
+  background: linear-gradient(135deg, #334766 0%, #4f5a7a 100%);
+  color: #ffffff;
+}
+
+/* Popconfirm Enhancement */
+.ant-popover-inner {
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+}
+
+.ant-popover-title {
+  color: #334766;
+  font-weight: 600;
+}
+
+/* Loading Enhancement */
+.ant-spin-dot-item {
+  background-color: #334766;
+}
+
+/* QR Code Preview Styles */
+.qr-code-preview-container {
+  text-align: center;
+  margin: 16px 0;
+  padding: 16px;
+  background: linear-gradient(145deg, #f8fafc 0%, #e5e7eb 100%);
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+}
+
+.qr-code-preview-title {
+  color: #334766;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: block;
+  font-size: 14px;
+}
+
+.qr-code-preview-image-container {
+  display: inline-block;
+  padding: 12px;
+  border: 2px solid #334766;
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: 0 4px 16px rgba(51, 71, 102, 0.2);
+  transition: all 0.3s ease;
+}
+
+.qr-code-preview-image-container:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(51, 71, 102, 0.3);
+}
+
+.qr-code-preview-image {
+  width: 120px;
+  height: 120px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.qr-code-preview-image:hover {
+  transform: scale(1.05);
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .admin-management-actions-card .ant-card-body {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .admin-management-summary {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-management-container {
+    padding: 12px;
+  }
+  
+  .admin-management-header {
+    margin-bottom: 16px;
+    padding: 16px;
+  }
+  
+  .admin-management-title {
+    font-size: 22px !important;
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .admin-management-title-icon {
+    font-size: 28px;
+  }
+  
+  .admin-management-filter-card .ant-card-body,
+  .admin-management-actions-card .ant-card-body,
+  .ant-modal-body {
+    padding: 16px;
+  }
+  
+  .admin-management-summary {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
+  }
+  
+  .ant-table-thead > tr > th,
+  .ant-table-tbody > tr > td {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-management-container {
+    padding: 8px;
+  }
+  
+  .admin-management-header {
+    padding: 12px;
+  }
+  
+  .admin-management-title {
+    font-size: 18px !important;
+  }
+  
+  .admin-management-title-icon {
+    font-size: 24px;
+  }
+}
