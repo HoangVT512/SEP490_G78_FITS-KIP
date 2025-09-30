@@ -2,6 +2,8 @@ using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Configuration;
 
 namespace FITSKIP.Application.Services;
 
@@ -10,15 +12,24 @@ public class AuthService : IAuthService
     private readonly UserManager<User> _userManager;
     private readonly SignInManager<User> _signInManager;
     private readonly IJwtTokenService _jwtTokenService;
+    private readonly IEmailService _emailService;
+    private readonly IMemoryCache _memoryCache;
+    private readonly IConfiguration _configuration;
 
     public AuthService(
         UserManager<User> userManager,
         SignInManager<User> signInManager,
-        IJwtTokenService jwtTokenService)
+        IJwtTokenService jwtTokenService,
+        IEmailService emailService,
+        IMemoryCache memoryCache,
+        IConfiguration configuration)
     {
         _userManager = userManager;
         _signInManager = signInManager;
         _jwtTokenService = jwtTokenService;
+        _emailService = emailService;
+        _memoryCache = memoryCache;
+        _configuration = configuration;
     }
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
@@ -81,6 +92,67 @@ public class AuthService : IAuthService
         return false;
     }
 
+    public async Task<bool> SendForgotPasswordOtpAsync(ForgotPasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email))
+            return false;
+
+        var user = await _userManager.FindByEmailAsync(request.Email);
+        if (user == null)
+        {
+            // Do not reveal whether email exists
+            return true;
+        }
+
+        var otp = GenerateOtp();
+        var ttlMinutes = int.TryParse(_configuration["Otp:ExpireMinutes"], out var m) ? m : 10;
+        var cacheKey = GetOtpCacheKey(request.Email);
+        _memoryCache.Set(cacheKey, otp, TimeSpan.FromMinutes(ttlMinutes));
+
+        var subject = "Mã OTP đặt lại mật khẩu";
+        var html = $@"<p>Xin chào {user.FullName ?? user.UserName},</p>
+<p>Mã OTP đặt lại mật khẩu của bạn là: <strong style='font-size:20px'>{otp}</strong></p>
+<p>Mã sẽ hết hạn sau {ttlMinutes} phút. Nếu bạn không yêu cầu, vui lòng bỏ qua email này.</p>";
+
+        await _emailService.SendEmailAsync(request.Email, subject, html, $"OTP: {otp}");
+        return true;
+    }
+
+    public Task<bool> VerifyOtpAsync(VerifyOtpRequest request)
+    {
+        var cacheKey = GetOtpCacheKey(request.Email);
+        if (_memoryCache.TryGetValue<string>(cacheKey, out var stored) && string.Equals(stored, request.Otp, StringComparison.Ordinal))
+        {
+            return Task.FromResult(true);
+        }
+        return Task.FromResult(false);
+    }
+
+    public async Task<bool> ResetPasswordWithOtpAsync(ResetPasswordWithOtpRequest request)
+    {
+        var cacheKey = GetOtpCacheKey(request.Email);
+        if (!_memoryCache.TryGetValue<string>(cacheKey, out var stored) || !string.Equals(stored, request.Otp, StringComparison.Ordinal))
+        {
+            return false;
+        }
+
+        var user = await _userManager.FindByEmailAsync(request.Email);
+        if (user == null)
+        {
+            return false;
+        }
+
+        // Use Identity reset token to change password securely
+        var resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
+        var result = await _userManager.ResetPasswordAsync(user, resetToken, request.NewPassword);
+        if (result.Succeeded)
+        {
+            _memoryCache.Remove(cacheKey);
+            return true;
+        }
+        return false;
+    }
+
     private async Task<User?> FindUserByEmailOrEmployeeCodeAsync(string emailOrEmployeeCode)
     {
         // First try to find by email
@@ -93,4 +165,12 @@ public class AuthService : IAuthService
         var users = _userManager.Users.Where(u => u.EmployeeCode == emailOrEmployeeCode);
         return users.FirstOrDefault();
     }
+
+    private static string GenerateOtp()
+    {
+        var random = new Random();
+        return random.Next(100000, 999999).ToString();
+    }
+
+    private static string GetOtpCacheKey(string email) => $"otp:reset:{email.ToLowerInvariant()}";
 }
