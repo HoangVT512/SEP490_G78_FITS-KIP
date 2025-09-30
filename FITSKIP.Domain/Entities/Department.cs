@@ -13,7 +13,9 @@ public partial class Department
 
     public string? Description { get; set; }
 
+    public bool IsActive { get; set; } = true;
+
     public virtual User? Manager { get; set; }
 
-    public virtual ICollection<Room> Rooms { get; set; } = new List<Room>();
+    public virtual ICollection<Line> Lines { get; set; } = new List<Line>();
 }

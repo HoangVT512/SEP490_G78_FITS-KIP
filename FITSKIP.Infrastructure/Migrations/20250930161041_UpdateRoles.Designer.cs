@@ -4,6 +4,7 @@ using FITSKIP.Infrastructure.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    partial class FitskipDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250930161041_UpdateRoles")]
+    partial class UpdateRoles
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -39,11 +42,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
 
                     b.Property<string>("ManagerId")
                         .HasMaxLength(450)
@@ -82,11 +80,6 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("nvarchar(250)");
 
                     b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<bool>("IsWorking")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
@@ -188,6 +181,32 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.ToTable("ErrorHistory", (string)null);
                 });
 
+            modelBuilder.Entity("FITSKIP.Domain.Entities.GroupLine", b =>
+                {
+                    b.Property<int>("GroupLineId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("GroupLineID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GroupLineId"));
+
+                    b.Property<string>("GroupLineName")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
+                    b.Property<int?>("RoomId")
+                        .HasColumnType("int")
+                        .HasColumnName("RoomID");
+
+                    b.HasKey("GroupLineId")
+                        .HasName("PK__GroupLin__23A523FB9505A5CE");
+
+                    b.HasIndex("RoomId");
+
+                    b.ToTable("GroupLines");
+                });
+
             modelBuilder.Entity("FITSKIP.Domain.Entities.Line", b =>
                 {
                     b.Property<int>("LineId")
@@ -197,14 +216,9 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LineId"));
 
-                    b.Property<int?>("DepartmentId")
+                    b.Property<int?>("GroupLineId")
                         .HasColumnType("int")
-                        .HasColumnName("DepartmentID");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
+                        .HasColumnName("GroupLineID");
 
                     b.Property<string>("LineName")
                         .IsRequired()
@@ -214,7 +228,7 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.HasKey("LineId")
                         .HasName("PK__Lines__2EAE64C9765DBF83");
 
-                    b.HasIndex("DepartmentId");
+                    b.HasIndex("GroupLineId");
 
                     b.ToTable("Lines");
                 });
@@ -355,6 +369,32 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.HasIndex("RequestedBy");
 
                     b.ToTable("PurchaseRequests");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.Room", b =>
+                {
+                    b.Property<int>("RoomId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("RoomID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoomId"));
+
+                    b.Property<int?>("DepartmentId")
+                        .HasColumnType("int")
+                        .HasColumnName("DepartmentID");
+
+                    b.Property<string>("RoomName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("RoomId")
+                        .HasName("PK__Rooms__3286391944F5E5E2");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.ToTable("Rooms");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Shift", b =>
@@ -526,11 +566,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<string>("Gender")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -813,14 +848,24 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("Type");
                 });
 
+            modelBuilder.Entity("FITSKIP.Domain.Entities.GroupLine", b =>
+                {
+                    b.HasOne("FITSKIP.Domain.Entities.Room", "Room")
+                        .WithMany("GroupLines")
+                        .HasForeignKey("RoomId")
+                        .HasConstraintName("FK__GroupLine__RoomI__6754599E");
+
+                    b.Navigation("Room");
+                });
+
             modelBuilder.Entity("FITSKIP.Domain.Entities.Line", b =>
                 {
-                    b.HasOne("FITSKIP.Domain.Entities.Department", "Department")
+                    b.HasOne("FITSKIP.Domain.Entities.GroupLine", "GroupLine")
                         .WithMany("Lines")
-                        .HasForeignKey("DepartmentId")
-                        .HasConstraintName("FK__Lines__Departmen__6A30C650");
+                        .HasForeignKey("GroupLineId")
+                        .HasConstraintName("FK__Lines__GroupLine__6A30C649");
 
-                    b.Navigation("Department");
+                    b.Navigation("GroupLine");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceAssignment", b =>
@@ -893,6 +938,16 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("Part");
 
                     b.Navigation("RequestedByNavigation");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.Room", b =>
+                {
+                    b.HasOne("FITSKIP.Domain.Entities.Department", "Department")
+                        .WithMany("Rooms")
+                        .HasForeignKey("DepartmentId")
+                        .HasConstraintName("FK__Rooms__Departmen__6477ECF3");
+
+                    b.Navigation("Department");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.ShiftSlot", b =>
@@ -988,7 +1043,7 @@ namespace FITSKIP.Infrastructure.Migrations
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Department", b =>
                 {
-                    b.Navigation("Lines");
+                    b.Navigation("Rooms");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Equipment", b =>
@@ -999,6 +1054,11 @@ namespace FITSKIP.Infrastructure.Migrations
             modelBuilder.Entity("FITSKIP.Domain.Entities.ErrorHistory", b =>
                 {
                     b.Navigation("MaintenanceAssignments");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.GroupLine", b =>
+                {
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Line", b =>
@@ -1012,6 +1072,11 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("Stages");
 
                     b.Navigation("UserLines");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.Room", b =>
+                {
+                    b.Navigation("GroupLines");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Shift", b =>

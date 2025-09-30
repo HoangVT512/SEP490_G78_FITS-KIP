@@ -9,13 +9,15 @@ public partial class Line
 
     public string LineName { get; set; } = null!;
 
-    public int? GroupLineId { get; set; }
+    public int? DepartmentId { get; set; }
+
+    public bool IsActive { get; set; } = true;
+
+    public virtual Department? Department { get; set; }
 
     public virtual ICollection<Equipment> Equipment { get; set; } = new List<Equipment>();
 
     public virtual ICollection<ErrorHistory> ErrorHistories { get; set; } = new List<ErrorHistory>();
-
-    public virtual GroupLine? GroupLine { get; set; }
 
     public virtual ICollection<ProductionOutput> ProductionOutputs { get; set; } = new List<ProductionOutput>();
 

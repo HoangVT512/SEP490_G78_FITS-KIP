@@ -29,6 +29,8 @@ public partial class Equipment
 
     public bool IsActive { get; set; }
 
+    public bool IsWorking { get; set; } = true;
+
     public virtual ICollection<ErrorHistory> ErrorHistories { get; set; } = new List<ErrorHistory>();
 
     public virtual Line? Line { get; set; }

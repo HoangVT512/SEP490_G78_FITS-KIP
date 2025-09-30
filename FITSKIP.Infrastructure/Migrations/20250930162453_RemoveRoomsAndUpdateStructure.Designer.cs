@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20250925090548_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250930162453_RemoveRoomsAndUpdateStructure")]
+    partial class RemoveRoomsAndUpdateStructure
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -42,6 +42,11 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("ManagerId")
                         .HasMaxLength(450)
@@ -195,14 +200,8 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
 
-                    b.Property<int?>("RoomId")
-                        .HasColumnType("int")
-                        .HasColumnName("RoomID");
-
                     b.HasKey("GroupLineId")
                         .HasName("PK__GroupLin__23A523FB9505A5CE");
-
-                    b.HasIndex("RoomId");
 
                     b.ToTable("GroupLines");
                 });
@@ -216,9 +215,18 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("LineId"));
 
+                    b.Property<int?>("DepartmentId")
+                        .HasColumnType("int")
+                        .HasColumnName("DepartmentID");
+
                     b.Property<int?>("GroupLineId")
                         .HasColumnType("int")
                         .HasColumnName("GroupLineID");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<string>("LineName")
                         .IsRequired()
@@ -227,6 +235,8 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     b.HasKey("LineId")
                         .HasName("PK__Lines__2EAE64C9765DBF83");
+
+                    b.HasIndex("DepartmentId");
 
                     b.HasIndex("GroupLineId");
 
@@ -369,32 +379,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.HasIndex("RequestedBy");
 
                     b.ToTable("PurchaseRequests");
-                });
-
-            modelBuilder.Entity("FITSKIP.Domain.Entities.Room", b =>
-                {
-                    b.Property<int>("RoomId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("RoomID");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RoomId"));
-
-                    b.Property<int?>("DepartmentId")
-                        .HasColumnType("int")
-                        .HasColumnName("DepartmentID");
-
-                    b.Property<string>("RoomName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.HasKey("RoomId")
-                        .HasName("PK__Rooms__3286391944F5E5E2");
-
-                    b.HasIndex("DepartmentId");
-
-                    b.ToTable("Rooms");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Shift", b =>
@@ -848,22 +832,19 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("Type");
                 });
 
-            modelBuilder.Entity("FITSKIP.Domain.Entities.GroupLine", b =>
-                {
-                    b.HasOne("FITSKIP.Domain.Entities.Room", "Room")
-                        .WithMany("GroupLines")
-                        .HasForeignKey("RoomId")
-                        .HasConstraintName("FK__GroupLine__RoomI__6754599E");
-
-                    b.Navigation("Room");
-                });
-
             modelBuilder.Entity("FITSKIP.Domain.Entities.Line", b =>
                 {
+                    b.HasOne("FITSKIP.Domain.Entities.Department", "Department")
+                        .WithMany("Lines")
+                        .HasForeignKey("DepartmentId")
+                        .HasConstraintName("FK__Lines__Departmen__6A30C650");
+
                     b.HasOne("FITSKIP.Domain.Entities.GroupLine", "GroupLine")
                         .WithMany("Lines")
                         .HasForeignKey("GroupLineId")
                         .HasConstraintName("FK__Lines__GroupLine__6A30C649");
+
+                    b.Navigation("Department");
 
                     b.Navigation("GroupLine");
                 });
@@ -938,16 +919,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("Part");
 
                     b.Navigation("RequestedByNavigation");
-                });
-
-            modelBuilder.Entity("FITSKIP.Domain.Entities.Room", b =>
-                {
-                    b.HasOne("FITSKIP.Domain.Entities.Department", "Department")
-                        .WithMany("Rooms")
-                        .HasForeignKey("DepartmentId")
-                        .HasConstraintName("FK__Rooms__Departmen__6477ECF3");
-
-                    b.Navigation("Department");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.ShiftSlot", b =>
@@ -1043,7 +1014,7 @@ namespace FITSKIP.Infrastructure.Migrations
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Department", b =>
                 {
-                    b.Navigation("Rooms");
+                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Equipment", b =>
@@ -1072,11 +1043,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("Stages");
 
                     b.Navigation("UserLines");
-                });
-
-            modelBuilder.Entity("FITSKIP.Domain.Entities.Room", b =>
-                {
-                    b.Navigation("GroupLines");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Shift", b =>
