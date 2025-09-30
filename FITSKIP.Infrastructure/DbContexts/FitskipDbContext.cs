@@ -23,8 +23,6 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
     public virtual DbSet<ErrorHistory> ErrorHistories { get; set; }
 
-    public virtual DbSet<GroupLine> GroupLines { get; set; }
-
     public virtual DbSet<Line> Lines { get; set; }
 
     public virtual DbSet<MaintenanceAssignment> MaintenanceAssignments { get; set; }
@@ -32,8 +30,6 @@ public partial class FitskipDbContext : IdentityDbContext<User>
     public virtual DbSet<ProductionOutput> ProductionOutputs { get; set; }
 
     public virtual DbSet<PurchaseRequest> PurchaseRequests { get; set; }
-
-    public virtual DbSet<Room> Rooms { get; set; }
 
     public virtual DbSet<Shift> Shifts { get; set; }
 
@@ -63,6 +59,7 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.Gender).HasMaxLength(10);
             entity.Property(e => e.EmployeeCode).HasMaxLength(50);
             entity.Property(e => e.Position).HasMaxLength(250);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
         });
 
         // Department configuration
@@ -74,6 +71,7 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.DepartmentName).HasMaxLength(100);
             entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.ManagerId).HasMaxLength(450);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
 
             entity.HasOne(d => d.Manager).WithMany(p => p.Departments)
                 .HasForeignKey(d => d.ManagerId)
@@ -89,6 +87,7 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.EquipmentName).HasMaxLength(255);
             entity.Property(e => e.IdCode).HasMaxLength(250);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.IsWorking).HasDefaultValue(true);
             entity.Property(e => e.LineId).HasColumnName("LineID");
             entity.Property(e => e.Origin).HasMaxLength(150);
             entity.Property(e => e.Qrcode).HasColumnName("QRCode");
@@ -142,30 +141,18 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .HasConstraintName("FK__ErrorHist__TypeI__7F2BE32F");
         });
 
-        modelBuilder.Entity<GroupLine>(entity =>
-        {
-            entity.HasKey(e => e.GroupLineId).HasName("PK__GroupLin__23A523FB9505A5CE");
-
-            entity.Property(e => e.GroupLineId).HasColumnName("GroupLineID");
-            entity.Property(e => e.GroupLineName).HasMaxLength(250);
-            entity.Property(e => e.RoomId).HasColumnName("RoomID");
-
-            entity.HasOne(d => d.Room).WithMany(p => p.GroupLines)
-                .HasForeignKey(d => d.RoomId)
-                .HasConstraintName("FK__GroupLine__RoomI__6754599E");
-        });
-
         modelBuilder.Entity<Line>(entity =>
         {
             entity.HasKey(e => e.LineId).HasName("PK__Lines__2EAE64C9765DBF83");
 
             entity.Property(e => e.LineId).HasColumnName("LineID");
-            entity.Property(e => e.GroupLineId).HasColumnName("GroupLineID");
+            entity.Property(e => e.DepartmentId).HasColumnName("DepartmentID");
             entity.Property(e => e.LineName).HasMaxLength(250);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
 
-            entity.HasOne(d => d.GroupLine).WithMany(p => p.Lines)
-                .HasForeignKey(d => d.GroupLineId)
-                .HasConstraintName("FK__Lines__GroupLine__6A30C649");
+            entity.HasOne(d => d.Department).WithMany(p => p.Lines)
+                .HasForeignKey(d => d.DepartmentId)
+                .HasConstraintName("FK__Lines__Departmen__6A30C650");
         });
 
         modelBuilder.Entity<MaintenanceAssignment>(entity =>
@@ -251,19 +238,6 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .HasConstraintName("FK__PurchaseR__Reque__14270015");
         });
 
-        modelBuilder.Entity<Room>(entity =>
-        {
-            entity.HasKey(e => e.RoomId).HasName("PK__Rooms__3286391944F5E5E2");
-
-            entity.Property(e => e.RoomId).HasColumnName("RoomID");
-            entity.Property(e => e.DepartmentId).HasColumnName("DepartmentID");
-            entity.Property(e => e.RoomName).HasMaxLength(100);
-
-            entity.HasOne(d => d.Department).WithMany(p => p.Rooms)
-                .HasForeignKey(d => d.DepartmentId)
-                .HasConstraintName("FK__Rooms__Departmen__6477ECF3");
-        });
-
         modelBuilder.Entity<Shift>(entity =>
         {
             entity.HasKey(e => e.ShiftId).HasName("PK__Shifts__C0A838E1E127179C");
@@ -319,14 +293,6 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
             entity.Property(e => e.TypeId).HasColumnName("TypeID");
             entity.Property(e => e.TypeName).HasMaxLength(250);
-        });
-
-        modelBuilder.Entity<User>(entity =>
-        {
-            entity.Property(e => e.FullName).HasMaxLength(250);
-            entity.Property(e => e.Gender).HasMaxLength(10);
-            entity.Property(e => e.EmployeeCode).HasMaxLength(50);
-            entity.Property(e => e.Position).HasMaxLength(250);
         });
 
         modelBuilder.Entity<UserLine>(entity =>

@@ -9,9 +9,5 @@ public partial class GroupLine
 
     public string GroupLineName { get; set; } = null!;
 
-    public int? RoomId { get; set; }
-
     public virtual ICollection<Line> Lines { get; set; } = new List<Line>();
-
-    public virtual Room? Room { get; set; }
 }
