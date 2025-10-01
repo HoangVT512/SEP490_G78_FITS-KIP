@@ -22,6 +22,8 @@ namespace FITSKIP.API
 
             // Add services to the container.
             //OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
+
+
             builder.Services.AddControllers();
             builder.Services.AddMemoryCache();
             // Add DbContext
@@ -35,6 +37,8 @@ namespace FITSKIP.API
             // DI registrations for repositories and services
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IUserRepository, FITSKIP.Infrastructure.Repositories.UserRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IUserService, FITSKIP.Application.Services.UserService>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IRoleRepository, FITSKIP.Infrastructure.Repositories.RoleRepository>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IRoleService, FITSKIP.Application.Services.RoleService>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IDepartmentRepository, FITSKIP.Infrastructure.Repositories.DepartmentRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IDepartmentService, FITSKIP.Application.Services.DepartmentService>();
 
