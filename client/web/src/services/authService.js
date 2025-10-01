@@ -4,7 +4,7 @@ export const authService = {
   // Login with email or employee code
   login: async (emailOrEmployeeCode, password, rememberMe = false) => {
     try {
-      const response = await apiRequest("/Auth/login", {
+      const response = await apiRequest("/Auths/login", {
         method: "POST",
         body: JSON.stringify({
           emailOrEmployeeCode,
@@ -35,32 +35,32 @@ export const authService = {
       const token = localStorage.getItem("token");
 
       if (token) {
-        await apiRequest("/Auth/logout", {
+        await apiRequest("/Auths/logout", {
           method: "POST",
         });
       }
     } catch (error) {
       console.error("Logout error:", error);
     } finally {
-  // Always clear local storage
-  localStorage.removeItem("token");
-  localStorage.removeItem("tokenExpiration");
-  localStorage.removeItem("currentUser");
+      // Always clear local storage
+      localStorage.removeItem("token");
+      localStorage.removeItem("tokenExpiration");
+      localStorage.removeItem("currentUser");
     }
   },
 
   // Get current user info
   getCurrentUser: async () => {
     try {
-      const response = await apiRequest("/Auth/me");
-      
+      const response = await apiRequest("/Auths/me");
+
       // Ensure the user data has the correct structure
       if (response) {
         // Store the updated user data
         localStorage.setItem("currentUser", JSON.stringify(response));
         return response;
       }
-      
+
       return response;
     } catch (error) {
       console.error("Get current user error:", error);
@@ -72,8 +72,8 @@ export const authService = {
 
   // Check if user is logged in
   isLoggedIn: () => {
-  const token = localStorage.getItem("token");
-  const expiration = localStorage.getItem("tokenExpiration");
+    const token = localStorage.getItem("token");
+    const expiration = localStorage.getItem("tokenExpiration");
 
     if (!token || !expiration) {
       return false;
@@ -93,20 +93,20 @@ export const authService = {
 
   // Get stored user
   getStoredUser: () => {
-  const userStr = localStorage.getItem("currentUser");
-  return userStr ? JSON.parse(userStr) : null;
+    const userStr = localStorage.getItem("currentUser");
+    return userStr ? JSON.parse(userStr) : null;
   },
 
   // Get stored token
   getToken: () => {
-  return localStorage.getItem("token");
+    return localStorage.getItem("token");
   },
 
   // Clear authentication data
   clearAuthData: () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("tokenExpiration");
-  localStorage.removeItem("currentUser");
+    localStorage.removeItem("token");
+    localStorage.removeItem("tokenExpiration");
+    localStorage.removeItem("currentUser");
   },
 
   // Check if user has admin role
@@ -132,7 +132,7 @@ export const authService = {
   // Change password
   changePassword: async (currentPassword, newPassword, confirmPassword) => {
     try {
-      const response = await apiRequest("/Auth/change-password", {
+      const response = await apiRequest("/Auths/change-password", {
         method: "POST",
         body: JSON.stringify({
           currentPassword,
@@ -144,13 +144,13 @@ export const authService = {
       return response;
     } catch (error) {
       console.error("Change password error:", error);
-      
+
       // Try to parse error response if it's a 400 Bad Request
       if (error.message.includes("HTTP error! status: 400")) {
         // The error might contain more specific information
         throw new Error("Mật khẩu hiện tại không chính xác");
       }
-      
+
       throw new Error(error.message || "Đổi mật khẩu thất bại");
     }
   },
@@ -158,7 +158,7 @@ export const authService = {
   // Update user profile
   updateProfile: async (profileData) => {
     try {
-      const response = await apiRequest("/Auth/profile", {
+      const response = await apiRequest("/Auths/profile", {
         method: "PUT",
         body: JSON.stringify(profileData),
       });

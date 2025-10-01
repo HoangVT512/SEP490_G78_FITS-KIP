@@ -7,12 +7,12 @@ namespace FITSKIP.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController : ControllerBase
+public class AuthsController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly IUserService _userService;
 
-    public AuthController(IAuthService authService, IUserService userService)
+    public AuthsController(IAuthService authService, IUserService userService)
     {
         _authService = authService;
         _userService = userService;

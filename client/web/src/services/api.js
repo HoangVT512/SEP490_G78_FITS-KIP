@@ -7,20 +7,20 @@ const apiRequest = async (endpoint, options = {}) => {
 
   // Get token from localStorage (consistent with authService)
   const token = localStorage.getItem("token");
-  
+
   // Debug: Log token status with more details
-  console.log('API Request Debug:', {
+  console.log("API Request Debug:", {
     endpoint,
     hasToken: !!token,
     tokenLength: token ? token.length : 0,
-    tokenPreview: token ? `${token.substring(0, 20)}...` : 'null',
-    url
+    tokenPreview: token ? `${token.substring(0, 20)}...` : "null",
+    url,
   });
 
   // Check if user is logged in
-  if (!token && endpoint !== '/Auth/login') {
-    console.error('No token found for protected endpoint:', endpoint);
-    throw new Error('Authentication required');
+  if (!token && endpoint !== "/Auths/login") {
+    console.error("No token found for protected endpoint:", endpoint);
+    throw new Error("Authentication required");
   }
 
   const defaultOptions = {
@@ -37,14 +37,14 @@ const apiRequest = async (endpoint, options = {}) => {
   };
 
   // Debug: Log the actual headers being sent
-  console.log('Request headers:', config.headers);
+  console.log("Request headers:", config.headers);
 
   try {
     const response = await fetch(url, config);
 
     const contentType = response.headers.get("content-type");
     let responseData;
-    
+
     if (contentType && contentType.includes("application/json")) {
       responseData = await response.json();
     } else {
@@ -54,14 +54,15 @@ const apiRequest = async (endpoint, options = {}) => {
     if (!response.ok) {
       // Parse error message from server response
       let errorMessage = `HTTP error! status: ${response.status}`;
-      
-      if (responseData && typeof responseData === 'object') {
+
+      if (responseData && typeof responseData === "object") {
         // If server returns structured error response
-        errorMessage = responseData.message || responseData.error || errorMessage;
-      } else if (typeof responseData === 'string') {
+        errorMessage =
+          responseData.message || responseData.error || errorMessage;
+      } else if (typeof responseData === "string") {
         errorMessage = responseData || errorMessage;
       }
-      
+
       throw new Error(errorMessage);
     }
 
