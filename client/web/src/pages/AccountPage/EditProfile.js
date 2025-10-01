@@ -46,20 +46,42 @@ const EditProfile = () => {
   const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    // Get current user from localStorage and initialize form
-    const user = authService.getStoredUser();
-    if (user) {
-      setCurrentUser(user);
-      form.setFieldsValue({
-        fullName: user.fullName || "",
-        email: user.email || "",
-        phoneNumber: user.phoneNumber || "",
-        gender: user.gender || "",
-      });
-    } else {
-      // If no user data, redirect to login
-      navigate("/login");
-    }
+    const loadUserData = async () => {
+      try {
+        // First try to get user from localStorage
+        let user = authService.getStoredUser();
+        
+        if (!user && authService.isLoggedIn()) {
+          // If no user in localStorage but token exists, fetch from API
+          user = await authService.getCurrentUser();
+          if (user) {
+            localStorage.setItem("currentUser", JSON.stringify(user));
+          }
+        }
+        
+        if (user) {
+          setCurrentUser(user);
+          form.setFieldsValue({
+            fullName: user.fullName || "",
+            email: user.email || "",
+            phoneNumber: user.phoneNumber || "",
+            gender: user.gender || "",
+            employeeCode: user.employeeCode || "",
+            department: user.department || "N/A",
+            position: user.position || "N/A",
+          });
+        } else {
+          // If no user data and not logged in, redirect to login
+          navigate("/login");
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+        // If error getting user data, redirect to login
+        navigate("/login");
+      }
+    };
+
+    loadUserData();
   }, [form, navigate]);
 
   const handleSubmit = async (values) => {
@@ -172,10 +194,10 @@ const EditProfile = () => {
                   <Avatar
                     size={120}
                     icon={<UserOutlined />}
-                    src={avatarUrl || currentUser.avatar}
+                    src={avatarUrl || currentUser?.avatar}
                     className={styles.editProfileAvatar}
                   />
-                  <Upload
+                  {/* <Upload
                     name="avatar"
                     listType="picture"
                     className={styles.avatarUploader}
@@ -187,7 +209,7 @@ const EditProfile = () => {
                     <div className={styles.editProfileUploadButton}>
                       <CameraOutlined />
                     </div>
-                  </Upload>
+                  </Upload> */}
                 </div>
                 <Title level={2} className={styles.editProfileHeaderTitle}>
                   Chỉnh sửa thông tin cá nhân
@@ -288,9 +310,10 @@ const EditProfile = () => {
                     >
                       <Input
                         prefix={<IdcardOutlined />}
-                        value={currentUser.employeeCode}
+                        value={currentUser?.employeeCode || ""}
                         disabled
                         size="large"
+                        className={styles.editProfileDisabledField}
                       />
                     </Form.Item>
                   </Col>
@@ -370,7 +393,7 @@ const EditProfile = () => {
                     <Form.Item label="Phòng ban" name="department">
                       <Input
                         prefix={<TeamOutlined />}
-                        value={currentUser.department}
+                        value={currentUser?.department || "N/A"}
                         disabled
                         size="large"
                         className={styles.editProfileDisabledField}
@@ -382,7 +405,7 @@ const EditProfile = () => {
                     <Form.Item label="Chức vụ" name="position">
                       <Input
                         prefix={<IdcardOutlined />}
-                        value={currentUser.position}
+                        value={currentUser?.position || "N/A"}
                         disabled
                         size="large"
                         className={styles.editProfileDisabledField}

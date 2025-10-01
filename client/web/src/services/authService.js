@@ -52,7 +52,16 @@ export const authService = {
   // Get current user info
   getCurrentUser: async () => {
     try {
-      return await apiRequest("/Auth/me");
+      const response = await apiRequest("/Auth/me");
+      
+      // Ensure the user data has the correct structure
+      if (response) {
+        // Store the updated user data
+        localStorage.setItem("currentUser", JSON.stringify(response));
+        return response;
+      }
+      
+      return response;
     } catch (error) {
       console.error("Get current user error:", error);
       // If token is invalid, clear storage
@@ -159,6 +168,13 @@ export const authService = {
         const currentUser = authService.getStoredUser();
         if (currentUser) {
           const updatedUser = { ...currentUser, ...response.user };
+          localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+        }
+      } else if (response) {
+        // If response doesn't have success/user structure, update with response data
+        const currentUser = authService.getStoredUser();
+        if (currentUser) {
+          const updatedUser = { ...currentUser, ...response };
           localStorage.setItem("currentUser", JSON.stringify(updatedUser));
         }
       }
