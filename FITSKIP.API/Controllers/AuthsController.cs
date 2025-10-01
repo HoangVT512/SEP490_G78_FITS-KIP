@@ -274,28 +274,4 @@ public class AuthsController : ControllerBase
             return BadRequest(new { success = false, message = "Đã có lỗi xảy ra trong quá trình cập nhật thông tin", details = ex.Message });
         }
     }
-
-    /// <summary>
-    /// Test JWT authentication - requires valid JWT token
-    /// </summary>
-    [HttpGet("test-auth")]
-    [Authorize]
-    public IActionResult TestAuth()
-    {
-        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-        var userName = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
-        var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-
-        var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
-
-        return Ok(new
-        {
-            success = true,
-            message = "JWT Authentication is working!",
-            userId,
-            userName,
-            email,
-            allClaims = claims
-        });
-    }
 }
