@@ -3,6 +3,7 @@ using FITSKIP.Application.Services;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
+using OfficeOpenXml;
 
 namespace FITSKIP.API.Controllers;
 
@@ -239,6 +240,157 @@ public class UsersController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, $"Internal server error: {ex.Message}");
+        }
+    }
+
+    [HttpPost("import-excel")]
+    public async Task<ActionResult> ImportUsersFromExcel(IFormFile file, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest(new { message = "No file uploaded." });
+            }
+
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            if (extension != ".xlsx" && extension != ".xls")
+            {
+                return BadRequest(new { message = "Invalid file format. Please upload an Excel file (.xlsx or .xls)" });
+            }
+
+            if (file.Length > 10 * 1024 * 1024)
+            {
+                return BadRequest(new { message = "File size exceeds 10MB limit." });
+            }
+
+            var excelImportService = HttpContext.RequestServices.GetRequiredService<IExcelImportService>();
+
+            using (var stream = new MemoryStream())
+            {
+                await file.CopyToAsync(stream, cancellationToken);
+                stream.Position = 0;
+
+                var userRequests = await excelImportService.ImportUsersFromExcelAsync(stream);
+
+                if (!userRequests.Any())
+                {
+                    return BadRequest(new { message = "No valid users found in the Excel file." });
+                }
+
+                var successCount = 0;
+                var failedUsers = new List<object>();
+
+                foreach (var request in userRequests)
+                {
+                    try
+                    {
+                        var passwordHash = !string.IsNullOrEmpty(request.Password) ?
+                            Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.Password)) :
+                            null;
+
+                        var user = new User
+                        {
+                            Id = Guid.NewGuid().ToString(),
+                            UserName = request.UserName,
+                            NormalizedUserName = request.UserName.ToUpperInvariant(),
+                            Email = request.Email,
+                            NormalizedEmail = request.Email.ToUpperInvariant(),
+                            FullName = request.FullName,
+                            Gender = request.Gender,
+                            EmployeeCode = request.EmployeeCode,
+                            Position = request.Position,
+                            PhoneNumber = request.PhoneNumber,
+                            EmailConfirmed = true,
+                            LockoutEnabled = true,
+                            PasswordHash = passwordHash,
+                            SecurityStamp = Guid.NewGuid().ToString(),
+                            ConcurrencyStamp = Guid.NewGuid().ToString()
+                        };
+
+                        await userService.CreateUserAsync(user, cancellationToken);
+                        successCount++;
+                    }
+                    catch (Exception ex)
+                    {
+                        failedUsers.Add(new
+                        {
+                            UserName = request.UserName,
+                            Email = request.Email,
+                            Error = ex.Message
+                        });
+                    }
+                }
+
+                return Ok(new
+                {
+                    Message = "Import completed",
+                    TotalUsers = userRequests.Count,
+                    SuccessCount = successCount,
+                    FailedCount = failedUsers.Count,
+                    FailedUsers = failedUsers
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { message = $"Error importing users: {ex.Message}" });
+        }
+    }
+
+
+    [HttpGet("download-template")]
+    public IActionResult DownloadExcelTemplate()
+    {
+        try
+        {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            using (var package = new ExcelPackage())
+            {
+                var worksheet = package.Workbook.Worksheets.Add("Users");
+
+                
+                worksheet.Cells[1, 1].Value = "UserName";
+                worksheet.Cells[1, 2].Value = "Email";
+                worksheet.Cells[1, 3].Value = "Password";
+                worksheet.Cells[1, 4].Value = "FullName";
+                worksheet.Cells[1, 5].Value = "Gender";
+                worksheet.Cells[1, 6].Value = "EmployeeCode";
+                worksheet.Cells[1, 7].Value = "Position";
+                worksheet.Cells[1, 8].Value = "PhoneNumber";
+                
+                using (var range = worksheet.Cells[1, 1, 1, 8])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
+                }
+
+               
+                worksheet.Cells[2, 1].Value = "Trung";
+                worksheet.Cells[2, 2].Value = "Trungnd98@fpt.com";
+                worksheet.Cells[2, 3].Value = "123";
+                worksheet.Cells[2, 4].Value = "Duc Trung";
+                worksheet.Cells[2, 5].Value = "Male";
+                worksheet.Cells[2, 6].Value = "EMP001";
+                worksheet.Cells[2, 7].Value = "Engineer";
+                worksheet.Cells[2, 8].Value = "0973771789";
+
+                worksheet.Cells.AutoFitColumns();
+
+                var stream = new MemoryStream();
+                package.SaveAs(stream);
+                stream.Position = 0;
+
+                return File(stream,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "UserImportTemplate.xlsx");
+            }
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error generating template: {ex.Message}");
         }
     }
 

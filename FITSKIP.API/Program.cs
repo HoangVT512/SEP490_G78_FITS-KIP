@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
+using System.Threading.Channels;
 
 namespace FITSKIP.API
 {
@@ -16,6 +17,8 @@ namespace FITSKIP.API
             builder.Configuration
                 .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
                 .AddEnvironmentVariables();
+
+
 
             // Add services to the container.
 
@@ -46,6 +49,9 @@ namespace FITSKIP.API
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IStageRepository, FITSKIP.Infrastructure.Repositories.StageRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IStageService, FITSKIP.Application.Services.StageService>();
 
+            // Import Excel service
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IExcelImportService,
+    FITSKIP.Application.Services.ExcelImportService>();
             // JWT Authentication services
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IJwtTokenService, FITSKIP.Application.Services.JwtTokenService>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IAuthService, FITSKIP.Application.Services.AuthService>();

@@ -60,6 +60,12 @@ namespace FITSKIP.API.Controllers
             if (string.IsNullOrWhiteSpace(managerId)) return "ManagerId là bắt buộc.";
             var user = await userManager.FindByIdAsync(managerId);
             if (user == null) return "Manager không tồn tại.";
+            if (!user.IsActive) return "Manager đã bị vô hiệu hóa.";
+            
+            // Check if user has QUAN LY role
+            var roles = await userManager.GetRolesAsync(user);
+            if (!roles.Contains("Quản lý")) return "Manager phải có role 'Quản lý'.";
+            
             return null;
         }
 

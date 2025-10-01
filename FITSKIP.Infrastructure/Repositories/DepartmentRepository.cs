@@ -1,4 +1,4 @@
-using FITSKIP.Domain.Entities;
+﻿using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
 using FITSKIP.Infrastructure.DbContexts;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +19,7 @@ public class DepartmentRepository : IDepartmentRepository
         return await dbContext.Departments
             .AsNoTracking()
             .Include(d => d.Manager)
+            .Where(d => d.IsActive)
             .ToListAsync(cancellationToken);
     }
 
@@ -26,6 +27,7 @@ public class DepartmentRepository : IDepartmentRepository
     {
         return await dbContext.Departments
             .Include(d => d.Manager)
+            .Where(d => d.IsActive)
             .FirstOrDefaultAsync(d => d.DepartmentId == id, cancellationToken);
     }
 
@@ -49,10 +51,8 @@ public class DepartmentRepository : IDepartmentRepository
     {
         var existing = await dbContext.Departments.FirstOrDefaultAsync(d => d.DepartmentId == id, cancellationToken);
         if (existing == null) return false;
-        dbContext.Departments.Remove(existing);
+        existing.IsActive = false;
         await dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }
 }
-
-
