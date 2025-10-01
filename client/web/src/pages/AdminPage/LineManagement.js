@@ -49,6 +49,8 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
+import { lineService } from "../../services/lineService";
+import { departmentService } from "../../services/departmentService";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/vi";
@@ -61,299 +63,133 @@ const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
-const LineGroupManagement = ({ showHeader = true }) => {
-  const [lineGroups, setLineGroups] = useState([]);
+const LineManagement = ({ showHeader = true }) => {
   const [lines, setLines] = useState([]);
-  const [rooms, setRooms] = useState([]);
+  const [departments, setDepartments] = useState([]); // Changed from rooms to departments
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
-  const [editingLineGroup, setEditingLineGroup] = useState(null);
-  const [viewingLineGroup, setViewingLineGroup] = useState(null);
+  const [editingLine, setEditingLine] = useState(null);
+  const [viewingLine, setViewingLine] = useState(null);
   const [form] = Form.useForm();
   const [filters, setFilters] = useState({
     status: "all",
-    room: "all",
-    efficiency: "all",
+    department: "all",
   });
 
-  // Mock data for rooms
-  const mockRooms = [
-    { id: 1, name: "Phòng sản xuất A", departmentId: 3 },
-    { id: 2, name: "Phòng sản xuất B", departmentId: 3 },
-    { id: 3, name: "Phòng lắp ráp", departmentId: 3 },
-    { id: 4, name: "Phòng kiểm tra chất lượng", departmentId: 3 },
-  ];
-
-  // Mock data for line groups
-  const mockLineGroups = [
-    {
-      id: 1,
-      groupLineName: "Nhóm sản xuất chính",
-      roomId: 1,
-      roomName: "Phòng sản xuất A",
-      status: "active",
-      efficiency: 85,
-      targetOutput: 1000,
-      actualOutput: 850,
-      lineCount: 4,
-      operatingHours: 16,
-      maintenanceStatus: "good",
-      lastMaintenance: "2024-01-15T00:00:00Z",
-      nextMaintenance: "2024-02-15T00:00:00Z",
-      supervisor: "Nguyễn Văn Quản",
-      shift: "Ca 1",
-      createdDate: "2024-01-01T00:00:00Z",
-      lines: [
-        { id: 1, name: "Dây chuyền 1", status: "running", efficiency: 90 },
-        { id: 2, name: "Dây chuyền 2", status: "running", efficiency: 85 },
-        { id: 3, name: "Dây chuyền 3", status: "maintenance", efficiency: 0 },
-        { id: 4, name: "Dây chuyền 4", status: "stopped", efficiency: 80 },
-      ],
-    },
-    {
-      id: 2,
-      groupLineName: "Nhóm lắp ráp tự động",
-      roomId: 3,
-      roomName: "Phòng lắp ráp",
-      status: "active",
-      efficiency: 92,
-      targetOutput: 800,
-      actualOutput: 736,
-      lineCount: 3,
-      operatingHours: 12,
-      maintenanceStatus: "excellent",
-      lastMaintenance: "2024-01-10T00:00:00Z",
-      nextMaintenance: "2024-02-10T00:00:00Z",
-      supervisor: "Trần Thị Linh",
-      shift: "Ca 2",
-      createdDate: "2024-01-01T00:00:00Z",
-      lines: [
-        {
-          id: 5,
-          name: "Dây chuyền lắp ráp A",
-          status: "running",
-          efficiency: 95,
-        },
-        {
-          id: 6,
-          name: "Dây chuyền lắp ráp B",
-          status: "running",
-          efficiency: 90,
-        },
-        {
-          id: 7,
-          name: "Dây chuyền đóng gói",
-          status: "running",
-          efficiency: 91,
-        },
-      ],
-    },
-    {
-      id: 3,
-      groupLineName: "Nhóm kiểm tra chất lượng",
-      roomId: 4,
-      roomName: "Phòng kiểm tra chất lượng",
-      status: "maintenance",
-      efficiency: 0,
-      targetOutput: 500,
-      actualOutput: 0,
-      lineCount: 2,
-      operatingHours: 0,
-      maintenanceStatus: "maintenance",
-      lastMaintenance: "2024-01-20T00:00:00Z",
-      nextMaintenance: "2024-01-25T00:00:00Z",
-      supervisor: "Lê Văn Kiểm",
-      shift: "Ca 1",
-      createdDate: "2024-01-01T00:00:00Z",
-      lines: [
-        { id: 8, name: "Dây chuyền QC1", status: "maintenance", efficiency: 0 },
-        { id: 9, name: "Dây chuyền QC2", status: "maintenance", efficiency: 0 },
-      ],
-    },
-    {
-      id: 4,
-      groupLineName: "Nhóm sản xuất phụ",
-      roomId: 2,
-      roomName: "Phòng sản xuất B",
-      status: "stopped",
-      efficiency: 60,
-      targetOutput: 600,
-      actualOutput: 360,
-      lineCount: 3,
-      operatingHours: 8,
-      maintenanceStatus: "warning",
-      lastMaintenance: "2024-01-05T00:00:00Z",
-      nextMaintenance: "2024-02-05T00:00:00Z",
-      supervisor: "Phạm Thị Hoa",
-      shift: "Ca 3",
-      createdDate: "2024-01-01T00:00:00Z",
-      lines: [
-        { id: 10, name: "Dây chuyền phụ 1", status: "stopped", efficiency: 70 },
-        { id: 11, name: "Dây chuyền phụ 2", status: "running", efficiency: 65 },
-        { id: 12, name: "Dây chuyền phụ 3", status: "stopped", efficiency: 45 },
-      ],
-    },
-  ];
-
   useEffect(() => {
-    loadLineGroups();
-    loadRooms();
+    loadLines();
+    loadDepartments();
   }, []);
 
-  const loadLineGroups = async () => {
+  const loadLines = async () => {
     setLoading(true);
     try {
-      // API call would go here
-      setTimeout(() => {
-        setLineGroups(mockLineGroups);
-        setLoading(false);
-      }, 1000);
+      const response = await lineService.getLines();
+      if (response.success) {
+        setLines(response.data || []); // Ensure data is array
+      } else {
+        message.error(response.message || "Không thể tải danh sách dây chuyền");
+        setLines([]); // Set empty array on error
+      }
     } catch (error) {
-      console.error("Error loading line groups:", error);
+      console.error("Error loading lines:", error);
       message.error("Không thể tải danh sách dây chuyền");
-      setLineGroups(mockLineGroups);
+      setLines([]); // Set empty array on error
+    } finally {
       setLoading(false);
     }
   };
 
-  const loadRooms = async () => {
+  const loadDepartments = async () => {
     try {
-      // API call would go here
-      setRooms(mockRooms);
+      const response = await departmentService.getDepartments();
+      // DepartmentsController trả về trực tiếp array, không có success/data wrapper
+      if (Array.isArray(response)) {
+        setDepartments(response);
+      } else if (response.success && Array.isArray(response.data)) {
+        setDepartments(response.data);
+      } else {
+        setDepartments([]);
+      }
     } catch (error) {
-      console.error("Error loading rooms:", error);
+      console.error("Error loading departments:", error);
       message.error("Không thể tải danh sách phòng ban");
+      setDepartments([]);
     }
   };
 
-  const getStatusColor = (status) => {
-    const statusColors = {
-      active: "success",
-      maintenance: "warning",
-      stopped: "error",
-      idle: "default",
-    };
-    return statusColors[status] || "default";
-  };
-
-  const getStatusText = (status) => {
-    const statusTexts = {
-      active: "Hoạt động",
-      maintenance: "Bảo trì",
-      stopped: "Dừng hoạt động",
-      idle: "Chờ",
-    };
-    return statusTexts[status] || "Không xác định";
-  };
-
-  const getStatusIcon = (status) => {
-    const statusIcons = {
-      active: <PlayCircleOutlined style={{ color: "#52c41a" }} />,
-      maintenance: <ToolOutlined style={{ color: "#faad14" }} />,
-      stopped: <StopOutlined style={{ color: "#ff4d4f" }} />,
-      idle: <PauseCircleOutlined style={{ color: "#d9d9d9" }} />,
-    };
-    return statusIcons[status] || <ExclamationCircleOutlined />;
-  };
-
-  const getMaintenanceStatusColor = (status) => {
-    const colors = {
-      excellent: "success",
-      good: "processing",
-      warning: "warning",
-      maintenance: "error",
-    };
-    return colors[status] || "default";
-  };
-
-  const getMaintenanceStatusText = (status) => {
-    const texts = {
-      excellent: "Tuyệt vời",
-      good: "Tốt",
-      warning: "Cần chú ý",
-      maintenance: "Đang bảo trì",
-    };
-    return texts[status] || "Không xác định";
-  };
-
-  const getEfficiencyColor = (efficiency) => {
-    if (efficiency >= 90) return "#52c41a";
-    if (efficiency >= 70) return "#faad14";
-    if (efficiency >= 50) return "#ff7a45";
-    return "#ff4d4f";
-  };
-
-  const handleAction = (action, lineGroup) => {
+  const handleAction = async (action, line) => {
     switch (action) {
       case "view":
-        setViewingLineGroup(lineGroup);
+        setViewingLine(line);
         setIsViewModalVisible(true);
         break;
       case "edit":
-        setEditingLineGroup(lineGroup);
+        setEditingLine(line);
         form.setFieldsValue({
-          ...lineGroup,
-          createdDate: lineGroup.createdDate
-            ? dayjs(lineGroup.createdDate)
-            : null,
+          lineName: line.lineName,
+          departmentId: line.departmentId,
+          isActive: line.isActive,
         });
         setIsModalVisible(true);
         break;
       case "delete":
-        message.success("Đã xóa dây chuyền thành công");
-        break;
-      case "start":
-        message.success("Đã khởi động dây chuyền");
-        break;
-      case "stop":
-        message.success("Đã dừng dây chuyền");
-        break;
-      case "maintenance":
-        message.success("Đã chuyển sang chế độ bảo trì");
+        Modal.confirm({
+          title: "Xác nhận xóa dây chuyền",
+          content: (
+            <div>
+              <p><strong>Tên chuyền:</strong> {line.lineName}</p>
+              <p><strong>Phòng ban:</strong> {line.department?.departmentName || "Chưa phân phòng"}</p>
+              <p><strong>Trạng thái:</strong> {line.isActive ? "Hoạt động" : "Dừng hoạt động"}</p>
+              <p style={{ color: "#ff4d4f", marginTop: "16px" }}>
+                <ExclamationCircleOutlined style={{ marginRight: "8px" }} />
+                Bạn có chắc chắn muốn xóa dây chuyền này không?
+              </p>
+            </div>
+          ),
+          okText: "Xóa",
+          cancelText: "Hủy",
+          okButtonProps: { danger: true },
+          onOk: async () => {
+            try {
+              const response = await lineService.deleteLine(line.lineId);
+              if (response.success) {
+                message.success("Đã xóa chuyền sản xuất thành công");
+                loadLines();
+              } else {
+                message.error(response.message || "Xóa chuyền sản xuất thất bại");
+              }
+            } catch (error) {
+              console.error("Delete line error:", error);
+              if (error.message && error.message.includes("HTTP error! status: 400")) {
+                message.error("Đã có giai đoạn trong chuyền, không thể xóa");
+              } else {
+                message.error("Xóa chuyền sản xuất thất bại");
+              }
+            }
+          },
+        });
         break;
       default:
         break;
     }
   };
 
-  const actionMenuItems = (lineGroup) => [
+  const actionMenuItems = (line) => [
     {
       key: "view",
       icon: <EyeOutlined />,
       label: "Xem chi tiết",
-      onClick: () => handleAction("view", lineGroup),
+      onClick: () => handleAction("view", line),
     },
     {
       key: "edit",
       icon: <EditOutlined />,
       label: "Chỉnh sửa",
-      onClick: () => handleAction("edit", lineGroup),
-    },
-    {
-      type: "divider",
-    },
-    {
-      key: "start",
-      icon: <PlayCircleOutlined />,
-      label: "Khởi động",
-      disabled: lineGroup.status === "active",
-      onClick: () => handleAction("start", lineGroup),
-    },
-    {
-      key: "stop",
-      icon: <StopOutlined />,
-      label: "Dừng hoạt động",
-      disabled: lineGroup.status === "stopped",
-      onClick: () => handleAction("stop", lineGroup),
-    },
-    {
-      key: "maintenance",
-      icon: <ToolOutlined />,
-      label: "Bảo trì",
-      onClick: () => handleAction("maintenance", lineGroup),
+      onClick: () => handleAction("edit", line),
     },
     {
       type: "divider",
@@ -363,14 +199,84 @@ const LineGroupManagement = ({ showHeader = true }) => {
       icon: <DeleteOutlined />,
       label: "Xóa",
       danger: true,
-      onClick: () => handleAction("delete", lineGroup),
+      onClick: () => handleAction("delete", line),
     },
   ];
 
+  const handleModalOk = async () => {
+    try {
+      const values = await form.validateFields();
+      
+      if (editingLine) {
+        // Update existing line
+        try {
+          const response = await lineService.updateLine(editingLine.lineId, values);
+          if (response.success) {
+            message.success("Cập nhật chuyền sản xuất thành công!");
+            setIsModalVisible(false);
+            setEditingLine(null);
+            form.resetFields();
+            loadLines(); // Reload data
+          } else {
+            message.error(response.message || "Cập nhật chuyền sản xuất thất bại");
+          }
+        } catch (error) {
+          console.error("Update line error:", error);
+          if (error.message && error.message.includes("đã tồn tại trong phòng ban")) {
+            message.error(`Tên chuyền đã tồn tại trong phòng ban này`);
+          } else {
+            message.error("Cập nhật chuyền sản xuất thất bại");
+          }
+        }
+      } else {
+        // Create new line
+        try {
+          const response = await lineService.createLine(values);
+          if (response.success) {
+            message.success("Tạo chuyền sản xuất mới thành công!");
+            setIsModalVisible(false);
+            form.resetFields();
+            loadLines(); // Reload data
+          } else {
+            message.error(response.message || "Tạo chuyền sản xuất thất bại");
+          }
+        } catch (error) {
+          console.error("Create line error:", error);
+          if (error.message && error.message.includes("đã tồn tại trong phòng ban")) {
+            message.error(`Tên chuyền đã tồn tại trong phòng ban này`);
+          } else {
+            message.error("Tạo chuyền sản xuất thất bại");
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Form validation error:", error);
+      message.error("Vui lòng kiểm tra lại thông tin nhập vào");
+    }
+  };
+
+  const handleModalCancel = () => {
+    setIsModalVisible(false);
+    setEditingLine(null);
+    form.resetFields();
+  };
+
+  const cardStyle = {
+    borderRadius: "12px",
+    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
+    border: "1px solid #e2e8f0",
+  };
+
+  const contentStyle = {
+    padding: "24px",
+    backgroundColor: "#f8fafc",
+    minHeight: "calc(100vh - 70px)",
+  };
+
   const columns = [
     {
-      title: "Dây chuyền",
-      key: "lineGroup",
+      title: "Chuyền sản xuất",
+      key: "line",
       width: 280,
       render: (_, record) => (
         <Space>
@@ -391,14 +297,11 @@ const LineGroupManagement = ({ showHeader = true }) => {
           </div>
           <div>
             <div style={{ fontWeight: "600", fontSize: "14px" }}>
-              {record.groupLineName}
+              {record.lineName}
             </div>
             <div style={{ fontSize: "12px", color: "#6b7280" }}>
               <EnvironmentOutlined style={{ marginRight: "4px" }} />
-              {record.roomName}
-            </div>
-            <div style={{ fontSize: "12px", color: "#6b7280" }}>
-              {record.lineCount} dây chuyền • {record.operatingHours}h hoạt động
+              {record.department?.departmentName || "Chưa phân phòng"}
             </div>
           </div>
         </Space>
@@ -409,86 +312,20 @@ const LineGroupManagement = ({ showHeader = true }) => {
       key: "status",
       width: 150,
       render: (_, record) => (
-        <Space direction="vertical" size={4}>
-          <Space>
-            {getStatusIcon(record.status)}
-            <Tag color={getStatusColor(record.status)}>
-              {getStatusText(record.status)}
-            </Tag>
-          </Space>
-          <Tag
-            color={getMaintenanceStatusColor(record.maintenanceStatus)}
-            size="small"
-          >
-            {getMaintenanceStatusText(record.maintenanceStatus)}
-          </Tag>
-        </Space>
+        <Tag color={record.isActive ? "success" : "error"}>
+          {record.isActive ? "Hoạt động" : "Dừng hoạt động"}
+        </Tag>
       ),
     },
     {
-      title: "Hiệu suất",
-      key: "efficiency",
-      width: 150,
-      render: (_, record) => (
-        <div>
-          <Progress
-            percent={record.efficiency}
-            size="small"
-            strokeColor={getEfficiencyColor(record.efficiency)}
-            format={(percent) => `${percent}%`}
-          />
-          <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
-            {record.actualOutput}/{record.targetOutput} sản phẩm
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Quản lý",
-      key: "supervisor",
-      width: 150,
+      title: "Phòng ban",
+      key: "department",
+      width: 200,
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: "500" }}>
             <TeamOutlined style={{ marginRight: "4px", color: "#334766" }} />
-            {record.supervisor}
-          </div>
-          <div style={{ fontSize: "12px", color: "#6b7280" }}>
-            {record.shift}
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Dây chuyền",
-      key: "lines",
-      width: 120,
-      align: "center",
-      render: (_, record) => (
-        <div>
-          <Badge
-            count={record.lineCount}
-            showZero
-            style={{ backgroundColor: "#334766" }}
-          />
-          <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "4px" }}>
-            {record.lines.filter((l) => l.status === "running").length} hoạt
-            động
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Bảo trì tiếp theo",
-      key: "nextMaintenance",
-      width: 150,
-      render: (_, record) => (
-        <div>
-          <div style={{ fontSize: "13px", fontWeight: "500" }}>
-            {dayjs(record.nextMaintenance).format("DD/MM/YYYY")}
-          </div>
-          <div style={{ fontSize: "12px", color: "#6b7280" }}>
-            {dayjs(record.nextMaintenance).fromNow()}
+            {record.department?.departmentName || "Chưa phân phòng"}
           </div>
         </div>
       ),
@@ -506,64 +343,22 @@ const LineGroupManagement = ({ showHeader = true }) => {
     },
   ];
 
-  const filteredLineGroups = lineGroups.filter((group) => {
+  const filteredLines = lines.filter((line) => {
     const matchesSearch =
-      group.groupLineName.toLowerCase().includes(searchText.toLowerCase()) ||
-      group.roomName.toLowerCase().includes(searchText.toLowerCase()) ||
-      group.supervisor.toLowerCase().includes(searchText.toLowerCase());
+      line.lineName?.toLowerCase().includes(searchText.toLowerCase()) ||
+      line.department?.departmentName?.toLowerCase().includes(searchText.toLowerCase());
 
     const matchesStatus =
-      filters.status === "all" || group.status === filters.status;
-    const matchesRoom =
-      filters.room === "all" || group.roomId.toString() === filters.room;
-    const matchesEfficiency =
-      filters.efficiency === "all" ||
-      (filters.efficiency === "high" && group.efficiency >= 80) ||
-      (filters.efficiency === "medium" &&
-        group.efficiency >= 60 &&
-        group.efficiency < 80) ||
-      (filters.efficiency === "low" && group.efficiency < 60);
+      filters.status === "all" || 
+      (filters.status === "active" && line.isActive) ||
+      (filters.status === "inactive" && !line.isActive);
+      
+    const matchesDepartment =
+      filters.department === "all" || 
+      line.departmentId?.toString() === filters.department;
 
-    return matchesSearch && matchesStatus && matchesRoom && matchesEfficiency;
+    return matchesSearch && matchesStatus && matchesDepartment;
   });
-
-  const handleModalOk = async () => {
-    try {
-      const values = await form.validateFields();
-      console.log("Form values:", values);
-
-      if (editingLineGroup) {
-        message.success("Cập nhật dây chuyền thành công!");
-      } else {
-        message.success("Tạo dây chuyền mới thành công!");
-      }
-
-      setIsModalVisible(false);
-      setEditingLineGroup(null);
-      form.resetFields();
-      loadLineGroups();
-    } catch (error) {
-      console.error("Validation failed:", error);
-    }
-  };
-
-  const handleModalCancel = () => {
-    setIsModalVisible(false);
-    setEditingLineGroup(null);
-    form.resetFields();
-  };
-
-  const cardStyle = {
-    borderRadius: "12px",
-    boxShadow: "0 4px 12px rgba(0, 0, 0, 0.05)",
-    border: "1px solid #e2e8f0",
-  };
-
-  const contentStyle = {
-    padding: "24px",
-    backgroundColor: "#f8fafc",
-    minHeight: "calc(100vh - 70px)",
-  };
 
   const content = (
     <div style={contentStyle}>
@@ -573,7 +368,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
           <Card>
             <Statistic
               title="Tổng dây chuyền"
-              value={lineGroups.length}
+              value={lines.length}
               prefix={<GroupOutlined style={{ color: "#334766" }} />}
               valueStyle={{ color: "#334766" }}
             />
@@ -583,7 +378,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
           <Card>
             <Statistic
               title="Đang hoạt động"
-              value={lineGroups.filter((g) => g.status === "active").length}
+              value={lines.filter((g) => g.isActive).length}
               prefix={<PlayCircleOutlined style={{ color: "#52c41a" }} />}
               valueStyle={{ color: "#52c41a" }}
             />
@@ -593,10 +388,13 @@ const LineGroupManagement = ({ showHeader = true }) => {
           <Card>
             <Statistic
               title="Hiệu suất trung bình"
-              value={Math.round(
-                lineGroups.reduce((sum, g) => sum + g.efficiency, 0) /
-                  lineGroups.length
-              )}
+              value={
+                lines.length > 0 
+                  ? Math.round(
+                      lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) / lines.length
+                    )
+                  : 0
+              }
               suffix="%"
               prefix={<ThunderboltOutlined style={{ color: "#faad14" }} />}
               valueStyle={{ color: "#faad14" }}
@@ -606,8 +404,8 @@ const LineGroupManagement = ({ showHeader = true }) => {
         <Col xs={24} sm={6}>
           <Card>
             <Statistic
-              title="Tổng dây chuyền"
-              value={lineGroups.reduce((sum, g) => sum + g.lineCount, 0)}
+              title="Tổng thiết bị"
+              value={lines.reduce((sum, g) => sum + (g.equipmentCount || 0), 0)}
               prefix={<LineChartOutlined style={{ color: "#722ed1" }} />}
               valueStyle={{ color: "#722ed1" }}
             />
@@ -658,41 +456,23 @@ const LineGroupManagement = ({ showHeader = true }) => {
             >
               <Option value="all">Tất cả trạng thái</Option>
               <Option value="active">Hoạt động</Option>
-              <Option value="maintenance">Bảo trì</Option>
-              <Option value="stopped">Dừng hoạt động</Option>
-              <Option value="idle">Chờ</Option>
+              <Option value="inactive">Dừng hoạt động</Option>
             </Select>
           </Col>
           <Col xs={24} sm={8} md={4}>
             <Select
-              value={filters.room}
-              onChange={(value) => setFilters({ ...filters, room: value })}
+              value={filters.department}
+              onChange={(value) => setFilters({ ...filters, department: value })}
               style={{ width: "100%" }}
               placeholder="Phòng"
               size="large"
             >
               <Option value="all">Tất cả phòng</Option>
-              {rooms.map((room) => (
-                <Option key={room.id} value={room.id.toString()}>
-                  {room.name}
+              {departments.map((department) => (
+                <Option key={department.departmentId} value={department.departmentId.toString()}>
+                  {department.departmentName}
                 </Option>
               ))}
-            </Select>
-          </Col>
-          <Col xs={24} sm={8} md={4}>
-            <Select
-              value={filters.efficiency}
-              onChange={(value) =>
-                setFilters({ ...filters, efficiency: value })
-              }
-              style={{ width: "100%" }}
-              placeholder="Hiệu suất"
-              size="large"
-            >
-              <Option value="all">Tất cả hiệu suất</Option>
-              <Option value="high">Cao (≥80%)</Option>
-              <Option value="medium">Trung bình (60-79%)</Option>
-              <Option value="low">Thấp (&lt;60%)</Option>
             </Select>
           </Col>
           <Col xs={24} sm={8} md={6}>
@@ -701,7 +481,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={() => {
-                  setEditingLineGroup(null);
+                  setEditingLine(null);
                   form.resetFields();
                   setIsModalVisible(true);
                 }}
@@ -709,7 +489,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
               >
                 Thêm dây chuyền
               </Button>
-              <Button icon={<ReloadOutlined />} onClick={loadLineGroups}>
+              <Button icon={<ReloadOutlined />} onClick={loadLines}>
                 Làm mới
               </Button>
             </Space>
@@ -718,11 +498,11 @@ const LineGroupManagement = ({ showHeader = true }) => {
 
         <Table
           columns={columns}
-          dataSource={filteredLineGroups}
-          rowKey="id"
+          dataSource={filteredLines}
+          rowKey="lineId"
           loading={loading}
           pagination={{
-            total: filteredLineGroups.length,
+            total: filteredLines.length,
             pageSize: 10,
             showSizeChanger: true,
             showQuickJumper: true,
@@ -735,13 +515,38 @@ const LineGroupManagement = ({ showHeader = true }) => {
           }}
           scroll={{ x: 1400 }}
           className="linegroup-management-table"
+          locale={{
+            emptyText: (
+              <div style={{ padding: "40px", textAlign: "center" }}>
+                <GroupOutlined style={{ fontSize: "48px", color: "#d9d9d9", marginBottom: "16px" }} />
+                <div style={{ fontSize: "16px", color: "#595959", marginBottom: "8px" }}>
+                  Chưa có dây chuyền nào
+                </div>
+                <div style={{ fontSize: "14px", color: "#8c8c8c", marginBottom: "16px" }}>
+                  Hãy thêm dây chuyền đầu tiên để bắt đầu quản lý sản xuất
+                </div>
+                <Button
+                  type="primary"
+                  icon={<PlusOutlined />}
+                  onClick={() => {
+                    setEditingLine(null);
+                    form.resetFields();
+                    setIsModalVisible(true);
+                  }}
+                  style={{ backgroundColor: "#334766", borderColor: "#334766" }}
+                >
+                  Thêm dây chuyền đầu tiên
+                </Button>
+              </div>
+            )
+          }}
         />
       </Card>
 
       {/* Create/Edit Modal */}
       <Modal
         title={
-          editingLineGroup
+          editingLine
             ? "Chỉnh sửa dây chuyền"
             : "Thêm dây chuyền mới"
         }
@@ -749,7 +554,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
         onOk={handleModalOk}
         onCancel={handleModalCancel}
         width={1000}
-        okText={editingLineGroup ? "Cập nhật" : "Tạo mới"}
+        okText={editingLine ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
         okButtonProps={{
           style: { backgroundColor: "#334766", borderColor: "#334766", width: 100 },
@@ -759,7 +564,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="groupLineName"
+                name="lineName"
                 label="Tên dây chuyền"
                 rules={[
                   {
@@ -773,14 +578,18 @@ const LineGroupManagement = ({ showHeader = true }) => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="roomId"
-                label="Phòng"
-                rules={[{ required: true, message: "Vui lòng chọn phòng" }]}
+                name="departmentId"
+                label="Phòng ban"
+                rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
               >
-                <Select placeholder="Chọn phòng">
-                  {rooms.map((room) => (
-                    <Option key={room.id} value={room.id}>
-                      {room.name}
+                <Select 
+                  placeholder="Chọn phòng ban"
+                  loading={departments.length === 0}
+                  notFoundContent={departments.length === 0 ? "Đang tải..." : "Không có phòng ban nào"}
+                >
+                  {departments.map((department) => (
+                    <Option key={department.departmentId} value={department.departmentId}>
+                      {department.departmentName}
                     </Option>
                   ))}
                 </Select>
@@ -790,72 +599,15 @@ const LineGroupManagement = ({ showHeader = true }) => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="supervisor"
-                label="Người quản lý"
-                rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng nhập tên người quản lý",
-                  },
-                ]}
-              >
-                <Input placeholder="Nhập tên người quản lý" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="shift"
-                label="Ca làm việc"
-                rules={[
-                  { required: true, message: "Vui lòng chọn ca làm việc" },
-                ]}
-              >
-                <Select placeholder="Chọn ca làm việc">
-                  <Option value="Ca 1">Ca 1 (06:00 - 14:00)</Option>
-                  <Option value="Ca 2">Ca 2 (14:00 - 22:00)</Option>
-                  <Option value="Ca 3">Ca 3 (22:00 - 06:00)</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                name="targetOutput"
-                label="Mục tiêu sản lượng"
-                rules={[{ required: true, message: "Vui lòng nhập mục tiêu" }]}
-              >
-                <Input type="number" placeholder="Nhập mục tiêu sản lượng" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="operatingHours"
-                label="Giờ hoạt động/ngày"
-                rules={[
-                  { required: true, message: "Vui lòng nhập giờ hoạt động" },
-                ]}
-              >
-                <Input
-                  type="number"
-                  placeholder="Nhập giờ hoạt động"
-                  max={24}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="status"
+                name="isActive"
                 label="Trạng thái"
                 rules={[
                   { required: true, message: "Vui lòng chọn trạng thái" },
                 ]}
               >
                 <Select placeholder="Chọn trạng thái">
-                  <Option value="active">Hoạt động</Option>
-                  <Option value="maintenance">Bảo trì</Option>
-                  <Option value="stopped">Dừng hoạt động</Option>
-                  <Option value="idle">Chờ</Option>
+                  <Option value={true}>Hoạt động</Option>
+                  <Option value={false}>Dừng hoạt động</Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -868,7 +620,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
         title={
           <Space>
             <GroupOutlined />
-            Chi tiết dây chuyền: {viewingLineGroup?.groupLineName}
+            Chi tiết dây chuyền: {viewingLine?.lineName}
           </Space>
         }
         open={isViewModalVisible}
@@ -880,7 +632,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
             icon={<EditOutlined />}
             onClick={() => {
               setIsViewModalVisible(false);
-              handleAction("edit", viewingLineGroup);
+              handleAction("edit", viewingLine);
             }}
             style={{ backgroundColor: "#334766", borderColor: "#334766" }}
           >
@@ -892,138 +644,73 @@ const LineGroupManagement = ({ showHeader = true }) => {
         ]}
         width={1000}
       >
-        {viewingLineGroup && (
+        {viewingLine && (
           <div>
-            <Row gutter={[24, 16]} style={{ marginBottom: "24px" }}>
-              <Col span={8}>
-                <Card size="small">
-                  <Statistic
-                    title="Hiệu suất"
-                    value={viewingLineGroup.efficiency}
-                    suffix="%"
-                    valueStyle={{
-                      color: getEfficiencyColor(viewingLineGroup.efficiency),
-                      fontSize: "24px",
-                    }}
-                  />
-                </Card>
-              </Col>
-              <Col span={8}>
-                <Card size="small">
-                  <Statistic
-                    title="Sản lượng hôm nay"
-                    value={viewingLineGroup.actualOutput}
-                    suffix={`/ ${viewingLineGroup.targetOutput}`}
-                    valueStyle={{ fontSize: "20px" }}
-                  />
-                </Card>
-              </Col>
-              <Col span={8}>
-                <Card size="small">
-                  <Statistic
-                    title="Giờ hoạt động"
-                    value={viewingLineGroup.operatingHours}
-                    suffix="h"
-                    valueStyle={{ fontSize: "20px" }}
-                  />
-                </Card>
-              </Col>
-            </Row>
-
             <Descriptions column={2} bordered style={{ marginBottom: "24px" }}>
               <Descriptions.Item label="Tên dây chuyền">
-                {viewingLineGroup.groupLineName}
+                {viewingLine.lineName}
               </Descriptions.Item>
-              <Descriptions.Item label="Phòng">
+              <Descriptions.Item label="Phòng ban">
                 <Space>
                   <EnvironmentOutlined style={{ color: "#334766" }} />
-                  {viewingLineGroup.roomName}
+                  {viewingLine.department?.departmentName || "Chưa phân phòng"}
                 </Space>
-              </Descriptions.Item>
-              <Descriptions.Item label="Người quản lý">
-                <Space>
-                  <TeamOutlined style={{ color: "#334766" }} />
-                  {viewingLineGroup.supervisor}
-                </Space>
-              </Descriptions.Item>
-              <Descriptions.Item label="Ca làm việc">
-                {viewingLineGroup.shift}
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
-                <Space>
-                  {getStatusIcon(viewingLineGroup.status)}
-                  <Tag color={getStatusColor(viewingLineGroup.status)}>
-                    {getStatusText(viewingLineGroup.status)}
-                  </Tag>
-                </Space>
-              </Descriptions.Item>
-              <Descriptions.Item label="Tình trạng bảo trì">
-                <Tag
-                  color={getMaintenanceStatusColor(
-                    viewingLineGroup.maintenanceStatus
-                  )}
-                >
-                  {getMaintenanceStatusText(viewingLineGroup.maintenanceStatus)}
+                <Tag color={viewingLine.isActive ? "success" : "error"}>
+                  {viewingLine.isActive ? "Hoạt động" : "Dừng hoạt động"}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Bảo trì cuối">
-                {dayjs(viewingLineGroup.lastMaintenance).format("DD/MM/YYYY")}
-              </Descriptions.Item>
-              <Descriptions.Item label="Bảo trì tiếp theo">
-                {dayjs(viewingLineGroup.nextMaintenance).format("DD/MM/YYYY")}
+              <Descriptions.Item label="Số giai đoạn">
+                <Badge count={viewingLine.stages?.length || 0} showZero style={{ backgroundColor: "#334766" }} />
               </Descriptions.Item>
             </Descriptions>
 
+            {/* Stages Section */}
             <Card
               title={
                 <span>
-                  <LineChartOutlined
-                    style={{ marginRight: "8px", color: "#334766" }}
-                  />
-                  Danh sách dây chuyền ({viewingLineGroup.lines?.length || 0})
+                  <SettingOutlined style={{ marginRight: "8px", color: "#334766" }} />
+                  Danh sách giai đoạn ({viewingLine.stages?.length || 0})
                 </span>
               }
               size="small"
+              style={{ marginBottom: "16px" }}
             >
-              <List
-                dataSource={viewingLineGroup.lines || []}
-                renderItem={(line) => (
-                  <List.Item>
-                    <List.Item.Meta
-                      avatar={
-                        <Avatar
-                          style={{
-                            backgroundColor: "#334766",
-                            color: "#fff",
-                          }}
-                          icon={<SettingOutlined />}
-                        />
-                      }
-                      title={
-                        <Space>
-                          <span>{line.name}</span>
-                          {getStatusIcon(line.status)}
-                          <Tag color={getStatusColor(line.status)} size="small">
-                            {getStatusText(line.status)}
-                          </Tag>
-                        </Space>
-                      }
-                      description={
-                        line.status === "running" ? (
-                          <Progress
-                            percent={line.efficiency}
-                            size="small"
-                            strokeColor={getEfficiencyColor(line.efficiency)}
-                            format={(percent) => `${percent}% hiệu suất`}
-                          />
-                        ) : (
-                          <Text type="secondary">Không hoạt động</Text>
-                        )
-                      }
-                    />
-                  </List.Item>
-                )}
-              />
+              {viewingLine.stages && viewingLine.stages.length > 0 ? (
+                <List
+                  dataSource={viewingLine.stages}
+                  renderItem={(stage, index) => (
+                    <List.Item>
+                      <List.Item.Meta
+                        avatar={
+                          <Avatar
+                            style={{ backgroundColor: "#334766", color: "#fff" }}
+                          >
+                            {index + 1}
+                          </Avatar>
+                        }
+                        title={
+                          <Space>
+                            <span style={{ fontWeight: "600" }}>{stage.stageName}</span>
+                            <Tag color="blue" size="small">Giai đoạn {index + 1}</Tag>
+                          </Space>
+                        }
+                        description={
+                          <Text type="secondary">
+                            ID: {stage.stageId} • Thuộc dây chuyền: {viewingLine.lineName}
+                          </Text>
+                        }
+                      />
+                    </List.Item>
+                  )}
+                />
+              ) : (
+                <div style={{ textAlign: "center", padding: "20px", color: "#8c8c8c" }}>
+                  <SettingOutlined style={{ fontSize: "24px", marginBottom: "8px" }} />
+                  <div>Chưa có giai đoạn nào trong dây chuyền này</div>
+                </div>
+              )}
             </Card>
           </div>
         )}
@@ -1034,4 +721,4 @@ const LineGroupManagement = ({ showHeader = true }) => {
   return showHeader ? <Layout>{content}</Layout> : content;
 };
 
-export default LineGroupManagement;
+export default LineManagement;

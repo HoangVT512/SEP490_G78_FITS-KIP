@@ -21,8 +21,15 @@ namespace FITSKIP.API
 
 
             // Add services to the container.
-            //OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
-            builder.Services.AddControllers();
+
+            builder.Services.AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    // Handle reference cycles in JSON serialization
+                    options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+                    options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
+                });
+
             builder.Services.AddMemoryCache();
             // Add DbContext
             builder.Services.AddDbContext<FITSKIP.Infrastructure.DbContexts.FitskipDbContext>(options =>
@@ -37,6 +44,10 @@ namespace FITSKIP.API
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IUserService, FITSKIP.Application.Services.UserService>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IDepartmentRepository, FITSKIP.Infrastructure.Repositories.DepartmentRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IDepartmentService, FITSKIP.Application.Services.DepartmentService>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.ILineRepository, FITSKIP.Infrastructure.Repositories.LineRepository>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.ILineService, FITSKIP.Application.Services.LineService>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IStageRepository, FITSKIP.Infrastructure.Repositories.StageRepository>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IStageService, FITSKIP.Application.Services.StageService>();
 
             // Import Excel service
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IExcelImportService,
