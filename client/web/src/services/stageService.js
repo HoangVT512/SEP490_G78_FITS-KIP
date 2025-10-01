@@ -1,11 +1,11 @@
-import apiRequest from './api';
+import apiRequest from "./api";
 
 export const stageService = {
   async getStages() {
     try {
-      return await apiRequest('/stages');
+      return await apiRequest("/stages");
     } catch (error) {
-      console.error('Get stages error:', error);
+      console.error("Get stages error:", error);
       throw error;
     }
   },
@@ -14,19 +14,19 @@ export const stageService = {
     try {
       return await apiRequest(`/stages/${id}`);
     } catch (error) {
-      console.error('Get stage error:', error);
+      console.error("Get stage error:", error);
       throw error;
     }
   },
 
   async createStage(stageData) {
     try {
-      return await apiRequest('/stages', {
-        method: 'POST',
+      return await apiRequest("/stages", {
+        method: "POST",
         body: JSON.stringify(stageData),
       });
     } catch (error) {
-      console.error('Create stage error:', error);
+      console.error("Create stage error:", error);
       throw error;
     }
   },
@@ -34,22 +34,22 @@ export const stageService = {
   async updateStage(id, stageData) {
     try {
       return await apiRequest(`/stages/${id}`, {
-        method: 'PUT',
+        method: "PUT",
         body: JSON.stringify(stageData),
       });
     } catch (error) {
-      console.error('Update stage error:', error);
+      console.error("Update stage error:", error);
       throw error;
     }
   },
 
-  async deleteStage(id) {
+  async toggleStageStatus(id) {
     try {
-      return await apiRequest(`/stages/${id}`, {
-        method: 'DELETE',
+      return await apiRequest(`/stages/${id}/toggle-status`, {
+        method: "PATCH",
       });
     } catch (error) {
-      console.error('Delete stage error:', error);
+      console.error("Toggle stage status error:", error);
       throw error;
     }
   },
@@ -58,7 +58,7 @@ export const stageService = {
     try {
       return await apiRequest(`/stages/line/${lineId}`);
     } catch (error) {
-      console.error('Get stages by line error:', error);
+      console.error("Get stages by line error:", error);
       throw error;
     }
   },

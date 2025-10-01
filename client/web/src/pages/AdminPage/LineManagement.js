@@ -772,13 +772,28 @@ const LineManagement = ({ showHeader = true }) => {
                             <Tag color="blue" size="small">
                               Giai đoạn {index + 1}
                             </Tag>
+                            <Tag
+                              color={stage.isActive ? "success" : "error"}
+                              size="small"
+                            >
+                              {stage.isActive ? "Hoạt động" : "Dừng hoạt động"}
+                            </Tag>
                           </Space>
                         }
                         description={
-                          <Text type="secondary">
-                            ID: {stage.stageId} • Thuộc dây chuyền:{" "}
-                            {viewingLine.lineName}
-                          </Text>
+                          <Space direction="vertical" size="small">
+                            <Typography.Text type="secondary">
+                              ID: {stage.stageId} • Thuộc dây chuyền:{" "}
+                              {viewingLine.lineName}
+                            </Typography.Text>
+                            <Typography.Text
+                              type="secondary"
+                              style={{ fontSize: "12px" }}
+                            >
+                              Trạng thái:{" "}
+                              {stage.isActive ? "Hoạt động" : "Dừng hoạt động"}
+                            </Typography.Text>
+                          </Space>
                         }
                       />
                     </List.Item>

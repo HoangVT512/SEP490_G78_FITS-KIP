@@ -31,7 +31,8 @@ public class StageService : IStageService
         var stage = new Stage
         {
             StageName = request.StageName,
-            LineId = request.LineId
+            LineId = request.LineId,
+            IsActive = request.IsActive
         };
 
         return await _stageRepository.CreateAsync(stage, cancellationToken);
@@ -59,20 +60,21 @@ public class StageService : IStageService
 
         existingStage.StageName = request.StageName;
         existingStage.LineId = request.LineId;
+        existingStage.IsActive = request.IsActive;
 
         return await _stageRepository.UpdateAsync(existingStage, cancellationToken);
     }
 
-    public async Task<bool> DeleteStageAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<Stage?> ToggleStageStatusAsync(int id, CancellationToken cancellationToken = default)
     {
-        // Check if stage has any dependencies before deletion
-        var hasDependencies = await _stageRepository.HasDependenciesAsync(id, cancellationToken);
-        if (hasDependencies)
+        var existingStage = await _stageRepository.GetByIdAsync(id, cancellationToken);
+        if (existingStage == null)
         {
-            throw new InvalidOperationException("Đã có thiết bị trong giai đoạn, không thể xóa");
+            return null;
         }
 
-        return await _stageRepository.DeleteAsync(id, cancellationToken);
+        existingStage.IsActive = !existingStage.IsActive;
+        return await _stageRepository.UpdateAsync(existingStage, cancellationToken);
     }
 
     public Task<IReadOnlyList<Stage>> GetStagesByLineAsync(int lineId, CancellationToken cancellationToken = default)

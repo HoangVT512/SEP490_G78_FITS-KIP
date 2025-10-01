@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FITSKIP.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class UpdateRoles : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -34,6 +34,7 @@ namespace FITSKIP.Infrastructure.Migrations
                     Gender = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
                     EmployeeCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     Position = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -213,7 +214,8 @@ namespace FITSKIP.Infrastructure.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     DepartmentName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     ManagerId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
-                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
@@ -282,60 +284,23 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "Rooms",
-                columns: table => new
-                {
-                    RoomID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    RoomName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    DepartmentID = table.Column<int>(type: "int", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK__Rooms__3286391944F5E5E2", x => x.RoomID);
-                    table.ForeignKey(
-                        name: "FK__Rooms__Departmen__6477ECF3",
-                        column: x => x.DepartmentID,
-                        principalTable: "Departments",
-                        principalColumn: "DepartmentID");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "GroupLines",
-                columns: table => new
-                {
-                    GroupLineID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    GroupLineName = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
-                    RoomID = table.Column<int>(type: "int", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK__GroupLin__23A523FB9505A5CE", x => x.GroupLineID);
-                    table.ForeignKey(
-                        name: "FK__GroupLine__RoomI__6754599E",
-                        column: x => x.RoomID,
-                        principalTable: "Rooms",
-                        principalColumn: "RoomID");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Lines",
                 columns: table => new
                 {
                     LineID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     LineName = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
-                    GroupLineID = table.Column<int>(type: "int", nullable: true)
+                    DepartmentID = table.Column<int>(type: "int", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Lines__2EAE64C9765DBF83", x => x.LineID);
                     table.ForeignKey(
-                        name: "FK__Lines__GroupLine__6A30C649",
-                        column: x => x.GroupLineID,
-                        principalTable: "GroupLines",
-                        principalColumn: "GroupLineID");
+                        name: "FK__Lines__Departmen__6A30C650",
+                        column: x => x.DepartmentID,
+                        principalTable: "Departments",
+                        principalColumn: "DepartmentID");
                 });
 
             migrationBuilder.CreateTable(
@@ -345,7 +310,8 @@ namespace FITSKIP.Infrastructure.Migrations
                     StageID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     StageName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    LineID = table.Column<int>(type: "int", nullable: true)
+                    LineID = table.Column<int>(type: "int", nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -398,7 +364,8 @@ namespace FITSKIP.Infrastructure.Migrations
                     Issue = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IdCode = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
                     LineID = table.Column<int>(type: "int", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    IsWorking = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
@@ -603,14 +570,9 @@ namespace FITSKIP.Infrastructure.Migrations
                 column: "TypeID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_GroupLines_RoomID",
-                table: "GroupLines",
-                column: "RoomID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Lines_GroupLineID",
+                name: "IX_Lines_DepartmentID",
                 table: "Lines",
-                column: "GroupLineID");
+                column: "DepartmentID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MaintenanceAssignments_ErrorID",
@@ -651,11 +613,6 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "IX_PurchaseRequests_RequestedBy",
                 table: "PurchaseRequests",
                 column: "RequestedBy");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Rooms_DepartmentID",
-                table: "Rooms",
-                column: "DepartmentID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ShiftSlots_ShiftID",
@@ -734,12 +691,6 @@ namespace FITSKIP.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "Lines");
-
-            migrationBuilder.DropTable(
-                name: "GroupLines");
-
-            migrationBuilder.DropTable(
-                name: "Rooms");
 
             migrationBuilder.DropTable(
                 name: "Departments");

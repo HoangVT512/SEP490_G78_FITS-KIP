@@ -11,6 +11,8 @@ public partial class Stage
 
     public int? LineId { get; set; }
 
+    public bool IsActive { get; set; } = true;
+
     public virtual ICollection<Equipment> Equipment { get; set; } = new List<Equipment>();
 
     public virtual ICollection<ErrorHistory> ErrorHistories { get; set; } = new List<ErrorHistory>();

@@ -460,6 +460,9 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StageId"));
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("LineId")
                         .HasColumnType("int")
                         .HasColumnName("LineID");

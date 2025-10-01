@@ -19,6 +19,7 @@ import {
   List,
   Avatar,
   Statistic,
+  Switch,
 } from "antd";
 import {
   SearchOutlined,
@@ -35,6 +36,8 @@ import {
   ExclamationCircleOutlined,
   PlayCircleOutlined,
   LineChartOutlined,
+  LockOutlined,
+  UnlockOutlined,
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
 import { stageService } from "../../services/stageService";
@@ -107,42 +110,65 @@ const StageManagement = ({ showHeader = true }) => {
         form.setFieldsValue({
           stageName: stage.stageName,
           lineId: stage.lineId,
+          isActive: stage.isActive,
         });
         setIsModalVisible(true);
         break;
-      case "delete":
+      case "toggle-status":
+        const actionText = stage.isActive ? "khóa" : "mở khóa";
         Modal.confirm({
-          title: "Xác nhận xóa công đoạn",
+          title: `Xác nhận ${actionText} công đoạn`,
           content: (
             <div>
-              <p><strong>Tên công đoạn:</strong> {stage.stageName}</p>
-              <p><strong>Dây chuyền:</strong> {stage.line?.lineName || "Không xác định"}</p>
-              <p><strong>Phòng ban:</strong> {stage.line?.department?.departmentName || "Không xác định"}</p>
-              <p style={{ color: "#ff4d4f", marginTop: "16px" }}>
+              <p>
+                <strong>Tên công đoạn:</strong> {stage.stageName}
+              </p>
+              <p>
+                <strong>Dây chuyền:</strong>{" "}
+                {stage.line?.lineName || "Không xác định"}
+              </p>
+              <p>
+                <strong>Phòng ban:</strong>{" "}
+                {stage.line?.department?.departmentName || "Không xác định"}
+              </p>
+              <p>
+                <strong>Trạng thái hiện tại:</strong>{" "}
+                {stage.isActive ? "Hoạt động" : "Đã khóa"}
+              </p>
+              <p style={{ color: "#1890ff", marginTop: "16px" }}>
                 <ExclamationCircleOutlined style={{ marginRight: "8px" }} />
-                Bạn có chắc chắn muốn xóa công đoạn này không?
+                Bạn có chắc chắn muốn {actionText} công đoạn này không?
               </p>
             </div>
           ),
-          okText: "Xóa",
+          okText: actionText.charAt(0).toUpperCase() + actionText.slice(1),
           cancelText: "Hủy",
-          okButtonProps: { danger: true },
+          okButtonProps: { type: "primary" },
           onOk: async () => {
             try {
-              const response = await stageService.deleteStage(stage.stageId);
+              const response = await stageService.toggleStageStatus(
+                stage.stageId
+              );
               if (response.success) {
-                message.success("Đã xóa công đoạn thành công");
+                message.success(
+                  response.message || `Đã ${actionText} công đoạn thành công`
+                );
                 loadStages();
               } else {
-                message.error(response.message || "Xóa công đoạn thất bại");
+                message.error(
+                  response.message ||
+                    `${
+                      actionText.charAt(0).toUpperCase() + actionText.slice(1)
+                    } công đoạn thất bại`
+                );
               }
             } catch (error) {
-              console.error("Delete stage error:", error);
-              if (error.message && error.message.includes("HTTP error! status: 500")) {
-                message.error("Đã có thiết bị trong công đoạn, không thể xóa");
-              } else {
-                message.error("Xóa công đoạn thất bại");
-              }
+              console.error("Toggle stage status error:", error);
+              message.error(
+                `${
+                  actionText.charAt(0).toUpperCase() + actionText.slice(1)
+                } công đoạn thất bại`
+              );
             }
           },
         });
@@ -169,22 +195,25 @@ const StageManagement = ({ showHeader = true }) => {
       type: "divider",
     },
     {
-      key: "delete",
-      icon: <DeleteOutlined />,
-      label: "Xóa",
-      danger: true,
-      onClick: () => handleAction("delete", stage),
+      key: "toggle-status",
+      icon: stage.isActive ? <LockOutlined /> : <UnlockOutlined />,
+      label: stage.isActive ? "Khóa công đoạn" : "Mở khóa công đoạn",
+      danger: stage.isActive,
+      onClick: () => handleAction("toggle-status", stage),
     },
   ];
 
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      
+
       if (editingStage) {
         // Update existing stage
         try {
-          const response = await stageService.updateStage(editingStage.stageId, values);
+          const response = await stageService.updateStage(
+            editingStage.stageId,
+            values
+          );
           if (response.success) {
             message.success("Cập nhật công đoạn thành công!");
             setIsModalVisible(false);
@@ -196,7 +225,10 @@ const StageManagement = ({ showHeader = true }) => {
           }
         } catch (error) {
           console.error("Update stage error:", error);
-          if (error.message && error.message.includes("đã tồn tại trong dây chuyền")) {
+          if (
+            error.message &&
+            error.message.includes("đã tồn tại trong dây chuyền")
+          ) {
             message.error("Tên công đoạn đã tồn tại trong dây chuyền này");
           } else {
             message.error("Cập nhật công đoạn thất bại");
@@ -216,7 +248,10 @@ const StageManagement = ({ showHeader = true }) => {
           }
         } catch (error) {
           console.error("Create stage error:", error);
-          if (error.message && error.message.includes("đã tồn tại trong dây chuyền")) {
+          if (
+            error.message &&
+            error.message.includes("đã tồn tại trong dây chuyền")
+          ) {
             message.error("Tên công đoạn đã tồn tại trong dây chuyền này");
           } else {
             message.error("Tạo công đoạn thất bại");
@@ -308,6 +343,16 @@ const StageManagement = ({ showHeader = true }) => {
       ),
     },
     {
+      title: "Trạng thái",
+      key: "status",
+      width: 120,
+      render: (_, record) => (
+        <Tag color={record.isActive ? "success" : "error"}>
+          {record.isActive ? "Hoạt động" : "Dừng hoạt động"}
+        </Tag>
+      ),
+    },
+    {
       title: "Hành động",
       key: "actions",
       width: 100,
@@ -324,11 +369,12 @@ const StageManagement = ({ showHeader = true }) => {
     const matchesSearch =
       stage.stageName?.toLowerCase().includes(searchText.toLowerCase()) ||
       stage.line?.lineName?.toLowerCase().includes(searchText.toLowerCase()) ||
-      stage.line?.department?.departmentName?.toLowerCase().includes(searchText.toLowerCase());
+      stage.line?.department?.departmentName
+        ?.toLowerCase()
+        .includes(searchText.toLowerCase());
 
     const matchesLine =
-      filters.line === "all" || 
-      stage.lineId?.toString() === filters.line;
+      filters.line === "all" || stage.lineId?.toString() === filters.line;
 
     return matchesSearch && matchesLine;
   });
@@ -351,7 +397,7 @@ const StageManagement = ({ showHeader = true }) => {
           <Card>
             <Statistic
               title="Dây chuyền có công đoạn"
-              value={new Set(stages.map(s => s.lineId)).size}
+              value={new Set(stages.map((s) => s.lineId)).size}
               prefix={<GroupOutlined style={{ color: "#52c41a" }} />}
               valueStyle={{ color: "#52c41a" }}
             />
@@ -361,7 +407,10 @@ const StageManagement = ({ showHeader = true }) => {
           <Card>
             <Statistic
               title="Thiết bị"
-              value={stages.reduce((sum, s) => sum + (s.equipment?.length || 0), 0)}
+              value={stages.reduce(
+                (sum, s) => sum + (s.equipment?.length || 0),
+                0
+              )}
               prefix={<ToolOutlined style={{ color: "#faad14" }} />}
               valueStyle={{ color: "#faad14" }}
             />
@@ -371,7 +420,13 @@ const StageManagement = ({ showHeader = true }) => {
           <Card>
             <Statistic
               title="Trung bình công đoạn/dây chuyền"
-              value={lines.length > 0 ? (stages.length / new Set(stages.map(s => s.lineId)).size).toFixed(1) : 0}
+              value={
+                lines.length > 0
+                  ? (
+                      stages.length / new Set(stages.map((s) => s.lineId)).size
+                    ).toFixed(1)
+                  : 0
+              }
               prefix={<LineChartOutlined style={{ color: "#722ed1" }} />}
               valueStyle={{ color: "#722ed1" }}
             />
@@ -470,11 +525,29 @@ const StageManagement = ({ showHeader = true }) => {
           locale={{
             emptyText: (
               <div style={{ padding: "40px", textAlign: "center" }}>
-                <SettingOutlined style={{ fontSize: "48px", color: "#d9d9d9", marginBottom: "16px" }} />
-                <div style={{ fontSize: "16px", color: "#595959", marginBottom: "8px" }}>
+                <SettingOutlined
+                  style={{
+                    fontSize: "48px",
+                    color: "#d9d9d9",
+                    marginBottom: "16px",
+                  }}
+                />
+                <div
+                  style={{
+                    fontSize: "16px",
+                    color: "#595959",
+                    marginBottom: "8px",
+                  }}
+                >
                   Chưa có công đoạn nào
                 </div>
-                <div style={{ fontSize: "14px", color: "#8c8c8c", marginBottom: "16px" }}>
+                <div
+                  style={{
+                    fontSize: "14px",
+                    color: "#8c8c8c",
+                    marginBottom: "16px",
+                  }}
+                >
                   Hãy thêm công đoạn đầu tiên để bắt đầu quản lý
                 </div>
                 <Button
@@ -490,18 +563,14 @@ const StageManagement = ({ showHeader = true }) => {
                   Thêm công đoạn đầu tiên
                 </Button>
               </div>
-            )
+            ),
           }}
         />
       </Card>
 
       {/* Create/Edit Modal */}
       <Modal
-        title={
-          editingStage
-            ? "Chỉnh sửa công đoạn"
-            : "Thêm công đoạn mới"
-        }
+        title={editingStage ? "Chỉnh sửa công đoạn" : "Thêm công đoạn mới"}
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
@@ -532,19 +601,41 @@ const StageManagement = ({ showHeader = true }) => {
               <Form.Item
                 name="lineId"
                 label="Dây chuyền"
-                rules={[{ required: true, message: "Vui lòng chọn dây chuyền" }]}
+                rules={[
+                  { required: true, message: "Vui lòng chọn dây chuyền" },
+                ]}
               >
-                <Select 
+                <Select
                   placeholder="Chọn dây chuyền"
                   loading={lines.length === 0}
-                  notFoundContent={lines.length === 0 ? "Đang tải..." : "Không có dây chuyền nào"}
+                  notFoundContent={
+                    lines.length === 0
+                      ? "Đang tải..."
+                      : "Không có dây chuyền nào"
+                  }
                 >
                   {lines.map((line) => (
                     <Option key={line.lineId} value={line.lineId}>
-                      {line.lineName} ({line.department?.departmentName || "Không xác định"})
+                      {line.lineName} (
+                      {line.department?.departmentName || "Không xác định"})
                     </Option>
                   ))}
                 </Select>
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="isActive"
+                label="Trạng thái hoạt động"
+                valuePropName="checked"
+              >
+                <Switch
+                  checkedChildren="Hoạt động"
+                  unCheckedChildren="Dừng hoạt động"
+                  defaultChecked={true}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -594,11 +685,16 @@ const StageManagement = ({ showHeader = true }) => {
               </Descriptions.Item>
               <Descriptions.Item label="Phòng ban">
                 <Tag color="blue">
-                  {viewingStage.line?.department?.departmentName || "Không xác định"}
+                  {viewingStage.line?.department?.departmentName ||
+                    "Không xác định"}
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Số thiết bị">
-                <Badge count={viewingStage.equipment?.length || 0} showZero style={{ backgroundColor: "#1890ff" }} />
+                <Badge
+                  count={viewingStage.equipment?.length || 0}
+                  showZero
+                  style={{ backgroundColor: "#1890ff" }}
+                />
               </Descriptions.Item>
             </Descriptions>
 
@@ -606,7 +702,9 @@ const StageManagement = ({ showHeader = true }) => {
             <Card
               title={
                 <span>
-                  <ToolOutlined style={{ marginRight: "8px", color: "#1890ff" }} />
+                  <ToolOutlined
+                    style={{ marginRight: "8px", color: "#1890ff" }}
+                  />
                   Danh sách thiết bị ({viewingStage.equipment?.length || 0})
                 </span>
               }
@@ -620,22 +718,30 @@ const StageManagement = ({ showHeader = true }) => {
                       <List.Item.Meta
                         avatar={
                           <Avatar
-                            style={{ backgroundColor: "#1890ff", color: "#fff" }}
+                            style={{
+                              backgroundColor: "#1890ff",
+                              color: "#fff",
+                            }}
                             icon={<ToolOutlined />}
                           />
                         }
                         title={
                           <Space>
-                            <span style={{ fontWeight: "600" }}>{equipment.equipmentName}</span>
-                            <Tag color={equipment.isActive ? "success" : "error"} size="small">
+                            <span style={{ fontWeight: "600" }}>
+                              {equipment.equipmentName}
+                            </span>
+                            <Tag
+                              color={equipment.isActive ? "success" : "error"}
+                              size="small"
+                            >
                               {equipment.isActive ? "Hoạt động" : "Dừng"}
                             </Tag>
                           </Space>
                         }
                         description={
                           <Text type="secondary">
-                            Mã: {equipment.equipmentCode || "N/A"} • 
-                            Xuất xứ: {equipment.origin || "N/A"}
+                            Mã: {equipment.equipmentCode || "N/A"} • Xuất xứ:{" "}
+                            {equipment.origin || "N/A"}
                           </Text>
                         }
                       />
@@ -643,8 +749,16 @@ const StageManagement = ({ showHeader = true }) => {
                   )}
                 />
               ) : (
-                <div style={{ textAlign: "center", padding: "20px", color: "#8c8c8c" }}>
-                  <ToolOutlined style={{ fontSize: "24px", marginBottom: "8px" }} />
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "20px",
+                    color: "#8c8c8c",
+                  }}
+                >
+                  <ToolOutlined
+                    style={{ fontSize: "24px", marginBottom: "8px" }}
+                  />
                   <div>Chưa có thiết bị nào trong công đoạn này</div>
                 </div>
               )}

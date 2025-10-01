@@ -96,24 +96,25 @@ public class StagesController : ControllerBase
     }
 
     /// <summary>
-    /// Xóa giai đoạn
+    /// Khóa/Mở khóa giai đoạn
     /// </summary>
-    [HttpDelete("{id}")]
-    [Authorize(Roles = "Quản trị viên")]
-    public async Task<IActionResult> DeleteStage(int id)
+    [HttpPatch("{id}/toggle-status")]
+    [Authorize(Roles = "Quản trị viên,Quản lý")]
+    public async Task<IActionResult> ToggleStageStatus(int id)
     {
         try
         {
-            var result = await _stageService.DeleteStageAsync(id);
-            if (!result)
+            var stage = await _stageService.ToggleStageStatusAsync(id);
+            if (stage == null)
             {
                 return NotFound(new { success = false, message = "Không tìm thấy giai đoạn" });
             }
-            return Ok(new { success = true, message = "Xóa giai đoạn thành công" });
+            var action = stage.IsActive ? "mở khóa" : "khóa";
+            return Ok(new { success = true, data = stage, message = $"Đã {action} giai đoạn thành công" });
         }
         catch (Exception ex)
         {
-            return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi xóa giai đoạn", details = ex.Message });
+            return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi thay đổi trạng thái giai đoạn", details = ex.Message });
         }
     }
 

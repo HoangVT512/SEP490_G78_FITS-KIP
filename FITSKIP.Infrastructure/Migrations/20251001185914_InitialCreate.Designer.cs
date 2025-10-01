@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20250930162453_RemoveRoomsAndUpdateStructure")]
-    partial class RemoveRoomsAndUpdateStructure
+    [Migration("20251001185914_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -85,6 +85,11 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("nvarchar(250)");
 
                     b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsWorking")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
@@ -186,26 +191,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.ToTable("ErrorHistory", (string)null);
                 });
 
-            modelBuilder.Entity("FITSKIP.Domain.Entities.GroupLine", b =>
-                {
-                    b.Property<int>("GroupLineId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("GroupLineID");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("GroupLineId"));
-
-                    b.Property<string>("GroupLineName")
-                        .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
-
-                    b.HasKey("GroupLineId")
-                        .HasName("PK__GroupLin__23A523FB9505A5CE");
-
-                    b.ToTable("GroupLines");
-                });
-
             modelBuilder.Entity("FITSKIP.Domain.Entities.Line", b =>
                 {
                     b.Property<int>("LineId")
@@ -218,10 +203,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<int?>("DepartmentId")
                         .HasColumnType("int")
                         .HasColumnName("DepartmentID");
-
-                    b.Property<int?>("GroupLineId")
-                        .HasColumnType("int")
-                        .HasColumnName("GroupLineID");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -237,8 +218,6 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasName("PK__Lines__2EAE64C9765DBF83");
 
                     b.HasIndex("DepartmentId");
-
-                    b.HasIndex("GroupLineId");
 
                     b.ToTable("Lines");
                 });
@@ -484,6 +463,9 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("StageId"));
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<int?>("LineId")
                         .HasColumnType("int")
                         .HasColumnName("LineID");
@@ -550,6 +532,11 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<string>("Gender")
                         .HasMaxLength(10)
                         .HasColumnType("nvarchar(10)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
 
                     b.Property<bool>("LockoutEnabled")
                         .HasColumnType("bit");
@@ -839,14 +826,7 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasForeignKey("DepartmentId")
                         .HasConstraintName("FK__Lines__Departmen__6A30C650");
 
-                    b.HasOne("FITSKIP.Domain.Entities.GroupLine", "GroupLine")
-                        .WithMany("Lines")
-                        .HasForeignKey("GroupLineId")
-                        .HasConstraintName("FK__Lines__GroupLine__6A30C649");
-
                     b.Navigation("Department");
-
-                    b.Navigation("GroupLine");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceAssignment", b =>
@@ -1025,11 +1005,6 @@ namespace FITSKIP.Infrastructure.Migrations
             modelBuilder.Entity("FITSKIP.Domain.Entities.ErrorHistory", b =>
                 {
                     b.Navigation("MaintenanceAssignments");
-                });
-
-            modelBuilder.Entity("FITSKIP.Domain.Entities.GroupLine", b =>
-                {
-                    b.Navigation("Lines");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Line", b =>
