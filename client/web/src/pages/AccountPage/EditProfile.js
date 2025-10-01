@@ -87,9 +87,8 @@ const EditProfile = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // Prepare data to update (only editable fields)
+      // Prepare data to update (only editable fields - NOT including fullName)
       const updateData = {
-        fullName: values.fullName,
         email: values.email,
         phoneNumber: values.phoneNumber || "",
         gender: values.gender,
@@ -118,12 +117,20 @@ const EditProfile = () => {
 
       let errorMessage = "Có lỗi xảy ra khi cập nhật thông tin!";
 
-      if (error.message.includes("Email này đã được sử dụng")) {
-        errorMessage = "Email này đã được sử dụng bởi người dùng khác!";
+      if (error.message.includes("Đã có người dùng sử dụng email này")) {
+        errorMessage = "Đã có người dùng sử dụng email này, không được dùng.";
         form.setFields([
           {
             name: "email",
-            errors: ["Email này đã được sử dụng bởi người dùng khác"],
+            errors: ["Đã có người dùng sử dụng email này, không được dùng"],
+          },
+        ]);
+      } else if (error.message.includes("Đã có người dùng sử dụng số điện thoại này")) {
+        errorMessage = "Đã có người dùng sử dụng số điện thoại này, không được dùng.";
+        form.setFields([
+          {
+            name: "phoneNumber",
+            errors: ["Đã có người dùng sử dụng số điện thoại này, không được dùng"],
           },
         ]);
       } else if (error.message) {
@@ -248,9 +255,8 @@ const EditProfile = () => {
                       Có thể chỉnh sửa:
                     </p>
                     <ul className={styles.editProfileAlertList}>
-                      <li>Họ và tên</li>
                       <li>Email</li>
-                      <li>Số điện thoại</li>
+                      <li>Số điện thoại (10 số bắt đầu bằng 0)</li>
                       <li>Giới tính</li>
                       <li>Ảnh đại diện</li>
                     </ul>
@@ -258,6 +264,7 @@ const EditProfile = () => {
                       Chỉ xem (do Admin quản lý):
                     </p>
                     <ul className={styles.editProfileAlertList}>
+                      <li>Họ và tên</li>
                       <li>Mã nhân viên</li>
                       <li>Phòng ban</li>
                       <li>Chức vụ</li>
@@ -285,19 +292,14 @@ const EditProfile = () => {
                     <Form.Item
                       label="Họ và tên"
                       name="fullName"
-                      rules={[
-                        { required: true, message: "Vui lòng nhập họ tên!" },
-                        { min: 2, message: "Họ tên phải có ít nhất 2 ký tự!" },
-                        {
-                          max: 100,
-                          message: "Họ tên không được vượt quá 100 ký tự!",
-                        },
-                      ]}
+                      tooltip="Họ tên không thể thay đổi, do Admin quản lý"
                     >
                       <Input
                         prefix={<UserOutlined />}
-                        placeholder="Nhập họ và tên đầy đủ"
+                        value={currentUser.fullName}
+                        disabled
                         size="large"
+                        className={styles.editProfileDisabledField}
                       />
                     </Form.Item>
                   </Col>
@@ -326,7 +328,7 @@ const EditProfile = () => {
                       name="email"
                       rules={[
                         { required: true, message: "Vui lòng nhập email!" },
-                        { type: "email", message: "Email không hợp lệ!" },
+                        { type: "email", message: "Email không đúng định dạng!" },
                       ]}
                     >
                       <Input
@@ -342,16 +344,18 @@ const EditProfile = () => {
                       label="Số điện thoại"
                       name="phoneNumber"
                       rules={[
+                        { required: true, message: "Vui lòng nhập số điện thoại!" },
                         {
-                          pattern: /^[0-9]{10,11}$/,
-                          message: "Số điện thoại không hợp lệ!",
+                          pattern: /^0[0-9]{9}$/,
+                          message: "Số điện thoại phải có đúng 10 số và bắt đầu bằng số 0!",
                         },
                       ]}
                     >
                       <Input
                         prefix={<PhoneOutlined />}
-                        placeholder="Nhập số điện thoại"
+                        placeholder="Nhập số điện thoại (VD: 0123456789)"
                         size="large"
+                        maxLength={10}
                       />
                     </Form.Item>
                   </Col>

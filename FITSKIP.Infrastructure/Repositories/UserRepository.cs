@@ -123,11 +123,17 @@ public class UserRepository : IUserRepository
             var emailExists = await db.Users.AnyAsync(u => u.Email == request.Email && u.Id != userId, cancellationToken);
             if (emailExists)
             {
-                throw new ArgumentException("Email này đã được sử dụng bởi người dùng khác.");
+                throw new ArgumentException("Đã có người dùng sử dụng email này, không được dùng.");
             }
 
-            // Update only editable fields
-            existingUser.FullName = request.FullName;
+            // Check if phone number is already taken by another user
+            var phoneExists = await db.Users.AnyAsync(u => u.PhoneNumber == request.PhoneNumber && u.Id != userId, cancellationToken);
+            if (phoneExists)
+            {
+                throw new ArgumentException("Đã có người dùng sử dụng số điện thoại này, không được dùng.");
+            }
+
+            // Update only editable fields - NOT including FullName (không cho sửa tên)
             existingUser.Email = request.Email;
             existingUser.NormalizedEmail = request.Email.ToUpperInvariant();
             existingUser.PhoneNumber = request.PhoneNumber;
