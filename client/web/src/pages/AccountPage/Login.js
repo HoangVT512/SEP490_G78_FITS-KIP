@@ -64,7 +64,7 @@ const Login = () => {
   const onFinish = async (values) => {
     setLoading(true);
     setLoginError(""); // Clear previous errors
-    
+
     try {
       const loginId = values.loginId; // Nhận cả email hoặc mã nhân viên
       const response = await login(loginId, values.password, values.remember);
@@ -77,14 +77,14 @@ const Login = () => {
     } catch (error) {
       // Determine if user entered email or employee code
       const isEmail = isEmailFormat(values.loginId);
-      
+
       // Set specific error message based on input type
       if (isEmail) {
         setLoginError("Email hoặc mật khẩu không đúng!");
       } else {
         setLoginError("Mã nhân viên hoặc mật khẩu không đúng!");
       }
-      
+
       // Don't show the general error message - only show red text under input
     } finally {
       setLoading(false);
@@ -171,7 +171,7 @@ const Login = () => {
                   </Form.Item>
                   <Button
                     type="link"
-                    onClick={() => navigate("/reset-password")}
+                    onClick={() => navigate("/forgot-password")}
                     className={styles.loginForgotLink}
                   >
                     Quên mật khẩu?

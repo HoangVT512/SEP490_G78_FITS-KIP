@@ -17,8 +17,20 @@ const apiRequest = async (endpoint, options = {}) => {
     url,
   });
 
-  // Check if user is logged in
-  if (!token && endpoint !== "/Auths/login") {
+  // List of public endpoints that don't require authentication
+  const publicEndpoints = [
+    "/Auths/login",
+    "/Auths/forgot-password/send-otp",
+    "/Auths/forgot-password/verify-otp",
+    "/Auths/forgot-password/reset",
+  ];
+
+  // Check if user is logged in for protected endpoints
+  const isPublicEndpoint = publicEndpoints.some((publicPath) =>
+    endpoint.includes(publicPath)
+  );
+
+  if (!token && !isPublicEndpoint) {
     console.error("No token found for protected endpoint:", endpoint);
     throw new Error("Authentication required");
   }

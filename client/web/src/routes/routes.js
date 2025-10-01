@@ -1,4 +1,5 @@
 import LoginPage from "../pages/AccountPage/Login";
+import ForgotPasswordPage from "../pages/AccountPage/ForgotPassword";
 import ResetPasswordPage from "../pages/AccountPage/ResetPassword";
 import ProfilePage from "../pages/AccountPage/Profile";
 import EditProfilePage from "../pages/AccountPage/EditProfile";
@@ -23,6 +24,13 @@ export const routes = [
     path: "/login",
     name: "Login",
     page: LoginPage,
+    isShowHeader: true,
+    requiredPermissions: 0,
+  },
+  {
+    path: "/forgot-password",
+    name: "Forgot Password",
+    page: ForgotPasswordPage,
     isShowHeader: true,
     requiredPermissions: 0,
   },

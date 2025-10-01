@@ -2,6 +2,7 @@ using FITSKIP.Infrastructure.DbContexts;
 using FITSKIP.Infrastructure.SeedData;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi.Models;
@@ -54,7 +55,8 @@ namespace FITSKIP.API
                 // User settings
                 options.User.RequireUniqueEmail = true;
             })
-            .AddEntityFrameworkStores<FITSKIP.Infrastructure.DbContexts.FitskipDbContext>();
+            .AddEntityFrameworkStores<FITSKIP.Infrastructure.DbContexts.FitskipDbContext>()
+            .AddDefaultTokenProviders(); // Add this for password reset tokens, email confirmation, etc.
 
             // DI registrations for repositories and services
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IUserRepository, FITSKIP.Infrastructure.Repositories.UserRepository>();

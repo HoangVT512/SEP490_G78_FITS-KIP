@@ -193,6 +193,51 @@ export const authService = {
       throw new Error(error.message || "Cập nhật thông tin thất bại");
     }
   },
+
+  // Forgot Password - Send OTP
+  sendForgotPasswordOtp: async (email) => {
+    try {
+      const response = await apiRequest("/Auths/forgot-password/send-otp", {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+
+      return response;
+    } catch (error) {
+      console.error("Send OTP error:", error);
+      throw error;
+    }
+  },
+
+  // Forgot Password - Verify OTP
+  verifyOtp: async (email, otp) => {
+    try {
+      const response = await apiRequest("/Auths/forgot-password/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({ email, otp }),
+      });
+
+      return response;
+    } catch (error) {
+      console.error("Verify OTP error:", error);
+      throw error;
+    }
+  },
+
+  // Forgot Password - Reset Password with OTP
+  resetPasswordWithOtp: async (email, otp, newPassword) => {
+    try {
+      const response = await apiRequest("/Auths/forgot-password/reset", {
+        method: "POST",
+        body: JSON.stringify({ email, otp, newPassword }),
+      });
+
+      return response;
+    } catch (error) {
+      console.error("Reset password error:", error);
+      throw error;
+    }
+  },
 };
 
 export default authService;
