@@ -61,9 +61,6 @@ export const roleService = {
     try {
       const payload = {
         name: roleData.name,
-        description: roleData.description,
-        isActive: roleData.status === "active",
-        permissions: roleData.permissions || [],
       };
 
       const response = await apiRequest("/roles", {
@@ -75,15 +72,15 @@ export const roleService = {
         id: response.id,
         name: response.name,
         normalizedName: response.normalizedName,
-        description: response.description || "",
-        status: response.isActive ? "active" : "inactive",
-        isSystemRole: response.isSystemRole || false,
-        userCount: response.userCount || 0,
-        permissions: response.permissions || [],
-        createdDate: response.createdDate,
-        updatedDate: response.updatedDate,
-        createdBy: response.createdBy,
-        priority: response.priority || 4,
+        description: "",
+        status: "active",
+        isSystemRole: false,
+        userCount: 0,
+        permissions: [],
+        createdDate: new Date().toISOString(),
+        updatedDate: new Date().toISOString(),
+        createdBy: "admin",
+        priority: 4,
       };
     } catch (error) {
       console.error("Error creating role:", error);
@@ -96,9 +93,6 @@ export const roleService = {
     try {
       const payload = {
         name: roleData.name,
-        description: roleData.description,
-        isActive: roleData.status === "active",
-        permissions: roleData.permissions || [],
       };
 
       const response = await apiRequest(`/roles/${id}`, {
@@ -110,15 +104,15 @@ export const roleService = {
         id: response.id,
         name: response.name,
         normalizedName: response.normalizedName,
-        description: response.description || "",
-        status: response.isActive ? "active" : "inactive",
-        isSystemRole: response.isSystemRole || false,
-        userCount: response.userCount || 0,
-        permissions: response.permissions || [],
-        createdDate: response.createdDate,
-        updatedDate: response.updatedDate,
-        createdBy: response.createdBy,
-        priority: response.priority || 4,
+        description: roleData.description || "",
+        status: roleData.status || "active",
+        isSystemRole: roleData.isSystemRole || false,
+        userCount: roleData.userCount || 0,
+        permissions: roleData.permissions || [],
+        createdDate: roleData.createdDate || new Date().toISOString(),
+        updatedDate: new Date().toISOString(),
+        createdBy: roleData.createdBy || "admin",
+        priority: roleData.priority || 4,
       };
     } catch (error) {
       console.error("Error updating role:", error);

@@ -443,45 +443,30 @@ const RoleManagement = ({ showHeader = true }) => {
 
   const handleDelete = async (roleId) => {
     try {
-      // Simulate API call
-      const roleToDelete = roles.find((r) => r.id === roleId);
-      if (roleToDelete?.isSystemRole) {
-        message.error("Không thể xóa vai trò hệ thống");
-        return;
-      }
-      if (roleToDelete?.userCount > 0) {
-        message.error(
-          `Không thể xóa vai trò đang được sử dụng bởi ${roleToDelete.userCount} người dùng`
-        );
-        return;
-      }
-
+      await roleService.deleteRole(roleId);
       setRoles(roles.filter((role) => role.id !== roleId));
       message.success("Đã xóa vai trò thành công");
     } catch (error) {
-      message.error("Có lỗi xảy ra khi xóa vai trò");
+      message.error(error.message || "Có lỗi xảy ra khi xóa vai trò");
     }
   };
 
   const handleToggleStatus = async (roleId) => {
     try {
-      const updatedRoles = roles.map((role) => {
-        if (role.id === roleId) {
-          if (role.isSystemRole) {
-            message.warning("Không thể thay đổi trạng thái vai trò hệ thống");
-            return role;
-          }
-          return {
-            ...role,
-            status: role.status === "active" ? "inactive" : "active",
-          };
-        }
-        return role;
-      });
+      const role = roles.find((r) => r.id === roleId);
+      if (role?.isSystemRole) {
+        message.warning("Không thể thay đổi trạng thái vai trò hệ thống");
+        return;
+      }
+
+      const updatedRole = await roleService.toggleRoleStatus(roleId);
+      const updatedRoles = roles.map((r) =>
+        r.id === roleId ? updatedRole : r
+      );
       setRoles(updatedRoles);
       message.success("Đã cập nhật trạng thái vai trò");
     } catch (error) {
-      message.error("Có lỗi xảy ra khi cập nhật trạng thái");
+      message.error(error.message || "Có lỗi xảy ra khi cập nhật trạng thái");
     }
   };
 
@@ -497,27 +482,18 @@ const RoleManagement = ({ showHeader = true }) => {
     try {
       if (editingRole) {
         // Update existing role
+        const updatedRole = await roleService.updateRole(
+          editingRole.id,
+          values
+        );
         const updatedRoles = roles.map((role) =>
-          role.id === editingRole.id
-            ? { ...role, ...values, updatedDate: new Date().toISOString() }
-            : role
+          role.id === editingRole.id ? updatedRole : role
         );
         setRoles(updatedRoles);
         message.success("Cập nhật vai trò thành công");
       } else {
         // Create new role
-        const newRole = {
-          id: `role-${Date.now()}`,
-          ...values,
-          normalizedName: values.name.toUpperCase().replace(/\s+/g, "_"),
-          isSystemRole: false,
-          userCount: 0,
-          permissions: [],
-          createdDate: new Date().toISOString(),
-          updatedDate: new Date().toISOString(),
-          createdBy: "admin",
-          priority: 4,
-        };
+        const newRole = await roleService.createRole(values);
         setRoles([...roles, newRole]);
         message.success("Tạo vai trò mới thành công");
       }
@@ -525,20 +501,18 @@ const RoleManagement = ({ showHeader = true }) => {
       setEditingRole(null);
       form.resetFields();
     } catch (error) {
-      message.error("Có lỗi xảy ra khi lưu vai trò");
+      message.error(error.message || "Có lỗi xảy ra khi lưu vai trò");
     }
   };
 
   const handlePermissionSubmit = async (values) => {
     try {
+      const updatedRole = await roleService.updateRolePermissions(
+        viewingRole.id,
+        values.permissions || []
+      );
       const updatedRoles = roles.map((role) =>
-        role.id === viewingRole.id
-          ? {
-              ...role,
-              permissions: values.permissions || [],
-              updatedDate: new Date().toISOString(),
-            }
-          : role
+        role.id === viewingRole.id ? updatedRole : role
       );
       setRoles(updatedRoles);
       message.success("Cập nhật quyền thành công");
@@ -546,7 +520,7 @@ const RoleManagement = ({ showHeader = true }) => {
       setViewingRole(null);
       permissionForm.resetFields();
     } catch (error) {
-      message.error("Có lỗi xảy ra khi cập nhật quyền");
+      message.error(error.message || "Có lỗi xảy ra khi cập nhật quyền");
     }
   };
 
@@ -575,35 +549,6 @@ const RoleManagement = ({ showHeader = true }) => {
       ),
     },
     {
-      title: "Mô tả",
-      dataIndex: "description",
-      key: "description",
-      ellipsis: {
-        showTitle: false,
-      },
-      render: (description) => (
-        <Tooltip placement="topLeft" title={description}>
-          {description}
-        </Tooltip>
-      ),
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
-      width: 150,
-      render: (status, record) => (
-        <Space direction="vertical" size={2}>
-          <Tag color={getStatusColor(status)}>{getStatusText(status)}</Tag>
-          {record.isSystemRole && (
-            <Tag color="gold" size="small">
-              <SafetyOutlined /> Hệ thống
-            </Tag>
-          )}
-        </Space>
-      ),
-    },
-    {
       title: "Số người dùng",
       dataIndex: "userCount",
       key: "userCount",
@@ -614,122 +559,69 @@ const RoleManagement = ({ showHeader = true }) => {
       ),
     },
     {
-      title: "Quyền hạn",
-      dataIndex: "permissions",
-      key: "permissions",
-      width: 150,
-      render: (permissions) => (
-        <div>
-          <Text strong>{permissions.length}</Text>
-          <Text type="secondary"> quyền</Text>
-        </div>
-      ),
-    },
-    {
-      title: "Ngày tạo",
-      dataIndex: "createdDate",
-      key: "createdDate",
-      width: 120,
-      render: (date) => new Date(date).toLocaleDateString("vi-VN"),
-    },
-    {
       title: "Thao tác",
       key: "actions",
-      width: 180,
+      width: 120,
       fixed: "right",
+      align: "center",
       render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="Xem chi tiết">
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
-              onClick={() => handleView(record)}
-              size="small"
-            />
-          </Tooltip>
-          <Tooltip title="Quản lý quyền">
-            <Button
-              type="text"
-              icon={<KeyOutlined />}
-              onClick={() => handleManagePermissions(record)}
-              size="small"
-            />
-          </Tooltip>
-          <Tooltip title="Chỉnh sửa">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleEdit(record)}
-              size="small"
-              disabled={record.isSystemRole}
-            />
-          </Tooltip>
-          <Tooltip
-            title={record.status === "active" ? "Vô hiệu hóa" : "Kích hoạt"}
-          >
-            <Button
-              type="text"
-              icon={
-                record.status === "active" ? (
-                  <LockOutlined />
-                ) : (
-                  <UnlockOutlined />
-                )
-              }
-              onClick={() => handleToggleStatus(record.id)}
-              size="small"
-              disabled={record.isSystemRole}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Xóa vai trò"
-            description="Bạn có chắc chắn muốn xóa vai trò này?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
-            disabled={record.isSystemRole || record.userCount > 0}
-          >
-            <Tooltip
-              title={
-                record.isSystemRole
-                  ? "Không thể xóa vai trò hệ thống"
-                  : record.userCount > 0
-                  ? `Không thể xóa vai trò đang được sử dụng bởi ${record.userCount} người dùng`
-                  : "Xóa vai trò"
-              }
-            >
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                size="small"
-                disabled={record.isSystemRole || record.userCount > 0}
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
+        <Dropdown
+          menu={{
+            items: getActionMenuItems(record),
+          }}
+          trigger={["click"]}
+          placement="bottomRight"
+        >
+          <Button type="text" icon={<SettingOutlined />} size="small">
+            <DownOutlined />
+          </Button>
+        </Dropdown>
       ),
     },
   ];
 
-  const actionMenuItems = [
+  const getActionMenuItems = (record) => [
     {
-      key: "active",
-      label: "Kích hoạt đã chọn",
-      icon: <UnlockOutlined />,
-      onClick: () => {
-        // Handle bulk activation
-        message.success("Đã kích hoạt các vai trò được chọn");
-      },
+      key: "view",
+      icon: <EyeOutlined />,
+      label: "Xem chi tiết",
+      onClick: () => handleView(record),
     },
     {
-      key: "inactive",
-      label: "Vô hiệu hóa đã chọn",
-      icon: <LockOutlined />,
+      key: "permissions",
+      icon: <KeyOutlined />,
+      label: "Quản lý quyền",
+      onClick: () => handleManagePermissions(record),
+    },
+    {
+      key: "edit",
+      icon: <EditOutlined />,
+      label: "Chỉnh sửa",
+      onClick: () => handleEdit(record),
+      disabled: record.isSystemRole,
+    },
+    {
+      type: "divider",
+    },
+    {
+      key: "delete",
+      icon: <DeleteOutlined />,
+      label: "Xóa vai trò",
+      danger: true,
       onClick: () => {
-        // Handle bulk deactivation
-        message.success("Đã vô hiệu hóa các vai trò được chọn");
+        if (record.isSystemRole) {
+          message.warning("Không thể xóa vai trò hệ thống");
+          return;
+        }
+        if (record.userCount > 0) {
+          message.warning(
+            `Không thể xóa vai trò đang được sử dụng bởi ${record.userCount} người dùng`
+          );
+          return;
+        }
+        handleDelete(record.id);
       },
+      disabled: record.isSystemRole || record.userCount > 0,
     },
   ];
 
@@ -902,7 +794,12 @@ const RoleManagement = ({ showHeader = true }) => {
           okText={editingRole ? "Cập nhật" : "Tạo mới"}
           cancelText="Hủy"
           okButtonProps={{
-            style: { backgroundColor: "#334766", borderColor: "#334766", width: 100, marginTop: 60},
+            style: {
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              width: 100,
+              marginTop: 60,
+            },
           }}
         >
           <Form form={form} layout="vertical" onFinish={handleModalSubmit}>
@@ -916,30 +813,6 @@ const RoleManagement = ({ showHeader = true }) => {
               ]}
             >
               <Input placeholder="Nhập tên vai trò" />
-            </Form.Item>
-
-            <Form.Item
-              name="description"
-              label="Mô tả"
-              rules={[
-                { max: 500, message: "Mô tả không được quá 500 ký tự!" },
-              ]}
-            >
-              <TextArea
-                rows={4}
-                placeholder="Nhập mô tả chi tiết về vai trò này..."
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="status"
-              label="Trạng thái"
-              rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
-            >
-              <Select placeholder="Chọn trạng thái">
-                <Option value="active">Hoạt động</Option>
-                <Option value="inactive">Ngừng hoạt động</Option>
-              </Select>
             </Form.Item>
           </Form>
         </Modal>
@@ -970,31 +843,8 @@ const RoleManagement = ({ showHeader = true }) => {
                 <Descriptions.Item label="Tên chuẩn hóa">
                   <Text code>{viewingRole.normalizedName}</Text>
                 </Descriptions.Item>
-                <Descriptions.Item label="Trạng thái">
-                  <Tag color={getStatusColor(viewingRole.status)}>
-                    {getStatusText(viewingRole.status)}
-                  </Tag>
-                </Descriptions.Item>
-                <Descriptions.Item label="Vai trò hệ thống">
-                  {viewingRole.isSystemRole ? (
-                    <Tag color="gold">
-                      <SafetyOutlined /> Có
-                    </Tag>
-                  ) : (
-                    <Tag>Không</Tag>
-                  )}
-                </Descriptions.Item>
                 <Descriptions.Item label="Số người dùng">
                   <Badge count={viewingRole.userCount} showZero />
-                </Descriptions.Item>
-                <Descriptions.Item label="Độ ưu tiên">
-                  {viewingRole.priority}
-                </Descriptions.Item>
-                <Descriptions.Item label="Ngày tạo" span={2}>
-                  {new Date(viewingRole.createdDate).toLocaleString("vi-VN")}
-                </Descriptions.Item>
-                <Descriptions.Item label="Mô tả" span={2}>
-                  {viewingRole.description}
                 </Descriptions.Item>
               </Descriptions>
 
@@ -1058,7 +908,11 @@ const RoleManagement = ({ showHeader = true }) => {
           okText="Lưu thay đổi"
           cancelText="Hủy"
           okButtonProps={{
-            style: { backgroundColor: "#334766", borderColor: "#334766", width: 100 },
+            style: {
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              width: 100,
+            },
           }}
         >
           {viewingRole?.isSystemRole && (

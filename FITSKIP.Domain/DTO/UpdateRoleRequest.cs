@@ -9,6 +9,5 @@ namespace FITSKIP.Domain.DTO
     public class UpdateRoleRequest
     {
         public string Name { get; set; } = null!;
-        public string NormalizedName { get; set; } = null!;
     }
 }

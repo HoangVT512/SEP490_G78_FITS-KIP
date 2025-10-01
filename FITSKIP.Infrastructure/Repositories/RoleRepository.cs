@@ -37,26 +37,22 @@ namespace FITSKIP.Infrastructure.Repositories
             var existingRole = await db.Roles.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
             if (existingRole == null)
             {
-                throw new ArgumentException("A role with the same id does not exist.");
+                return null;
             }
             db.Roles.Remove(existingRole);
-            db.SaveChangesAsync(cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
             return existingRole;
         }
 
         public async Task<IdentityRole?> GetRoleByIdAsync(string id, CancellationToken cancellationToken = default)
         {
             var existingRole = await db.Roles.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
-            if (existingRole == null)
-            {
-                throw new ArgumentException("A role with the same id does not exist.");
-            }
             return existingRole;
         }
 
         public async Task<IReadOnlyList<IdentityRole>> GetRolesAsync(CancellationToken cancellationToken = default)
         {
-            var roles =await db.Roles.ToListAsync(cancellationToken);
+            var roles = await db.Roles.ToListAsync(cancellationToken);
             return roles;
         }
 
@@ -65,10 +61,10 @@ namespace FITSKIP.Infrastructure.Repositories
             var existingRole = await db.Roles.FirstOrDefaultAsync(r => r.Id == role.Id, cancellationToken);
             if (existingRole == null)
             {
-                throw new ArgumentException("A role with the same id does not exist.");
+                return null;
             }
-            db.Roles.Entry(existingRole).CurrentValues.SetValues(role);
-            db.SaveChangesAsync(cancellationToken);
+            db.Entry(existingRole).CurrentValues.SetValues(role);
+            await db.SaveChangesAsync(cancellationToken);
             return existingRole;
         }
     }

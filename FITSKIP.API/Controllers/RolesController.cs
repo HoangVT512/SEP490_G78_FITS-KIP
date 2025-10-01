@@ -45,7 +45,7 @@ namespace FITSKIP.API.Controllers
             var role = await roleService.GetRoleByIdAsync(id);
             if (role == null)
             {
-                return NotFound();
+                return BadRequest(new { message = "Không tìm thấy vai trò với ID: " + id });
             }
             var response = new RoleDTO
             {
@@ -63,7 +63,7 @@ namespace FITSKIP.API.Controllers
             var role = await roleService.DeleteRoleAsync(id);
             if (role == null)
             {
-                return NotFound();
+                return BadRequest(new { message = "Không tìm thấy vai trò với ID: " + id });
             }
             var response = new RoleDTO
             {
@@ -77,37 +77,42 @@ namespace FITSKIP.API.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateRole([FromBody] CreateRoleRequest request)
         {
-            var role = new IdentityRole
+            try
             {
-                Id = request.Id,
-                Name = request.Name,
-                NormalizedName = request.NormalizedName,
-                ConcurrencyStamp = request.ConcurrencyStamp
-            };
-            var createdRole = await roleService.CreateRoleAsync(role);
-            var response = new RoleDTO
+                var role = new IdentityRole
+                {
+                    Name = request.Name,
+                    NormalizedName = request.Name.ToUpper().Replace(" ", "_")
+                };
+                var createdRole = await roleService.CreateRoleAsync(role);
+                var response = new RoleDTO
+                {
+                    Id = createdRole.Id,
+                    Name = createdRole.Name,
+                    NormalizedName = createdRole.NormalizedName,
+                    ConcurrencyStamp = createdRole.ConcurrencyStamp
+                };
+                return Ok(response);
+            }
+            catch (ArgumentException ex)
             {
-                Id = createdRole.Id,
-                Name = createdRole.Name,
-                NormalizedName = createdRole.NormalizedName,
-                ConcurrencyStamp = createdRole.ConcurrencyStamp
-            };
-            return Ok(response);
+                return BadRequest(new { message = ex.Message });
+            }
         }
         [HttpPut]
         [Route("{id}")]
-        public async Task<IActionResult> UpdateRole([FromRoute] Guid id, [FromBody] UpdateRoleRequest request)
+        public async Task<IActionResult> UpdateRole([FromRoute] string id, [FromBody] UpdateRoleRequest request)
         {
             var role = new IdentityRole
             {
-                Id = id.ToString(),
+                Id = id,
                 Name = request.Name,
-                NormalizedName = request.NormalizedName
+                NormalizedName = request.Name.ToUpper().Replace(" ", "_")
             };
             var updatedRole = await roleService.UpdateRoleAsync(role);
             if (updatedRole == null)
             {
-                return NotFound();
+                return BadRequest(new { message = "Không tìm thấy vai trò với ID: " + id });
             }
             var response = new RoleDTO
             {
