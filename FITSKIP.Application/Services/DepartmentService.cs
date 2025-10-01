@@ -62,7 +62,8 @@ public class DepartmentService : IDepartmentService
             DepartmentName = d.DepartmentName,
             ManagerId = d.ManagerId,
             ManagerName = d.Manager?.FullName,
-            Description = d.Description
+            Description = d.Description,
+            IsActive = d.IsActive
         };
     }
 
