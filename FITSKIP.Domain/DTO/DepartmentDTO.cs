@@ -7,6 +7,8 @@ public class DepartmentDTO
     public string? ManagerId { get; set; }
     public string? ManagerName { get; set; }
     public string? Description { get; set; }
+    public bool IsActive { get; set; }
 }
+
 
 
