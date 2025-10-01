@@ -1,0 +1,179 @@
+/* Edit Profile Page Styles - CSS Modules */
+
+.editProfileContainer {
+    padding: 24px;
+    background-color: #f8fafc;
+    min-height: calc(100vh - 70px);
+}
+
+.editProfileHeader {
+    background: linear-gradient(135deg, #334766 0%, #283652 100%);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    color: #fff;
+    text-align: center;
+}
+
+.editProfileAvatarContainer {
+    position: relative;
+}
+
+.editProfileAvatar {
+    width: 120px;
+    height: 120px;
+    font-size: 40px;
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    margin-bottom: 16px;
+}
+
+.editProfileUploadButton {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #334766;
+    border: 2px solid #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #fff;
+}
+
+.editProfileUploadButton:hover {
+    background-color: #283652;
+}
+
+.editProfileHeaderTitle {
+    color: #fff !important;
+    margin-bottom: 0 !important;
+}
+
+.editProfileHeaderSubtitle {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+}
+
+.editProfileCard {
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+    width: 100%;
+}
+
+.editProfileCardTitleIcon {
+    color: #334766;
+}
+
+.editProfileAlert {
+    margin-bottom: 24px;
+}
+
+.editProfileAlertContent {
+    margin: 8px 0;
+}
+
+.editProfileAlertTitle {
+    margin: 8px 0;
+    font-weight: bold;
+}
+
+.editProfileAlertList {
+    margin: 8px 0;
+    padding-left: 20px;
+}
+
+.editProfileAlertNote {
+    margin: 8px 0;
+    color: #059669;
+}
+
+.editProfileDisabledField {
+    background-color: #f8fafc;
+    color: #64748b;
+}
+
+.editProfileSubmitButton {
+    background-color: #334766 !important;
+    border-color: #334766 !important;
+    color: #fff !important;
+}
+
+.editProfileSubmitButton:hover {
+    background-color: #283652 !important;
+    border-color: #283652 !important;
+    color: #fff !important;
+}
+
+.editProfileSubmitButton:focus {
+    background-color: #334766 !important;
+    border-color: #334766 !important;
+    color: #fff !important;
+}
+
+.customOkButton {
+ background-color: #334766 !important;
+    border-color: #334766 !important;
+    color: #fff !important;
+}
+
+.customOkButton:hover {
+  background-color: #283652 !important;
+    border-color: #283652 !important;
+    color: #fff !important;
+}
+
+
+/* Avatar uploader styles */
+.editProfile .avatarUploader .ant-upload {
+    border: none;
+    background: transparent;
+}
+
+.editProfile .avatarUploader .ant-upload:hover {
+    border: none;
+}
+
+/* Form styling */
+.editProfileForm .ant-form-item-label>label {
+    font-weight: 500;
+    color: #374151;
+}
+
+.editProfileForm .ant-input-disabled {
+    background-color: #f8fafc;
+    color: #64748b;
+    border-color: #e2e8f0;
+}
+
+.editProfileForm .ant-select-disabled .ant-select-selector {
+    background-color: #f8fafc;
+    color: #64748b;
+    border-color: #e2e8f0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .editProfileContainer {
+        padding: 16px;
+    }
+
+    .editProfileHeader {
+        padding: 20px 16px;
+    }
+
+    .editProfileAvatar {
+        width: 100px;
+        height: 100px;
+        font-size: 32px;
+    }
+
+    .editProfileUploadButton {
+        width: 32px;
+        height: 32px;
+    }
+}

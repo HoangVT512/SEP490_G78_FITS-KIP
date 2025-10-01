@@ -1,11 +1,11 @@
-/* Equipment Management Page Styles */
-.admin-management-container {
+/* Equipment Management CSS Module */
+.container {
   padding: 24px;
   background: linear-gradient(135deg, #f8fafc 0%, #e5e7eb 100%);
   min-height: 100vh;
 }
 
-.admin-management-header {
+.header {
   margin-bottom: 24px;
   padding: 20px 0;
   text-align: center;
@@ -15,7 +15,7 @@
   box-shadow: 0 8px 32px rgba(51, 71, 102, 0.3);
 }
 
-.admin-management-title {
+.title {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -26,15 +26,15 @@
   font-weight: 700;
 }
 
-.admin-management-title-icon {
+.titleIcon {
   color: #ffffff;
   font-size: 32px;
   filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
 }
 
-.admin-management-filter-card,
-.admin-management-actions-card,
-.admin-management-table-card {
+.filterCard,
+.actionsCard,
+.tableCard {
   margin-bottom: 20px;
   border-radius: 16px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.08);
@@ -42,25 +42,23 @@
   overflow: hidden;
 }
 
-
-
-.admin-management-filter-card .ant-card-body {
+.filterCard :global(.ant-card-body) {
   padding: 20px;
   background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
 }
 
-.admin-management-actions-card {
+.actionsCard {
   background: linear-gradient(145deg, #ffffff 0%, #f1f5f9 100%);
 }
 
-.admin-management-actions-card .ant-card-body {
+.actionsCard :global(.ant-card-body) {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 16px 24px;
 }
 
-.admin-management-summary {
+.summary {
   display: flex;
   align-items: center;
   gap: 16px;
@@ -71,7 +69,7 @@
 }
 
 /* Enhanced Button Styles */
-.ant-btn-primary {
+.container :global(.ant-btn-primary) {
   background: linear-gradient(135deg, #334766 0%, #4f5a7a 100%);
   border: none;
   border-radius: 10px;
@@ -79,42 +77,53 @@
   font-weight: 500;
 }
 
-
-
-.ant-btn {
+.container :global(.ant-btn) {
   border-radius: 8px;
-  border: 1px solid #d1d5db;
   font-weight: 500;
 }
 
+.addEquipmentButton {
+  background-color: #334766 !important;
+  border-color: #334766 !important;
+  color: #fff !important;
+  padding: 0 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  animation: pulse 2s ease-in-out infinite;
+}
 
+.addEquipmentButton:hover {
+  background-color: #283652 !important;
+  border-color: #283652 !important;
+  color: #fff !important;
+}
 
 /* Enhanced Input Styles */
-.ant-input,
-.ant-select-selector {
+.container :global(.ant-input),
+.container :global(.ant-select-selector) {
   border-radius: 10px;
   border: 1.5px solid #d1d5db;
   transition: all 0.3s ease;
   background: #ffffff;
 }
 
-.ant-input:focus,
-.ant-select-focused .ant-select-selector {
+.container :global(.ant-input:focus),
+.container :global(.ant-select-focused .ant-select-selector) {
   border-color: #334766;
   box-shadow: 0 0 0 3px rgba(51, 71, 102, 0.1);
 }
 
 /* Table Enhancement */
-.admin-management-table-card .ant-card-body {
+.tableCard :global(.ant-card-body) {
   padding: 0;
   background: #ffffff;
 }
 
-.ant-table {
+.container :global(.ant-table) {
   border-radius: 0;
 }
 
-.ant-table-thead > tr > th {
+.container :global(.ant-table-thead > tr > th) {
   background: linear-gradient(135deg, #334766 0%, #4f5a7a 100%);
   color: #ffffff;
   font-weight: 600;
@@ -124,18 +133,14 @@
   text-align: center;
 }
 
-
-
-
-
-.ant-table-tbody > tr > td {
+.container :global(.ant-table-tbody > tr > td) {
   padding: 12px 16px;
   border-bottom: 1px solid #e5e7eb;
   vertical-align: middle;
 }
 
 /* Enhanced Status Tags */
-.ant-tag {
+.container :global(.ant-tag) {
   font-size: 12px;
   padding: 6px 12px;
   border-radius: 20px;
@@ -144,215 +149,179 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  transition: all 0.3s ease;
+  transition: none !important;
+}
+
+/* Remove hover effects for status tags */
+.container :global(.ant-tag:hover) {
+  transform: none !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
+  opacity: 1 !important;
 }
 
 /* Green status - Working */
-.ant-tag-green {
+.container :global(.ant-tag-green) {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;
 }
 
 /* Orange status - Maintenance */
-.ant-tag-orange {
+.container :global(.ant-tag-orange) {
   background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   color: white;
 }
 
 /* Red status - Inactive */
-.ant-tag-red {
+.container :global(.ant-tag-red) {
   background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: white;
 }
 
 /* Yellow status - Issues */
-.ant-tag-yellow {
+.container :global(.ant-tag-yellow) {
   background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
   color: white;
 }
 
 /* Enhanced Switch Styles */
-.ant-switch {
+.container :global(.ant-switch) {
   background: #d1d5db;
   border-radius: 16px;
+  transition: none !important;
 }
 
-.ant-switch-checked {
+.container :global(.ant-switch-checked) {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  transition: none !important;
 }
 
+/* Remove all hover, active, focus effects for Switch */
+.container :global(.ant-switch:hover),
+.container :global(.ant-switch:active),
+.container :global(.ant-switch:focus),
+.container :global(.ant-switch-checked:hover),
+.container :global(.ant-switch-checked:active),
+.container :global(.ant-switch-checked:focus),
+.container :global(.ant-switch-disabled),
+.container :global(.ant-switch-disabled:active),
+.container :global(.ant-switch-disabled:hover),
+.container :global(.ant-switch-disabled:focus) {
+  background: #d1d5db !important;
+  border-color: #d1d5db !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
 
+.container :global(.ant-switch-checked),
+.container :global(.ant-switch-checked:hover),
+.container :global(.ant-switch-checked:active),
+.container :global(.ant-switch-checked:focus),
+.container :global(.ant-switch-checked:disabled) {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  border-color: #10b981 !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
 
 /* Modal Enhancement */
-.ant-modal {
+.container :global(.ant-modal) {
   border-radius: 16px;
   overflow: hidden;
 }
 
-.ant-modal-header {
+.container :global(.ant-modal-header) {
   background: linear-gradient(135deg, #334766 0%, #4f5a7a 100%);
   border-bottom: none;
   padding: 20px 24px;
 }
 
-.ant-modal-title {
+.container :global(.ant-modal-title) {
   color: #ffffff !important;
   font-weight: 600;
   font-size: 18px;
 }
 
-.ant-modal-close {
+.container :global(.ant-modal-close) {
   color: #ffffff;
   font-size: 18px;
 }
 
-.ant-modal-close:hover {
+.container :global(.ant-modal-close:hover) {
   color: #e5e7eb;
 }
 
-.ant-modal-body {
+.container :global(.ant-modal-body) {
   padding: 24px;
   background: #ffffff;
 }
 
-.ant-modal-footer {
+.container :global(.ant-modal-footer) {
   background: #f8fafc;
   border-top: 1px solid #e5e7eb;
   padding: 16px 24px;
 }
 
+/* Wider primary buttons for Add/Update in modal footer */
+.container :global(.ant-modal-footer .ant-btn-primary) {
+  min-width: 120px;
+  padding-left: 32px;
+  padding-right: 32px;
+  font-size: 16px;
+}
+
+/* Wider Cancel button in modal footer */
+.container :global(.ant-modal-footer .ant-btn-default) {
+  min-width: 100px;
+  padding-left: 24px;
+  padding-right: 24px;
+  font-size: 15px;
+}
+
 /* Form Enhancement */
-.ant-form-item-label > label {
+.container :global(.ant-form-item-label > label) {
   color: #334766;
   font-weight: 600;
   font-size: 14px;
 }
 
-.ant-form-item {
+.container :global(.ant-form-item) {
   margin-bottom: 20px;
 }
 
 /* Badge Enhancement */
-.admin-management-summary .ant-badge-status-dot {
+.summary :global(.ant-badge-status-dot) {
   width: 10px;
   height: 10px;
 }
 
-.admin-management-summary .ant-badge-status-success {
+.summary :global(.ant-badge-status-success) {
   background: #10b981;
 }
 
-.admin-management-summary .ant-badge-status-processing {
+.summary :global(.ant-badge-status-processing) {
   background: #3b82f6;
 }
 
-.admin-management-summary .ant-badge-status-warning {
+.summary :global(.ant-badge-status-warning) {
   background: #f59e0b;
 }
 
 /* Action Button Enhancement */
-.ant-btn-text {
+.container :global(.ant-btn-text) {
   border-radius: 8px;
 }
 
-
-
-.ant-btn-text.ant-btn-dangerous:hover {
+/* .container :global(.ant-btn-text.ant-btn-dangerous:hover) {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
-}
-
-/* Tooltip Enhancement */
-.ant-tooltip-inner {
-  background: #334766;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.ant-tooltip-arrow-content {
-  background: #334766;
-}
-
-/* Pagination Enhancement */
-.ant-pagination {
-  margin-top: 20px;
-  text-align: center;
-}
-
-.ant-pagination-item {
-  border-radius: 8px;
-  border: 1px solid #d1d5db;
-}
-
-
-
-.ant-pagination-item-active {
-  background: linear-gradient(135deg, #334766 0%, #4f5a7a 100%);
-  border-color: #334766;
-}
-
-.ant-pagination-item-active a {
-  color: #ffffff;
-}
-
-/* Search Input Enhancement */
-.ant-input-affix-wrapper {
-  border-radius: 10px;
-  border: 1.5px solid #d1d5db;
-  transition: all 0.3s ease;
-  background: #ffffff;
-}
-
-.ant-input-affix-wrapper:focus,
-.ant-input-affix-wrapper-focused {
-  border-color: #334766;
-  box-shadow: 0 0 0 3px rgba(51, 71, 102, 0.1);
-}
-
-.ant-input-affix-wrapper .ant-input-prefix {
-  color: #6b7280;
-}
-
-/* Select Enhancement */
-.ant-select-dropdown {
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-}
-
-.ant-select-item {
-  border-radius: 8px;
-  margin: 4px 8px;
-  transition: all 0.3s ease;
-}
-
-.ant-select-item-option-active {
-  background: rgba(51, 71, 102, 0.1);
-}
-
-.ant-select-item-option-selected {
-  background: linear-gradient(135deg, #334766 0%, #4f5a7a 100%);
-  color: #ffffff;
-}
-
-/* Popconfirm Enhancement */
-.ant-popover-inner {
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-}
-
-.ant-popover-title {
-  color: #334766;
-  font-weight: 600;
-}
-
-/* Loading Enhancement */
-.ant-spin-dot-item {
-  background-color: #334766;
-}
+} */
 
 /* QR Code Preview Styles */
-.qr-code-preview-container {
+.qrCodePreviewContainer {
   text-align: center;
   margin: 16px 0;
   padding: 16px;
@@ -361,7 +330,7 @@
   border: 1px solid #d1d5db;
 }
 
-.qr-code-preview-title {
+.qrCodePreviewTitle {
   color: #334766;
   font-weight: 600;
   margin-bottom: 12px;
@@ -369,7 +338,7 @@
   font-size: 14px;
 }
 
-.qr-code-preview-image-container {
+.qrCodePreviewImageContainer {
   display: inline-block;
   padding: 12px;
   border: 2px solid #334766;
@@ -379,12 +348,12 @@
   transition: all 0.3s ease;
 }
 
-.qr-code-preview-image-container:hover {
+.qrCodePreviewImageContainer:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 24px rgba(51, 71, 102, 0.3);
 }
 
-.qr-code-preview-image {
+.qrCodePreviewImage {
   width: 120px;
   height: 120px;
   border: 1px solid #e5e7eb;
@@ -392,76 +361,40 @@
   transition: all 0.3s ease;
 }
 
-.qr-code-preview-image:hover {
+.qrCodePreviewImage:hover {
   transform: scale(1.05);
 }
 
 /* Responsive adjustments */
 @media (max-width: 1200px) {
-  .admin-management-actions-card .ant-card-body {
+  .actionsCard :global(.ant-card-body) {
     flex-direction: column;
     gap: 16px;
     align-items: stretch;
   }
   
-  .admin-management-summary {
+  .summary {
     justify-content: center;
   }
 }
 
 @media (max-width: 768px) {
-  .admin-management-container {
+  .container {
     padding: 12px;
   }
   
-  .admin-management-header {
+  .header {
     margin-bottom: 16px;
     padding: 16px;
   }
   
-  .admin-management-title {
+  .title {
     font-size: 22px !important;
     flex-direction: column;
     gap: 8px;
   }
   
-  .admin-management-title-icon {
+  .titleIcon {
     font-size: 28px;
-  }
-  
-  .admin-management-filter-card .ant-card-body,
-  .admin-management-actions-card .ant-card-body,
-  .ant-modal-body {
-    padding: 16px;
-  }
-  
-  .admin-management-summary {
-    flex-direction: column;
-    gap: 8px;
-    text-align: center;
-  }
-  
-  .ant-table-thead > tr > th,
-  .ant-table-tbody > tr > td {
-    padding: 8px 12px;
-    font-size: 13px;
-  }
-}
-
-@media (max-width: 480px) {
-  .admin-management-container {
-    padding: 8px;
-  }
-  
-  .admin-management-header {
-    padding: 12px;
-  }
-  
-  .admin-management-title {
-    font-size: 18px !important;
-  }
-  
-  .admin-management-title-icon {
-    font-size: 24px;
   }
 }

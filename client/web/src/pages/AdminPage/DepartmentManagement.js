@@ -143,6 +143,7 @@ const DepartmentManagement = ({ showHeader = true }) => {
           okText: "Xóa",
           cancelText: "Hủy",
           okType: "danger",
+          okButtonProps: { style: { backgroundColor: "#334766", borderColor: "#334766", color: "#fff" } },
           onOk: () => handleDelete(department.departmentId),
         });
         break;
@@ -451,7 +452,7 @@ const DepartmentManagement = ({ showHeader = true }) => {
         okText={editingDepartment ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
         okButtonProps={{
-          style: { backgroundColor: "#334766", borderColor: "#334766" },
+          style: { backgroundColor: "#334766", borderColor: "#334766", width: 100 },
         }}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>

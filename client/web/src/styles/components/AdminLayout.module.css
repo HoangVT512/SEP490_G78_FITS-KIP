@@ -1,20 +1,20 @@
-/* AdminLayout Styles (moved to src/styles for centralized styling) */
-.admin-layout {
+/* AdminLayout CSS Module */
+.adminLayout {
   min-height: 100vh;
 }
 
-.admin-layout .ant-layout-sider {
+.adminLayout :global(.ant-layout-sider) {
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15) !important;
 }
 
-.admin-layout .ant-menu-dark.ant-menu-inline .ant-menu-item {
+.adminLayout :global(.ant-menu-dark.ant-menu-inline .ant-menu-item) {
   background: transparent;
   margin: 4px 8px;
   border-radius: 8px;
   font-weight: 500;
 }
 
-.admin-layout .ant-menu-dark .ant-menu-item .ant-menu-title-content {
+.adminLayout :global(.ant-menu-dark .ant-menu-item .ant-menu-title-content) {
   white-space: normal;
   line-height: 1.2;
   display: inline-block;
@@ -24,30 +24,26 @@
   padding-right: 8px;
 }
 
-.admin-layout .ant-layout-sider .ant-menu {
+.adminLayout :global(.ant-layout-sider .ant-menu) {
   padding: 8px 12px;
 }
 
-.admin-layout .ant-layout-sider-collapsed .ant-menu-item .ant-menu-title-content {
+.adminLayout :global(.ant-layout-sider-collapsed .ant-menu-item .ant-menu-title-content) {
   display: none;
 }
 
-.admin-layout .ant-layout-sider-collapsed .ant-menu-item-selected {
+.adminLayout :global(.ant-layout-sider-collapsed .ant-menu-item-selected) {
   background: #334766 !important;
   border-right: 3px solid #5a7a9d;
 }
 
-
-
-.admin-layout .ant-menu-dark.ant-menu-inline .ant-menu-item-selected {
+.adminLayout :global(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected) {
   background: #334766 !important;
   color: #fff !important;
   box-shadow: 0 2px 8px rgba(51, 71, 102, 0.3);
 }
 
-
-
-.admin-layout .ant-layout-header {
+.adminLayout :global(.ant-layout-header) {
   padding: 0 24px;
   background: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -56,13 +52,13 @@
   z-index: 10;
 }
 
-.admin-layout .ant-layout-content {
+.adminLayout :global(.ant-layout-content) {
   background: #f8fafc;
   padding: 24px;
   overflow-y: auto;
 }
 
-.admin-layout .admin-logo {
+.adminLogo {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -72,14 +68,14 @@
   min-height: 64px;
 }
 
-.admin-layout .admin-logo h4 {
+.adminLogo h4 {
   color: #fff !important;
   margin: 0;
   font-size: 16px;
   font-weight: 600;
 }
 
-.admin-layout .collapse-button {
+.collapseButton {
   position: absolute;
   bottom: 16px;
   left: 50%;
@@ -92,9 +88,7 @@
   border-radius: 8px;
 }
 
-
-
-.admin-layout .user-dropdown {
+.userDropdown {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -105,83 +99,77 @@
   border: 1px solid #e5e7eb;
 }
 
-
-
-.admin-layout .user-info {
+.userInfo {
   text-align: left;
 }
 
-.admin-layout .user-name {
+.userName {
   font-size: 13px;
   font-weight: 500;
   color: #1f2937;
   line-height: 1.2;
 }
 
-.admin-layout .user-role {
+.userRole {
   font-size: 11px;
   color: #6b7280;
   line-height: 1.2;
 }
 
-.admin-layout .notification-badge .ant-badge-count {
+.notificationBadge :global(.ant-badge-count) {
   background: #ef4444;
   box-shadow: 0 0 0 1px #fff;
 }
 
-@media (max-width: 768px) {
-  .admin-layout .ant-layout-header {
-    padding: 0 16px;
-  }
-  
-  .admin-layout .ant-layout-content {
-    padding: 16px;
-  }
-  
-  .admin-layout .user-dropdown {
-    padding: 6px 8px;
-  }
-  
-  .admin-layout .user-name {
-    font-size: 12px;
-  }
-  
-  .admin-layout .user-role {
-    font-size: 10px;
-  }
-}
-
-
-
-.admin-layout .page-header {
+.pageHeader {
   margin-bottom: 24px;
 }
 
-.admin-layout .page-header h4 {
+.pageHeader h4 {
   color: #1f2937;
   font-weight: 600;
   margin: 0;
 }
 
-.admin-layout .ant-layout-sider {
+.adminLayout :global(.ant-layout-sider) {
   background: linear-gradient(180deg, #283652 0%, #283652 100%) !important;
 }
 
-.admin-layout .ant-menu-item .anticon {
+.adminLayout :global(.ant-menu-item .anticon) {
   font-size: 16px;
 }
 
-.admin-layout .ant-layout-sider::-webkit-scrollbar {
+.adminLayout :global(.ant-layout-sider::-webkit-scrollbar) {
   width: 6px;
 }
 
-.admin-layout .ant-layout-sider::-webkit-scrollbar-track {
+.adminLayout :global(.ant-layout-sider::-webkit-scrollbar-track) {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.admin-layout .ant-layout-sider::-webkit-scrollbar-thumb {
+.adminLayout :global(.ant-layout-sider::-webkit-scrollbar-thumb) {
   background: rgba(255, 255, 255, 0.3);
   border-radius: 3px;
 }
 
-
+@media (max-width: 768px) {
+  .adminLayout :global(.ant-layout-header) {
+    padding: 0 16px;
+  }
+  
+  .adminLayout :global(.ant-layout-content) {
+    padding: 16px;
+  }
+  
+  .userDropdown {
+    padding: 6px 8px;
+  }
+  
+  .userName {
+    font-size: 12px;
+  }
+  
+  .userRole {
+    font-size: 10px;
+  }
+}

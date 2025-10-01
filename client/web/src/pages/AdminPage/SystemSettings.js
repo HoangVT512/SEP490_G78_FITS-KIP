@@ -38,7 +38,7 @@ import {
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
 import dayjs from "dayjs";
-import "../../styles/pages/SystemSettings.css";
+import styles from "../../styles/pages/SystemSettings.module.css";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -703,10 +703,10 @@ const SystemSettings = ({ showHeader = true }) => {
   ];
 
   const content = (
-    <div style={contentStyle}>
-      <div style={{ marginBottom: "24px" }}>
-        <Title level={3} style={{ margin: 0, color: "#1f2937" }}>
-          <SettingOutlined style={{ marginRight: "8px", color: "#334766" }} />
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <Title level={3} className={styles.title}>
+          <SettingOutlined className={styles.titleIcon} />
           Cài đặt hệ thống
         </Title>
         <Text type="secondary">
@@ -714,11 +714,11 @@ const SystemSettings = ({ showHeader = true }) => {
         </Text>
       </div>
 
-      <Card style={cardStyle}>
+      <Card className={styles.card}>
         <div style={{ marginBottom: "24px" }}>
           <Space>
             <Button
-              type="primary"
+              style={{ backgroundColor: "#334766", borderColor: "#334766", color: "#fff" }}
               icon={<SaveOutlined />}
               loading={loading}
               onClick={() => handleSave("tất cả")}

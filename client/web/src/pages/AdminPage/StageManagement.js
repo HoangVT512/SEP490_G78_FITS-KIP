@@ -871,11 +871,11 @@ const StageManagement = ({ showHeader = true }) => {
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
-        width={800}
+        width={1000}
         okText={editingStage ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
         okButtonProps={{
-          style: { backgroundColor: "#334766", borderColor: "#334766" },
+          style: { backgroundColor: "#334766", borderColor: "#334766", width: 100 },
         }}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>

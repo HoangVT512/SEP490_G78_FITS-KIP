@@ -1,12 +1,12 @@
-/* AdminDashboard.css */
+/* AdminDashboard CSS Module */
 
-.admin-dashboard-container {
+.container {
   padding: 24px;
   background-color: #f8fafc;
   min-height: calc(100vh - 70px);
 }
 
-.admin-dashboard-card {
+.card {
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -14,102 +14,102 @@
   margin-bottom: 24px;
 }
 
-.admin-dashboard-header {
+.header {
   margin-bottom: 24px;
 }
 
-.admin-dashboard-title {
+.title {
   margin: 0 !important;
   color: #1f2937 !important;
 }
 
-.admin-dashboard-title-icon {
+.titleIcon {
   margin-right: 8px;
   color: #334766;
 }
 
-.admin-dashboard-stats-row {
+.statsRow {
   margin-bottom: 24px;
 }
 
-.admin-dashboard-stat-value {
+.statValue {
   color: #1f2937 !important;
 }
 
-.admin-dashboard-stat-description {
+.statDescription {
   font-size: 12px !important;
 }
 
-.admin-dashboard-trend-positive {
+.trendPositive {
   color: #10b981 !important;
   margin-right: 4px !important;
 }
 
 /* Activity Log Icons */
-.activity-icon-login {
+.activityIconLogin {
   color: #52c41a !important;
 }
 
-.activity-icon-logout {
+.activityIconLogout {
   color: #1890ff !important;
 }
 
-.activity-icon-update {
+.activityIconUpdate {
   color: #722ed1 !important;
 }
 
-.activity-icon-failed-login {
+.activityIconFailedLogin {
   color: #fa8c16 !important;
 }
 
-.activity-icon-account-locked {
+.activityIconAccountLocked {
   color: #ff4d4f !important;
 }
 
 /* Stats Icons */
-.stats-icon-users {
+.statsIconUsers {
   color: #334766 !important;
 }
 
-.stats-icon-active {
+.statsIconActive {
   color: #10b981 !important;
 }
 
-.stats-icon-departments {
+.statsIconDepartments {
   color: #7c3aed !important;
 }
 
-.stats-icon-security {
+.statsIconSecurity {
   color: #dc2626 !important;
 }
 
 /* Activity and Alert Lists */
-.admin-dashboard-activity-list {
+.activityList {
   max-height: 400px;
   overflow-y: auto;
 }
 
-.admin-dashboard-activity-time {
+.activityTime {
   font-size: 12px;
 }
 
-.admin-dashboard-alert-time {
+.alertTime {
   font-size: 12px;
 }
 
 /* System Status */
-.admin-dashboard-system-status-row {
+.systemStatusRow {
   margin-top: 24px;
 }
 
-.admin-dashboard-progress-container {
+.progressContainer {
   text-align: center;
 }
 
-.admin-dashboard-progress-label {
+.progressLabel {
   margin-top: 8px;
 }
 
-.admin-dashboard-progress-title {
+.progressTitle {
   font-weight: bold;
 }

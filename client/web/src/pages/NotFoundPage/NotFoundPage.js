@@ -8,7 +8,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import Layout from "../../components/Layout";
-import "../../styles/pages/NotFoundPage.css";
+import styles from "../../styles/pages/NotFoundPage.module.css";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -33,25 +33,25 @@ const NotFoundPage = ({
 
   return (
     <Layout>
-      <div className="not-found-container">
-        <div className="not-found-content">
+      <div className={styles.notFoundContainer}>
+        <div className={styles.notFoundContent}>
           <FactoryIllustration />
 
-          <Title level={1} className="error-code">
+          <Title level={1} className={styles.errorCode}>
             404
           </Title>
 
-          <Title level={3} className="error-title">
+          <Title level={3} className={styles.errorTitle}>
             Oops! Không tìm thấy trang
           </Title>
 
-          <Paragraph className="error-message">{message}</Paragraph>
+          <Paragraph className={styles.errorMessage}>{message}</Paragraph>
 
-          <div className="path-info">
-            <Text strong className="notfound-path-label">
+          <div className={styles.pathInfo}>
+            <Text strong className={styles.notfoundPathLabel}>
               Đường dẫn hiện tại:
             </Text>
-            <Text code className="path-code">
+            <Text code className={styles.pathCode}>
               {location.pathname}
             </Text>
           </div>
@@ -59,19 +59,18 @@ const NotFoundPage = ({
           <Space
             direction="vertical"
             size="middle"
-            className="notfound-full-width"
+            className={styles.notfoundFullWidth}
           >
-            <Text className="notfound-suggestion-text">
+            <Text className={styles.notfoundSuggestionText}>
               Bạn có thể thử các hành động sau:
             </Text>
 
-            <div className="button-group">
+            <div className={styles.buttonGroup}>
               <Button
-                type="primary"
                 size="large"
                 icon={<HomeOutlined />}
                 onClick={() => navigate(getHomeRoute())}
-                className="primary-button"
+                className={styles.primaryButton}
               >
                 Về trang chủ
               </Button>
@@ -80,18 +79,18 @@ const NotFoundPage = ({
                 size="large"
                 icon={<ArrowLeftOutlined />}
                 onClick={() => navigate(-1)}
-                className="secondary-button"
+                className={styles.secondaryButton}
               >
                 Quay lại
               </Button>
             </div>
 
-            <div className="button-group">
+            <div className={styles.buttonGroup}>
               <Button
                 size="large"
                 icon={<SearchOutlined />}
                 onClick={() => navigate("/search")}
-                className="secondary-button"
+                className={styles.secondaryButton}
               >
                 Tìm kiếm
               </Button>
@@ -100,7 +99,16 @@ const NotFoundPage = ({
                 size="large"
                 icon={<SettingOutlined />}
                 onClick={() => navigate("/admin")}
-                className="secondary-button"
+                className={styles.secondaryButton}
+              >
+                Tìm kiếm
+              </Button>
+
+              <Button
+                size="large"
+                icon={<SettingOutlined />}
+                onClick={() => navigate("/admin")}
+                className={styles.secondaryButton}
               >
                 Quản trị
               </Button>

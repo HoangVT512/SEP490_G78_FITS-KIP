@@ -1,0 +1,313 @@
+/* NotFoundPage Styles - CSS Modules */
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Additional utility classes for inline style replacement */
+.notfoundPathLabel {
+  color: #374151;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.notfoundSuggestionText {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.notfoundFullWidth {
+  width: 100%;
+}
+
+.notFoundContainer {
+  min-height: calc(100vh - 140px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  padding: 40px 20px;
+}
+
+/* User Management Table Pagination Styles */
+.userManagementTable .ant-pagination-item {
+  border-color: #334766;
+}
+
+.userManagementTable .ant-pagination-item a {
+  color: #334766;
+}
+
+.userManagementTable .ant-pagination-item-active {
+  background-color: #334766;
+  border-color: #334766;
+}
+
+.userManagementTable .ant-pagination-item-active a {
+  color: #fff;
+}
+
+.userManagementTable .ant-pagination-prev .ant-pagination-item-link,
+.userManagementTable .ant-pagination-next .ant-pagination-item-link {
+  color: #334766;
+  border-color: #334766;
+}
+
+.userManagementTable .ant-pagination-prev:hover .ant-pagination-item-link,
+.userManagementTable .ant-pagination-next:hover .ant-pagination-item-link {
+  color: #334766;
+  border-color: #334766;
+}
+
+/* Department Management Table Pagination Styles */
+.departmentManagementTable .ant-pagination-item {
+  border-color: #334766;
+}
+
+.departmentManagementTable .ant-pagination-item a {
+  color: #334766;
+}
+
+.departmentManagementTable .ant-pagination-item-active {
+  background-color: #334766;
+  border-color: #334766;
+}
+
+.departmentManagementTable .ant-pagination-item-active a {
+  color: #fff;
+}
+
+.departmentManagementTable .ant-pagination-prev .ant-pagination-item-link,
+.departmentManagementTable .ant-pagination-next .ant-pagination-item-link {
+  color: #334766;
+  border-color: #334766;
+}
+
+.departmentManagementTable .ant-pagination-prev:hover .ant-pagination-item-link,
+.departmentManagementTable .ant-pagination-next:hover .ant-pagination-item-link {
+  color: #334766;
+  border-color: #334766;
+}
+
+.notFoundContent {
+  background: #fff;
+  border-radius: 16px;
+  padding: 60px 40px;
+  text-align: center;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  max-width: 600px;
+  width: 100%;
+  position: relative;
+}
+
+.notFoundContent::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(45deg, #334766, #283652);
+  border-radius: 18px;
+  z-index: -1;
+}
+
+.factoryIllustration {
+  font-size: 80px;
+  margin-bottom: 24px;
+  animation: float 3s ease-in-out infinite;
+  display: block;
+}
+
+.errorCode {
+  font-size: 120px;
+  font-weight: 900;
+  margin: 0;
+  background: linear-gradient(45deg, #334766, #283652);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.errorTitle {
+  color: #1f2937;
+  margin-bottom: 16px;
+}
+
+.errorMessage {
+  color: #6b7280;
+  font-size: 16px;
+  line-height: 1.6;
+  margin-bottom: 24px;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.pathInfo {
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 32px;
+  border: 1px solid #e2e8f0;
+}
+
+.pathCode {
+  background: #334766;
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.primaryButton {
+  background-color: #334766 !important;
+  border-color: #334766 !important;
+  color: #fff !important;
+  height: 44px;
+  padding: 0 24px;
+  font-weight: 600;
+  border-radius: 8px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.primaryButton:hover {
+  background-color: #283652 !important;
+  border-color: #283652 !important;
+  color: #fff !important;
+}
+
+.secondaryButton {
+  color: #334766;
+  border-color: #334766;
+  height: 44px;
+  padding: 0 24px;
+  font-weight: 500;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.secondaryButton:hover {
+  color: #283652;
+  border-color: #283652;
+  transform: translateY(-1px);
+}
+
+.brandInfo {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.brandText {
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .notFoundContainer {
+    padding: 20px;
+  }
+
+  .notFoundContent {
+    padding: 40px 24px;
+  }
+
+  .errorCode {
+    font-size: 80px;
+  }
+
+  .factoryIllustration {
+    font-size: 60px;
+  }
+
+  .buttonGroup {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .primaryButton,
+  .secondaryButton {
+    width: 100%;
+    max-width: 300px;
+  }
+}
+
+@media (max-width: 480px) {
+  .notFoundContent {
+    padding: 30px 16px;
+  }
+
+  .errorCode {
+    font-size: 60px;
+  }
+
+  .factoryIllustration {
+    font-size: 48px;
+  }
+
+  .errorMessage {
+    font-size: 14px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .notFoundContainer {
+    background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+  }
+
+  .notFoundContent {
+    background: #374151;
+    border-color: #4b5563;
+  }
+
+  .errorTitle {
+    color: #f9fafb;
+  }
+
+  .errorMessage {
+    color: #d1d5db;
+  }
+
+  .pathInfo {
+    background: #4b5563;
+    border-color: #6b7280;
+  }
+
+  .brandInfo {
+    color: #9ca3af;
+    border-color: #4b5563;
+  }
+}

@@ -31,7 +31,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
-import "../../styles/pages/EditProfile.css";
+import styles from "../../styles/pages/EditProfile.module.css";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -148,43 +148,44 @@ const EditProfile = () => {
       content: "Bạn có chắc chắn muốn hủy? Các thay đổi chưa lưu sẽ bị mất.",
       okText: "Xác nhận",
       cancelText: "Tiếp tục chỉnh sửa",
+      okButtonProps: { className: styles.customOkButton },
       onOk: () => navigate("/profile"),
     });
   };
 
   return (
     <Layout>
-      <div className="edit-profile-container edit-profile">
+      <div className={styles.editProfileContainer}>
         <Row gutter={[24, 24]}>
           <Col span={24}>
             {/* Header */}
-            <div className="edit-profile-header">
+            <div className={styles.editProfileHeader}>
               <Space direction="vertical" align="center">
-                <div className="edit-profile-avatar-container">
+                <div className={styles.editProfileAvatarContainer}>
                   <Avatar
                     size={120}
                     icon={<UserOutlined />}
                     src={avatarUrl || currentUser.avatar}
-                    className="edit-profile-avatar"
+                    className={styles.editProfileAvatar}
                   />
                   <Upload
                     name="avatar"
                     listType="picture"
-                    className="avatar-uploader"
+                    className={styles.avatarUploader}
                     showUploadList={false}
                     action="/api/upload/avatar" // TODO: Replace with real API
                     beforeUpload={beforeUpload}
                     onChange={handleAvatarChange}
                   >
-                    <div className="edit-profile-upload-button">
+                    <div className={styles.editProfileUploadButton}>
                       <CameraOutlined />
                     </div>
                   </Upload>
                 </div>
-                <Title level={2} className="edit-profile-header-title">
+                <Title level={2} className={styles.editProfileHeaderTitle}>
                   Chỉnh sửa thông tin cá nhân
                 </Title>
-                <Text className="edit-profile-header-subtitle">
+                <Text className={styles.editProfileHeaderSubtitle}>
                   Cập nhật thông tin cá nhân của bạn. Phòng ban và chức vụ do
                   Admin quản lý.
                 </Text>
@@ -192,15 +193,15 @@ const EditProfile = () => {
             </div>
           </Col>
 
-          <Col xs={24} lg={16} push={4}>
+          <Col span={24}>
             <Card
               title={
                 <Space>
-                  <EditOutlined className="edit-profile-card-title-icon" />
+                  <EditOutlined className={styles.editProfileCardTitleIcon} />
                   Thông tin cá nhân
                 </Space>
               }
-              className="edit-profile-card"
+              className={styles.editProfileCard}
               extra={
                 <Button
                   icon={<ArrowLeftOutlined />}
@@ -214,33 +215,33 @@ const EditProfile = () => {
                 message="Hướng dẫn chỉnh sửa thông tin"
                 description={
                   <div>
-                    <p className="edit-profile-alert-title">
-                      ✅ Có thể chỉnh sửa:
+                    <p className={styles.editProfileAlertTitle}>
+                      Có thể chỉnh sửa:
                     </p>
-                    <ul className="edit-profile-alert-list">
+                    <ul className={styles.editProfileAlertList}>
                       <li>Họ và tên</li>
                       <li>Email</li>
                       <li>Số điện thoại</li>
                       <li>Giới tính</li>
                       <li>Ảnh đại diện</li>
                     </ul>
-                    <p className="edit-profile-alert-title">
-                      👁️ Chỉ xem (do Admin quản lý):
+                    <p className={styles.editProfileAlertTitle}>
+                      Chỉ xem (do Admin quản lý):
                     </p>
-                    <ul className="edit-profile-alert-list">
+                    <ul className={styles.editProfileAlertList}>
                       <li>Mã nhân viên</li>
                       <li>Phòng ban</li>
                       <li>Chức vụ</li>
                     </ul>
-                    <p className="edit-profile-alert-note">
-                      💡 Liên hệ phòng Nhân sự nếu cần thay đổi thông tin do
+                    <p className={styles.editProfileAlertNote}>
+                      Liên hệ phòng Nhân sự nếu cần thay đổi thông tin do
                       Admin quản lý.
                     </p>
                   </div>
                 }
                 type="info"
                 showIcon
-                className="edit-profile-alert"
+                className={styles.editProfileAlert}
               />
 
               <Form
@@ -248,7 +249,7 @@ const EditProfile = () => {
                 layout="vertical"
                 onFinish={handleSubmit}
                 autoComplete="off"
-                className="edit-profile-form"
+                className={styles.editProfileForm}
               >
                 <Row gutter={16}>
                   <Col xs={24} md={12}>
@@ -365,7 +366,7 @@ const EditProfile = () => {
                         value={currentUser.department}
                         disabled
                         size="large"
-                        className="edit-profile-disabled-field"
+                        className={styles.editProfileDisabledField}
                       />
                     </Form.Item>
                   </Col>
@@ -377,7 +378,7 @@ const EditProfile = () => {
                         value={currentUser.position}
                         disabled
                         size="large"
-                        className="edit-profile-disabled-field"
+                        className={styles.editProfileDisabledField}
                       />
                     </Form.Item>
                   </Col>
@@ -398,7 +399,7 @@ const EditProfile = () => {
                       loading={loading}
                       size="large"
                       icon={<SaveOutlined />}
-                      className="edit-profile-submit-button"
+                      className={styles.editProfileSubmitButton}
                     >
                       Lưu thay đổi
                     </Button>

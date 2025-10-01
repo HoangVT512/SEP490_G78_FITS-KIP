@@ -27,13 +27,13 @@ import {
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import "../../styles/components/AdminLayout.css";
+import styles from "../../styles/components/AdminLayout.module.css";
 
 // Import admin pages
 import AdminDashboard from "../AdminPage/AdminDashboard";
 import UserManagement from "../AdminPage/UserManagement";
 import DepartmentManagement from "../AdminPage/DepartmentManagement";
-import LineGroupManagement from "../AdminPage/LineGroupManagement";
+import LineGroupManagement from "./LineManagement";
 import StageManagement from "../AdminPage/StageManagement";
 import RoleManagement from "../AdminPage/RoleManagement";
 import SystemSettings from "../AdminPage/SystemSettings";
@@ -79,7 +79,7 @@ const AdminLayout = () => {
     {
       key: "linegroups",
       icon: <GroupOutlined />,
-      label: "Quản lý nhóm dây chuyền",
+      label: "Quản lý dây chuyền",
     },
     {
       key: "stages",
@@ -244,7 +244,7 @@ const AdminLayout = () => {
   };
 
   return (
-    <AntLayout className="admin-layout" style={{ minHeight: "100vh" }}>
+    <AntLayout className={styles.adminLayout} style={{ minHeight: "100vh" }}>
       {/* Sidebar */}
       <Sider
         collapsible
@@ -331,7 +331,7 @@ const AdminLayout = () => {
 
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             {/* Notifications */}
-            <Badge count={5} size="small" className="notification-badge">
+            <Badge count={5} size="small" className={styles.notificationBadge}>
               <Button
                 type="text"
                 icon={<BellOutlined />}
@@ -345,16 +345,16 @@ const AdminLayout = () => {
               placement="bottomRight"
               arrow
             >
-              <div className="user-dropdown">
+              <div className={styles.userDropdown}>
                 <Avatar
                   size="small"
                   icon={<UserOutlined />}
                   src={adminUser.avatar}
                   style={{ backgroundColor: "#334766" }}
                 />
-                <div className="user-info">
-                  <div className="user-name">{adminUser.name}</div>
-                  <div className="user-role">{adminUser.role}</div>
+                <div className={styles.userInfo}>
+                  <div className={styles.userName}>{adminUser.name}</div>
+                  <div className={styles.userRole}>{adminUser.role}</div>
                 </div>
               </div>
             </Dropdown>
@@ -363,7 +363,7 @@ const AdminLayout = () => {
 
         {/* Content */}
         <Content style={contentStyle}>
-          <div className="admin-content">{renderContent()}</div>
+          <div className={styles.adminContent}>{renderContent()}</div>
         </Content>
       </AntLayout>
     </AntLayout>

@@ -1,144 +1,144 @@
-/* UserManagement.css */
+/* UserManagement.css - CSS Modules */
 
-.user-management-container {
+.userManagementContainer {
   padding: 24px;
   background-color: #f8fafc;
   min-height: calc(100vh - 70px);
 }
 
-.user-management-card {
+.userManagementCard {
   background: #ffffff;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   border: 1px solid #e2e8f0;
 }
 
-.user-management-header {
+.userManagementHeader {
   margin-bottom: 24px;
 }
 
-.user-management-title {
+.userManagementTitle {
   margin: 0 !important;
   color: #1f2937 !important;
 }
 
-.user-management-title-icon {
+.userManagementTitleIcon {
   margin-right: 8px;
   color: #334766;
 }
 
-.user-search-controls {
+.userSearchControls {
   margin-bottom: 24px;
 }
 
-.user-search-input {
+.userSearchInput {
   width: 100%;
 }
 
-.user-action-buttons {
+.userActionButtons {
   margin-top: 16px;
 }
 
-.user-primary-button {
+.userPrimaryButton {
   background-color: #334766 !important;
   border-color: #334766 !important;
 }
 
-.user-modal-content {
+.userModalContent {
   padding: 20px 0;
 }
 
-.user-modal-search {
+.userModalSearch {
   margin-bottom: 16px;
 }
 
-.user-modal-search-input {
+.userModalSearchInput {
   width: 100%;
 }
 
-.user-form-container {
+.userFormContainer {
   margin-top: 16px;
 }
 
-.user-details-container {
+.userDetailsContainer {
   max-height: 70vh;
   overflow-y: auto;
 }
 
-.user-detail-header {
+.userDetailHeader {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.user-detail-section {
+.userDetailSection {
   margin-bottom: 16px;
 }
 
-.user-detail-item {
+.userDetailItem {
   margin-bottom: 8px;
 }
 
-.user-detail-label {
+.userDetailLabel {
   font-weight: 500;
 }
 
-.user-avatar-primary {
+.userAvatarPrimary {
   background-color: #334766;
 }
 
-.user-name-display {
+.userNameDisplay {
   font-weight: 600;
   color: #1f2937;
 }
 
-.user-role-display {
+.userRoleDisplay {
   font-size: 12px;
   color: #6b7280;
 }
 
-.user-contact-item {
+.userContactItem {
   margin-bottom: 4px;
 }
 
-.user-contact-icon {
+.userContactIcon {
   color: #334766;
   margin-right: 6px;
 }
 
-.user-contact-text {
+.userContactText {
   font-size: 13px;
 }
 
-.user-contact-copy {
+.userContactCopy {
   margin-left: 6px;
 }
 
-.user-department-icon {
+.userDepartmentIcon {
   color: #334766;
   margin-right: 6px;
 }
 
-.user-datetime-text {
+.userDatetimeText {
   font-size: 13px;
 }
 
-.user-info-header {
+.userInfoHeader {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-.user-info-avatar {
+.userInfoAvatar {
   background-color: #334766;
 }
 
-.user-info-name {
+.userInfoName {
   font-weight: 600;
   font-size: 16px;
 }
 
-.user-info-meta {
+.userInfoMeta {
   margin-top: 4px;
   font-size: 13px;
   color: #6b7280;
@@ -147,6 +147,6 @@
   gap: 12px;
 }
 
-.user-info-separator {
+.userInfoSeparator {
   color: #e5e7eb;
 }

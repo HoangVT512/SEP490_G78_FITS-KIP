@@ -46,7 +46,7 @@ import {
   StarOutlined,
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
-import "../../styles/pages/RoleManagement.css";
+import styles from "../../styles/pages/RoleManagement.module.css";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -898,12 +898,12 @@ const RoleManagement = ({ showHeader = true }) => {
             form.resetFields();
           }}
           onOk={() => form.submit()}
-          width={600}
+          width={1000}
           destroyOnClose
           okText={editingRole ? "Cập nhật" : "Tạo mới"}
           cancelText="Hủy"
           okButtonProps={{
-            style: { backgroundColor: "#334766", borderColor: "#334766" },
+            style: { backgroundColor: "#334766", borderColor: "#334766", width: 100, marginTop: 60},
           }}
         >
           <Form form={form} layout="vertical" onFinish={handleModalSubmit}>
@@ -961,7 +961,7 @@ const RoleManagement = ({ showHeader = true }) => {
               Đóng
             </Button>,
           ]}
-          width={800}
+          width={1000}
         >
           {viewingRole && (
             <div>
@@ -1055,12 +1055,12 @@ const RoleManagement = ({ showHeader = true }) => {
             permissionForm.resetFields();
           }}
           onOk={() => permissionForm.submit()}
-          width={900}
+          width={1000}
           destroyOnClose
           okText="Lưu thay đổi"
           cancelText="Hủy"
           okButtonProps={{
-            style: { backgroundColor: "#334766", borderColor: "#334766" },
+            style: { backgroundColor: "#334766", borderColor: "#334766", width: 100 },
           }}
         >
           {viewingRole?.isSystemRole && (

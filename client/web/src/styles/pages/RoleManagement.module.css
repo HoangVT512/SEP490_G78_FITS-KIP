@@ -1,0 +1,57 @@
+/* RoleManagement.css - CSS Modules */
+
+.roleManagementPage .tableContainer {
+  overflow: auto;
+}
+
+.roleManagementPage .ant-table-tbody > tr > td {
+  overflow: hidden;
+  position: relative;
+}
+
+.roleManagementPage .ant-table-tbody > tr:hover > td {
+  z-index: 1;
+}
+
+.roleManagementPage .ant-tag,
+.roleManagementPage .ant-tooltip {
+  z-index: 1000;
+}
+
+.roleManagementPage .ant-dropdown {
+  z-index: 1050;
+}
+
+.roleManagementPage .ant-modal {
+  z-index: 1100;
+}
+
+/* Custom pagination colors */
+.roleManagementPage .ant-pagination-item {
+  border-color: #334766;
+}
+
+.roleManagementPage .ant-pagination-item a {
+  color: #334766;
+}
+
+.roleManagementPage .ant-pagination-item-active {
+  background-color: #334766;
+  border-color: #334766;
+}
+
+.roleManagementPage .ant-pagination-item-active a {
+  color: #fff;
+}
+
+.roleManagementPage .ant-pagination-prev .ant-pagination-item-link,
+.roleManagementPage .ant-pagination-next .ant-pagination-item-link {
+  color: #334766;
+  border-color: #334766;
+}
+
+.roleManagementPage .ant-pagination-prev:hover .ant-pagination-item-link,
+.roleManagementPage .ant-pagination-next:hover .ant-pagination-item-link {
+  color: #334766;
+  border-color: #334766;
+}

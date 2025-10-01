@@ -1,0 +1,190 @@
+/* AdminReports CSS Module */
+.container {
+  padding: 24px;
+  background-color: #f8fafc;
+  min-height: calc(100vh - 70px);
+}
+
+.card {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.title {
+  margin: 0 !important;
+  color: #1f2937 !important;
+}
+
+.titleIcon {
+  margin-right: 8px;
+  color: #334766;
+}
+
+.filterRow {
+  margin-bottom: 24px;
+}
+
+.exportButton {
+  width: 100%;
+  justify-content: flex-end;
+}
+
+.statisticCard {
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.chartCard {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.summaryRow {
+  margin-bottom: 24px;
+}
+
+.tableContainer {
+  background: #ffffff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.tableHeader {
+  background: #f8fafc;
+  padding: 16px;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 600;
+  color: #374151;
+}
+
+/* Enhanced table styles */
+.container :global(.ant-table-thead > tr > th) {
+  background: #f8fafc;
+  color: #374151;
+  font-weight: 600;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.container :global(.ant-table-tbody > tr:hover > td) {
+  background: #f9fafb !important;
+}
+
+/* Enhanced statistic cards */
+.container :global(.ant-statistic-title) {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.container :global(.ant-statistic-content) {
+  color: #1f2937;
+}
+
+/* Chart containers */
+.chartContainer {
+  background: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Status badges for security events */
+.highPriority {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mediumPriority {
+  background: #fef3c7;
+  color: #d97706;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.lowPriority {
+  background: #dcfce7;
+  color: #16a34a;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Department usage styling */
+.departmentRow {
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.departmentName {
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.departmentStats {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+/* Performance metrics */
+.performanceMetric {
+  text-align: center;
+  padding: 16px;
+  background: #f9fafb;
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.metricValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1f2937;
+  display: block;
+}
+
+.metricLabel {
+  font-size: 12px;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Loading states */
+.loadingContainer {
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+  
+  .exportButton {
+    justify-content: center;
+    margin-top: 16px;
+  }
+  
+  .chartContainer {
+    padding: 12px;
+  }
+  
+  .metricValue {
+    font-size: 20px;
+  }
+}

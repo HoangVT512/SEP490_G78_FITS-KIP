@@ -21,8 +21,8 @@ import {
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
 import ForgotPassword from "./ForgotPassword";
-import "../../styles/pages/ForgotPassword.css";
-import "../../styles/pages/ResetPassword.css";
+import styles from "../../styles/pages/ForgotPassword.module.css";
+import resetStyles from "../../styles/pages/ResetPassword.module.css";
 
 const { Title, Text } = Typography;
 
@@ -155,13 +155,13 @@ const ResetPassword = () => {
             layout="vertical"
             autoComplete="off"
           >
-            <div className="auth-header">
+            <div className={styles.authHeader}>
               <Space direction="vertical" size="small">
-                <SafetyOutlined className="reset-password-icon" />
-                <Title level={2} className="reset-password-title">
+                <SafetyOutlined className={resetStyles.resetPasswordIcon} />
+                <Title level={2} className={resetStyles.resetPasswordTitle}>
                   {!otpVerified ? "Nhập mã OTP" : "Đặt mật khẩu mới"}
                 </Title>
-                <Text className="reset-password-description">
+                <Text className={resetStyles.resetPasswordDescription}>
                   {!otpVerified ? (
                     <>
                       Mã OTP đã được gửi tới <strong>{resetContact}</strong>
@@ -181,7 +181,7 @@ const ResetPassword = () => {
                 <Alert
                   message={
                     <span>
-                      <InfoCircleOutlined className="reset-password-alert-icon" />
+                      <InfoCircleOutlined className={resetStyles.resetPasswordAlertIcon} />
                       Kiểm tra{" "}
                       {contactType === "email" ? "hộp thư" : "tin nhắn SMS"}
                     </span>
@@ -192,8 +192,8 @@ const ResetPassword = () => {
                       : "Mã OTP 6 số đã được gửi đến số điện thoại của bạn. Mã có hiệu lực trong 5 phút."
                   }
                   type="warning"
-                  className={`alert-with-animation ${
-                    otpVerified ? "alert-fade-out" : ""
+                  className={`${resetStyles.alertWithAnimation} ${
+                    otpVerified ? resetStyles.alertFadeOut : ""
                   }`}
                 />
                 {/* Countdown Timer UI */}
@@ -205,8 +205,8 @@ const ResetPassword = () => {
 
             {/* OTP Section - Initially visible, hidden after verification */}
             <div
-              className={`otp-container ${
-                otpVerified ? "otp-container-hidden" : "otp-container-visible"
+              className={`${resetStyles.otpContainer} ${
+                otpVerified ? resetStyles.otpContainerHidden : resetStyles.otpContainerVisible
               }`}
             >
               <Form.Item
@@ -258,10 +258,10 @@ const ResetPassword = () => {
 
             {/* Password Fields - Hidden initially, slide up after OTP verification */}
             <div
-              className={`password-fields-container ${
+              className={`${resetStyles.passwordFieldsContainer} ${
                 otpVerified
-                  ? "password-fields-visible"
-                  : "password-fields-hidden"
+                  ? resetStyles.passwordFieldsVisible
+                  : resetStyles.passwordFieldsHidden
               }`}
             >
               <Form.Item
@@ -274,11 +274,11 @@ const ResetPassword = () => {
                   },
                   { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự!" },
                 ]}
-                className={`password-field-item ${
+                className={`${resetStyles.passwordFieldItem} ${
                   otpVerified
-                    ? "password-field-visible"
-                    : "password-field-hidden"
-                } reset-password-form-item-spacing`}
+                    ? resetStyles.passwordFieldVisible
+                    : resetStyles.passwordFieldHidden
+                } ${resetStyles.resetPasswordFormItemSmallSpacing}`}
               >
                 <Input.Password
                   prefix={<LockOutlined />}
@@ -307,11 +307,11 @@ const ResetPassword = () => {
                     },
                   }),
                 ]}
-                className={`password-field-item ${
+                className={`${resetStyles.passwordFieldItem} ${
                   otpVerified
-                    ? "password-field-visible"
-                    : "password-field-hidden"
-                } reset-password-form-item-large-spacing`}
+                    ? resetStyles.passwordFieldVisible
+                    : resetStyles.passwordFieldHidden
+                } ${resetStyles.resetPasswordFormItemLargeSpacing}`}
               >
                 <Input.Password
                   prefix={<LockOutlined />}
@@ -321,15 +321,15 @@ const ResetPassword = () => {
               </Form.Item>
 
               <Form.Item
-                className={`password-field-item ${
-                  otpVerified ? "submit-button-visible" : "submit-button-hidden"
-                } reset-password-form-item-small-spacing`}
+                className={`${resetStyles.passwordFieldItem} ${
+                  otpVerified ? resetStyles.submitButtonVisible : resetStyles.submitButtonHidden
+                } ${resetStyles.resetPasswordFormItemSmallSpacing}`}
               >
                 <Button
                   type="primary"
                   htmlType="submit"
                   loading={loading}
-                  className="auth-button"
+                  className={styles.authButton}
                   icon={<CheckCircleOutlined />}
                 >
                   Đặt lại mật khẩu
@@ -338,8 +338,8 @@ const ResetPassword = () => {
             </div>
 
             <div
-              className={`navigation-buttons ${
-                otpVerified ? "alert-fade-out" : ""
+              className={`${resetStyles.navigationButtons} ${
+                otpVerified ? resetStyles.alertFadeOut : ""
               }`}
             >
               {!otpVerified && (
@@ -352,11 +352,11 @@ const ResetPassword = () => {
                       setOtpValue("");
                       form.resetFields();
                     }}
-                    className="reset-password-nav-button"
+                    className={resetStyles.resetPasswordNavButton}
                   >
                     Gửi lại mã OTP
                   </Button>
-                  <span className="reset-password-nav-separator">|</span>
+                  <span className={resetStyles.resetPasswordNavSeparator}>|</span>
                   <Button
                     type="link"
                     onClick={() => {
@@ -365,7 +365,7 @@ const ResetPassword = () => {
                       setOtpValue("");
                       form.resetFields();
                     }}
-                    className="reset-password-nav-button"
+                    className={resetStyles.resetPasswordNavButton}
                   >
                     Thay đổi phương thức
                   </Button>
@@ -386,7 +386,7 @@ const ResetPassword = () => {
                 type="primary"
                 key="login"
                 onClick={() => navigate("/login")}
-                className="auth-button"
+                className={styles.authButton}
               >
                 Đăng nhập ngay
               </Button>,
@@ -401,31 +401,31 @@ const ResetPassword = () => {
 
   return (
     <Layout>
-      <div className="auth-container">
-        <div className="auth-wrapper">
+      <div className={styles.authContainer}>
+        <div className={styles.authWrapper}>
           {/* Logo Section */}
-          <div className="auth-logo-section">
-            <div className="auth-logo-content">
-              <div className="logo-emoji">🔐</div>
-              <div className="logo-title">Khôi phục tài khoản</div>
-              <div className="logo-subtitle">
+          <div className={styles.authLogoSection}>
+            <div className={styles.authLogoContent}>
+              <div className={styles.logoEmoji}>🔐</div>
+              <div className={styles.logoTitle}>Khôi phục tài khoản</div>
+              <div className={styles.logoSubtitle}>
                 Hệ thống bảo mật FITS-KIP
                 <br />
                 Đặt lại mật khẩu an toàn và bảo mật
               </div>
 
               {/* Security features */}
-              <div className="security-features">
-                <div className="security-feature-item">
+              <div className={styles.securityFeatures}>
+                <div className={styles.securityFeatureItem}>
                   ✓ Mã OTP được gửi qua Email/SMS
                 </div>
-                <div className="security-feature-item">
+                <div className={styles.securityFeatureItem}>
                   ✓ Mã OTP có hiệu lực trong 5 phút
                 </div>
-                <div className="security-feature-item">
+                <div className={styles.securityFeatureItem}>
                   ✓ Xác thực 2 lớp an toàn
                 </div>
-                <div className="security-feature-item">
+                <div className={styles.securityFeatureItem}>
                   ✓ Mật khẩu được mã hóa bảo mật
                 </div>
               </div>
@@ -433,34 +433,34 @@ const ResetPassword = () => {
           </div>
 
           {/* Form Section */}
-          <div className="auth-form-section">
-            <div className="auth-steps">
+          <div className={styles.authFormSection}>
+            <div className={styles.authSteps}>
               <Steps
                 current={currentStep}
                 direction="horizontal"
                 size="default"
-                className="auth-steps-config"
+                className={styles.authStepsConfig}
                 items={[
                   {
-                    title: <div className="step-title">Chọn phương thức</div>,
+                    title: <div className={styles.stepTitle}>Chọn phương thức</div>,
                     description: (
-                      <div className="step-description">Email hoặc SMS</div>
+                      <div className={styles.stepDescription}>Email hoặc SMS</div>
                     ),
-                    icon: <KeyOutlined className="step-icon" />,
+                    icon: <KeyOutlined className={styles.stepIcon} />,
                   },
                   {
-                    title: <div className="step-title">Nhập mã OTP</div>,
+                    title: <div className={styles.stepTitle}>Nhập mã OTP</div>,
                     description: (
-                      <div className="step-description">Và mật khẩu mới</div>
+                      <div className={styles.stepDescription}>Và mật khẩu mới</div>
                     ),
-                    icon: <SafetyOutlined className="step-icon" />,
+                    icon: <SafetyOutlined className={styles.stepIcon} />,
                   },
                   {
-                    title: <div className="step-title">Hoàn thành</div>,
+                    title: <div className={styles.stepTitle}>Hoàn thành</div>,
                     description: (
-                      <div className="step-description">Thành công</div>
+                      <div className={styles.stepDescription}>Thành công</div>
                     ),
-                    icon: <CheckCircleOutlined className="step-icon" />,
+                    icon: <CheckCircleOutlined className={styles.stepIcon} />,
                   },
                 ]}
               />

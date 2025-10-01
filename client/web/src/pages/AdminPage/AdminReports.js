@@ -35,6 +35,7 @@ import {
 import Layout from "../../components/Layout/Layout";
 import { Line, Column, Pie, Area } from "@ant-design/plots";
 import dayjs from "dayjs";
+import styles from "../../styles/pages/AdminReports.module.css";
 
 const { Title, Text } = Typography;
 const { RangePicker } = DatePicker;
@@ -538,10 +539,10 @@ const AdminReports = ({ showHeader = true }) => {
   };
 
   const content = (
-    <div style={contentStyle}>
-      <div style={{ marginBottom: "24px" }}>
-        <Title level={3} style={{ margin: 0, color: "#1f2937" }}>
-          <BarChartOutlined style={{ marginRight: "8px", color: "#334766" }} />
+    <div className={styles.container}>
+      <div className={styles.header}>
+        <Title level={3} className={styles.title}>
+          <BarChartOutlined className={styles.titleIcon} />
           Báo cáo & Thống kê
         </Title>
         <Text type="secondary">
@@ -549,7 +550,7 @@ const AdminReports = ({ showHeader = true }) => {
         </Text>
       </div>
 
-      <Card style={cardStyle}>
+      <Card className={styles.card}>
         <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
           <Col xs={24} sm={8} md={6}>
             <Select
@@ -597,7 +598,7 @@ const AdminReports = ({ showHeader = true }) => {
                 Làm mới
               </Button>
               <Button
-                type="primary"
+                style={{ backgroundColor: "#334766", borderColor: "#334766", color: "#fff" }}
                 icon={<DownloadOutlined />}
                 onClick={() => handleExportReport("pdf")}
               >

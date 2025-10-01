@@ -17,7 +17,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
 import { useAuth } from "../../contexts/AuthContext";
-import "../../styles/pages/Login.css";
+import styles from "../../styles/pages/Login.module.css";
 
 const { Title } = Typography;
 
@@ -93,14 +93,14 @@ const Login = () => {
 
   return (
     <Layout>
-      <div className="login-container">
-        <div className="login-wrapper">
+      <div className={styles.loginContainer}>
+        <div className={styles.loginWrapper}>
           {/* Logo Section */}
-          <div className="login-logo-section">
-            <div className="login-logo-content">
-              <div className="login-factory-icon">🏭</div>
-              <div className="login-company-title">FITS-KIP</div>
-              <div className="login-company-subtitle">
+          <div className={styles.loginLogoSection}>
+            <div className={styles.loginLogoContent}>
+              <div className={styles.loginFactoryIcon}>🏭</div>
+              <div className={styles.loginCompanyTitle}>FITS-KIP</div>
+              <div className={styles.loginCompanySubtitle}>
                 Hệ thống quản lý bảo trì nhà máy hiện đại
                 <br />
                 Giải pháp toàn diện cho doanh nghiệp
@@ -109,7 +109,7 @@ const Login = () => {
           </div>
 
           {/* Login Form Section */}
-          <div className="login-form-section">
+          <div className={styles.loginFormSection}>
             <Form
               form={form}
               name="login"
@@ -117,13 +117,13 @@ const Login = () => {
               onFinish={onFinish}
               layout="vertical"
             >
-              <div className="login-form-header">
+              <div className={styles.loginFormHeader}>
                 <Space direction="vertical" size="small">
-                  <SafetyOutlined className="login-header-icon" />
-                  <Title level={2} className="login-title">
+                  <SafetyOutlined className={styles.loginHeaderIcon} />
+                  <Title level={2} className={styles.loginTitle}>
                     Đăng nhập hệ thống
                   </Title>
-                  <Typography.Text className="login-header-subtitle">
+                  <Typography.Text className={styles.loginHeaderSubtitle}>
                     Vui lòng đăng nhập để tiếp tục
                   </Typography.Text>
                 </Space>
@@ -137,7 +137,7 @@ const Login = () => {
                     message: "Vui lòng nhập email hoặc mã nhân viên!",
                   },
                 ]}
-                className="login-form-item"
+                className={styles.loginFormItem}
                 label="Email hoặc Mã nhân viên"
               >
                 <Input
@@ -151,7 +151,7 @@ const Login = () => {
               <Form.Item
                 name="password"
                 rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}
-                className="login-form-item"
+                className={styles.loginFormItem}
                 label="Mật khẩu"
                 validateStatus={loginError ? "error" : ""}
                 help={loginError}
@@ -164,29 +164,28 @@ const Login = () => {
                 />
               </Form.Item>
 
-              <Form.Item className="login-form-item-checkbox">
-                <div className="login-remember-row">
+              <Form.Item className={styles.loginFormItemCheckbox}>
+                <div className={styles.loginRememberRow}>
                   <Form.Item name="remember" valuePropName="checked" noStyle>
                     <Checkbox>Ghi nhớ đăng nhập</Checkbox>
                   </Form.Item>
                   <Button
                     type="link"
                     onClick={() => navigate("/reset-password")}
-                    className="login-forgot-link"
+                    className={styles.loginForgotLink}
                   >
                     Quên mật khẩu?
                   </Button>
                 </div>
               </Form.Item>
 
-              <Form.Item className="login-form-item-submit">
+              <Form.Item className={styles.loginFormItemSubmit}>
                 <Button
-                  type="primary"
                   htmlType="submit"
                   size="large"
                   loading={loading}
                   icon={!loading && <LoginOutlined />}
-                  className="login-submit-button"
+                  className={styles.loginSubmitButton}
                 >
                   {loading ? "Đang đăng nhập..." : "Đăng nhập vào hệ thống"}
                 </Button>

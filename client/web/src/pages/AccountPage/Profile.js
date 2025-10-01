@@ -30,7 +30,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
-import "../../styles/pages/Profile.css";
+import styles from "../../styles/pages/Profile.module.css";
 
 const { Title, Text } = Typography;
 
@@ -107,32 +107,32 @@ const Profile = () => {
 
   return (
     <Layout>
-      <div className="profile-container">
+      <div className={styles.profileContainer}>
         <Row gutter={[24, 24]}>
           <Col span={24}>
             {/* Profile Header */}
-            <div className="profile-header-card">
+            <div className={styles.profileHeaderCard}>
               <Avatar
                 size={100}
                 icon={<UserOutlined />}
-                className="profile-header-avatar"
+                className={styles.profileHeaderAvatar}
               />
-              <Title level={2} className="profile-header-title">
+              <Title level={2} className={styles.profileHeaderTitle}>
                 {userInfo.fullName}
               </Title>
-              <Text className="profile-header-subtitle">
+              <Text className={styles.profileHeaderSubtitle}>
                 {userInfo.position} • {userInfo.department}
               </Text>
-              <Space className="profile-header-badges">
+              <Space className={styles.profileHeaderBadges}>
                 <Badge
                   status={getUserStatusColor()}
                   text={
-                    <span className="profile-badge-text">
+                    <span className={styles.profileBadgeText}>
                       {getUserStatusText()}
                     </span>
                   }
                 />
-                <Tag className="profile-role-tag">{userInfo.role}</Tag>
+                <Tag className={styles.profileRoleTag}>{userInfo.role}</Tag>
               </Space>
             </div>
           </Col>
@@ -141,17 +141,17 @@ const Profile = () => {
             <Card
               title={
                 <Space>
-                  <IdcardOutlined className="profile-icon-idcard" />
+                  <IdcardOutlined className={styles.profileIconIdcard} />
                   Thông tin cá nhân
                 </Space>
               }
-              className="profile-info-card"
+              className={styles.profileInfoCard}
               extra={
                 <Button
                   type="primary"
                   icon={<EditOutlined />}
                   onClick={handleEditProfile}
-                  className="profile-edit-button"
+                  className={styles.profileEditButton}
                 >
                   Chỉnh sửa
                 </Button>
@@ -159,7 +159,7 @@ const Profile = () => {
             >
               <Tabs
                 defaultActiveKey="1"
-                className="profile-tabs"
+                className={styles.profileTabs}
                 items={[
                   {
                     key: "1",
@@ -175,7 +175,7 @@ const Profile = () => {
                           <Text strong>{userInfo.fullName}</Text>
                         </Descriptions.Item>
                         <Descriptions.Item label="Mã nhân viên">
-                          <Tag className="profile-tag-employee-code">
+                          <Tag className={styles.profileTagEmployeeCode}>
                             {userInfo.employeeCode}
                           </Tag>
                         </Descriptions.Item>
@@ -184,20 +184,20 @@ const Profile = () => {
                         </Descriptions.Item>
                         <Descriptions.Item label="Email">
                           <Space>
-                            <MailOutlined className="profile-icon-email" />
+                            <MailOutlined className={styles.profileIconEmail} />
                             {userInfo.email}
                             {userInfo.emailConfirmed && (
-                              <CheckCircleOutlined className="profile-icon-verified" />
+                              <CheckCircleOutlined className={styles.profileIconVerified} />
                             )}
                           </Space>
                         </Descriptions.Item>
                         <Descriptions.Item label="Số điện thoại">
                           <Space>
-                            <PhoneOutlined className="profile-icon-phone" />
+                            <PhoneOutlined className={styles.profileIconPhone} />
                             {userInfo.phoneNumber || "Chưa cập nhật"}
                             {userInfo.phoneNumberConfirmed &&
                               userInfo.phoneNumber && (
-                                <CheckCircleOutlined className="profile-icon-verified" />
+                                <CheckCircleOutlined className={styles.profileIconVerified} />
                               )}
                           </Space>
                         </Descriptions.Item>
@@ -206,7 +206,7 @@ const Profile = () => {
                         </Descriptions.Item>
                         <Descriptions.Item label="Phòng ban" span={2}>
                           <Space>
-                            <TeamOutlined className="profile-icon-team" />
+                            <TeamOutlined className={styles.profileIconTeam} />
                             {userInfo.department}
                           </Space>
                         </Descriptions.Item>
@@ -234,7 +234,7 @@ const Profile = () => {
                               : "warning"
                           }
                           showIcon
-                          className="profile-security-alert"
+                          className={styles.profileSecurityAlert}
                         />
 
                         <Descriptions column={2} bordered>
@@ -295,10 +295,10 @@ const Profile = () => {
                             span={2}
                           >
                             <Text
-                              className={`profile-failed-count ${
+                              className={`${styles.profileFailedCount} ${
                                 userInfo.accessFailedCount > 0
-                                  ? "error"
-                                  : "success"
+                                  ? styles.error
+                                  : styles.success
                               }`}
                             >
                               {userInfo.accessFailedCount} lần
@@ -313,7 +313,7 @@ const Profile = () => {
                             type="primary"
                             icon={<SafetyOutlined />}
                             onClick={handleChangePassword}
-                            className="profile-change-password-button"
+                            className={styles.profileChangePasswordButton}
                           >
                             Đổi mật khẩu
                           </Button>
@@ -336,23 +336,23 @@ const Profile = () => {
             <Card
               title={
                 <Space>
-                  <ClockCircleOutlined className="profile-icon-clock" />
+                  <ClockCircleOutlined className={styles.profileIconClock} />
                   Hoạt động gần đây
                 </Space>
               }
-              className="profile-activity-card"
+              className={styles.profileActivityCard}
             >
               <Timeline
                 items={activityLog.map((activity, index) => ({
                   color: activity.status === "success" ? "#059669" : "#d97706",
                   dot: (
-                    <CheckCircleOutlined className="profile-timeline-icon" />
+                    <CheckCircleOutlined className={styles.profileTimelineIcon} />
                   ),
                   children: (
                     <div>
                       <Text strong>{activity.action}</Text>
                       <br />
-                      <Text type="secondary" className="profile-timeline-date">
+                      <Text type="secondary" className={styles.profileTimelineDate}>
                         {formatDateTime(activity.date)}
                       </Text>
                     </div>
@@ -362,19 +362,19 @@ const Profile = () => {
 
               <Divider />
 
-              <div className="profile-view-all-container">
+              <div className={styles.profileViewAllContainer}>
                 <Button type="link">Xem tất cả hoạt động</Button>
               </div>
             </Card>
 
             <Card
               title="Thông tin hệ thống"
-              className="profile-system-card"
+              className={styles.profileSystemCard}
               size="small"
             >
               <Descriptions column={1} size="small">
                 <Descriptions.Item label="ID người dùng">
-                  <Text code className="profile-user-id">
+                  <Text code className={styles.profileUserId}>
                     {userInfo.id}
                   </Text>
                 </Descriptions.Item>

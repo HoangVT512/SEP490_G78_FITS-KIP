@@ -48,7 +48,7 @@ import {
   ClockCircleOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
-import "../../styles/pages/UserManagement.css";
+import styles from "../../styles/pages/UserManagement.module.css";
 import Layout from "../../components/Layout/Layout";
 import dayjs from "dayjs";
 import { userService } from "../../services/userService";
@@ -653,11 +653,11 @@ const UserManagement = ({ showHeader = true }) => {
   };
 
   const content = (
-    <div className="user-management-container">
-      <Card className="user-management-card">
-        <div className="user-management-header">
-          <Title level={3} className="user-management-title">
-            <UserOutlined className="user-management-title-icon" />
+    <div className={styles.userManagementContainer}>
+      <Card className={styles.userManagementCard}>
+        <div className={styles.userManagementHeader}>
+          <Title level={3} className={styles.userManagementTitle}>
+            <UserOutlined className={styles.userManagementTitleIcon} />
             Quản lý người dùng
           </Title>
           <Text type="secondary">
@@ -665,21 +665,22 @@ const UserManagement = ({ showHeader = true }) => {
           </Text>
         </div>
 
-        <Row gutter={[16, 16]} className="user-search-controls">
+        <Row gutter={[16, 16]} className={styles.userSearchControls}>
           <Col xs={24} sm={12} md={8}>
             <Search
+              style={{ hover: { borderColor: "#334766" } }}
               placeholder="Tìm kiếm theo tên, email, mã NV..."
               allowClear
               onSearch={handleSearch}
               onChange={(e) => setSearchText(e.target.value)}
-              className="user-search-input"
+              className={styles.userSearchInput}
             />
           </Col>
           <Col xs={24} sm={12} md={4}>
             <Select
               value={filters.status}
               onChange={(value) => setFilters({ ...filters, status: value })}
-              className="user-search-input"
+              className={styles.userSearchInput}
               placeholder="Trạng thái"
             >
               <Option value="all">Tất cả trạng thái</Option>
@@ -755,7 +756,7 @@ const UserManagement = ({ showHeader = true }) => {
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} của ${total} người dùng`,
           }}
-          className="user-management-table"
+          className={styles.userManagementTable}
           rowSelection={{
             selectedRowKeys,
             onChange: setSelectedRowKeys,
@@ -814,11 +815,11 @@ const UserManagement = ({ showHeader = true }) => {
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
-        width={800}
+        width={1200}
         okText={editingUser ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
         okButtonProps={{
-          style: { backgroundColor: "#334766", borderColor: "#334766" },
+          style: { backgroundColor: "#334766", borderColor: "#334766", width: "150px" },
         }}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>

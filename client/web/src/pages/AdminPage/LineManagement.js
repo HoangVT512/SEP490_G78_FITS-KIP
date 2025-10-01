@@ -213,7 +213,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
       }, 1000);
     } catch (error) {
       console.error("Error loading line groups:", error);
-      message.error("Không thể tải danh sách nhóm dây chuyền");
+      message.error("Không thể tải danh sách dây chuyền");
       setLineGroups(mockLineGroups);
       setLoading(false);
     }
@@ -303,13 +303,13 @@ const LineGroupManagement = ({ showHeader = true }) => {
         setIsModalVisible(true);
         break;
       case "delete":
-        message.success("Đã xóa nhóm dây chuyền thành công");
+        message.success("Đã xóa dây chuyền thành công");
         break;
       case "start":
-        message.success("Đã khởi động nhóm dây chuyền");
+        message.success("Đã khởi động dây chuyền");
         break;
       case "stop":
-        message.success("Đã dừng nhóm dây chuyền");
+        message.success("Đã dừng dây chuyền");
         break;
       case "maintenance":
         message.success("Đã chuyển sang chế độ bảo trì");
@@ -369,7 +369,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
 
   const columns = [
     {
-      title: "Nhóm dây chuyền",
+      title: "Dây chuyền",
       key: "lineGroup",
       width: 280,
       render: (_, record) => (
@@ -533,9 +533,9 @@ const LineGroupManagement = ({ showHeader = true }) => {
       console.log("Form values:", values);
 
       if (editingLineGroup) {
-        message.success("Cập nhật nhóm dây chuyền thành công!");
+        message.success("Cập nhật dây chuyền thành công!");
       } else {
-        message.success("Tạo nhóm dây chuyền mới thành công!");
+        message.success("Tạo dây chuyền mới thành công!");
       }
 
       setIsModalVisible(false);
@@ -572,7 +572,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
         <Col xs={24} sm={6}>
           <Card>
             <Statistic
-              title="Tổng nhóm dây chuyền"
+              title="Tổng dây chuyền"
               value={lineGroups.length}
               prefix={<GroupOutlined style={{ color: "#334766" }} />}
               valueStyle={{ color: "#334766" }}
@@ -619,10 +619,10 @@ const LineGroupManagement = ({ showHeader = true }) => {
         <div style={{ marginBottom: "24px" }}>
           <Title level={3} style={{ margin: 0, color: "#1f2937" }}>
             <GroupOutlined style={{ marginRight: "8px", color: "#334766" }} />
-            Quản lý nhóm dây chuyền
+            Quản lý dây chuyền
           </Title>
           <Text type="secondary">
-            Quản lý và giám sát các nhóm dây chuyền sản xuất
+            Quản lý và giám sát các dây chuyền sản xuất
           </Text>
         </div>
 
@@ -630,7 +630,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
           <Col xs={24} sm={8} md={6}>
             <Input.Group compact>
               <Input
-                placeholder="Tìm kiếm nhóm dây chuyền..."
+                placeholder="Tìm kiếm dây chuyền..."
                 size="large"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
@@ -707,7 +707,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
                 }}
                 style={{ backgroundColor: "#334766", borderColor: "#334766" }}
               >
-                Thêm nhóm dây chuyền
+                Thêm dây chuyền
               </Button>
               <Button icon={<ReloadOutlined />} onClick={loadLineGroups}>
                 Làm mới
@@ -727,7 +727,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} nhóm dây chuyền`,
+              `${range[0]}-${range[1]} của ${total} dây chuyền`,
           }}
           rowSelection={{
             selectedRowKeys,
@@ -742,17 +742,17 @@ const LineGroupManagement = ({ showHeader = true }) => {
       <Modal
         title={
           editingLineGroup
-            ? "Chỉnh sửa nhóm dây chuyền"
-            : "Thêm nhóm dây chuyền mới"
+            ? "Chỉnh sửa dây chuyền"
+            : "Thêm dây chuyền mới"
         }
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
-        width={800}
+        width={1000}
         okText={editingLineGroup ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
         okButtonProps={{
-          style: { backgroundColor: "#334766", borderColor: "#334766" },
+          style: { backgroundColor: "#334766", borderColor: "#334766", width: 100 },
         }}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
@@ -760,15 +760,15 @@ const LineGroupManagement = ({ showHeader = true }) => {
             <Col span={12}>
               <Form.Item
                 name="groupLineName"
-                label="Tên nhóm dây chuyền"
+                label="Tên dây chuyền"
                 rules={[
                   {
                     required: true,
-                    message: "Vui lòng nhập tên nhóm dây chuyền",
+                    message: "Vui lòng nhập tên dây chuyền",
                   },
                 ]}
               >
-                <Input placeholder="Nhập tên nhóm dây chuyền" />
+                <Input placeholder="Nhập tên dây chuyền" />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -868,7 +868,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
         title={
           <Space>
             <GroupOutlined />
-            Chi tiết nhóm dây chuyền: {viewingLineGroup?.groupLineName}
+            Chi tiết dây chuyền: {viewingLineGroup?.groupLineName}
           </Space>
         }
         open={isViewModalVisible}
@@ -931,7 +931,7 @@ const LineGroupManagement = ({ showHeader = true }) => {
             </Row>
 
             <Descriptions column={2} bordered style={{ marginBottom: "24px" }}>
-              <Descriptions.Item label="Tên nhóm dây chuyền">
+              <Descriptions.Item label="Tên dây chuyền">
                 {viewingLineGroup.groupLineName}
               </Descriptions.Item>
               <Descriptions.Item label="Phòng">

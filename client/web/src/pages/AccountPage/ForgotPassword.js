@@ -19,7 +19,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
-import "../../styles/pages/ForgotPassword.css";
+import styles from "../../styles/pages/ForgotPassword.module.css";
 
 const { Title, Text } = Typography;
 
@@ -56,13 +56,13 @@ const ForgotPassword = ({ onRequestReset }) => {
       layout="vertical"
       autoComplete="off"
     >
-      <div className="auth-header">
+      <div className={styles.authHeader}>
         <Space direction="vertical" size="small">
-          <KeyOutlined className="forgot-password-icon" />
-          <Title level={2} className="forgot-password-title">
+          <KeyOutlined className={styles.forgotPasswordIcon} />
+          <Title level={2} className={styles.forgotPasswordTitle}>
             Quên mật khẩu
           </Title>
-          <Text className="forgot-password-subtitle">
+          <Text className={styles.forgotPasswordSubtitle}>
             Chọn phương thức nhận mã OTP để đặt lại mật khẩu
           </Text>
         </Space>
@@ -73,27 +73,27 @@ const ForgotPassword = ({ onRequestReset }) => {
         message="Hướng dẫn khôi phục mật khẩu"
         description={
           <div>
-            <p className="forgot-password-guide-step">
+            <p className={styles.forgotPasswordGuideStep}>
               <strong>Bước 1:</strong> Chọn phương thức nhận mã OTP (Email hoặc
               SMS)
             </p>
-            <p className="forgot-password-guide-step">
+            <p className={styles.forgotPasswordGuideStep}>
               <strong>Bước 2:</strong> Nhập email hoặc số điện thoại đã đăng ký
             </p>
-            <p className="forgot-password-guide-step">
+            <p className={styles.forgotPasswordGuideStep}>
               <strong>Bước 3:</strong> Nhập mã OTP 6 số và đặt mật khẩu mới
             </p>
           </div>
         }
         type="info"
         icon={<InfoCircleOutlined />}
-        className="forgot-password-guide-alert"
+        className={styles.forgotPasswordGuideAlert}
       />
 
       {/* Chọn phương thức nhận OTP */}
       <Form.Item
         label="Chọn phương thức nhận mã OTP"
-        className="forgot-password-method-label"
+        className={styles.forgotPasswordMethodLabel}
       >
         <Radio.Group
           value={contactType}
@@ -101,45 +101,43 @@ const ForgotPassword = ({ onRequestReset }) => {
             setContactType(e.target.value);
             form.resetFields(["email", "phone"]);
           }}
-          className="forgot-password-method-group"
+          className={styles.forgotPasswordMethodGroup}
         >
-          <Space direction="vertical" className="forgot-password-method-space">
+          <Space direction="vertical" className={styles.forgotPasswordMethodSpace}>
             <Card
               hoverable
-              className={`method-card ${
-                contactType === "email"
-                  ? "method-card-selected"
-                  : "method-card-default"
-              }`}
+              className={`${styles.methodCard} ${contactType === "email"
+                  ? styles.methodCardSelected
+                  : styles.methodCardDefault
+                }`}
               onClick={() => {
                 setContactType("email");
                 form.resetFields(["email", "phone"]);
               }}
             >
-              <Radio value="email" className="forgot-password-method-radio" />
-              <MailOutlined className="forgot-password-method-icon email-icon" />
+              <Radio value="email" className={styles.forgotPasswordMethodRadio} />
+              <MailOutlined className={styles.forgotPasswordMethodIcon} />
               <strong>Gửi OTP qua Email</strong>
-              <div className="method-card-description">
+              <div className={styles.methodCardDescription}>
                 Mã OTP sẽ được gửi đến email của bạn
               </div>
             </Card>
 
             <Card
               hoverable
-              className={`method-card ${
-                contactType === "phone"
-                  ? "method-card-selected"
-                  : "method-card-default"
-              }`}
+              className={`${styles.methodCard} ${contactType === "phone"
+                  ? styles.methodCardSelected
+                  : styles.methodCardDefault
+                }`}
               onClick={() => {
                 setContactType("phone");
                 form.resetFields(["email", "phone"]);
               }}
             >
-              <Radio value="phone" className="forgot-password-method-radio" />
-              <PhoneOutlined className="forgot-password-method-icon phone-icon" />
+              <Radio value="phone" className={styles.forgotPasswordMethodRadio} />
+              <PhoneOutlined className={styles.forgotPasswordMethodIcon} />
               <strong>Gửi OTP qua SMS</strong>
-              <div className="method-card-description">
+              <div className={styles.methodCardDescription}>
                 Mã OTP sẽ được gửi đến số điện thoại của bạn
               </div>
             </Card>
@@ -156,7 +154,7 @@ const ForgotPassword = ({ onRequestReset }) => {
             { required: true, message: "Vui lòng nhập email!" },
             { type: "email", message: "Email không hợp lệ!" },
           ]}
-          className="forgot-password-input-item"
+          className={styles.forgotPasswordInputItem}
         >
           <Input
             prefix={<MailOutlined />}
@@ -175,7 +173,7 @@ const ForgotPassword = ({ onRequestReset }) => {
               message: "Số điện thoại phải có 10-11 chữ số!",
             },
           ]}
-          className="forgot-password-input-item"
+          className={styles.forgotPasswordInputItem}
         >
           <Input
             prefix={<PhoneOutlined />}
@@ -186,12 +184,12 @@ const ForgotPassword = ({ onRequestReset }) => {
         </Form.Item>
       )}
 
-      <Form.Item className="forgot-password-submit-item">
+      <Form.Item className={styles.forgotPasswordSubmitItem}>
         <Button
-          type="primary"
+          style={{ backgroundColor: "#334766", borderColor: "#334766", color: "#fff" }}
           htmlType="submit"
           loading={loading}
-          className="auth-button"
+          className={styles.authButton}
           icon={contactType === "email" ? <MailOutlined /> : <PhoneOutlined />}
         >
           {loading
@@ -200,11 +198,11 @@ const ForgotPassword = ({ onRequestReset }) => {
         </Button>
       </Form.Item>
 
-      <div className="forgot-password-back-container">
+      <div className={styles.forgotPasswordBackContainer}>
         <Button
           type="link"
           onClick={() => navigate("/login")}
-          className="forgot-password-back-button"
+          className={styles.forgotPasswordBackButton}
           icon={<ArrowLeftOutlined />}
         >
           Quay lại đăng nhập

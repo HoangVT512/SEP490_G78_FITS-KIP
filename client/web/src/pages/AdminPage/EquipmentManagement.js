@@ -38,7 +38,7 @@ import {
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
 import dayjs from "dayjs";
-import "../../styles/pages/AdminManagement.css";
+import styles from "../../styles/pages/EquipmentManagement.module.css";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -183,7 +183,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
           return item;
         })
       );
-      
+
       // Update the mock data with real QR codes
       mockEquipment.splice(0, mockEquipment.length, ...updatedEquipment);
     } catch (error) {
@@ -308,7 +308,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
         },
         errorCorrectionLevel: 'M'
       });
-      
+
       form.setFieldsValue({ qrCode: qrCodeDataURL });
       setQrCodePreview(qrCodeDataURL);
       message.success("Tạo mã QR thành công");
@@ -320,19 +320,19 @@ const EquipmentManagement = ({ showHeader = true }) => {
 
   // Filter equipment
   const filteredEquipment = equipment.filter(item => {
-    const matchesSearch = 
+    const matchesSearch =
       item.equipmentName?.toLowerCase().includes(searchText.toLowerCase()) ||
       item.equipmentCode?.toLowerCase().includes(searchText.toLowerCase()) ||
       item.origin?.toLowerCase().includes(searchText.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || 
+
+    const matchesStatus = statusFilter === "all" ||
       (statusFilter === "active" && item.isActive) ||
       (statusFilter === "inactive" && !item.isActive);
-    
+
     const matchesWorking = workingFilter === "all" ||
       (workingFilter === "working" && item.isWorking) ||
       (workingFilter === "not-working" && !item.isWorking);
-    
+
     const matchesStage = stageFilter === "all" || item.stageId === parseInt(stageFilter);
     const matchesLine = lineFilter === "all" || item.lineId === parseInt(lineFilter);
 
@@ -489,6 +489,9 @@ const EquipmentManagement = ({ showHeader = true }) => {
             description="Bạn có chắc chắn muốn xóa thiết bị này?"
             onConfirm={() => handleDeleteEquipment(record.equipmentId)}
             okText="Có"
+            okButtonProps={{
+              style: { backgroundColor: "#334766", borderColor: "#334766", width: 100 },
+            }}
             cancelText="Không"
           >
             <Tooltip title="Xóa">
@@ -501,19 +504,19 @@ const EquipmentManagement = ({ showHeader = true }) => {
   ];
 
   const content = (
-    <div className="admin-management-container">
-      <div className="admin-management-header">
-        <Title level={3} className="admin-management-title">
-          <ToolOutlined className="admin-management-title-icon" />
+    <div className={styles.container}>
+      {/* <div className={styles.header}>
+        <Title level={3} className={styles.title}>
+          <ToolOutlined className={styles.titleIcon} />
           Quản lý thiết bị
         </Title>
         <Text type="secondary">
           Quản lý thông tin thiết bị, máy móc trong hệ thống sản xuất
         </Text>
-      </div>
+      </div> */}
 
       {/* Filters */}
-      <Card className="admin-management-filter-card">
+      <Card className={styles.filterCard}>
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={12} md={6}>
             <Input
@@ -582,10 +585,10 @@ const EquipmentManagement = ({ showHeader = true }) => {
       </Card>
 
       {/* Action buttons */}
-      <Card className="admin-management-actions-card">
+      <Card className={styles.actionsCard}>
         <Space>
           <Button
-            type="primary"
+            className={styles.addEquipmentButton}
             icon={<PlusOutlined />}
             onClick={handleAddEquipment}
           >
@@ -601,7 +604,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
             Nhập Excel
           </Button>
         </Space>
-        <div className="admin-management-summary">
+        <div className={styles.summary}>
           <Space split={<Divider type="vertical" />}>
             <Text>
               <Badge status="success" />
@@ -620,7 +623,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
       </Card>
 
       {/* Equipment table */}
-      <Card className="admin-management-table-card">
+      <Card className={styles.tableCard}>
         <Table
           columns={columns}
           dataSource={filteredEquipment}
@@ -660,24 +663,27 @@ const EquipmentManagement = ({ showHeader = true }) => {
           setQrCodePreview(null);
           form.resetFields();
         }}
-        width={800}
+        width={1000}
         okText={editingEquipment ? "Cập nhật" : "Thêm"}
         cancelText="Hủy"
+        okButtonProps={{
+          style: { backgroundColor: "#334766", borderColor: "#334766", width: 100 },
+        }}
       >
         <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={12}>
-            {/* Disable editing for equipment code */}
-            <Form.Item
-              name="equipmentCode"
-              label="Mã thiết bị"
-              rules={[
-                { required: true, message: "Vui lòng nhập mã thiết bị!" },
-                { max: 50, message: "Mã thiết bị không được quá 50 ký tự!" },
-              ]}
-            >
-              <Input placeholder="Nhập mã thiết bị (VD: EQ001)" disabled={editingEquipment} />
-            </Form.Item>
+              {/* Disable editing for equipment code */}
+              <Form.Item
+                name="equipmentCode"
+                label="Mã thiết bị"
+                rules={[
+                  { required: true, message: "Vui lòng nhập mã thiết bị!" },
+                  { max: 50, message: "Mã thiết bị không được quá 50 ký tự!" },
+                ]}
+              >
+                <Input placeholder="Nhập mã thiết bị (VD: EQ001)" disabled={editingEquipment} />
+              </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
@@ -825,15 +831,15 @@ const EquipmentManagement = ({ showHeader = true }) => {
           {qrCodePreview && (
             <Row gutter={16}>
               <Col span={24}>
-                <div className="qr-code-preview-container">
-                  <Text className="qr-code-preview-title">
+                <div className={styles.qrCodePreviewContainer}>
+                  <Text className={styles.qrCodePreviewTitle}>
                     Ảnh QRCode:
                   </Text>
-                  <div className="qr-code-preview-image-container">
-                    <img 
-                      src={qrCodePreview} 
-                      alt="QR Code Preview" 
-                      className="qr-code-preview-image"
+                  <div className={styles.qrCodePreviewImageContainer}>
+                    <img
+                      src={qrCodePreview}
+                      alt="QR Code Preview"
+                      className={styles.qrCodePreviewImage}
                     />
                   </div>
                 </div>

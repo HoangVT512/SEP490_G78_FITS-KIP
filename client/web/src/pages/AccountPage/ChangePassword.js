@@ -23,7 +23,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
-import "../../styles/pages/ChangePassword.css";
+import styles from "../../styles/pages/ChangePassword.module.css";
 
 const { Title, Text } = Typography;
 
@@ -60,10 +60,10 @@ const ChangePassword = () => {
   };
 
   const getPasswordStrengthClass = (strength) => {
-    if (strength < 30) return "password-strength-weak";
-    if (strength < 60) return "password-strength-medium";
-    if (strength < 80) return "password-strength-strong";
-    return "password-strength-very-strong";
+    if (strength < 30) return styles.passwordStrengthWeak;
+    if (strength < 60) return styles.passwordStrengthMedium;
+    if (strength < 80) return styles.passwordStrengthStrong;
+    return styles.passwordStrengthVeryStrong;
   };
 
   const getPasswordStrengthText = (strength) => {
@@ -115,6 +115,7 @@ const ChangePassword = () => {
       content: "Bạn có chắc chắn muốn hủy thay đổi mật khẩu?",
       okText: "Xác nhận",
       cancelText: "Tiếp tục",
+      okButtonProps: { className: styles.customOkButton },
       onOk: () => navigate("/profile"),
     });
   };
@@ -139,17 +140,17 @@ const ChangePassword = () => {
 
   return (
     <Layout>
-      <div className="change-password-container">
+      <div className={styles.changePasswordContainer}>
         <Row gutter={[24, 24]}>
           <Col span={24}>
             {/* Header */}
-            <div className="change-password-header">
+            <div className={styles.changePasswordHeader}>
               <Space direction="vertical" align="center">
-                <div className="change-password-header-emoji">🔐</div>
-                <Title level={2} className="change-password-header-title">
+                <div className={styles.changePasswordHeaderEmoji}>🔐</div>
+                <Title level={2} className={styles.changePasswordHeaderTitle}>
                   Đổi mật khẩu
                 </Title>
-                <Text className="change-password-header-text">
+                <Text className={styles.changePasswordHeaderText}>
                   Tạo mật khẩu mạnh để bảo vệ tài khoản của bạn
                 </Text>
               </Space>
@@ -160,11 +161,11 @@ const ChangePassword = () => {
             <Card
               title={
                 <Space>
-                  <SafetyOutlined className="change-password-card-title-icon" />
+                  <SafetyOutlined className={styles.changePasswordCardTitleIcon} />
                   Thay đổi mật khẩu
                 </Space>
               }
-              className="change-password-card"
+              className={styles.changePasswordCard}
               extra={
                 <Button
                   icon={<ArrowLeftOutlined />}
@@ -179,7 +180,7 @@ const ChangePassword = () => {
                 description="Sau khi đổi mật khẩu, bạn sẽ cần đăng nhập lại. Đảm bảo nhớ mật khẩu mới trước khi lưu thay đổi."
                 type="warning"
                 showIcon
-                className="change-password-alert"
+                className={styles.changePasswordAlert}
               />
 
               <Form
@@ -235,13 +236,13 @@ const ChangePassword = () => {
 
                 {/* Password Strength Indicator */}
                 {newPassword && (
-                  <div className="change-password-strength-container">
-                    <div className="change-password-strength-header">
-                      <Text className="change-password-strength-label">
+                  <div className={styles.changePasswordStrengthContainer}>
+                    <div className={styles.changePasswordStrengthHeader}>
+                      <Text className={styles.changePasswordStrengthLabel}>
                         Độ mạnh mật khẩu:
                       </Text>
                       <Text
-                        className={`change-password-strength-text ${getPasswordStrengthClass(
+                        className={`${styles.changePasswordStrengthText} ${getPasswordStrengthClass(
                           passwordStrength
                         )}`}
                       >
@@ -290,20 +291,20 @@ const ChangePassword = () => {
                   <Card
                     size="small"
                     title="Yêu cầu mật khẩu"
-                    className="change-password-requirements-card"
+                    className={styles.changePasswordRequirementsCard}
                   >
                     <Row gutter={[16, 8]}>
                       {requirements.map((req, index) => (
                         <Col xs={24} sm={12} key={index}>
                           <Space>
                             {req.met ? (
-                              <CheckCircleOutlined className="change-password-requirement-icon met" />
+                              <CheckCircleOutlined className={styles.changePasswordRequirementIconMet} />
                             ) : (
-                              <ExclamationCircleOutlined className="change-password-requirement-icon unmet" />
+                              <ExclamationCircleOutlined className={styles.changePasswordRequirementIconUnmet} />
                             )}
                             <Text
-                              className={`change-password-requirement-text ${
-                                req.met ? "met" : "unmet"
+                              className={`${styles.changePasswordRequirementText} ${
+                                req.met ? styles.changePasswordRequirementTextMet : styles.changePasswordRequirementTextUnmet
                               }`}
                             >
                               {req.text}
@@ -328,7 +329,7 @@ const ChangePassword = () => {
                       loading={loading}
                       size="large"
                       icon={<SafetyOutlined />}
-                      className="change-password-submit-button"
+                      className={styles.changePasswordSubmitButton}
                     >
                       Đổi mật khẩu
                     </Button>
