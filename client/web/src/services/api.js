@@ -42,16 +42,30 @@ const apiRequest = async (endpoint, options = {}) => {
   try {
     const response = await fetch(url, config);
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
     const contentType = response.headers.get("content-type");
+    let responseData;
+    
     if (contentType && contentType.includes("application/json")) {
-      return await response.json();
+      responseData = await response.json();
+    } else {
+      responseData = await response.text();
     }
 
-    return await response.text();
+    if (!response.ok) {
+      // Parse error message from server response
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      
+      if (responseData && typeof responseData === 'object') {
+        // If server returns structured error response
+        errorMessage = responseData.message || responseData.error || errorMessage;
+      } else if (typeof responseData === 'string') {
+        errorMessage = responseData || errorMessage;
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    return responseData;
   } catch (error) {
     console.error(`API request failed: ${endpoint}`, error);
     throw error;
