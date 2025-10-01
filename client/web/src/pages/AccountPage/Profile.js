@@ -15,6 +15,7 @@ import {
   Timeline,
   Alert,
   Spin,
+  message,
 } from "antd";
 import {
   UserOutlined,
@@ -28,8 +29,9 @@ import {
   TeamOutlined,
   IdcardOutlined,
   SecurityScanOutlined,
+  DashboardOutlined,
 } from "@ant-design/icons";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import Layout from "../../components/Layout";
 import { authService } from "../../services/authService";
 import styles from "../../styles/pages/Profile.module.css";
@@ -38,6 +40,7 @@ const { Title, Text } = Typography;
 
 const Profile = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
 
@@ -59,6 +62,30 @@ const Profile = () => {
     },
   ]);
 
+  // Check for update success parameter - only runs once on mount
+  useEffect(() => {
+    const hasUpdatedParam = searchParams.get("updated") === "true";
+
+    if (hasUpdatedParam) {
+      // Use setTimeout to ensure message only shows once
+      const timer = setTimeout(() => {
+        message.success(
+          "Cập nhật thành công! Thông tin cá nhân của bạn đã được cập nhật."
+        );
+      }, 0);
+
+      // Remove the parameter from URL immediately
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete("updated");
+      const newUrl = newSearchParams.toString()
+        ? `${window.location.pathname}?${newSearchParams.toString()}`
+        : window.location.pathname;
+      window.history.replaceState({}, "", newUrl);
+
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     const loadUserData = async () => {
       try {
@@ -76,7 +103,9 @@ const Profile = () => {
             position: storedUser.position || "Chưa có chức vụ",
             gender: storedUser.gender || "Chưa cập nhật",
             department: "Chưa phân phòng ban",
-            role: storedUser.roles ? storedUser.roles.join(", ") : "Chưa có vai trò",
+            role: storedUser.roles
+              ? storedUser.roles.join(", ")
+              : "Chưa có vai trò",
             emailConfirmed: storedUser.emailConfirmed || false,
             phoneNumberConfirmed: storedUser.phoneNumberConfirmed || false,
             twoFactorEnabled: storedUser.twoFactorEnabled || false,
@@ -86,12 +115,12 @@ const Profile = () => {
             createdDate: "2024-01-15T09:00:00",
           });
         } else {
-          navigate('/login');
+          navigate("/login");
         }
       } catch (error) {
         console.error("Error loading user data:", error);
         if (!authService.isLoggedIn()) {
-          navigate('/login');
+          navigate("/login");
         }
       } finally {
         setLoading(false);
@@ -107,6 +136,19 @@ const Profile = () => {
 
   const handleChangePassword = () => {
     navigate("/profile/change-password");
+  };
+
+  const getDashboardPath = () => {
+    if (authService.isAdmin()) {
+      return "/admin";
+    }
+    // Default dashboard for regular users
+    return "/dashboard"; // You can change this to appropriate user dashboard
+  };
+
+  const handleBackToDashboard = () => {
+    const dashboardPath = getDashboardPath();
+    navigate(dashboardPath);
   };
 
   const formatDateTime = (dateTime) => {
@@ -130,9 +172,18 @@ const Profile = () => {
   if (loading) {
     return (
       <Layout>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            height: "400px",
+          }}
+        >
           <Spin size="large" />
-          <Text style={{ marginLeft: 16 }}>Đang tải thông tin người dùng...</Text>
+          <Text style={{ marginLeft: 16 }}>
+            Đang tải thông tin người dùng...
+          </Text>
         </div>
       </Layout>
     );
@@ -147,7 +198,7 @@ const Profile = () => {
           type="error"
           showIcon
           action={
-            <Button type="primary" onClick={() => navigate('/login')}>
+            <Button type="primary" onClick={() => navigate("/login")}>
               Đăng nhập lại
             </Button>
           }
@@ -184,6 +235,19 @@ const Profile = () => {
                 />
                 <Tag className={styles.profileRoleTag}>{userInfo.role}</Tag>
               </Space>
+              <div style={{ marginTop: 16 }}>
+                <Button
+                  type="default"
+                  icon={<DashboardOutlined />}
+                  onClick={handleBackToDashboard}
+                  style={{
+                    borderColor: "#334766",
+                    color: "#334766",
+                  }}
+                >
+                  Quay về trang quản lý
+                </Button>
+              </div>
             </div>
           </Col>
 
@@ -237,17 +301,23 @@ const Profile = () => {
                             <MailOutlined className={styles.profileIconEmail} />
                             {userInfo.email}
                             {userInfo.emailConfirmed && (
-                              <CheckCircleOutlined className={styles.profileIconVerified} />
+                              <CheckCircleOutlined
+                                className={styles.profileIconVerified}
+                              />
                             )}
                           </Space>
                         </Descriptions.Item>
                         <Descriptions.Item label="Số điện thoại">
                           <Space>
-                            <PhoneOutlined className={styles.profileIconPhone} />
+                            <PhoneOutlined
+                              className={styles.profileIconPhone}
+                            />
                             {userInfo.phoneNumber || "Chưa cập nhật"}
                             {userInfo.phoneNumberConfirmed &&
                               userInfo.phoneNumber && (
-                                <CheckCircleOutlined className={styles.profileIconVerified} />
+                                <CheckCircleOutlined
+                                  className={styles.profileIconVerified}
+                                />
                               )}
                           </Space>
                         </Descriptions.Item>
@@ -396,13 +466,18 @@ const Profile = () => {
                 items={activityLog.map((activity, index) => ({
                   color: activity.status === "success" ? "#059669" : "#d97706",
                   dot: (
-                    <CheckCircleOutlined className={styles.profileTimelineIcon} />
+                    <CheckCircleOutlined
+                      className={styles.profileTimelineIcon}
+                    />
                   ),
                   children: (
                     <div>
                       <Text strong>{activity.action}</Text>
                       <br />
-                      <Text type="secondary" className={styles.profileTimelineDate}>
+                      <Text
+                        type="secondary"
+                        className={styles.profileTimelineDate}
+                      >
                         {formatDateTime(activity.date)}
                       </Text>
                     </div>

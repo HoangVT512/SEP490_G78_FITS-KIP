@@ -44,13 +44,15 @@ const EditProfile = () => {
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [fileList, setFileList] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
+  const [initialValues, setInitialValues] = useState(null);
+  const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     const loadUserData = async () => {
       try {
         // First try to get user from localStorage
         let user = authService.getStoredUser();
-        
+
         if (!user && authService.isLoggedIn()) {
           // If no user in localStorage but token exists, fetch from API
           user = await authService.getCurrentUser();
@@ -58,10 +60,10 @@ const EditProfile = () => {
             localStorage.setItem("currentUser", JSON.stringify(user));
           }
         }
-        
+
         if (user) {
           setCurrentUser(user);
-          form.setFieldsValue({
+          const initialData = {
             fullName: user.fullName || "",
             email: user.email || "",
             phoneNumber: user.phoneNumber || "",
@@ -69,7 +71,10 @@ const EditProfile = () => {
             employeeCode: user.employeeCode || "",
             department: user.department || "N/A",
             position: user.position || "N/A",
-          });
+          };
+          form.setFieldsValue(initialData);
+          setInitialValues(initialData);
+          setAvatarUrl(user.profileImageUrl || null);
         } else {
           // If no user data and not logged in, redirect to login
           navigate("/login");
@@ -100,15 +105,8 @@ const EditProfile = () => {
       const response = await authService.updateProfile(updateData);
 
       if (response.success) {
-        message.success("Cập nhật thông tin cá nhân thành công!");
-
-        // Show success modal
-        Modal.success({
-          title: "Cập nhật thành công!",
-          content: "Thông tin cá nhân của bạn đã được cập nhật.",
-          okText: "Về trang Profile",
-          onOk: () => navigate("/profile"),
-        });
+        // Navigate to profile page with success parameter
+        navigate("/profile?updated=true");
       } else {
         throw new Error(response.message || "Cập nhật thất bại");
       }
@@ -125,12 +123,17 @@ const EditProfile = () => {
             errors: ["Đã có người dùng sử dụng email này, không được dùng"],
           },
         ]);
-      } else if (error.message.includes("Đã có người dùng sử dụng số điện thoại này")) {
-        errorMessage = "Đã có người dùng sử dụng số điện thoại này, không được dùng.";
+      } else if (
+        error.message.includes("Đã có người dùng sử dụng số điện thoại này")
+      ) {
+        errorMessage =
+          "Đã có người dùng sử dụng số điện thoại này, không được dùng.";
         form.setFields([
           {
             name: "phoneNumber",
-            errors: ["Đã có người dùng sử dụng số điện thoại này, không được dùng"],
+            errors: [
+              "Đã có người dùng sử dụng số điện thoại này, không được dùng",
+            ],
           },
         ]);
       } else if (error.message) {
@@ -143,6 +146,28 @@ const EditProfile = () => {
     }
   };
 
+  const checkForChanges = () => {
+    if (!initialValues) return;
+
+    const currentValues = form.getFieldsValue();
+    const currentAvatarUrl = avatarUrl;
+    const initialAvatarUrl = currentUser?.profileImageUrl || null;
+
+    // Check if any editable field has changed
+    const hasEmailChanged = currentValues.email !== initialValues.email;
+    const hasPhoneChanged =
+      currentValues.phoneNumber !== initialValues.phoneNumber;
+    const hasGenderChanged = currentValues.gender !== initialValues.gender;
+    const hasAvatarChanged = currentAvatarUrl !== initialAvatarUrl;
+
+    const changed =
+      hasEmailChanged ||
+      hasPhoneChanged ||
+      hasGenderChanged ||
+      hasAvatarChanged;
+    setHasChanges(changed);
+  };
+
   const handleAvatarChange = (info) => {
     const { fileList: newFileList } = info;
     setFileList(newFileList);
@@ -151,6 +176,7 @@ const EditProfile = () => {
       // Get this url from response in real world.
       setAvatarUrl(info.file.response?.url);
       message.success("Tải ảnh đại diện thành công!");
+      checkForChanges();
     } else if (info.file.status === "error") {
       message.error("Tải ảnh thất bại!");
     }
@@ -270,8 +296,8 @@ const EditProfile = () => {
                       <li>Chức vụ</li>
                     </ul>
                     <p className={styles.editProfileAlertNote}>
-                      Liên hệ phòng Nhân sự nếu cần thay đổi thông tin do
-                      Admin quản lý.
+                      Liên hệ phòng Nhân sự nếu cần thay đổi thông tin do Admin
+                      quản lý.
                     </p>
                   </div>
                 }
@@ -286,6 +312,7 @@ const EditProfile = () => {
                 onFinish={handleSubmit}
                 autoComplete="off"
                 className={styles.editProfileForm}
+                onValuesChange={checkForChanges}
               >
                 <Row gutter={16}>
                   <Col xs={24} md={12}>
@@ -328,7 +355,10 @@ const EditProfile = () => {
                       name="email"
                       rules={[
                         { required: true, message: "Vui lòng nhập email!" },
-                        { type: "email", message: "Email không đúng định dạng!" },
+                        {
+                          type: "email",
+                          message: "Email không đúng định dạng!",
+                        },
                       ]}
                     >
                       <Input
@@ -344,10 +374,14 @@ const EditProfile = () => {
                       label="Số điện thoại"
                       name="phoneNumber"
                       rules={[
-                        { required: true, message: "Vui lòng nhập số điện thoại!" },
+                        {
+                          required: true,
+                          message: "Vui lòng nhập số điện thoại!",
+                        },
                         {
                           pattern: /^0[0-9]{9}$/,
-                          message: "Số điện thoại phải có đúng 10 số và bắt đầu bằng số 0!",
+                          message:
+                            "Số điện thoại phải có đúng 10 số và bắt đầu bằng số 0!",
                         },
                       ]}
                     >
@@ -434,6 +468,7 @@ const EditProfile = () => {
                       size="large"
                       icon={<SaveOutlined />}
                       className={styles.editProfileSubmitButton}
+                      disabled={!hasChanges}
                     >
                       Lưu thay đổi
                     </Button>

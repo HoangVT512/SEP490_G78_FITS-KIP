@@ -117,9 +117,22 @@ export const authService = {
     }
 
     // Check if user has admin role
+    const adminRoles = [
+      "System Administrator",
+      "Administrator",
+      "Admin",
+      "Manager",
+      "Quản trị viên",
+      "QUANTRI",
+    ];
+
     return (
       user.roles &&
-      (user.roles.includes("Quản trị viên") || user.roles.includes("QUANTRI"))
+      user.roles.some((role) =>
+        adminRoles.some((adminRole) =>
+          role.toLowerCase().includes(adminRole.toLowerCase())
+        )
+      )
     );
   },
 
