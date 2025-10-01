@@ -922,7 +922,6 @@ const RoleManagement = ({ showHeader = true }) => {
               name="description"
               label="Mô tả"
               rules={[
-                { required: true, message: "Vui lòng nhập mô tả vai trò!" },
                 { max: 500, message: "Mô tả không được quá 500 ký tự!" },
               ]}
             >

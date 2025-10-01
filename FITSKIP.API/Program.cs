@@ -46,6 +46,8 @@ namespace FITSKIP.API
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IDepartmentService, FITSKIP.Application.Services.DepartmentService>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.ILineRepository, FITSKIP.Infrastructure.Repositories.LineRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.ILineService, FITSKIP.Application.Services.LineService>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IRoleRepository, FITSKIP.Infrastructure.Repositories.RoleRepository>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IRoleService, FITSKIP.Application.Services.RoleService>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IStageRepository, FITSKIP.Infrastructure.Repositories.StageRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IStageService, FITSKIP.Application.Services.StageService>();
 
