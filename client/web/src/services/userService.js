@@ -1,5 +1,9 @@
 import apiRequest from "./api";
 
+// API Base URL
+const API_URL =
+  process.env.REACT_APP_API_BASE_URL || "https://localhost:7003/api";
+
 // User service functions
 export const userService = {
   // Get all users
@@ -85,15 +89,29 @@ export const userService = {
   },
 
   // Import users from Excel
-  importUsers: async (usersData) => {
+  importUsersFromExcel: async (formData) => {
     try {
-      return await apiRequest("/Users/import", {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/Users/import-excel`, {
         method: "POST",
-        body: JSON.stringify(usersData),
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // Don't set Content-Type for FormData, browser will set it with boundary
+        },
+        body: formData,
       });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.message || "Không thể import người dùng từ Excel."
+        );
+      }
+
+      return await response.json();
     } catch (error) {
       console.error("Error importing users:", error);
-      throw new Error("Không thể import người dùng từ Excel.");
+      throw error;
     }
   },
 

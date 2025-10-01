@@ -14,6 +14,8 @@ public interface IUserService
     Task<IReadOnlyList<Department>> GetDepartmentsAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<User>> GetUsersByRoleAsync(string roleName, CancellationToken cancellationToken = default);
     Task<User?> UpdateProfileAsync(string userId, UpdateProfileRequest request, CancellationToken cancellationToken = default);
+    Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
+    Task<User?> GetByEmployeeCodeAsync(string employeeCode, CancellationToken cancellationToken = default);
 }
 
 

@@ -21,6 +21,7 @@ import {
   Tooltip,
   DatePicker,
   Upload,
+  Alert,
 } from "antd";
 import {
   SearchOutlined,
@@ -54,7 +55,7 @@ import dayjs from "dayjs";
 import { userService } from "../../services/userService";
 import { departmentService } from "../../services/departmentService";
 import { roleService } from "../../services/roleService";
-//import * as XLSX from "xlsx";
+import * as XLSX from "xlsx";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -387,69 +388,88 @@ const UserManagement = ({ showHeader = true }) => {
     },
   ];
 
-  const handleImport = (file) => {
-    setImporting(true);
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheetName = workbook.SheetNames[0];
-        const worksheet = workbook.Sheets[sheetName];
-        const jsonData = XLSX.utils.sheet_to_json(worksheet);
-
-        // Validate and process the data
-        const processedUsers = jsonData.map((row, index) => ({
-          fullName: row["Họ và tên"] || row["Full Name"],
-          employeeCode: row["Mã nhân viên"] || row["Employee Code"],
-          email: row["Email"],
-          phoneNumber: row["Số điện thoại"] || row["Phone Number"],
-          department: row["Phòng ban"] || row["Department"],
-          position: row["Chức vụ"] || row["Position"],
-          role: row["Vai trò"] || row["Role"] || "User",
-          status: row["Trạng thái"] || row["Status"] || "active",
-        }));
-
-        // Validate required fields
-        const invalidRows = [];
-        processedUsers.forEach((user, index) => {
-          if (!user.fullName || !user.employeeCode || !user.email) {
-            invalidRows.push(index + 1);
-          }
-        });
-
-        if (invalidRows.length > 0) {
-          message.error(
-            `Dữ liệu không hợp lệ ở các dòng: ${invalidRows.join(", ")}`
-          );
-          setImporting(false);
-          return;
+  const handleDownloadTemplate = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(
+        `${
+          process.env.REACT_APP_API_URL || "https://localhost:7003"
+        }/api/Users/download-template`,
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
+      );
 
-        // Import users via API
-        userService
-          .importUsers(processedUsers)
-          .then(() => {
-            message.success(
-              `Đã nhập thành công ${processedUsers.length} người dùng`
-            );
-            loadUsers();
-            setIsImportModalVisible(false);
-          })
-          .catch((error) => {
-            console.error("Import error:", error);
-            message.error("Lỗi khi nhập dữ liệu người dùng");
-          })
-          .finally(() => {
-            setImporting(false);
-          });
-      } catch (error) {
-        console.error("Error reading file:", error);
-        message.error("Lỗi khi đọc file Excel");
-        setImporting(false);
+      if (!response.ok) {
+        throw new Error("Không thể tải file mẫu");
       }
-    };
-    reader.readAsArrayBuffer(file);
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "UserImportTemplate.xlsx";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      message.success("Đã tải file mẫu thành công!");
+    } catch (error) {
+      console.error("Error downloading template:", error);
+      message.error("Lỗi khi tải file mẫu");
+    }
+  };
+
+  const handleImport = async (file) => {
+    setImporting(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const response = await userService.importUsersFromExcel(formData);
+
+      if (response.successCount > 0) {
+        message.success(
+          `Đã nhập thành công ${response.successCount}/${response.totalUsers} người dùng!`
+        );
+      }
+
+      if (response.failedCount > 0) {
+        // Hiển thị chi tiết các user bị lỗi
+        Modal.error({
+          title: `${response.failedCount} người dùng không thể import`,
+          width: 700,
+          content: (
+            <div style={{ maxHeight: "400px", overflow: "auto" }}>
+              <ul>
+                {response.failedUsers.map((failed, index) => (
+                  <li key={index} style={{ marginBottom: "8px" }}>
+                    <strong>{failed.userName || failed.email}</strong>:{" "}
+                    {failed.error}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ),
+        });
+      }
+
+      // Reload danh sách users
+      loadUsers();
+      setIsImportModalVisible(false);
+    } catch (error) {
+      console.error("Error importing file:", error);
+      const errorMessage = error.message || "Lỗi khi import file Excel";
+      message.error(errorMessage);
+    } finally {
+      setImporting(false);
+    }
+
     return false; // Prevent default upload behavior
   };
 
@@ -761,43 +781,82 @@ const UserManagement = ({ showHeader = true }) => {
         open={isImportModalVisible}
         onCancel={() => setIsImportModalVisible(false)}
         footer={null}
-        width={600}
+        width={700}
       >
         <div style={{ padding: "20px 0" }}>
-          <div style={{ marginBottom: "16px" }}>
-            <Text>
-              Chọn file Excel chứa danh sách người dùng. File phải có các cột:
-              <br />
-              - Họ và tên (bắt buộc)
-              <br />
-              - Mã nhân viên (bắt buộc)
-              <br />
-              - Email (bắt buộc)
-              <br />
-              - Số điện thoại
-              <br />
-              - Phòng ban
-              <br />
-              - Chức vụ
-              <br />
-              - Vai trò (mặc định: User)
-              <br />- Trạng thái (mặc định: active)
-            </Text>
-          </div>
-          <Upload
-            accept=".xlsx,.xls"
-            beforeUpload={handleImport}
-            showUploadList={false}
-            disabled={importing}
-          >
+          <Alert
+            message="Hướng dẫn import"
+            description={
+              <div>
+                <p style={{ marginBottom: 8 }}>
+                  File Excel cần có các cột theo thứ tự:
+                </p>
+                <ol style={{ paddingLeft: 20, marginBottom: 8 }}>
+                  <li>
+                    <strong>UserName</strong> - Tên đăng nhập (bắt buộc)
+                  </li>
+                  <li>
+                    <strong>Email</strong> - Email (bắt buộc, phải duy nhất)
+                  </li>
+                  <li>
+                    <strong>Password</strong> - Mật khẩu (để trống = mật khẩu
+                    mặc định)
+                  </li>
+                  <li>
+                    <strong>FullName</strong> - Họ và tên đầy đủ
+                  </li>
+                  <li>
+                    <strong>Gender</strong> - Giới tính (Male/Female)
+                  </li>
+                  <li>
+                    <strong>EmployeeCode</strong> - Mã nhân viên (phải duy nhất)
+                  </li>
+                  <li>
+                    <strong>Position</strong> - Chức vụ
+                  </li>
+                  <li>
+                    <strong>PhoneNumber</strong> - Số điện thoại
+                  </li>
+                </ol>
+                <p style={{ color: "#ff4d4f", marginTop: 8 }}>
+                  ⚠️ Lưu ý: Email và Mã nhân viên phải là duy nhất, không được
+                  trùng với dữ liệu đã có
+                </p>
+              </div>
+            }
+            type="info"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+
+          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
             <Button
-              icon={<UploadOutlined />}
-              loading={importing}
-              style={{ width: "100%" }}
+              icon={<ExportOutlined />}
+              onClick={handleDownloadTemplate}
+              block
+              type="dashed"
             >
-              {importing ? "Đang nhập dữ liệu..." : "Chọn file Excel"}
+              Tải file mẫu Excel
             </Button>
-          </Upload>
+
+            <Upload
+              accept=".xlsx,.xls"
+              beforeUpload={handleImport}
+              showUploadList={false}
+              disabled={importing}
+            >
+              <Button
+                icon={<UploadOutlined />}
+                loading={importing}
+                type="primary"
+                block
+              >
+                {importing
+                  ? "Đang nhập dữ liệu..."
+                  : "Chọn file Excel để import"}
+              </Button>
+            </Upload>
+          </Space>
         </div>
       </Modal>
 

@@ -243,6 +243,22 @@ public class UsersController : ControllerBase
         }
     }
 
+    private bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return false;
+
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     [HttpPost("import-excel")]
     public async Task<ActionResult> ImportUsersFromExcel(IFormFile file, CancellationToken cancellationToken)
     {
@@ -285,6 +301,60 @@ public class UsersController : ControllerBase
                 {
                     try
                     {
+                        // Validation 1: Check if username already exists
+                        var existingUserByUsername = await userService.GetByUsernameAsync(request.UserName, cancellationToken);
+                        if (existingUserByUsername != null)
+                        {
+                            failedUsers.Add(new
+                            {
+                                UserName = request.UserName,
+                                Email = request.Email,
+                                Error = $"Tên đăng nhập '{request.UserName}' đã tồn tại trong hệ thống"
+                            });
+                            continue;
+                        }
+
+                        // Validation 2: Check if email already exists
+                        var existingUserByEmail = await userService.GetByEmailAsync(request.Email, cancellationToken);
+                        if (existingUserByEmail != null)
+                        {
+                            failedUsers.Add(new
+                            {
+                                UserName = request.UserName,
+                                Email = request.Email,
+                                Error = $"Email '{request.Email}' đã tồn tại trong hệ thống"
+                            });
+                            continue;
+                        }
+
+                        // Validation 3: Check if employee code already exists
+                        if (!string.IsNullOrEmpty(request.EmployeeCode))
+                        {
+                            var existingUserByEmployeeCode = await userService.GetByEmployeeCodeAsync(request.EmployeeCode, cancellationToken);
+                            if (existingUserByEmployeeCode != null)
+                            {
+                                failedUsers.Add(new
+                                {
+                                    UserName = request.UserName,
+                                    Email = request.Email,
+                                    Error = $"Mã nhân viên '{request.EmployeeCode}' đã tồn tại trong hệ thống"
+                                });
+                                continue;
+                            }
+                        }
+
+                        // Validation 4: Check email format
+                        if (!IsValidEmail(request.Email))
+                        {
+                            failedUsers.Add(new
+                            {
+                                UserName = request.UserName,
+                                Email = request.Email,
+                                Error = "Email không hợp lệ"
+                            });
+                            continue;
+                        }
+
                         var passwordHash = !string.IsNullOrEmpty(request.Password) ?
                             Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.Password)) :
                             null;
