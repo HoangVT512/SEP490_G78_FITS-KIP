@@ -8,7 +8,9 @@ export const lineService = {
       return response;
     } catch (error) {
       console.error("Get lines error:", error);
-      throw new Error(error.message || "Lấy danh sách chuyền sản xuất thất bại");
+      throw new Error(
+        error.message || "Lấy danh sách chuyền sản xuất thất bại"
+      );
     }
   },
 
@@ -19,7 +21,9 @@ export const lineService = {
       return response;
     } catch (error) {
       console.error("Get line by id error:", error);
-      throw new Error(error.message || "Lấy thông tin chuyền sản xuất thất bại");
+      throw new Error(
+        error.message || "Lấy thông tin chuyền sản xuất thất bại"
+      );
     }
   },
 
@@ -51,16 +55,18 @@ export const lineService = {
     }
   },
 
-  // Xóa chuyền sản xuất
-  deleteLine: async (id) => {
+  // Thay đổi trạng thái hoạt động của chuyền sản xuất
+  toggleLineStatus: async (id) => {
     try {
-      const response = await apiRequest(`/Lines/${id}`, {
-        method: "DELETE",
+      const response = await apiRequest(`/Lines/${id}/toggle-status`, {
+        method: "PATCH",
       });
       return response;
     } catch (error) {
-      console.error("Delete line error:", error);
-      throw new Error(error.message || "Xóa chuyền sản xuất thất bại");
+      console.error("Toggle line status error:", error);
+      throw new Error(
+        error.message || "Thay đổi trạng thái chuyền sản xuất thất bại"
+      );
     }
   },
 
@@ -71,7 +77,9 @@ export const lineService = {
       return response;
     } catch (error) {
       console.error("Get lines by department error:", error);
-      throw new Error(error.message || "Lấy chuyền sản xuất theo phòng ban thất bại");
+      throw new Error(
+        error.message || "Lấy chuyền sản xuất theo phòng ban thất bại"
+      );
     }
   },
 };

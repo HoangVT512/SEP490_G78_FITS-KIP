@@ -8,7 +8,7 @@ public interface ILineRepository
     Task<Line?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<Line> CreateAsync(Line line, CancellationToken cancellationToken = default);
     Task<Line?> UpdateAsync(Line line, CancellationToken cancellationToken = default);
-    Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Line>> GetByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);
     Task<bool> HasDependenciesAsync(int lineId, CancellationToken cancellationToken = default);
+    Task<Line?> ToggleLineStatusAsync(int id, CancellationToken cancellationToken = default);
 }

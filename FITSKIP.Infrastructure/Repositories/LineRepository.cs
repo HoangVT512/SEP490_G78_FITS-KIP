@@ -35,12 +35,12 @@ public class LineRepository : ILineRepository
     {
         await _context.Lines.AddAsync(line, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         // Load the department after saving
         await _context.Entry(line)
             .Reference(l => l.Department)
             .LoadAsync(cancellationToken);
-            
+
         return line;
     }
 
@@ -48,24 +48,13 @@ public class LineRepository : ILineRepository
     {
         _context.Lines.Update(line);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         // Load the department after updating
         await _context.Entry(line)
             .Reference(l => l.Department)
             .LoadAsync(cancellationToken);
-            
+
         return line;
-    }
-
-    public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
-    {
-        var line = await GetByIdAsync(id, cancellationToken);
-        if (line == null)
-            return false;
-
-        _context.Lines.Remove(line);
-        await _context.SaveChangesAsync(cancellationToken);
-        return true;
     }
 
     public async Task<IReadOnlyList<Line>> GetByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default)
@@ -100,5 +89,17 @@ public class LineRepository : ILineRepository
         if (hasUserLines) return true;
 
         return false;
+    }
+
+    public async Task<Line?> ToggleLineStatusAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var line = await GetByIdAsync(id, cancellationToken);
+        if (line == null)
+            return null;
+
+        line.IsActive = !line.IsActive;
+        await _context.SaveChangesAsync(cancellationToken);
+
+        return line;
     }
 }

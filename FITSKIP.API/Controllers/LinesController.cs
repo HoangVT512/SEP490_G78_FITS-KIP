@@ -99,24 +99,24 @@ public class LinesController : ControllerBase
     }
 
     /// <summary>
-    /// Xóa chuyền sản xuất
+    /// Thay đổi trạng thái hoạt động của chuyền sản xuất
     /// </summary>
-    [HttpDelete("{id}")]
-    [Authorize(Roles = "Quản trị viên")]
-    public async Task<IActionResult> DeleteLine(int id)
+    [HttpPatch("{id}/toggle-status")]
+    [Authorize(Roles = "Quản trị viên,Quản lý")]
+    public async Task<IActionResult> ToggleLineStatus(int id)
     {
         try
         {
-            var result = await _lineService.DeleteLineAsync(id);
-            if (!result)
+            var line = await _lineService.ToggleLineStatusAsync(id);
+            if (line == null)
             {
                 return NotFound(new { success = false, message = "Không tìm thấy chuyền sản xuất" });
             }
-            return Ok(new { success = true, message = "Xóa chuyền sản xuất thành công" });
+            return Ok(new { success = true, data = line, message = $"Chuyền sản xuất đã được {(line.IsActive ? "kích hoạt" : "vô hiệu hóa")}" });
         }
         catch (Exception ex)
         {
-            return BadRequest(new { success = false, message = "Có lỗi xảy ra khi xóa chuyền sản xuất", details = ex.Message });
+            return BadRequest(new { success = false, message = "Có lỗi xảy ra khi thay đổi trạng thái chuyền sản xuất", details = ex.Message });
         }
     }
 }

@@ -65,20 +65,13 @@ public class LineService : ILineService
         return await _lineRepository.UpdateAsync(existingLine, cancellationToken);
     }
 
-    public async Task<bool> DeleteLineAsync(int id, CancellationToken cancellationToken = default)
-    {
-        // Check if line has any dependencies before deletion
-        var hasDependencies = await _lineRepository.HasDependenciesAsync(id, cancellationToken);
-        if (hasDependencies)
-        {
-            throw new InvalidOperationException("Đã có giai đoạn trong chuyền, không thể xóa");
-        }
-
-        return await _lineRepository.DeleteAsync(id, cancellationToken);
-    }
-
     public Task<IReadOnlyList<Line>> GetLinesByDepartmentAsync(int departmentId, CancellationToken cancellationToken = default)
     {
         return _lineRepository.GetByDepartmentIdAsync(departmentId, cancellationToken);
+    }
+
+    public Task<Line?> ToggleLineStatusAsync(int id, CancellationToken cancellationToken = default)
+    {
+        return _lineRepository.ToggleLineStatusAsync(id, cancellationToken);
     }
 }

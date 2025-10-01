@@ -9,6 +9,6 @@ public interface ILineService
     Task<Line> CreateLineAsync(CreateLineRequest request, CancellationToken cancellationToken = default);
     Task<Line?> GetLineByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<Line?> UpdateLineAsync(int id, UpdateLineRequest request, CancellationToken cancellationToken = default);
-    Task<bool> DeleteLineAsync(int id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Line>> GetLinesByDepartmentAsync(int departmentId, CancellationToken cancellationToken = default);
+    Task<Line?> ToggleLineStatusAsync(int id, CancellationToken cancellationToken = default);
 }

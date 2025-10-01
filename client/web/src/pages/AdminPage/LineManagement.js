@@ -47,6 +47,8 @@ import {
   StopOutlined,
   ThunderboltOutlined,
   TeamOutlined,
+  LockOutlined,
+  UnlockOutlined,
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
 import { lineService } from "../../services/lineService";
@@ -136,39 +138,61 @@ const LineManagement = ({ showHeader = true }) => {
         });
         setIsModalVisible(true);
         break;
-      case "delete":
+      case "toggle-status":
         Modal.confirm({
-          title: "Xác nhận xóa dây chuyền",
+          title: line.isActive
+            ? "Xác nhận khóa dây chuyền"
+            : "Xác nhận mở khóa dây chuyền",
           content: (
             <div>
-              <p><strong>Tên chuyền:</strong> {line.lineName}</p>
-              <p><strong>Phòng ban:</strong> {line.department?.departmentName || "Chưa phân phòng"}</p>
-              <p><strong>Trạng thái:</strong> {line.isActive ? "Hoạt động" : "Dừng hoạt động"}</p>
-              <p style={{ color: "#ff4d4f", marginTop: "16px" }}>
-                <ExclamationCircleOutlined style={{ marginRight: "8px" }} />
-                Bạn có chắc chắn muốn xóa dây chuyền này không?
+              <p>
+                <strong>Tên dây chuyền:</strong> {line.lineName}
+              </p>
+              <p>
+                <strong>Phòng ban:</strong>{" "}
+                {line.department?.departmentName || "Chưa phân phòng"}
+              </p>
+              <p>
+                <strong>Trạng thái hiện tại:</strong>{" "}
+                {line.isActive ? "Hoạt động" : "Dừng hoạt động"}
+              </p>
+              <p
+                style={{
+                  color: line.isActive ? "#ff4d4f" : "#52c41a",
+                  marginTop: "16px",
+                }}
+              >
+                {line.isActive ? (
+                  <LockOutlined style={{ marginRight: "8px" }} />
+                ) : (
+                  <UnlockOutlined style={{ marginRight: "8px" }} />
+                )}
+                Bạn có chắc chắn muốn {line.isActive ? "khóa" : "mở khóa"} dây
+                chuyền này không?
               </p>
             </div>
           ),
-          okText: "Xóa",
+          okText: line.isActive ? "Khóa" : "Mở khóa",
           cancelText: "Hủy",
-          okButtonProps: { danger: true },
+          okButtonProps: { danger: line.isActive },
           onOk: async () => {
             try {
-              const response = await lineService.deleteLine(line.lineId);
+              const response = await lineService.toggleLineStatus(line.lineId);
               if (response.success) {
-                message.success("Đã xóa chuyền sản xuất thành công");
+                message.success(
+                  `Đã ${
+                    line.isActive ? "khóa" : "mở khóa"
+                  } dây chuyền thành công`
+                );
                 loadLines();
               } else {
-                message.error(response.message || "Xóa chuyền sản xuất thất bại");
+                message.error(
+                  response.message || "Thay đổi trạng thái dây chuyền thất bại"
+                );
               }
             } catch (error) {
-              console.error("Delete line error:", error);
-              if (error.message && error.message.includes("HTTP error! status: 400")) {
-                message.error("Đã có giai đoạn trong chuyền, không thể xóa");
-              } else {
-                message.error("Xóa chuyền sản xuất thất bại");
-              }
+              console.error("Toggle line status error:", error);
+              message.error("Thay đổi trạng thái dây chuyền thất bại");
             }
           },
         });
@@ -195,37 +219,42 @@ const LineManagement = ({ showHeader = true }) => {
       type: "divider",
     },
     {
-      key: "delete",
-      icon: <DeleteOutlined />,
-      label: "Xóa",
-      danger: true,
-      onClick: () => handleAction("delete", line),
+      key: "toggle-status",
+      icon: line.isActive ? <LockOutlined /> : <UnlockOutlined />,
+      label: line.isActive ? "Khóa dây chuyền" : "Mở khóa dây chuyền",
+      onClick: () => handleAction("toggle-status", line),
     },
   ];
 
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
-      
+
       if (editingLine) {
         // Update existing line
         try {
-          const response = await lineService.updateLine(editingLine.lineId, values);
+          const response = await lineService.updateLine(
+            editingLine.lineId,
+            values
+          );
           if (response.success) {
-            message.success("Cập nhật chuyền sản xuất thành công!");
+            message.success("Cập nhật dây chuyền thành công!");
             setIsModalVisible(false);
             setEditingLine(null);
             form.resetFields();
             loadLines(); // Reload data
           } else {
-            message.error(response.message || "Cập nhật chuyền sản xuất thất bại");
+            message.error(response.message || "Cập nhật dây chuyền thất bại");
           }
         } catch (error) {
           console.error("Update line error:", error);
-          if (error.message && error.message.includes("đã tồn tại trong phòng ban")) {
-            message.error(`Tên chuyền đã tồn tại trong phòng ban này`);
+          if (
+            error.message &&
+            error.message.includes("đã tồn tại trong phòng ban")
+          ) {
+            message.error(`Tên dây chuyền đã tồn tại trong phòng ban này`);
           } else {
-            message.error("Cập nhật chuyền sản xuất thất bại");
+            message.error("Cập nhật dây chuyền thất bại");
           }
         }
       } else {
@@ -233,19 +262,22 @@ const LineManagement = ({ showHeader = true }) => {
         try {
           const response = await lineService.createLine(values);
           if (response.success) {
-            message.success("Tạo chuyền sản xuất mới thành công!");
+            message.success("Tạo dây chuyền mới thành công!");
             setIsModalVisible(false);
             form.resetFields();
             loadLines(); // Reload data
           } else {
-            message.error(response.message || "Tạo chuyền sản xuất thất bại");
+            message.error(response.message || "Tạo dây chuyền thất bại");
           }
         } catch (error) {
           console.error("Create line error:", error);
-          if (error.message && error.message.includes("đã tồn tại trong phòng ban")) {
-            message.error(`Tên chuyền đã tồn tại trong phòng ban này`);
+          if (
+            error.message &&
+            error.message.includes("đã tồn tại trong phòng ban")
+          ) {
+            message.error(`Tên dây chuyền đã tồn tại trong phòng ban này`);
           } else {
-            message.error("Tạo chuyền sản xuất thất bại");
+            message.error("Tạo dây chuyền thất bại");
           }
         }
       }
@@ -275,7 +307,7 @@ const LineManagement = ({ showHeader = true }) => {
 
   const columns = [
     {
-      title: "Chuyền sản xuất",
+      title: "Dây chuyền",
       key: "line",
       width: 280,
       render: (_, record) => (
@@ -346,15 +378,17 @@ const LineManagement = ({ showHeader = true }) => {
   const filteredLines = lines.filter((line) => {
     const matchesSearch =
       line.lineName?.toLowerCase().includes(searchText.toLowerCase()) ||
-      line.department?.departmentName?.toLowerCase().includes(searchText.toLowerCase());
+      line.department?.departmentName
+        ?.toLowerCase()
+        .includes(searchText.toLowerCase());
 
     const matchesStatus =
-      filters.status === "all" || 
+      filters.status === "all" ||
       (filters.status === "active" && line.isActive) ||
       (filters.status === "inactive" && !line.isActive);
-      
+
     const matchesDepartment =
-      filters.department === "all" || 
+      filters.department === "all" ||
       line.departmentId?.toString() === filters.department;
 
     return matchesSearch && matchesStatus && matchesDepartment;
@@ -389,9 +423,10 @@ const LineManagement = ({ showHeader = true }) => {
             <Statistic
               title="Hiệu suất trung bình"
               value={
-                lines.length > 0 
+                lines.length > 0
                   ? Math.round(
-                      lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) / lines.length
+                      lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) /
+                        lines.length
                     )
                   : 0
               }
@@ -462,14 +497,19 @@ const LineManagement = ({ showHeader = true }) => {
           <Col xs={24} sm={8} md={4}>
             <Select
               value={filters.department}
-              onChange={(value) => setFilters({ ...filters, department: value })}
+              onChange={(value) =>
+                setFilters({ ...filters, department: value })
+              }
               style={{ width: "100%" }}
               placeholder="Phòng"
               size="large"
             >
               <Option value="all">Tất cả phòng</Option>
               {departments.map((department) => (
-                <Option key={department.departmentId} value={department.departmentId.toString()}>
+                <Option
+                  key={department.departmentId}
+                  value={department.departmentId.toString()}
+                >
                   {department.departmentName}
                 </Option>
               ))}
@@ -518,11 +558,29 @@ const LineManagement = ({ showHeader = true }) => {
           locale={{
             emptyText: (
               <div style={{ padding: "40px", textAlign: "center" }}>
-                <GroupOutlined style={{ fontSize: "48px", color: "#d9d9d9", marginBottom: "16px" }} />
-                <div style={{ fontSize: "16px", color: "#595959", marginBottom: "8px" }}>
+                <GroupOutlined
+                  style={{
+                    fontSize: "48px",
+                    color: "#d9d9d9",
+                    marginBottom: "16px",
+                  }}
+                />
+                <div
+                  style={{
+                    fontSize: "16px",
+                    color: "#595959",
+                    marginBottom: "8px",
+                  }}
+                >
                   Chưa có dây chuyền nào
                 </div>
-                <div style={{ fontSize: "14px", color: "#8c8c8c", marginBottom: "16px" }}>
+                <div
+                  style={{
+                    fontSize: "14px",
+                    color: "#8c8c8c",
+                    marginBottom: "16px",
+                  }}
+                >
                   Hãy thêm dây chuyền đầu tiên để bắt đầu quản lý sản xuất
                 </div>
                 <Button
@@ -538,18 +596,14 @@ const LineManagement = ({ showHeader = true }) => {
                   Thêm dây chuyền đầu tiên
                 </Button>
               </div>
-            )
+            ),
           }}
         />
       </Card>
 
       {/* Create/Edit Modal */}
       <Modal
-        title={
-          editingLine
-            ? "Chỉnh sửa dây chuyền"
-            : "Thêm dây chuyền mới"
-        }
+        title={editingLine ? "Chỉnh sửa dây chuyền" : "Thêm dây chuyền mới"}
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
@@ -557,7 +611,11 @@ const LineManagement = ({ showHeader = true }) => {
         okText={editingLine ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
         okButtonProps={{
-          style: { backgroundColor: "#334766", borderColor: "#334766", width: 100 },
+          style: {
+            backgroundColor: "#334766",
+            borderColor: "#334766",
+            width: 100,
+          },
         }}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
@@ -582,13 +640,20 @@ const LineManagement = ({ showHeader = true }) => {
                 label="Phòng ban"
                 rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
               >
-                <Select 
+                <Select
                   placeholder="Chọn phòng ban"
                   loading={departments.length === 0}
-                  notFoundContent={departments.length === 0 ? "Đang tải..." : "Không có phòng ban nào"}
+                  notFoundContent={
+                    departments.length === 0
+                      ? "Đang tải..."
+                      : "Không có phòng ban nào"
+                  }
                 >
                   {departments.map((department) => (
-                    <Option key={department.departmentId} value={department.departmentId}>
+                    <Option
+                      key={department.departmentId}
+                      value={department.departmentId}
+                    >
                       {department.departmentName}
                     </Option>
                   ))}
@@ -662,7 +727,11 @@ const LineManagement = ({ showHeader = true }) => {
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Số giai đoạn">
-                <Badge count={viewingLine.stages?.length || 0} showZero style={{ backgroundColor: "#334766" }} />
+                <Badge
+                  count={viewingLine.stages?.length || 0}
+                  showZero
+                  style={{ backgroundColor: "#334766" }}
+                />
               </Descriptions.Item>
             </Descriptions>
 
@@ -670,7 +739,9 @@ const LineManagement = ({ showHeader = true }) => {
             <Card
               title={
                 <span>
-                  <SettingOutlined style={{ marginRight: "8px", color: "#334766" }} />
+                  <SettingOutlined
+                    style={{ marginRight: "8px", color: "#334766" }}
+                  />
                   Danh sách giai đoạn ({viewingLine.stages?.length || 0})
                 </span>
               }
@@ -685,20 +756,28 @@ const LineManagement = ({ showHeader = true }) => {
                       <List.Item.Meta
                         avatar={
                           <Avatar
-                            style={{ backgroundColor: "#334766", color: "#fff" }}
+                            style={{
+                              backgroundColor: "#334766",
+                              color: "#fff",
+                            }}
                           >
                             {index + 1}
                           </Avatar>
                         }
                         title={
                           <Space>
-                            <span style={{ fontWeight: "600" }}>{stage.stageName}</span>
-                            <Tag color="blue" size="small">Giai đoạn {index + 1}</Tag>
+                            <span style={{ fontWeight: "600" }}>
+                              {stage.stageName}
+                            </span>
+                            <Tag color="blue" size="small">
+                              Giai đoạn {index + 1}
+                            </Tag>
                           </Space>
                         }
                         description={
                           <Text type="secondary">
-                            ID: {stage.stageId} • Thuộc dây chuyền: {viewingLine.lineName}
+                            ID: {stage.stageId} • Thuộc dây chuyền:{" "}
+                            {viewingLine.lineName}
                           </Text>
                         }
                       />
@@ -706,8 +785,16 @@ const LineManagement = ({ showHeader = true }) => {
                   )}
                 />
               ) : (
-                <div style={{ textAlign: "center", padding: "20px", color: "#8c8c8c" }}>
-                  <SettingOutlined style={{ fontSize: "24px", marginBottom: "8px" }} />
+                <div
+                  style={{
+                    textAlign: "center",
+                    padding: "20px",
+                    color: "#8c8c8c",
+                  }}
+                >
+                  <SettingOutlined
+                    style={{ fontSize: "24px", marginBottom: "8px" }}
+                  />
                   <div>Chưa có giai đoạn nào trong dây chuyền này</div>
                 </div>
               )}
