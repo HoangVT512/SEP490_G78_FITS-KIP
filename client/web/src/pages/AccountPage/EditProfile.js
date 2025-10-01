@@ -31,6 +31,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
+import { authService } from "../../services/authService";
 import styles from "../../styles/pages/EditProfile.module.css";
 
 const { Title, Text } = Typography;
@@ -42,74 +43,72 @@ const EditProfile = () => {
   const [loading, setLoading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(null);
   const [fileList, setFileList] = useState([]);
-
-  // Mock current user data - replace with real API call
-  const [currentUser] = useState({
-    id: "user-123",
-    fullName: "Nguyễn Văn Admin",
-    employeeCode: "ADM001",
-    email: "admin@congty.com",
-    phoneNumber: "0123456789",
-    position: "Quản trị viên hệ thống",
-    gender: "Nam",
-    department: "Phòng IT",
-    avatar: null,
-  });
-
-  // Department options - no longer needed for display only
-  // const departmentOptions = [
-  //   { value: "IT", label: "Phòng IT" },
-  //   { value: "HR", label: "Phòng Nhân sự" },
-  //   { value: "PRODUCTION", label: "Phòng Sản xuất" },
-  //   { value: "QC", label: "Phòng Kiểm tra chất lượng" },
-  //   { value: "MAINTENANCE", label: "Phòng Bảo trì" },
-  //   { value: "FINANCE", label: "Phòng Tài chính" },
-  // ];
-
-  // Position options - no longer needed for display only
-  // const positionOptions = [
-  //   { value: "Quản trị viên hệ thống", label: "Quản trị viên hệ thống" },
-  //   { value: "Quản lý", label: "Quản lý" },
-  //   { value: "Kỹ sư", label: "Kỹ sư" },
-  //   { value: "Kỹ thuật viên", label: "Kỹ thuật viên" },
-  //   { value: "Nhân viên", label: "Nhân viên" },
-  //   { value: "Thực tập sinh", label: "Thực tập sinh" },
-  // ];
+  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
-    // Initialize form with current user data
-    form.setFieldsValue({
-      fullName: currentUser.fullName,
-      email: currentUser.email,
-      phoneNumber: currentUser.phoneNumber,
-      gender: currentUser.gender,
-      // Note: department and position are disabled and managed by Admin
-    });
-  }, [currentUser, form]);
+    // Get current user from localStorage and initialize form
+    const user = authService.getStoredUser();
+    if (user) {
+      setCurrentUser(user);
+      form.setFieldsValue({
+        fullName: user.fullName || "",
+        email: user.email || "",
+        phoneNumber: user.phoneNumber || "",
+        gender: user.gender || "",
+      });
+    } else {
+      // If no user data, redirect to login
+      navigate("/login");
+    }
+  }, [form, navigate]);
 
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // Prepare data to update (exclude admin-managed fields)
+      // Prepare data to update (only editable fields)
       const updateData = {
         fullName: values.fullName,
         email: values.email,
-        phoneNumber: values.phoneNumber,
+        phoneNumber: values.phoneNumber || "",
         gender: values.gender,
-        // Note: department and position are managed by Admin only
+        profileImageUrl: avatarUrl, // Include avatar if uploaded
       };
 
-      // TODO: API call to update profile
       console.log("Updating profile:", updateData);
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const response = await authService.updateProfile(updateData);
 
-      message.success("Cập nhật thông tin cá nhân thành công!");
-      navigate("/profile");
+      if (response.success) {
+        message.success("Cập nhật thông tin cá nhân thành công!");
+
+        // Show success modal
+        Modal.success({
+          title: "Cập nhật thành công!",
+          content: "Thông tin cá nhân của bạn đã được cập nhật.",
+          okText: "Về trang Profile",
+          onOk: () => navigate("/profile"),
+        });
+      } else {
+        throw new Error(response.message || "Cập nhật thất bại");
+      }
     } catch (error) {
-      message.error("Có lỗi xảy ra khi cập nhật thông tin!");
       console.error("Update profile error:", error);
+
+      let errorMessage = "Có lỗi xảy ra khi cập nhật thông tin!";
+
+      if (error.message.includes("Email này đã được sử dụng")) {
+        errorMessage = "Email này đã được sử dụng bởi người dùng khác!";
+        form.setFields([
+          {
+            name: "email",
+            errors: ["Email này đã được sử dụng bởi người dùng khác"],
+          },
+        ]);
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -152,6 +151,14 @@ const EditProfile = () => {
       onOk: () => navigate("/profile"),
     });
   };
+
+  if (!currentUser) {
+    return (
+      <Layout>
+        <div>Đang tải...</div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

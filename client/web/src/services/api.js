@@ -5,8 +5,23 @@ const API_BASE_URL =
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
 
-  // Get token from sessionStorage
-  const token = sessionStorage.getItem("token");
+  // Get token from localStorage (consistent with authService)
+  const token = localStorage.getItem("token");
+  
+  // Debug: Log token status with more details
+  console.log('API Request Debug:', {
+    endpoint,
+    hasToken: !!token,
+    tokenLength: token ? token.length : 0,
+    tokenPreview: token ? `${token.substring(0, 20)}...` : 'null',
+    url
+  });
+
+  // Check if user is logged in
+  if (!token && endpoint !== '/Auth/login') {
+    console.error('No token found for protected endpoint:', endpoint);
+    throw new Error('Authentication required');
+  }
 
   const defaultOptions = {
     headers: {
@@ -20,6 +35,9 @@ const apiRequest = async (endpoint, options = {}) => {
     ...defaultOptions,
     ...options,
   };
+
+  // Debug: Log the actual headers being sent
+  console.log('Request headers:', config.headers);
 
   try {
     const response = await fetch(url, config);

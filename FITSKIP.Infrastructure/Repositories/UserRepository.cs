@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
 using FITSKIP.Infrastructure.DbContexts;
+using FITSKIP.Domain.DTO;
 
 namespace FITSKIP.Infrastructure.Repositories;
 
@@ -105,6 +106,41 @@ public class UserRepository : IUserRepository
         {
             Console.WriteLine($"Error in GetUsersByRoleAsync: {ex.Message}");
             return new List<User>();
+        }
+    }
+
+    public async Task<User?> UpdateProfileAsync(string userId, UpdateProfileRequest request, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var existingUser = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+            if (existingUser == null)
+            {
+                throw new ArgumentException("Không tìm thấy người dùng với ID này.");
+            }
+
+            // Check if email is already taken by another user
+            var emailExists = await db.Users.AnyAsync(u => u.Email == request.Email && u.Id != userId, cancellationToken);
+            if (emailExists)
+            {
+                throw new ArgumentException("Email này đã được sử dụng bởi người dùng khác.");
+            }
+
+            // Update only editable fields
+            existingUser.FullName = request.FullName;
+            existingUser.Email = request.Email;
+            existingUser.NormalizedEmail = request.Email.ToUpperInvariant();
+            existingUser.PhoneNumber = request.PhoneNumber;
+            existingUser.Gender = request.Gender;
+            // Note: ProfileImageUrl would be handled when we add image upload functionality
+
+            await db.SaveChangesAsync(cancellationToken);
+            return existingUser;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"UpdateProfile Error: {ex.Message}");
+            throw;
         }
     }
 }

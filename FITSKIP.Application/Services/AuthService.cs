@@ -153,6 +153,38 @@ public class AuthService : IAuthService
         return false;
     }
 
+    public async Task<bool> ChangePasswordAsync(string userId, ChangePasswordRequest request)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            // Verify current password
+            var isCurrentPasswordValid = await _userManager.CheckPasswordAsync(user, request.CurrentPassword);
+            if (!isCurrentPasswordValid)
+            {
+                throw new UnauthorizedAccessException("Mật khẩu hiện tại không chính xác");
+            }
+
+            // Change password
+            var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
+            return result.Succeeded;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            throw; // Re-throw to preserve the specific error message
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ChangePassword Error: {ex.Message}");
+            return false;
+        }
+    }
+
     private async Task<User?> FindUserByEmailOrEmployeeCodeAsync(string emailOrEmployeeCode)
     {
         // First try to find by email

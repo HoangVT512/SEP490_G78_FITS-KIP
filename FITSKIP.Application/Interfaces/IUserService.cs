@@ -1,4 +1,5 @@
 using FITSKIP.Domain.Entities;
+using FITSKIP.Domain.DTO;
 
 namespace FITSKIP.Application.Interfaces;
 
@@ -12,6 +13,7 @@ public interface IUserService
     Task<User?> DeleteUserAsync(string id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Department>> GetDepartmentsAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<User>> GetUsersByRoleAsync(string roleName, CancellationToken cancellationToken = default);
+    Task<User?> UpdateProfileAsync(string userId, UpdateProfileRequest request, CancellationToken cancellationToken = default);
 }
 
 

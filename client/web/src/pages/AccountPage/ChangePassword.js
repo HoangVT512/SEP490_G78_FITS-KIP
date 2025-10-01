@@ -23,6 +23,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
+import { authService } from "../../services/authService";
 import styles from "../../styles/pages/ChangePassword.module.css";
 
 const { Title, Text } = Typography;
@@ -82,28 +83,67 @@ const ChangePassword = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // TODO: API call to change password
-      console.log("Changing password:", {
-        currentPassword: values.currentPassword,
-        newPassword: values.newPassword,
-      });
+      const response = await authService.changePassword(
+        values.currentPassword,
+        values.newPassword,
+        values.confirmPassword
+      );
 
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      if (response.success) {
+        message.success("Đổi mật khẩu thành công!");
 
-      message.success("Đổi mật khẩu thành công!");
-
-      // Show success modal
-      Modal.success({
-        title: "Đổi mật khẩu thành công!",
-        content:
-          "Mật khẩu của bạn đã được cập nhật. Vui lòng đăng nhập lại với mật khẩu mới.",
-        okText: "Đăng nhập lại",
-        onOk: () => navigate("/login"),
-      });
+        // Show success modal and auto logout
+        Modal.success({
+          title: "Đổi mật khẩu thành công!",
+          content:
+            "Mật khẩu của bạn đã được cập nhật. Hệ thống sẽ đăng xuất để bảo mật. Vui lòng đăng nhập lại với mật khẩu mới.",
+          okText: "Đăng nhập lại",
+          onOk: async () => {
+            try {
+              // Call logout API to clear server-side session
+              await authService.logout();
+            } catch (error) {
+              console.log("Logout API error:", error);
+              // Continue with client-side cleanup even if server logout fails
+            } finally {
+              // Always clear client-side auth data and redirect
+              authService.clearAuthData();
+              navigate("/login");
+            }
+          },
+        });
+      } else {
+        throw new Error(response.message || "Đổi mật khẩu thất bại");
+      }
     } catch (error) {
-      message.error("Có lỗi xảy ra khi đổi mật khẩu!");
       console.error("Change password error:", error);
+      
+      // Handle specific error messages
+      let errorMessage = "Có lỗi xảy ra khi đổi mật khẩu!";
+      
+      if (error.message.includes("Mật khẩu hiện tại không chính xác")) {
+        errorMessage = "Mật khẩu hiện tại không chính xác!";
+        // Highlight the current password field with error
+        form.setFields([
+          {
+            name: "currentPassword",
+            errors: ["Mật khẩu hiện tại không chính xác"],
+          },
+        ]);
+      } else if (error.message.includes("HTTP error! status: 400")) {
+        // Parse error response for 400 Bad Request
+        errorMessage = "Mật khẩu hiện tại không đúng hoặc mật khẩu mới không hợp lệ!";
+        form.setFields([
+          {
+            name: "currentPassword",
+            errors: ["Vui lòng kiểm tra lại mật khẩu hiện tại"],
+          },
+        ]);
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }

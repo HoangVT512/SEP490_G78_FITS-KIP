@@ -119,6 +119,56 @@ export const authService = {
     const user = authService.getStoredUser();
     return user?.roles || [];
   },
+
+  // Change password
+  changePassword: async (currentPassword, newPassword, confirmPassword) => {
+    try {
+      const response = await apiRequest("/Auth/change-password", {
+        method: "POST",
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+          confirmPassword,
+        }),
+      });
+
+      return response;
+    } catch (error) {
+      console.error("Change password error:", error);
+      
+      // Try to parse error response if it's a 400 Bad Request
+      if (error.message.includes("HTTP error! status: 400")) {
+        // The error might contain more specific information
+        throw new Error("Mật khẩu hiện tại không chính xác");
+      }
+      
+      throw new Error(error.message || "Đổi mật khẩu thất bại");
+    }
+  },
+
+  // Update user profile
+  updateProfile: async (profileData) => {
+    try {
+      const response = await apiRequest("/Auth/profile", {
+        method: "PUT",
+        body: JSON.stringify(profileData),
+      });
+
+      // Update stored user data if successful
+      if (response.success && response.user) {
+        const currentUser = authService.getStoredUser();
+        if (currentUser) {
+          const updatedUser = { ...currentUser, ...response.user };
+          localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+        }
+      }
+
+      return response;
+    } catch (error) {
+      console.error("Update profile error:", error);
+      throw new Error(error.message || "Cập nhật thông tin thất bại");
+    }
+  },
 };
 
 export default authService;

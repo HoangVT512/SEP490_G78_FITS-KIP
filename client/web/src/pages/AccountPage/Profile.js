@@ -14,6 +14,7 @@ import {
   Tabs,
   Timeline,
   Alert,
+  Spin,
 } from "antd";
 import {
   UserOutlined,
@@ -30,54 +31,75 @@ import {
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
+import { authService } from "../../services/authService";
 import styles from "../../styles/pages/Profile.module.css";
 
 const { Title, Text } = Typography;
 
 const Profile = () => {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
-  const [userInfo, setUserInfo] = useState({
-    id: "user-123",
-    fullName: "Nguyễn Văn Admin",
-    employeeCode: "ADM001",
-    email: "admin@congty.com",
-    phoneNumber: "0123456789",
-    position: "Quản trị viên hệ thống",
-    gender: "Nam",
-    department: "Phòng IT",
-    role: "Quản trị viên",
-    emailConfirmed: true,
-    phoneNumberConfirmed: true,
-    twoFactorEnabled: false,
-    lockoutEnabled: false,
-    accessFailedCount: 0,
-    lastLoginDate: "2024-09-25 08:30:00",
-    createdDate: "2024-01-15 09:00:00",
-  });
+  const [loading, setLoading] = useState(true);
+  const [userInfo, setUserInfo] = useState(null);
 
   const [activityLog] = useState([
     {
-      date: "2024-09-25 08:30:00",
+      date: new Date().toISOString(),
       action: "Đăng nhập hệ thống",
       status: "success",
     },
     {
-      date: "2024-09-24 17:45:00",
-      action: "Cập nhật thông tin thiết bị TB001",
+      date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+      action: "Cập nhật thông tin cá nhân",
       status: "success",
     },
     {
-      date: "2024-09-24 14:20:00",
-      action: "Tạo yêu cầu bảo trì mới #MT-2024-001",
-      status: "success",
-    },
-    {
-      date: "2024-09-23 16:30:00",
-      action: "Thay đổi mật khẩu",
+      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
+      action: "Đổi mật khẩu",
       status: "success",
     },
   ]);
+
+  useEffect(() => {
+    const loadUserData = async () => {
+      try {
+        setLoading(true);
+
+        const storedUser = authService.getStoredUser();
+
+        if (storedUser) {
+          setUserInfo({
+            id: storedUser.id,
+            fullName: storedUser.fullName || "Chưa cập nhật",
+            employeeCode: storedUser.employeeCode || "Chưa có",
+            email: storedUser.email || "Chưa cập nhật",
+            phoneNumber: storedUser.phoneNumber || null,
+            position: storedUser.position || "Chưa có chức vụ",
+            gender: storedUser.gender || "Chưa cập nhật",
+            department: "Chưa phân phòng ban",
+            role: storedUser.roles ? storedUser.roles.join(", ") : "Chưa có vai trò",
+            emailConfirmed: storedUser.emailConfirmed || false,
+            phoneNumberConfirmed: storedUser.phoneNumberConfirmed || false,
+            twoFactorEnabled: storedUser.twoFactorEnabled || false,
+            lockoutEnabled: storedUser.lockoutEnabled || false,
+            accessFailedCount: storedUser.accessFailedCount || 0,
+            lastLoginDate: new Date().toISOString(),
+            createdDate: "2024-01-15T09:00:00",
+          });
+        } else {
+          navigate('/login');
+        }
+      } catch (error) {
+        console.error("Error loading user data:", error);
+        if (!authService.isLoggedIn()) {
+          navigate('/login');
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, [navigate]);
 
   const handleEditProfile = () => {
     navigate("/profile/edit");
@@ -105,12 +127,40 @@ const Profile = () => {
     return "Hoạt động";
   };
 
+  if (loading) {
+    return (
+      <Layout>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+          <Spin size="large" />
+          <Text style={{ marginLeft: 16 }}>Đang tải thông tin người dùng...</Text>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!userInfo) {
+    return (
+      <Layout>
+        <Alert
+          message="Không thể tải thông tin người dùng"
+          description="Vui lòng thử đăng nhập lại."
+          type="error"
+          showIcon
+          action={
+            <Button type="primary" onClick={() => navigate('/login')}>
+              Đăng nhập lại
+            </Button>
+          }
+        />
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className={styles.profileContainer}>
         <Row gutter={[24, 24]}>
           <Col span={24}>
-            {/* Profile Header */}
             <div className={styles.profileHeaderCard}>
               <Avatar
                 size={100}

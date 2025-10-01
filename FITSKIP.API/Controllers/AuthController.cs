@@ -10,10 +10,12 @@ namespace FITSKIP.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly IUserService _userService;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, IUserService userService)
     {
         _authService = authService;
+        _userService = userService;
     }
 
     /// <summary>
@@ -161,5 +163,94 @@ public class AuthController : ControllerBase
         var ok = await _authService.ResetPasswordWithOtpAsync(request);
         if (!ok) return BadRequest(new { success = false, message = "OTP không hợp lệ hoặc thao tác thất bại" });
         return Ok(new { success = true });
+    }
+
+    /// <summary>
+    /// Đổi mật khẩu khi đã đăng nhập
+    /// </summary>
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { success = false, message = "Không thể xác định user từ token" });
+            }
+
+            var result = await _authService.ChangePasswordAsync(userId, request);
+            
+            if (result)
+            {
+                return Ok(new { success = true, message = "Đổi mật khẩu thành công" });
+            }
+            else
+            {
+                return BadRequest(new { success = false, message = "Đổi mật khẩu thất bại" });
+            }
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            // Return 400 BadRequest with specific error message for wrong current password
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Đã có lỗi xảy ra trong quá trình đổi mật khẩu", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Cập nhật thông tin profile người dùng
+    /// </summary>
+    [HttpPut("profile")]
+    [Authorize]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { success = false, message = "Không thể xác định user từ token" });
+            }
+
+            var result = await _userService.UpdateProfileAsync(userId, request);
+            
+            if (result != null)
+            {
+                // Return updated user info (excluding sensitive data)
+                return Ok(new { 
+                    success = true, 
+                    message = "Cập nhật thông tin thành công",
+                    user = new {
+                        id = result.Id,
+                        userName = result.UserName,
+                        email = result.Email,
+                        fullName = result.FullName,
+                        phoneNumber = result.PhoneNumber,
+                        gender = result.Gender,
+                        employeeCode = result.EmployeeCode,
+                        position = result.Position
+                    }
+                });
+            }
+            else
+            {
+                return BadRequest(new { success = false, message = "Cập nhật thông tin thất bại" });
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Đã có lỗi xảy ra trong quá trình cập nhật thông tin", details = ex.Message });
+        }
     }
 }
