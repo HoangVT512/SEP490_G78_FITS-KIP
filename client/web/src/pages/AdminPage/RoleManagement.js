@@ -47,6 +47,7 @@ import {
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
 import styles from "../../styles/pages/RoleManagement.module.css";
+import { roleService } from "../../services/roleService";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -66,6 +67,23 @@ const RoleManagement = ({ showHeader = true }) => {
   const [viewingRole, setViewingRole] = useState(null);
   const [form] = Form.useForm();
   const [permissionForm] = Form.useForm();
+
+  useEffect(() => {
+    loadRoles();
+  }, []);
+
+  const loadRoles = async () => {
+    setLoading(true);
+    try {
+      const rolesData = await roleService.getRoles();
+      setRoles(rolesData);
+    } catch (error) {
+      console.error("Error loading roles:", error);
+      message.error("Không thể tải danh sách vai trò");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Mock data for roles
   const mockRoles = [
@@ -372,25 +390,6 @@ const RoleManagement = ({ showHeader = true }) => {
       ],
     },
   ];
-
-  useEffect(() => {
-    loadRoles();
-  }, []);
-
-  const loadRoles = async () => {
-    setLoading(true);
-    try {
-      // Simulate API call
-      setTimeout(() => {
-        setRoles(mockRoles);
-        setLoading(false);
-      }, 1000);
-    } catch (error) {
-      console.error("Error loading roles:", error);
-      message.error("Không thể tải danh sách vai trò");
-      setLoading(false);
-    }
-  };
 
   const getStatusColor = (status) => {
     const statusColors = {
@@ -753,7 +752,7 @@ const RoleManagement = ({ showHeader = true }) => {
 
           {/* Action Bar */}
           <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-            <Col xs={24} sm={12} md={8} lg={6}>
+            <Col xs={24} sm={12} md={16} lg={8}>
               <Input.Group compact>
                 <Input
                   placeholder="Tìm kiếm vai trò..."
@@ -774,7 +773,7 @@ const RoleManagement = ({ showHeader = true }) => {
                 />
               </Input.Group>
             </Col>
-            <Col xs={24} sm={12} md={16} lg={18}>
+            <Col xs={24} sm={12} md={8} lg={12}>
               <div
                 style={{
                   display: "flex",
