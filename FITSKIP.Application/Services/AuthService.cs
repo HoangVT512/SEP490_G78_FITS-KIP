@@ -42,6 +42,12 @@ public class AuthService : IAuthService
             throw new UnauthorizedAccessException("Thông tin đăng nhập không chính xác");
         }
 
+        // Check if user account is active
+        if (!user.IsActive)
+        {
+            throw new UnauthorizedAccessException("Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.");
+        }
+
         // Check password
         var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: false);
 
@@ -76,6 +82,7 @@ public class AuthService : IAuthService
                 LockoutEnd = user.LockoutEnd?.DateTime,
                 LockoutEnabled = user.LockoutEnabled,
                 AccessFailedCount = user.AccessFailedCount,
+                IsActive = user.IsActive,
                 Roles = roles.ToList()
             }
         };

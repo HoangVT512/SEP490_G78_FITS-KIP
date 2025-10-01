@@ -1,19 +1,25 @@
-import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { Spin } from 'antd';
+import React from "react";
+import { Navigate } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
+import { Spin } from "antd";
 
-const ProtectedRoute = ({ children, requireAdmin = false, redirectTo = '/login' }) => {
-  const { isAuthenticated, loading, isAdmin } = useAuth();
+const ProtectedRoute = ({
+  children,
+  requireAdmin = false,
+  redirectTo = "/login",
+}) => {
+  const { isAuthenticated, loading, isAdmin, user } = useAuth();
 
   if (loading) {
     return (
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh' 
-      }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+        }}
+      >
         <Spin size="large" />
       </div>
     );
@@ -21,6 +27,11 @@ const ProtectedRoute = ({ children, requireAdmin = false, redirectTo = '/login' 
 
   if (!isAuthenticated) {
     return <Navigate to={redirectTo} replace />;
+  }
+
+  // Check if user account is active
+  if (user && user.isActive === false) {
+    return <Navigate to="/login?inactive=true" replace />;
   }
 
   if (requireAdmin && !isAdmin()) {

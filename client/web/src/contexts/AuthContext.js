@@ -31,6 +31,20 @@ export const AuthProvider = ({ children }) => {
       if (isLoggedIn) {
         const storedUser = authService.getStoredUser();
         console.log("Stored user:", storedUser);
+
+        // Check if user account is still active
+        if (storedUser && storedUser.isActive === false) {
+          console.log("User account is inactive, logging out...");
+          authService.clearAuthData();
+          setUser(null);
+          setIsAuthenticated(false);
+          // Redirect to login with message
+          if (window.location.pathname !== "/login") {
+            window.location.href = "/login?inactive=true";
+          }
+          return;
+        }
+
         setUser(storedUser);
         setIsAuthenticated(true);
       } else {

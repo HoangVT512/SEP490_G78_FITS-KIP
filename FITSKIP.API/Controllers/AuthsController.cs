@@ -96,11 +96,19 @@ public class AuthsController : ControllerBase
             var employeeCode = User.FindFirst("EmployeeCode")?.Value;
             var position = User.FindFirst("Position")?.Value;
             var gender = User.FindFirst("Gender")?.Value;
+            var isActiveStr = User.FindFirst("IsActive")?.Value;
+            var isActive = bool.Parse(isActiveStr ?? "true");
             var roles = User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToList();
 
             if (string.IsNullOrEmpty(userId))
             {
                 return Unauthorized(new { message = "Token không chứa thông tin user hợp lệ" });
+            }
+
+            // Check if user account is still active
+            if (!isActive)
+            {
+                return Unauthorized(new { message = "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên." });
             }
 
             return Ok(new
@@ -112,6 +120,7 @@ public class AuthsController : ControllerBase
                 employeeCode = employeeCode,
                 position = position,
                 gender = gender,
+                isActive = isActive,
                 roles = roles
             });
         }

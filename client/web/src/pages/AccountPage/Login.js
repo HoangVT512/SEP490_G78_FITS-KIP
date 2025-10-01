@@ -29,6 +29,18 @@ const Login = () => {
   const [form] = Form.useForm();
 
   useEffect(() => {
+    // Check if redirected due to inactive account
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get("inactive") === "true") {
+      message.error(
+        "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên để được hỗ trợ."
+      );
+      // Clean up URL
+      window.history.replaceState({}, "", "/login");
+    }
+  }, []);
+
+  useEffect(() => {
     // Don't auto-redirect if currently logging out
     if (isLoggingOut) {
       console.log("Logout in progress, skipping auto-redirect");
@@ -75,14 +87,27 @@ const Login = () => {
       console.log("Redirecting to admin page for all users");
       navigate("/admin");
     } catch (error) {
-      // Determine if user entered email or employee code
-      const isEmail = isEmailFormat(values.loginId);
+      // Check if error is due to inactive account
+      const errorMessage = error.message || "";
 
-      // Set specific error message based on input type
-      if (isEmail) {
-        setLoginError("Email hoặc mật khẩu không đúng!");
+      if (
+        errorMessage.includes("vô hiệu hóa") ||
+        errorMessage.includes("inactive")
+      ) {
+        // Show specific message for inactive account
+        setLoginError(
+          "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên để được hỗ trợ."
+        );
       } else {
-        setLoginError("Mã nhân viên hoặc mật khẩu không đúng!");
+        // Determine if user entered email or employee code
+        const isEmail = isEmailFormat(values.loginId);
+
+        // Set specific error message based on input type
+        if (isEmail) {
+          setLoginError("Email hoặc mật khẩu không đúng!");
+        } else {
+          setLoginError("Mã nhân viên hoặc mật khẩu không đúng!");
+        }
       }
 
       // Don't show the general error message - only show red text under input

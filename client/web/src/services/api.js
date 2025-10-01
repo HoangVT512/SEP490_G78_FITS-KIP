@@ -66,16 +66,43 @@ const apiRequest = async (endpoint, options = {}) => {
     if (!response.ok) {
       // Handle 401 Unauthorized specifically
       if (response.status === 401) {
-        // Clear auth data and redirect to login
-        localStorage.removeItem("token");
-        localStorage.removeItem("currentUser");
+        // Check if it's due to inactive account
+        const isInactiveAccount =
+          responseData &&
+          (responseData.message?.includes("vô hiệu hóa") ||
+            responseData.message?.includes("inactive"));
 
-        // If not already on login page, redirect
-        if (!window.location.pathname.includes("/login")) {
-          window.location.href = "/login";
+        const isLoginPage = window.location.pathname.includes("/login");
+
+        console.log("401 Error Debug:", {
+          isInactiveAccount,
+          isLoginPage,
+          message: responseData?.message,
+        });
+
+        // Only clear and redirect if NOT on login page OR if it's not an inactive account error
+        // If on login page and inactive account, let the login form handle the error display
+        if (!isLoginPage || !isInactiveAccount) {
+          // Clear auth data
+          localStorage.removeItem("token");
+          localStorage.removeItem("tokenExpiration");
+          localStorage.removeItem("currentUser");
+
+          // Redirect if not on login page
+          if (!isLoginPage) {
+            if (isInactiveAccount) {
+              window.location.href = "/login?inactive=true";
+            } else {
+              window.location.href = "/login";
+            }
+          }
         }
 
-        throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+        // Always throw error with message from server
+        throw new Error(
+          responseData.message ||
+            "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+        );
       }
 
       // Parse error message from server response

@@ -33,7 +33,8 @@ public class JwtTokenService : IJwtTokenService
             new("FullName", user.FullName ?? string.Empty),
             new("EmployeeCode", user.EmployeeCode ?? string.Empty),
             new("Position", user.Position ?? string.Empty),
-            new("Gender", user.Gender ?? string.Empty)
+            new("Gender", user.Gender ?? string.Empty),
+            new("IsActive", user.IsActive.ToString())
         };
 
         // Add roles to claims
