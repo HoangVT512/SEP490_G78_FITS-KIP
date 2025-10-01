@@ -158,13 +158,8 @@ export const authService = {
     } catch (error) {
       console.error("Change password error:", error);
 
-      // Try to parse error response if it's a 400 Bad Request
-      if (error.message.includes("HTTP error! status: 400")) {
-        // The error might contain more specific information
-        throw new Error("Mật khẩu hiện tại không chính xác");
-      }
-
-      throw new Error(error.message || "Đổi mật khẩu thất bại");
+      // Pass the error message as-is since api.js already handles error parsing
+      throw error;
     }
   },
 

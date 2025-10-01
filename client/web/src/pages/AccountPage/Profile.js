@@ -12,7 +12,6 @@ import {
   Space,
   Badge,
   Tabs,
-  Timeline,
   Alert,
   Spin,
   message,
@@ -23,8 +22,6 @@ import {
   PhoneOutlined,
   EditOutlined,
   SafetyOutlined,
-  SettingOutlined,
-  ClockCircleOutlined,
   CheckCircleOutlined,
   TeamOutlined,
   IdcardOutlined,
@@ -43,24 +40,6 @@ const Profile = () => {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
-
-  const [activityLog] = useState([
-    {
-      date: new Date().toISOString(),
-      action: "Đăng nhập hệ thống",
-      status: "success",
-    },
-    {
-      date: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-      action: "Cập nhật thông tin cá nhân",
-      status: "success",
-    },
-    {
-      date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-      action: "Đổi mật khẩu",
-      status: "success",
-    },
-  ]);
 
   // Check for update success parameter - only runs once on mount
   useEffect(() => {
@@ -251,7 +230,7 @@ const Profile = () => {
             </div>
           </Col>
 
-          <Col xs={24} lg={16}>
+          <Col xs={24}>
             <Card
               title={
                 <Space>
@@ -330,6 +309,9 @@ const Profile = () => {
                             {userInfo.department}
                           </Space>
                         </Descriptions.Item>
+                        <Descriptions.Item label="Ngày tạo tài khoản" span={2}>
+                          {formatDateTime(userInfo.createdDate)}
+                        </Descriptions.Item>
                       </Descriptions>
                     ),
                   },
@@ -384,21 +366,7 @@ const Profile = () => {
                               }
                             />
                           </Descriptions.Item>
-                          <Descriptions.Item label="Xác thực 2 bước">
-                            <Badge
-                              status={
-                                userInfo.twoFactorEnabled
-                                  ? "success"
-                                  : "default"
-                              }
-                              text={
-                                userInfo.twoFactorEnabled
-                                  ? "Đã bật"
-                                  : "Chưa bật"
-                              }
-                            />
-                          </Descriptions.Item>
-                          <Descriptions.Item label="Khóa tài khoản">
+                          <Descriptions.Item label="Khóa tài khoản" span={2}>
                             <Badge
                               status={
                                 userInfo.lockoutEnabled ? "warning" : "success"
@@ -410,106 +378,23 @@ const Profile = () => {
                               }
                             />
                           </Descriptions.Item>
-                          <Descriptions.Item
-                            label="Số lần đăng nhập sai"
-                            span={2}
-                          >
-                            <Text
-                              className={`${styles.profileFailedCount} ${
-                                userInfo.accessFailedCount > 0
-                                  ? styles.error
-                                  : styles.success
-                              }`}
-                            >
-                              {userInfo.accessFailedCount} lần
-                            </Text>
-                          </Descriptions.Item>
                         </Descriptions>
 
                         <Divider />
 
-                        <Space>
-                          <Button
-                            type="primary"
-                            icon={<SafetyOutlined />}
-                            onClick={handleChangePassword}
-                            className={styles.profileChangePasswordButton}
-                          >
-                            Đổi mật khẩu
-                          </Button>
-                          <Button
-                            icon={<SettingOutlined />}
-                            disabled={userInfo.twoFactorEnabled}
-                          >
-                            Bật xác thực 2 bước
-                          </Button>
-                        </Space>
+                        <Button
+                          type="primary"
+                          icon={<SafetyOutlined />}
+                          onClick={handleChangePassword}
+                          className={styles.profileChangePasswordButton}
+                        >
+                          Đổi mật khẩu
+                        </Button>
                       </div>
                     ),
                   },
                 ]}
               />
-            </Card>
-          </Col>
-
-          <Col xs={24} lg={8}>
-            <Card
-              title={
-                <Space>
-                  <ClockCircleOutlined className={styles.profileIconClock} />
-                  Hoạt động gần đây
-                </Space>
-              }
-              className={styles.profileActivityCard}
-            >
-              <Timeline
-                items={activityLog.map((activity, index) => ({
-                  color: activity.status === "success" ? "#059669" : "#d97706",
-                  dot: (
-                    <CheckCircleOutlined
-                      className={styles.profileTimelineIcon}
-                    />
-                  ),
-                  children: (
-                    <div>
-                      <Text strong>{activity.action}</Text>
-                      <br />
-                      <Text
-                        type="secondary"
-                        className={styles.profileTimelineDate}
-                      >
-                        {formatDateTime(activity.date)}
-                      </Text>
-                    </div>
-                  ),
-                }))}
-              />
-
-              <Divider />
-
-              <div className={styles.profileViewAllContainer}>
-                <Button type="link">Xem tất cả hoạt động</Button>
-              </div>
-            </Card>
-
-            <Card
-              title="Thông tin hệ thống"
-              className={styles.profileSystemCard}
-              size="small"
-            >
-              <Descriptions column={1} size="small">
-                <Descriptions.Item label="ID người dùng">
-                  <Text code className={styles.profileUserId}>
-                    {userInfo.id}
-                  </Text>
-                </Descriptions.Item>
-                <Descriptions.Item label="Ngày tạo tài khoản">
-                  {formatDateTime(userInfo.createdDate)}
-                </Descriptions.Item>
-                <Descriptions.Item label="Đăng nhập cuối">
-                  {formatDateTime(userInfo.lastLoginDate)}
-                </Descriptions.Item>
-              </Descriptions>
             </Card>
           </Col>
         </Row>

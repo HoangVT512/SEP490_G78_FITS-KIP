@@ -52,17 +52,45 @@ const apiRequest = async (endpoint, options = {}) => {
     }
 
     if (!response.ok) {
+      // Handle 401 Unauthorized specifically
+      if (response.status === 401) {
+        // Clear auth data and redirect to login
+        localStorage.removeItem("token");
+        localStorage.removeItem("currentUser");
+
+        // If not already on login page, redirect
+        if (!window.location.pathname.includes("/login")) {
+          window.location.href = "/login";
+        }
+
+        throw new Error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.");
+      }
+
       // Parse error message from server response
       let errorMessage = `HTTP error! status: ${response.status}`;
 
       if (responseData && typeof responseData === "object") {
-        // If server returns structured error response
-        errorMessage =
-          responseData.message || responseData.error || errorMessage;
+        // If server returns structured error response with validation errors
+        if (responseData.errors) {
+          // Extract validation error messages
+          const validationErrors = Object.values(responseData.errors).flat();
+          errorMessage = validationErrors.join(", ");
+        } else {
+          errorMessage =
+            responseData.message ||
+            responseData.title ||
+            responseData.error ||
+            errorMessage;
+        }
       } else if (typeof responseData === "string") {
         errorMessage = responseData || errorMessage;
       }
 
+      console.error(`API Error Details:`, {
+        status: response.status,
+        responseData,
+        errorMessage,
+      });
       throw new Error(errorMessage);
     }
 

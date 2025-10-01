@@ -36,7 +36,7 @@ public class AuthService : IAuthService
     {
         // Find user by email or employee code
         var user = await FindUserByEmailOrEmployeeCodeAsync(request.EmailOrEmployeeCode);
-        
+
         if (user == null)
         {
             throw new UnauthorizedAccessException("Thông tin đăng nhập không chính xác");
@@ -44,7 +44,7 @@ public class AuthService : IAuthService
 
         // Check password
         var result = await _signInManager.CheckPasswordSignInAsync(user, request.Password, lockoutOnFailure: false);
-        
+
         if (!result.Succeeded)
         {
             throw new UnauthorizedAccessException("Thông tin đăng nhập không chính xác");
@@ -160,7 +160,7 @@ public class AuthService : IAuthService
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null)
             {
-                return false;
+                throw new UnauthorizedAccessException("Không tìm thấy người dùng");
             }
 
             // Verify current password
@@ -172,16 +172,28 @@ public class AuthService : IAuthService
 
             // Change password
             var result = await _userManager.ChangePasswordAsync(user, request.CurrentPassword, request.NewPassword);
-            return result.Succeeded;
+
+            if (!result.Succeeded)
+            {
+                // Get error messages from Identity
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                throw new InvalidOperationException($"Không thể đổi mật khẩu: {errors}");
+            }
+
+            return true;
         }
         catch (UnauthorizedAccessException)
         {
             throw; // Re-throw to preserve the specific error message
         }
+        catch (InvalidOperationException)
+        {
+            throw; // Re-throw validation errors from Identity
+        }
         catch (Exception ex)
         {
             Console.WriteLine($"ChangePassword Error: {ex.Message}");
-            return false;
+            throw new Exception("Đã có lỗi xảy ra khi đổi mật khẩu", ex);
         }
     }
 
@@ -189,7 +201,7 @@ public class AuthService : IAuthService
     {
         // First try to find by email
         var user = await _userManager.FindByEmailAsync(emailOrEmployeeCode);
-        
+
         if (user != null)
             return user;
 

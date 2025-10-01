@@ -52,7 +52,7 @@ public class AuthsController : ControllerBase
         {
             // For logout, we can be more flexible - either with or without token
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            
+
             if (!string.IsNullOrEmpty(userId))
             {
                 var result = await _authService.LogoutAsync(userId);
@@ -61,7 +61,7 @@ public class AuthsController : ControllerBase
                     return BadRequest(new { message = "Không thể đăng xuất từ server" });
                 }
             }
-            
+
             // Return success regardless - client-side token cleanup is the main thing for JWT
             return Ok(new { message = "Đăng xuất thành công" });
         }
@@ -174,22 +174,32 @@ public class AuthsController : ControllerBase
     {
         try
         {
+            // Validate model state first
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+                return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors });
+            }
+
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            
+
             if (string.IsNullOrEmpty(userId))
             {
-                return Unauthorized(new { success = false, message = "Không thể xác định user từ token" });
+                return Unauthorized(new { success = false, message = "Không thể xác định user từ token. Vui lòng đăng nhập lại." });
             }
 
             var result = await _authService.ChangePasswordAsync(userId, request);
-            
+
             if (result)
             {
                 return Ok(new { success = true, message = "Đổi mật khẩu thành công" });
             }
             else
             {
-                return BadRequest(new { success = false, message = "Đổi mật khẩu thất bại" });
+                return BadRequest(new { success = false, message = "Đổi mật khẩu thất bại. Vui lòng thử lại." });
             }
         }
         catch (UnauthorizedAccessException ex)
@@ -213,21 +223,23 @@ public class AuthsController : ControllerBase
         try
         {
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            
+
             if (string.IsNullOrEmpty(userId))
             {
                 return Unauthorized(new { success = false, message = "Không thể xác định user từ token" });
             }
 
             var result = await _userService.UpdateProfileAsync(userId, request);
-            
+
             if (result != null)
             {
                 // Return updated user info (excluding sensitive data)
-                return Ok(new { 
-                    success = true, 
+                return Ok(new
+                {
+                    success = true,
                     message = "Cập nhật thông tin thành công",
-                    user = new {
+                    user = new
+                    {
                         id = result.Id,
                         userName = result.UserName,
                         email = result.Email,
@@ -252,5 +264,29 @@ public class AuthsController : ControllerBase
         {
             return BadRequest(new { success = false, message = "Đã có lỗi xảy ra trong quá trình cập nhật thông tin", details = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Test JWT authentication - requires valid JWT token
+    /// </summary>
+    [HttpGet("test-auth")]
+    [Authorize]
+    public IActionResult TestAuth()
+    {
+        var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var userName = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
+        var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+
+        var claims = User.Claims.Select(c => new { c.Type, c.Value }).ToList();
+
+        return Ok(new
+        {
+            success = true,
+            message = "JWT Authentication is working!",
+            userId,
+            userName,
+            email,
+            allClaims = claims
+        });
     }
 }
