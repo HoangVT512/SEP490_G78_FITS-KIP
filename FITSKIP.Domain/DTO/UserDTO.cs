@@ -46,6 +46,8 @@ namespace FITSKIP.Domain.DTO
 
         public string? Position { get; set; }
 
+        public bool IsActive { get; set; }
+
         public List<string>? Roles { get; set; }
     }
 }

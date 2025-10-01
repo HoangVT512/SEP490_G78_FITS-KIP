@@ -18,10 +18,11 @@ public class UserService : IUserService
 
     public Task<User?> DeleteUserAsync(string id, CancellationToken cancellationToken = default) => userRepository.DeleteUserAsync(id, cancellationToken);
 
-    public Task<IReadOnlyList<User>> GetUsersAsync(CancellationToken cancellationToken = default)
+    public Task<IReadOnlyList<UserDTO>> GetUsersWithRolesAsync(CancellationToken cancellationToken = default)
     {
-        return userRepository.GetAllAsync(cancellationToken);
+        return userRepository.GetUsersWithRolesAsync(cancellationToken);
     }
+
     public Task<User?> GetByUsernameAsync(string fullName, CancellationToken cancellationToken = default) => userRepository.GetByUsernameAsync(fullName, cancellationToken);
 
     public Task<User?> GetUserByIdAsync(string id, CancellationToken cancellationToken = default) => userRepository.GetUserByIdAsync(id, cancellationToken);

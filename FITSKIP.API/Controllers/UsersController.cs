@@ -19,9 +19,9 @@ public class UsersController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<User>>> Get(CancellationToken cancellationToken)
+    public async Task<ActionResult<IReadOnlyList<UserDTO>>> Get(CancellationToken cancellationToken)
     {
-        var users = await userService.GetUsersAsync(cancellationToken);
+        var users = await userService.GetUsersWithRolesAsync(cancellationToken);
         return Ok(users);
     }
     // GET: https://localhost:7003/api/Users/{fullName}
@@ -350,7 +350,7 @@ public class UsersController : ControllerBase
             {
                 var worksheet = package.Workbook.Worksheets.Add("Users");
 
-                
+
                 worksheet.Cells[1, 1].Value = "UserName";
                 worksheet.Cells[1, 2].Value = "Email";
                 worksheet.Cells[1, 3].Value = "Password";
@@ -359,7 +359,7 @@ public class UsersController : ControllerBase
                 worksheet.Cells[1, 6].Value = "EmployeeCode";
                 worksheet.Cells[1, 7].Value = "Position";
                 worksheet.Cells[1, 8].Value = "PhoneNumber";
-                
+
                 using (var range = worksheet.Cells[1, 1, 1, 8])
                 {
                     range.Style.Font.Bold = true;
@@ -367,7 +367,7 @@ public class UsersController : ControllerBase
                     range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
                 }
 
-               
+
                 worksheet.Cells[2, 1].Value = "Trung";
                 worksheet.Cells[2, 2].Value = "Trungnd98@fpt.com";
                 worksheet.Cells[2, 3].Value = "123";

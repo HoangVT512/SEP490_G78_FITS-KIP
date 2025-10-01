@@ -42,11 +42,42 @@ public class UserRepository : IUserRepository
         return existingUser;
     }
 
-    public async Task<IReadOnlyList<User>> GetAllAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<UserDTO>> GetUsersWithRolesAsync(CancellationToken cancellationToken = default)
     {
-        return await db.Users
+        var users = await db.Users
             .AsNoTracking()
             .ToListAsync(cancellationToken);
+
+        var userDTOs = new List<UserDTO>();
+        foreach (var user in users)
+        {
+            var roles = await userManager.GetRolesAsync(user);
+            userDTOs.Add(new UserDTO
+            {
+                Id = user.Id,
+                UserName = user.UserName,
+                NormalizedUserName = user.NormalizedUserName,
+                Email = user.Email,
+                NormalizedEmail = user.NormalizedEmail,
+                EmailConfirmed = user.EmailConfirmed,
+                PasswordHash = user.PasswordHash,
+                SecurityStamp = user.SecurityStamp,
+                ConcurrencyStamp = user.ConcurrencyStamp,
+                PhoneNumber = user.PhoneNumber,
+                PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+                TwoFactorEnabled = user.TwoFactorEnabled,
+                LockoutEnd = user.LockoutEnd,
+                LockoutEnabled = user.LockoutEnabled,
+                AccessFailedCount = user.AccessFailedCount,
+                FullName = user.FullName,
+                Gender = user.Gender,
+                EmployeeCode = user.EmployeeCode,
+                Position = user.Position,
+                IsActive = user.IsActive,
+                Roles = roles.ToList()
+            });
+        }
+        return userDTOs;
     }
 
     public Task<User?> GetByUsernameAsync(string fullName, CancellationToken cancellationToken = default)

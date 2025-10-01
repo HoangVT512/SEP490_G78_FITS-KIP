@@ -18,8 +18,9 @@ export const userService = {
         // Default values for properties not in API
         department: "N/A",
         position: user.position || "N/A",
-        role: "User",
-        status: "active",
+        // Get first role from roles array, default to "User" if no roles
+        role: user.roles && user.roles.length > 0 ? user.roles[0] : "User",
+        status: user.isActive ? "active" : "inactive",
         emailConfirmed: user.emailConfirmed || false,
         phoneConfirmed: user.phoneNumberConfirmed || false,
         lastLoginDate: new Date().toISOString(),

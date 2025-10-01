@@ -536,15 +536,6 @@ const UserManagement = ({ showHeader = true }) => {
       ),
     },
     {
-      title: "Đăng nhập cuối",
-      dataIndex: "lastLoginDate",
-      key: "lastLoginDate",
-      width: 150,
-      render: (date) => (
-        <Text style={{ fontSize: "13px" }}>{formatDateTime(date)}</Text>
-      ),
-    },
-    {
       title: "Thao tác",
       key: "action",
       width: 100,
@@ -819,7 +810,11 @@ const UserManagement = ({ showHeader = true }) => {
         okText={editingUser ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
         okButtonProps={{
-          style: { backgroundColor: "#334766", borderColor: "#334766", width: "150px" },
+          style: {
+            backgroundColor: "#334766",
+            borderColor: "#334766",
+            width: "150px",
+          },
         }}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
