@@ -1,21 +1,20 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 
 namespace FITSKIP.Domain.DTO;
 
 public class UpdateProfileRequest
 {
-    [Required(ErrorMessage = "Họ và tên là bắt buộc")]
-    [StringLength(250, ErrorMessage = "Họ và tên không được vượt quá 250 ký tự")]
-    public string FullName { get; set; } = string.Empty;
-
+    // Loại bỏ FullName vì không cho phép sửa tên
+    
     [Required(ErrorMessage = "Email là bắt buộc")]
-    [EmailAddress(ErrorMessage = "Email không hợp lệ")]
+    [EmailAddress(ErrorMessage = "Email không đúng định dạng")]
     [StringLength(256, ErrorMessage = "Email không được vượt quá 256 ký tự")]
     public string Email { get; set; } = string.Empty;
 
-    [Phone(ErrorMessage = "Số điện thoại không hợp lệ")]
-    [StringLength(15, ErrorMessage = "Số điện thoại không được vượt quá 15 ký tự")]
-    public string? PhoneNumber { get; set; }
+    [Required(ErrorMessage = "Số điện thoại là bắt buộc")]
+    [RegularExpression(@"^0[0-9]{9}$", ErrorMessage = "Số điện thoại phải có đúng 10 số và bắt đầu bằng số 0")]
+    public string PhoneNumber { get; set; } = string.Empty;
 
     [StringLength(10, ErrorMessage = "Giới tính không được vượt quá 10 ký tự")]
     public string? Gender { get; set; }
