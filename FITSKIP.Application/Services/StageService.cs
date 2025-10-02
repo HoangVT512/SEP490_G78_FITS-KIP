@@ -39,7 +39,7 @@ public class StageService : IStageService
             System.Text.RegularExpressions.Regex.Replace(s.StageName.Trim(), @"\s+", " ").ToLower() == normalizedStageName.ToLower());
         if (duplicateStage != null)
         {
-            throw new InvalidOperationException($"'{line.LineName}' đã có giai đoạn tên '{duplicateStage.StageName}'");
+            throw new InvalidOperationException($"Chuyền sản xuất '{line.LineName}' đã có giai đoạn tên '{duplicateStage.StageName}'");
         }
 
         var stage = new Stage
@@ -81,7 +81,7 @@ public class StageService : IStageService
             System.Text.RegularExpressions.Regex.Replace(s.StageName.Trim(), @"\s+", " ").ToLower() == normalizedStageName.ToLower());
         if (duplicateStage != null)
         {
-            throw new InvalidOperationException($"'{line.LineName}' đã có giai đoạn tên '{duplicateStage.StageName}'");
+            throw new InvalidOperationException($"Chuyền sản xuất '{line.LineName}' đã có giai đoạn tên '{duplicateStage.StageName}'");
         }
 
         existingStage.StageName = normalizedStageName; // Sử dụng tên đã chuẩn hóa
