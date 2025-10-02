@@ -129,61 +129,14 @@ public class UsersController : ControllerBase
     // PUT: https://localhost:7003/api/Users/{id}
     [HttpPut]
     [Route("{id}")]
-    public async Task<IActionResult> UpdateUser(string id, [FromBody] UserDTO user, CancellationToken cancellationToken)
+    public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserRequest request, CancellationToken cancellationToken)
     {
-        var updatedUser = new User
-        {
-            UserName = user.UserName,
-            NormalizedUserName = user.NormalizedUserName,
-            NormalizedEmail = user.NormalizedEmail,
-            Email = user.Email,
-            EmailConfirmed = user.EmailConfirmed,
-            PasswordHash = user.PasswordHash,
-            SecurityStamp = user.SecurityStamp,
-            ConcurrencyStamp = user.ConcurrencyStamp,
-            PhoneNumber = user.PhoneNumber,
-            PhoneNumberConfirmed = user.PhoneNumberConfirmed,
-            TwoFactorEnabled = user.TwoFactorEnabled,
-            LockoutEnd = user.LockoutEnd,
-            LockoutEnabled = user.LockoutEnabled,
-            AccessFailedCount = user.AccessFailedCount,
-            FullName = user.FullName,
-            Gender = user.Gender,
-            EmployeeCode = user.EmployeeCode,
-            Position = user.Position,
-            IsActive = user.IsActive,
-        };
-        // Ensure the Id from the route is applied so the repository can find the existing entity
-        updatedUser.Id = id;
-        updatedUser = await userService.UpdateUserAsync(updatedUser, cancellationToken);
+        var updatedUser = await userService.UpdateUserAsync(id, request, cancellationToken);
         if (updatedUser == null)
         {
             return NotFound();
         }
-        var response = new UserDTO
-        {
-            Id = updatedUser.Id,
-            UserName = updatedUser.UserName,
-            NormalizedUserName = updatedUser.NormalizedUserName,
-            NormalizedEmail = updatedUser.NormalizedEmail,
-            Email = updatedUser.Email,
-            EmailConfirmed = updatedUser.EmailConfirmed,
-            PasswordHash = updatedUser.PasswordHash,
-            SecurityStamp = updatedUser.SecurityStamp,
-            ConcurrencyStamp = updatedUser.ConcurrencyStamp,
-            PhoneNumber = updatedUser.PhoneNumber,
-            PhoneNumberConfirmed = updatedUser.PhoneNumberConfirmed,
-            TwoFactorEnabled = updatedUser.TwoFactorEnabled,
-            LockoutEnd = updatedUser.LockoutEnd,
-            LockoutEnabled = updatedUser.LockoutEnabled,
-            AccessFailedCount = updatedUser.AccessFailedCount,
-            FullName = updatedUser.FullName,
-            Gender = updatedUser.Gender,
-            EmployeeCode = updatedUser.EmployeeCode,
-            Position = updatedUser.Position,
-            IsActive = updatedUser.IsActive,
-        };
-        return Ok(response);
+        return Ok(updatedUser);
     }
 
     [HttpPost]

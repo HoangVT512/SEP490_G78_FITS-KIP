@@ -173,6 +173,93 @@ public class UserRepository : IUserRepository
         return existingUser;
     }
 
+    public async Task<UserDTO?> UpdateUserAsync(string id, UpdateUserRequest request, CancellationToken cancellationToken = default)
+    {
+        var existingUser = await db.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        if (existingUser == null)
+        {
+            return null;
+        }
+
+        // Update user properties using EF Core directly
+        existingUser.UserName = request.UserName;
+        existingUser.Email = request.Email;
+        existingUser.NormalizedUserName = request.UserName.ToUpperInvariant();
+        existingUser.NormalizedEmail = request.Email.ToUpperInvariant();
+        existingUser.FullName = request.FullName;
+        existingUser.Gender = request.Gender;
+        existingUser.EmployeeCode = request.EmployeeCode;
+        existingUser.Position = request.Position;
+        existingUser.PhoneNumber = request.PhoneNumber;
+        existingUser.IsActive = request.IsActive;
+
+        // Update roles if provided
+        if (request.RoleIds != null)
+        {
+            // Remove all existing user roles directly from AspNetUserRoles table
+            var existingUserRoles = await db.UserRoles
+                .Where(ur => ur.UserId == id)
+                .ToListAsync(cancellationToken);
+
+            if (existingUserRoles.Any())
+            {
+                db.UserRoles.RemoveRange(existingUserRoles);
+            }
+
+            // Add new roles directly to AspNetUserRoles table
+            if (request.RoleIds.Length > 0)
+            {
+                foreach (var roleId in request.RoleIds)
+                {
+                    // Verify role exists
+                    var roleExists = await db.Roles.AnyAsync(r => r.Id == roleId, cancellationToken);
+                    if (!roleExists)
+                    {
+                        throw new Exception($"Role với ID '{roleId}' không tồn tại trong hệ thống");
+                    }
+
+                    // Add to AspNetUserRoles
+                    var userRole = new Microsoft.AspNetCore.Identity.IdentityUserRole<string>
+                    {
+                        UserId = id,
+                        RoleId = roleId
+                    };
+                    await db.UserRoles.AddAsync(userRole, cancellationToken);
+                }
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        // Return UserDTO with roles
+        var userRoles = await userManager.GetRolesAsync(existingUser);
+
+        return new UserDTO
+        {
+            Id = existingUser.Id,
+            UserName = existingUser.UserName,
+            NormalizedUserName = existingUser.NormalizedUserName,
+            NormalizedEmail = existingUser.NormalizedEmail,
+            Email = existingUser.Email,
+            EmailConfirmed = existingUser.EmailConfirmed,
+            PasswordHash = existingUser.PasswordHash,
+            SecurityStamp = existingUser.SecurityStamp,
+            ConcurrencyStamp = existingUser.ConcurrencyStamp,
+            PhoneNumber = existingUser.PhoneNumber,
+            PhoneNumberConfirmed = existingUser.PhoneNumberConfirmed,
+            TwoFactorEnabled = existingUser.TwoFactorEnabled,
+            LockoutEnd = existingUser.LockoutEnd,
+            LockoutEnabled = existingUser.LockoutEnabled,
+            AccessFailedCount = existingUser.AccessFailedCount,
+            FullName = existingUser.FullName,
+            Gender = existingUser.Gender,
+            EmployeeCode = existingUser.EmployeeCode,
+            Position = existingUser.Position,
+            IsActive = existingUser.IsActive,
+            Roles = userRoles.ToList()
+        };
+    }
+
     public async Task<IReadOnlyList<Department>> GetDepartmentsAsync(CancellationToken cancellationToken = default)
     {
         return await db.Departments

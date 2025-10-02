@@ -180,6 +180,11 @@ const UserManagement = ({ showHeader = true }) => {
 
   const getRoleColor = (role) => {
     const roleColors = {
+      "Quản trị viên": "red",
+      "Quản lý": "volcano",
+      "Quản lý kỹ thuật": "orange",
+      "Tổ trưởng": "green",
+      "Kỹ thuật viên": "blue",
       Admin: "red",
       Developer: "purple",
       Manager: "blue",
@@ -666,26 +671,15 @@ const UserManagement = ({ showHeader = true }) => {
       setLoading(true);
       if (editingUser) {
         await userService.updateUser(editingUser.id, {
-          id: editingUser.id,
           userName: values.email,
-          normalizedUserName: values.email.toUpperCase(),
           email: values.email,
-          normalizedEmail: values.email.toUpperCase(),
-          emailConfirmed: editingUser.emailConfirmed || false,
-          passwordHash: editingUser.passwordHash || null,
-          securityStamp: editingUser.securityStamp || null,
-          concurrencyStamp: editingUser.concurrencyStamp || null,
-          phoneNumber: values.phoneNumber,
-          phoneNumberConfirmed: editingUser.phoneNumberConfirmed || false,
-          twoFactorEnabled: editingUser.twoFactorEnabled || false,
-          lockoutEnd: editingUser.lockoutEnd || null,
-          lockoutEnabled: editingUser.lockoutEnabled || false,
-          accessFailedCount: editingUser.accessFailedCount || 0,
           fullName: values.fullName,
           gender: values.gender || "Nam",
           employeeCode: values.employeeCode,
           position: values.position,
+          phoneNumber: values.phoneNumber,
           isActive: values.status === "true",
+          roleIds: values.roleIds || [],
         });
         message.success({
           content: "Cập nhật người dùng thành công",

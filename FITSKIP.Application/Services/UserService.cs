@@ -29,6 +29,8 @@ public class UserService : IUserService
 
     public Task<User?> UpdateUserAsync(User user, CancellationToken cancellationToken = default) => userRepository.UpdateUserAsync(user, cancellationToken);
 
+    public Task<UserDTO?> UpdateUserAsync(string id, UpdateUserRequest request, CancellationToken cancellationToken = default) => userRepository.UpdateUserAsync(id, request, cancellationToken);
+
     public Task<IReadOnlyList<Department>> GetDepartmentsAsync(CancellationToken cancellationToken = default) => userRepository.GetDepartmentsAsync(cancellationToken);
 
     public Task<IReadOnlyList<User>> GetUsersByRoleAsync(string roleName, CancellationToken cancellationToken = default) => userRepository.GetUsersByRoleAsync(roleName, cancellationToken);

@@ -9,6 +9,7 @@ public interface IUserService
     Task<User> CreateUserAsync(User user, string[]? roleIds = null, CancellationToken cancellationToken = default);
     Task<User?> GetByUsernameAsync(string fullName, CancellationToken cancellationToken = default);
     Task<User?> UpdateUserAsync(User user, CancellationToken cancellationToken = default);
+    Task<UserDTO?> UpdateUserAsync(string id, UpdateUserRequest request, CancellationToken cancellationToken = default);
     Task<User?> GetUserByIdAsync(string id, CancellationToken cancellationToken = default);
     Task<User?> DeleteUserAsync(string id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Department>> GetDepartmentsAsync(CancellationToken cancellationToken = default);
