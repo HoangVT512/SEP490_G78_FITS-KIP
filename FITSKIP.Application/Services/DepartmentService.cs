@@ -45,6 +45,7 @@ public class DepartmentService : IDepartmentService
         entity.DepartmentName = request.DepartmentName;
         entity.ManagerId = request.ManagerId;
         entity.Description = request.Description;
+        entity.IsActive = request.IsActive;
         var updated = await repository.UpdateAsync(entity, cancellationToken);
         return updated == null ? null : MapToDto(updated);
     }

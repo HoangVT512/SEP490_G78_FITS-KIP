@@ -18,7 +18,7 @@ public class LineRepository : ILineRepository
     {
         return await _context.Lines
             .Include(l => l.Department)
-            .Include(l => l.Stages) // Add this line to include stages
+            .Include(l => l.Stages)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }

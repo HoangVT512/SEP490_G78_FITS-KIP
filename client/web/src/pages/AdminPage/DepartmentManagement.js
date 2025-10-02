@@ -28,6 +28,8 @@ import {
   ReloadOutlined,
   BankOutlined,
   UserOutlined,
+  LockOutlined,
+  UnlockOutlined,
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
 import { departmentService } from "../../services/departmentService";
@@ -50,11 +52,31 @@ const DepartmentManagement = ({ showHeader = true }) => {
   const [loadingManagers, setLoadingManagers] = useState(false);
   const [form] = Form.useForm();
 
-  // API data structure: departmentId, departmentName, managerId, description, manager, rooms
+  const [showArchive, setShowArchive] = useState(() => {
+    // Persist archive view state in localStorage
+    const saved = localStorage.getItem("departmentArchiveView");
+    return saved === "true";
+  });
+
+  // Archive icon component
+  function ArchiveIcon() {
+    return (
+      <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" style={{ verticalAlign: "middle" }}>
+        <rect x="3" y="7" width="18" height="13" rx="2" stroke="#334766" strokeWidth="2" />
+        <rect x="2" y="3" width="20" height="4" rx="1" stroke="#334766" strokeWidth="2" />
+        <path d="M9 12h6" stroke="#334766" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    );
+  }
 
   useEffect(() => {
     loadDepartments();
   }, []);
+
+  // Persist archive view state on change
+  useEffect(() => {
+    localStorage.setItem("departmentArchiveView", showArchive ? "true" : "false");
+  }, [showArchive]);
 
   const loadDepartments = async () => {
     setLoading(true);
@@ -147,6 +169,46 @@ const DepartmentManagement = ({ showHeader = true }) => {
           onOk: () => handleDelete(department.departmentId),
         });
         break;
+      case "activate":
+        try {
+          setLoading(true);
+          await departmentService.updateDepartment(department.departmentId, {
+            ...department,
+            isActive: true,
+          });
+          message.success("Đã kích hoạt phòng ban thành công");
+          loadDepartments();
+        } catch (error) {
+          console.error("Error activating department:", error);
+          message.error("Không thể kích hoạt phòng ban");
+          setLoading(false);
+        }
+        break;
+      case "deactivate":
+        Modal.confirm({
+          title: "Xác nhận vô hiệu hóa phòng ban",
+          content: `Bạn có chắc chắn muốn vô hiệu hóa phòng ban "${department.departmentName}"?`,
+          okText: "Vô hiệu hóa",
+          cancelText: "Hủy",
+          okType: "danger",
+          okButtonProps: { style: { backgroundColor: "#ff4d4f", borderColor: "#ff4d4f", color: "#fff" } },
+          onOk: async () => {
+            try {
+              setLoading(true);
+              await departmentService.updateDepartment(department.departmentId, {
+                ...department,
+                isActive: false,
+              });
+              message.success("Đã vô hiệu hóa phòng ban thành công");
+              loadDepartments();
+            } catch (error) {
+              console.error("Error deactivating department:", error);
+              message.error("Không thể vô hiệu hóa phòng ban");
+              setLoading(false);
+            }
+          },
+        });
+        break;
       default:
         break;
     }
@@ -169,11 +231,10 @@ const DepartmentManagement = ({ showHeader = true }) => {
       type: "divider",
     },
     {
-      key: "delete",
-      icon: <DeleteOutlined />,
-      label: "Xóa",
-      danger: true,
-      onClick: () => handleAction("delete", department),
+      key: department.isActive ? "deactivate" : "activate",
+      icon: department.isActive ? <LockOutlined /> : <UnlockOutlined />,
+      label: department.isActive ? "Khóa phòng ban" : "Mở khóa phòng ban",
+      onClick: () => handleAction(department.isActive ? "deactivate" : "activate", department),
     },
   ];
 
@@ -289,7 +350,12 @@ const DepartmentManagement = ({ showHeader = true }) => {
       (statusFilter === "active" && dept.isActive) ||
       (statusFilter === "inactive" && !dept.isActive);
 
-    return matchesSearch && matchesStatus;
+    // Archive filter: only show inactive departments in archive, hide them in main list
+    if (showArchive) {
+      return !dept.isActive && matchesSearch && matchesStatus;
+    } else {
+      return dept.isActive && matchesSearch && matchesStatus;
+    }
   });
 
   const handleModalOk = async () => {
@@ -305,6 +371,7 @@ const DepartmentManagement = ({ showHeader = true }) => {
             departmentName: values.departmentName,
             managerId: values.managerId || null,
             description: values.description || "",
+            isActive: editingDepartment.isActive,
           }
         );
         message.success("Cập nhật phòng ban thành công!");
@@ -356,10 +423,10 @@ const DepartmentManagement = ({ showHeader = true }) => {
         <div style={{ marginBottom: "24px" }}>
           <Title level={3} style={{ margin: 0, color: "#1f2937" }}>
             <TeamOutlined style={{ marginRight: "8px", color: "#334766" }} />
-            Quản lý phòng ban
+            {showArchive ? "Lưu trữ phòng ban" : "Quản lý phòng ban"}
           </Title>
           <Text type="secondary">
-            Quản lý thông tin các phòng ban trong công ty
+            {showArchive ? "Danh sách các phòng ban đã ngừng hoạt động" : "Quản lý thông tin các phòng ban trong công ty"}
           </Text>
         </div>
 
@@ -393,7 +460,7 @@ const DepartmentManagement = ({ showHeader = true }) => {
               onChange={setStatusFilter}
               style={{ width: "100%" }}
               options={[
-                { value: "all", label: "Tất cả" },
+                { value: "all", label: "Tất cả vai trò" },
                 { value: "active", label: "Hoạt động" },
                 { value: "inactive", label: "Ngừng hoạt động" },
               ]}
@@ -401,6 +468,14 @@ const DepartmentManagement = ({ showHeader = true }) => {
           </Col>
           <Col xs={24} sm={6} md={12}>
             <Space style={{ float: "right" }}>
+              <Button
+                type={showArchive ? "primary" : "default"}
+                icon={<ArchiveIcon />}
+                onClick={() => setShowArchive(!showArchive)}
+                style={showArchive ? { backgroundColor: "#334766", borderColor: "#334766" } : {}}
+              >
+                {showArchive ? "Thoát lưu trữ" : "Lưu trữ"}
+              </Button>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}

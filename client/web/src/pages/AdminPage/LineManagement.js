@@ -81,10 +81,32 @@ const LineManagement = ({ showHeader = true }) => {
     department: "all",
   });
 
+  const [showArchive, setShowArchive] = useState(() => {
+    // Persist archive view state in localStorage
+    const saved = localStorage.getItem("lineArchiveView");
+    return saved ? saved === "true" : false;
+  });
+
+  // Archive icon component
+  function ArchiveIcon() {
+    return (
+      <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" style={{ verticalAlign: "middle" }}>
+        <rect x="3" y="7" width="18" height="13" rx="2" stroke="#334766" strokeWidth="2" />
+        <rect x="2" y="3" width="20" height="4" rx="1" stroke="#334766" strokeWidth="2" />
+        <path d="M9 12h6" stroke="#334766" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
   useEffect(() => {
     loadLines();
     loadDepartments();
   }, []);
+
+  // Persist archive view state on change
+  useEffect(() => {
+    localStorage.setItem("lineArchiveView", showArchive ? "true" : "false");
+  }, [showArchive]);
 
   const loadLines = async () => {
     setLoading(true);
@@ -180,8 +202,7 @@ const LineManagement = ({ showHeader = true }) => {
               const response = await lineService.toggleLineStatus(line.lineId);
               if (response.success) {
                 message.success(
-                  `Đã ${
-                    line.isActive ? "khóa" : "mở khóa"
+                  `Đã ${line.isActive ? "khóa" : "mở khóa"
                   } dây chuyền thành công`
                 );
                 loadLines();
@@ -391,7 +412,12 @@ const LineManagement = ({ showHeader = true }) => {
       filters.department === "all" ||
       line.departmentId?.toString() === filters.department;
 
-    return matchesSearch && matchesStatus && matchesDepartment;
+    // Archive filter: only show inactive lines in archive, hide them in main list
+    if (showArchive) {
+      return matchesSearch && matchesDepartment && !line.isActive;
+    } else {
+      return matchesSearch && matchesStatus && matchesDepartment && line.isActive;
+    }
   });
 
   const content = (
@@ -425,9 +451,9 @@ const LineManagement = ({ showHeader = true }) => {
               value={
                 lines.length > 0
                   ? Math.round(
-                      lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) /
-                        lines.length
-                    )
+                    lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) /
+                    lines.length
+                  )
                   : 0
               }
               suffix="%"
@@ -504,7 +530,7 @@ const LineManagement = ({ showHeader = true }) => {
               placeholder="Phòng"
               size="large"
             >
-              <Option value="all">Tất cả phòng</Option>
+              <Option value="all">Tất cả phòng ban</Option>
               {departments.map((department) => (
                 <Option
                   key={department.departmentId}
@@ -531,6 +557,19 @@ const LineManagement = ({ showHeader = true }) => {
               </Button>
               <Button icon={<ReloadOutlined />} onClick={loadLines}>
                 Làm mới
+              </Button>
+            </Space>
+          </Col>
+        </Row>
+        <Row gutter={[16, 16]} style={{ marginBottom: "16px" }}>
+          <Col>
+            <Space>
+               <Button
+                type={showArchive ? "default" : "dashed"}
+                icon={<ArchiveIcon />}
+                onClick={() => setShowArchive(!showArchive)}
+              >
+                {showArchive ? "Hiển thị tất cả" : "Lưu trữ (Ngừng hoạt động)"}
               </Button>
             </Space>
           </Col>

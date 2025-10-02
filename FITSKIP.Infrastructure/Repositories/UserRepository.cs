@@ -25,6 +25,31 @@ public class UserRepository : IUserRepository
         {
             throw new ArgumentException("User with the same username already exists.");
         }
+
+        var existingEmail = await db.Users.FirstOrDefaultAsync(u => u.Email == user.Email, cancellationToken);
+        if (existingEmail != null)
+        {
+            throw new ArgumentException("User with the same email already exists.");
+        }
+
+        if (!string.IsNullOrEmpty(user.EmployeeCode))
+        {
+            var existingEmployeeCode = await db.Users.FirstOrDefaultAsync(u => u.EmployeeCode == user.EmployeeCode, cancellationToken);
+            if (existingEmployeeCode != null)
+            {
+                throw new ArgumentException("User with the same employee code already exists.");
+            }
+        }
+
+        if (!string.IsNullOrEmpty(user.PhoneNumber))
+        {
+            var existingPhone = await db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == user.PhoneNumber, cancellationToken);
+            if (existingPhone != null)
+            {
+                throw new ArgumentException("User with the same phone number already exists.");
+            }
+        }
+
         await db.Users.AddAsync(user, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         return user;

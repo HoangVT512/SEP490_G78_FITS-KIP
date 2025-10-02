@@ -39,7 +39,7 @@ namespace FITSKIP.API.Controllers
         [HttpPost]
         public async Task<ActionResult<DepartmentDTO>> Create([FromBody] CreateDepartmentRequest request, CancellationToken cancellationToken)
         {
-            var validationError = await ValidateManagerAsync(request.ManagerId);
+            var validationError = await ValidateManagerAsync(request.ManagerId, true);
             if (validationError != null) return BadRequest(new { message = validationError });
             var created = await departmentService.CreateAsync(request, cancellationToken);
             return CreatedAtAction(nameof(GetById), new { id = created.DepartmentId }, created);
@@ -48,16 +48,19 @@ namespace FITSKIP.API.Controllers
         [HttpPut("{id:int}")]
         public async Task<ActionResult<DepartmentDTO>> Update(int id, [FromBody] UpdateDepartmentRequest request, CancellationToken cancellationToken)
         {
-            var validationError = await ValidateManagerAsync(request.ManagerId);
+            var validationError = await ValidateManagerAsync(request.ManagerId, false);
             if (validationError != null) return BadRequest(new { message = validationError });
             var updated = await departmentService.UpdateAsync(id, request, cancellationToken);
             if (updated == null) return NotFound();
             return Ok(updated);
         }
 
-        private async Task<string?> ValidateManagerAsync(string? managerId)
+        private async Task<string?> ValidateManagerAsync(string? managerId, bool isRequired = true)
         {
-            if (string.IsNullOrWhiteSpace(managerId)) return "ManagerId là bắt buộc.";
+            if (string.IsNullOrWhiteSpace(managerId))
+            {
+                return isRequired ? "ManagerId là bắt buộc." : null;
+            }
             var user = await userManager.FindByIdAsync(managerId);
             if (user == null) return "Manager không tồn tại.";
             if (!user.IsActive) return "Manager đã bị vô hiệu hóa.";

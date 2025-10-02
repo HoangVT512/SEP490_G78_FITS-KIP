@@ -89,6 +89,32 @@ export const userService = {
   },
 
   // Import users from Excel
+  // importUsersFromExcel: async (formData) => {
+  //   try {
+  //     const token = localStorage.getItem("token");
+  //     const response = await fetch(`${API_URL}/Users/import-excel`, {
+  //       method: "POST",
+  //       headers: {
+  //         Authorization: `Bearer ${token}`,
+  //         // Don't set Content-Type for FormData, browser will set it with boundary
+  //       },
+  //       body: formData,
+  //     });
+
+  //     if (!response.ok) {
+  //       const errorData = await response.json();
+  //       throw new Error(
+  //         errorData.message || "Không thể import người dùng từ Excel."
+  //       );
+  //     }
+
+  //     return await response.json();
+  //   } catch (error) {
+  //     console.error("Error importing users:", error);
+  //     throw error;
+  //   }
+  // },
+
   importUsersFromExcel: async (formData) => {
     try {
       const token = localStorage.getItem("token");
@@ -96,21 +122,96 @@ export const userService = {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
-          // Don't set Content-Type for FormData, browser will set it with boundary
+          // Do NOT set Content-Type for FormData!
         },
         body: formData,
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.message || "Không thể import người dùng từ Excel."
-        );
+        // Only try to read the body once
+        let errorMessage = "Không thể import người dùng từ Excel.";
+        let errorText = "";
+        try {
+          errorText = await response.text();
+          // Try to parse as JSON if possible
+          try {
+            const errorData = JSON.parse(errorText);
+            errorMessage = errorData.message || errorMessage;
+          } catch {
+            if (errorText) errorMessage = errorText;
+          }
+        } catch {
+          // If even text fails, use default
+        }
+        throw new Error(errorMessage);
       }
 
+      // Only parse JSON if response is OK
       return await response.json();
     } catch (error) {
       console.error("Error importing users:", error);
+      throw error;
+    }
+  },
+
+  // Download Excel template
+  downloadTemplate: async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/Users/download-template`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Không thể tải file mẫu");
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'user-template.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading template:", error);
+      throw error;
+    }
+  },
+
+  // Export users to Excel
+  exportUsersToExcel: async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_URL}/Users/export-excel`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Không thể xuất file Excel");
+      }
+
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `users-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error exporting users:", error);
       throw error;
     }
   },

@@ -19,7 +19,6 @@ public class DepartmentRepository : IDepartmentRepository
         return await dbContext.Departments
             .AsNoTracking()
             .Include(d => d.Manager)
-            .Where(d => d.IsActive)
             .ToListAsync(cancellationToken);
     }
 
@@ -27,7 +26,6 @@ public class DepartmentRepository : IDepartmentRepository
     {
         return await dbContext.Departments
             .Include(d => d.Manager)
-            .Where(d => d.IsActive)
             .FirstOrDefaultAsync(d => d.DepartmentId == id, cancellationToken);
     }
 

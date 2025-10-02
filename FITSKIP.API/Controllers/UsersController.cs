@@ -151,6 +151,7 @@ public class UsersController : ControllerBase
             Gender = user.Gender,
             EmployeeCode = user.EmployeeCode,
             Position = user.Position,
+            IsActive = user.IsActive,
         };
         // Ensure the Id from the route is applied so the repository can find the existing entity
         updatedUser.Id = id;
@@ -180,6 +181,7 @@ public class UsersController : ControllerBase
             Gender = updatedUser.Gender,
             EmployeeCode = updatedUser.EmployeeCode,
             Position = updatedUser.Position,
+            IsActive = updatedUser.IsActive,
         };
         return Ok(response);
     }
@@ -193,6 +195,36 @@ public class UsersController : ControllerBase
             if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.UserName))
             {
                 return BadRequest("Email and UserName are required fields.");
+            }
+
+            // Validation 1: Check if username already exists
+            var existingUserByUsername = await userService.GetByUsernameAsync(request.UserName, cancellationToken);
+            if (existingUserByUsername != null)
+            {
+                return BadRequest($"Tên đăng nhập '{request.UserName}' đã tồn tại trong hệ thống");
+            }
+
+            // Validation 2: Check if email already exists
+            var existingUserByEmail = await userService.GetByEmailAsync(request.Email, cancellationToken);
+            if (existingUserByEmail != null)
+            {
+                return BadRequest($"Email '{request.Email}' đã tồn tại trong hệ thống");
+            }
+
+            // Validation 3: Check if employee code already exists
+            if (!string.IsNullOrEmpty(request.EmployeeCode))
+            {
+                var existingUserByEmployeeCode = await userService.GetByEmployeeCodeAsync(request.EmployeeCode, cancellationToken);
+                if (existingUserByEmployeeCode != null)
+                {
+                    return BadRequest($"Mã nhân viên '{request.EmployeeCode}' đã tồn tại trong hệ thống");
+                }
+            }
+
+            // Validation 4: Check email format
+            if (!IsValidEmail(request.Email))
+            {
+                return BadRequest("Email không hợp lệ");
             }
 
             // Hash password for demo purposes
@@ -461,6 +493,89 @@ public class UsersController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, $"Error generating template: {ex.Message}");
+        }
+    }
+
+    [HttpGet("export-excel")]
+    public async Task<IActionResult> ExportUsersToExcel(CancellationToken cancellationToken)
+    {
+        try
+        {
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            var users = await userService.GetUsersWithRolesAsync(cancellationToken);
+
+            using (var package = new ExcelPackage())
+            {
+                var worksheet = package.Workbook.Worksheets.Add("Users");
+
+                // Headers
+                worksheet.Cells[1, 1].Value = "Người dùng";
+                worksheet.Cells[1, 2].Value = "Email";
+                worksheet.Cells[1, 3].Value = "Họ và tên";
+                worksheet.Cells[1, 4].Value = "Giới tính";
+                worksheet.Cells[1, 5].Value = "Mã nhân viên";
+                worksheet.Cells[1, 6].Value = "Chức vụ";
+                worksheet.Cells[1, 7].Value = "Số điện thoại";
+                worksheet.Cells[1, 8].Value = "Trạng thái";
+                worksheet.Cells[1, 9].Value = "Vai trò";
+
+                // Style headers
+                using (var range = worksheet.Cells[1, 1, 1, 9])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
+                    range.Style.Border.Top.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                    range.Style.Border.Bottom.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                    range.Style.Border.Left.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                    range.Style.Border.Right.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                }
+
+                // Data rows
+                for (int i = 0; i < users.Count; i++)
+                {
+                    var user = users[i];
+                    var row = i + 2;
+
+                    worksheet.Cells[row, 1].Value = user.UserName;
+                    worksheet.Cells[row, 2].Value = user.Email;
+                    worksheet.Cells[row, 3].Value = user.FullName;
+                    worksheet.Cells[row, 4].Value = user.Gender;
+                    worksheet.Cells[row, 5].Value = user.EmployeeCode;
+                    worksheet.Cells[row, 6].Value = user.Position;
+                    worksheet.Cells[row, 7].Value = user.PhoneNumber;
+                    worksheet.Cells[row, 8].Value = user.IsActive ? "Hoạt động" : "Ngừng hoạt động";
+                    worksheet.Cells[row, 9].Value = user.Roles != null && user.Roles.Any()
+                        ? string.Join(", ", user.Roles)
+                        : "Không có vai trò";
+
+                    // Add borders to data rows
+                    using (var range = worksheet.Cells[row, 1, row, 9])
+                    {
+                        range.Style.Border.Top.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                        range.Style.Border.Bottom.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                        range.Style.Border.Left.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                        range.Style.Border.Right.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
+                    }
+                }
+
+                worksheet.Cells.AutoFitColumns();
+
+                var stream = new MemoryStream();
+                package.SaveAs(stream);
+                stream.Position = 0;
+
+                var fileName = $"Users_Export_{DateTime.Now:yyyy_MM_dd_HH_mm_ss}.xlsx";
+
+                return File(stream,
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    fileName);
+            }
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Error exporting users: {ex.Message}");
         }
     }
 

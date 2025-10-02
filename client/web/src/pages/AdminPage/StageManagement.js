@@ -61,10 +61,32 @@ const StageManagement = ({ showHeader = true }) => {
     line: "all",
   });
 
+  const [showArchive, setShowArchive] = useState(() => {
+    // Persist archive view state in localStorage
+    const saved = localStorage.getItem("stageArchiveView");
+    return saved ? saved === "true" : false;
+  });
+
+  // Archive icon component
+  function ArchiveIcon() {
+    return (
+      <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" style={{ verticalAlign: "middle" }}>
+        <rect x="3" y="7" width="18" height="13" rx="2" stroke="#334766" strokeWidth="2" />
+        <rect x="2" y="3" width="20" height="4" rx="1" stroke="#334766" strokeWidth="2" />
+        <path d="M9 12h6" stroke="#334766" strokeWidth="2" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
   useEffect(() => {
     loadStages();
     loadLines();
   }, []);
+
+  // Persist archive view state on change
+  useEffect(() => {
+    localStorage.setItem("stageArchiveView", showArchive ? "true" : "false");
+  }, [showArchive]);
 
   const loadStages = async () => {
     setLoading(true);
@@ -376,7 +398,12 @@ const StageManagement = ({ showHeader = true }) => {
     const matchesLine =
       filters.line === "all" || stage.lineId?.toString() === filters.line;
 
-    return matchesSearch && matchesLine;
+    // Archive filter: only show inactive stages in archive, hide them in main list
+    if (showArchive) {
+      return matchesSearch && matchesLine && !stage.isActive;
+    } else {
+      return matchesSearch && matchesLine && stage.isActive;
+    }
   });
 
   const content = (
@@ -499,6 +526,13 @@ const StageManagement = ({ showHeader = true }) => {
               </Button>
               <Button icon={<ReloadOutlined />} onClick={loadStages}>
                 Làm mới
+              </Button>
+              <Button
+                type={showArchive ? "default" : "dashed"}
+                icon={<ArchiveIcon />}
+                onClick={() => setShowArchive(!showArchive)}
+              >
+                {showArchive ? "Hiển thị tất cả" : "Lưu trữ (Ngừng hoạt động)"}
               </Button>
             </Space>
           </Col>
