@@ -58,7 +58,6 @@ const RoleManagement = ({ showHeader = true }) => {
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [isPermissionModalVisible, setIsPermissionModalVisible] =
@@ -687,16 +686,6 @@ const RoleManagement = ({ showHeader = true }) => {
                 >
                   Tạo vai trò mới
                 </Button>
-                {selectedRowKeys.length > 0 && (
-                  <Dropdown
-                    menu={{ items: actionMenuItems }}
-                    trigger={["click"]}
-                  >
-                    <Button size="large">
-                      Thao tác <DownOutlined />
-                    </Button>
-                  </Dropdown>
-                )}
                 <Button
                   icon={<ReloadOutlined />}
                   size="large"
@@ -760,13 +749,6 @@ const RoleManagement = ({ showHeader = true }) => {
               rowKey="id"
               loading={loading}
               scroll={{ x: 1200 }}
-              rowSelection={{
-                selectedRowKeys,
-                onChange: setSelectedRowKeys,
-                getCheckboxProps: (record) => ({
-                  disabled: record.isSystemRole,
-                }),
-              }}
               pagination={{
                 total: filteredRoles.length,
                 pageSize: 10,

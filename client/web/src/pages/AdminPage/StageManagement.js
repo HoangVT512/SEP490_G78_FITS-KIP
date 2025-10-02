@@ -51,7 +51,6 @@ const StageManagement = ({ showHeader = true }) => {
   const [lines, setLines] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [editingStage, setEditingStage] = useState(null);
@@ -70,10 +69,37 @@ const StageManagement = ({ showHeader = true }) => {
   // Archive icon component
   function ArchiveIcon() {
     return (
-      <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" style={{ verticalAlign: "middle" }}>
-        <rect x="3" y="7" width="18" height="13" rx="2" stroke="#334766" strokeWidth="2" />
-        <rect x="2" y="3" width="20" height="4" rx="1" stroke="#334766" strokeWidth="2" />
-        <path d="M9 12h6" stroke="#334766" strokeWidth="2" strokeLinecap="round" />
+      <svg
+        width="1em"
+        height="1em"
+        viewBox="0 0 24 24"
+        fill="none"
+        style={{ verticalAlign: "middle" }}
+      >
+        <rect
+          x="3"
+          y="7"
+          width="18"
+          height="13"
+          rx="2"
+          stroke="#334766"
+          strokeWidth="2"
+        />
+        <rect
+          x="2"
+          y="3"
+          width="20"
+          height="4"
+          rx="1"
+          stroke="#334766"
+          strokeWidth="2"
+        />
+        <path
+          d="M9 12h6"
+          stroke="#334766"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
       </svg>
     );
   }
@@ -550,10 +576,6 @@ const StageManagement = ({ showHeader = true }) => {
             showQuickJumper: true,
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} của ${total} công đoạn`,
-          }}
-          rowSelection={{
-            selectedRowKeys,
-            onChange: setSelectedRowKeys,
           }}
           scroll={{ x: 1400 }}
           locale={{
