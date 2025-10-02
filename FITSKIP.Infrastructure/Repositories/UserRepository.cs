@@ -249,10 +249,77 @@ public class UserRepository : IUserRepository
             }
         }
 
+        // Update department if provided
+        if (request.DepartmentId.HasValue)
+        {
+            // Verify department exists
+            var department = await db.Departments.FirstOrDefaultAsync(d => d.DepartmentId == request.DepartmentId.Value, cancellationToken);
+            if (department == null)
+            {
+                throw new Exception($"Department với ID '{request.DepartmentId.Value}' không tồn tại trong hệ thống");
+            }
+
+            // Unset previous manager if any
+            var previousManagerDepartment = await db.Departments.FirstOrDefaultAsync(d => d.ManagerId == id, cancellationToken);
+            if (previousManagerDepartment != null)
+            {
+                previousManagerDepartment.ManagerId = null;
+            }
+
+            // Set user as manager of the new department
+            department.ManagerId = id;
+        }
+
+        // Update lines if provided
+        if (request.LineIds != null)
+        {
+            // Remove all existing user lines
+            var existingUserLines = await db.UserLines
+                .Where(ul => ul.UserId == id)
+                .ToListAsync(cancellationToken);
+
+            if (existingUserLines.Any())
+            {
+                db.UserLines.RemoveRange(existingUserLines);
+            }
+
+            // Add new lines
+            if (request.LineIds.Count > 0)
+            {
+                foreach (var lineId in request.LineIds)
+                {
+                    // Verify line exists
+                    var line = await db.Lines.FirstOrDefaultAsync(l => l.LineId == lineId, cancellationToken);
+                    if (line == null)
+                    {
+                        throw new Exception($"Line với ID '{lineId}' không tồn tại trong hệ thống");
+                    }
+
+                    var userLine = new UserLine
+                    {
+                        UserId = id,
+                        LineId = lineId
+                    };
+                    await db.UserLines.AddAsync(userLine, cancellationToken);
+                }
+            }
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
-        // Return UserDTO with roles
+        // Return UserDTO with roles, department, and lines
         var userRoles = await userManager.GetRolesAsync(existingUser);
+
+        // Get department where user is manager
+        var managedDepartment = await db.Departments
+            .AsNoTracking()
+            .FirstOrDefaultAsync(d => d.ManagerId == id, cancellationToken);
+
+        // Get lines assigned to user
+        var userLines = await db.UserLines
+            .Where(ul => ul.UserId == id)
+            .Select(ul => ul.LineId)
+            .ToListAsync(cancellationToken);
 
         return new UserDTO
         {
@@ -276,7 +343,10 @@ public class UserRepository : IUserRepository
             EmployeeCode = existingUser.EmployeeCode,
             Position = existingUser.Position,
             IsActive = existingUser.IsActive,
-            Roles = userRoles.ToList()
+            Roles = userRoles.ToList(),
+            DepartmentId = managedDepartment?.DepartmentId,
+            DepartmentName = managedDepartment?.DepartmentName,
+            LineIds = userLines
         };
     }
 

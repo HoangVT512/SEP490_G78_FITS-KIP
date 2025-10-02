@@ -746,6 +746,8 @@ const UserManagement = ({ showHeader = true }) => {
           phoneNumber: values.phoneNumber,
           isActive: values.status === "true",
           roleIds: values.roleIds || [],
+          departmentId: values.departmentId,
+          lineIds: values.lineIds || [],
         });
         message.success({
           content: "Cập nhật người dùng thành công",
