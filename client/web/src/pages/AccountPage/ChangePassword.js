@@ -171,6 +171,7 @@ const ChangePassword = () => {
                 onFinish={handleSubmit}
                 autoComplete="off"
                 onValuesChange={() => setIsFormTouched(true)}
+                data-form-type="change-password"
               >
                 <Form.Item
                   label="Mật khẩu hiện tại"
@@ -220,7 +221,7 @@ const ChangePassword = () => {
                     prefix={<LockOutlined />}
                     placeholder="Nhập mật khẩu mới"
                     size="large"
-                    autoComplete="new-password"
+                    autoComplete="off"
                   />
                 </Form.Item>
 
@@ -249,7 +250,7 @@ const ChangePassword = () => {
                     prefix={<LockOutlined />}
                     placeholder="Nhập lại mật khẩu mới"
                     size="large"
-                    autoComplete="new-password"
+                    autoComplete="off"
                   />
                 </Form.Item>
 
