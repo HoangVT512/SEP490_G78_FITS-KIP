@@ -92,10 +92,37 @@ const UserManagement = ({ showHeader = true }) => {
   // Archive icon component
   function ArchiveIcon() {
     return (
-      <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" style={{ verticalAlign: "middle" }}>
-        <rect x="3" y="7" width="18" height="13" rx="2" stroke="#334766" strokeWidth="2" />
-        <rect x="2" y="3" width="20" height="4" rx="1" stroke="#334766" strokeWidth="2" />
-        <path d="M9 12h6" stroke="#334766" strokeWidth="2" strokeLinecap="round" />
+      <svg
+        width="1em"
+        height="1em"
+        viewBox="0 0 24 24"
+        fill="none"
+        style={{ verticalAlign: "middle" }}
+      >
+        <rect
+          x="3"
+          y="7"
+          width="18"
+          height="13"
+          rx="2"
+          stroke="#334766"
+          strokeWidth="2"
+        />
+        <rect
+          x="2"
+          y="3"
+          width="20"
+          height="4"
+          rx="1"
+          stroke="#334766"
+          strokeWidth="2"
+        />
+        <path
+          d="M9 12h6"
+          stroke="#334766"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
       </svg>
     );
   }
@@ -105,7 +132,7 @@ const UserManagement = ({ showHeader = true }) => {
     Promise.all([
       userService.getUsers(),
       departmentService.getDepartments(),
-      roleService.getRoles()
+      roleService.getRoles(),
     ])
       .then(([usersData, departmentsData, rolesData]) => {
         setUsers(usersData);
@@ -116,8 +143,7 @@ const UserManagement = ({ showHeader = true }) => {
         message.error({
           key: LOAD_USERS_ERROR_KEY,
           content:
-            error.message ||
-            "Không thể tải dữ liệu. Vui lòng thử lại sau.",
+            error.message || "Không thể tải dữ liệu. Vui lòng thử lại sau.",
           placement: "topRight",
           duration: 4,
         });
@@ -250,7 +276,7 @@ const UserManagement = ({ showHeader = true }) => {
     try {
       // Create FormData object and append the file
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append("file", file);
 
       const response = await userService.importUsersFromExcel(formData);
       if (response.successCount > 0) {
@@ -267,7 +293,8 @@ const UserManagement = ({ showHeader = true }) => {
               <ul>
                 {response.failedUsers.map((failed, index) => (
                   <li key={index} style={{ marginBottom: "8px" }}>
-                    <strong>{failed.userName || failed.email}</strong>: {failed.error}
+                    <strong>{failed.userName || failed.email}</strong>:{" "}
+                    {failed.error}
                   </li>
                 ))}
               </ul>
@@ -295,8 +322,19 @@ const UserManagement = ({ showHeader = true }) => {
         break;
       case "edit":
         setEditingUser(user);
+        // Convert role names to role IDs for form
+        const userRoleIds = user.roles
+          ? user.roles
+              .map((roleName) => {
+                const role = roles.find((r) => r.name === roleName);
+                return role ? role.id : null;
+              })
+              .filter((id) => id !== null)
+          : [];
+
         form.setFieldsValue({
           ...user,
+          roleIds: userRoleIds,
           status: user.status === "active" ? "true" : "false",
         });
         setIsModalVisible(true);
@@ -304,7 +342,7 @@ const UserManagement = ({ showHeader = true }) => {
       case "delete":
         try {
           await userService.deleteUser(user.id);
-          setUsers(users.filter(u => u.id !== user.id));
+          setUsers(users.filter((u) => u.id !== user.id));
           message.success({
             content: "Đã xóa người dùng thành công",
             placement: "topRight",
@@ -320,9 +358,11 @@ const UserManagement = ({ showHeader = true }) => {
             ...user,
             isActive: false,
           });
-          setUsers(users.map(u =>
-            u.id === user.id ? { ...u, status: "inactive" } : u
-          ));
+          setUsers(
+            users.map((u) =>
+              u.id === user.id ? { ...u, status: "inactive" } : u
+            )
+          );
           message.success({
             content: "Đã khóa tài khoản người dùng",
             placement: "topRight",
@@ -339,9 +379,11 @@ const UserManagement = ({ showHeader = true }) => {
             ...user,
             isActive: true,
           });
-          setUsers(users.map(u =>
-            u.id === user.id ? { ...u, status: "active" } : u
-          ));
+          setUsers(
+            users.map((u) =>
+              u.id === user.id ? { ...u, status: "active" } : u
+            )
+          );
           message.success({
             content: "Đã mở khóa tài khoản người dùng",
             placement: "topRight",
@@ -376,7 +418,8 @@ const UserManagement = ({ showHeader = true }) => {
     {
       key: user.status === "inactive" ? "unlock" : "lock",
       icon: user.status === "inactive" ? <UnlockOutlined /> : <LockOutlined />,
-      label: user.status === "inactive" ? "Mở khóa tài khoản" : "Khóa tài khoản",
+      label:
+        user.status === "inactive" ? "Mở khóa tài khoản" : "Khóa tài khoản",
       onClick: () =>
         handleUserAction(user.status === "inactive" ? "unlock" : "lock", user),
     },
@@ -413,8 +456,13 @@ const UserManagement = ({ showHeader = true }) => {
       },
       onFilter: (value, record) => {
         const name = record.fullName ? record.fullName.toLowerCase() : "";
-        const code = record.employeeCode ? record.employeeCode.toLowerCase() : "";
-        return name.includes(value.toLowerCase()) || code.includes(value.toLowerCase());
+        const code = record.employeeCode
+          ? record.employeeCode.toLowerCase()
+          : "";
+        return (
+          name.includes(value.toLowerCase()) ||
+          code.includes(value.toLowerCase())
+        );
       },
       width: 250,
       render: (_, record) => (
@@ -442,8 +490,13 @@ const UserManagement = ({ showHeader = true }) => {
       ...getColumnSearchProps("email", "Tìm kiếm email hoặc số điện thoại"),
       onFilter: (value, record) => {
         const email = record.email ? record.email.toLowerCase() : "";
-        const phone = record.phoneNumber ? record.phoneNumber.toLowerCase() : "";
-        return email.includes(value.toLowerCase()) || phone.includes(value.toLowerCase());
+        const phone = record.phoneNumber
+          ? record.phoneNumber.toLowerCase()
+          : "";
+        return (
+          email.includes(value.toLowerCase()) ||
+          phone.includes(value.toLowerCase())
+        );
       },
       width: 200,
       render: (_, record) => (
@@ -479,10 +532,12 @@ const UserManagement = ({ showHeader = true }) => {
       key: "department",
       width: 150,
       filters: departments
-        .filter((dept, idx, arr) =>
-          arr.findIndex(d => d.departmentName === dept.departmentName) === idx
+        .filter(
+          (dept, idx, arr) =>
+            arr.findIndex((d) => d.departmentName === dept.departmentName) ===
+            idx
         )
-        .map(dept => ({
+        .map((dept) => ({
           text: dept.departmentName,
           value: dept.departmentName,
         })),
@@ -496,10 +551,26 @@ const UserManagement = ({ showHeader = true }) => {
     },
     {
       title: "Vai trò",
-      dataIndex: "role",
-      key: "role",
-      width: 120,
-      render: (role) => <Tag color={getRoleColor(role)}>{role}</Tag>,
+      dataIndex: "roles",
+      key: "roles",
+      width: 180,
+      render: (roles) => (
+        <div>
+          {roles && roles.length > 0 ? (
+            roles.map((role, index) => (
+              <Tag
+                key={index}
+                color={getRoleColor(role)}
+                style={{ marginBottom: 2 }}
+              >
+                {role}
+              </Tag>
+            ))
+          ) : (
+            <Tag color="default">Chưa có vai trò</Tag>
+          )}
+        </div>
+      ),
     },
     {
       title: "Trạng thái",
@@ -572,9 +643,20 @@ const UserManagement = ({ showHeader = true }) => {
 
     // Archive filter: only show inactive users in archive, hide them in main list
     if (showArchive) {
-      return searchMatch && roleMatch && departmentMatch && user.status === "inactive";
+      return (
+        searchMatch &&
+        roleMatch &&
+        departmentMatch &&
+        user.status === "inactive"
+      );
     } else {
-      return searchMatch && statusMatch && roleMatch && departmentMatch && user.status !== "inactive";
+      return (
+        searchMatch &&
+        statusMatch &&
+        roleMatch &&
+        departmentMatch &&
+        user.status !== "inactive"
+      );
     }
   });
 
@@ -620,7 +702,7 @@ const UserManagement = ({ showHeader = true }) => {
           phoneNumber: values.phoneNumber,
           position: values.position,
           gender: values.gender || "Nam",
-          roleIds: values.role ? [values.role] : [],
+          roleIds: values.roleIds || [],
         });
         message.success({
           content: "Tạo người dùng mới thành công",
@@ -759,10 +841,7 @@ const UserManagement = ({ showHeader = true }) => {
               >
                 Nhập từ Excel
               </Button>
-              <Button
-                icon={<ExportOutlined />}
-                onClick={handleExportUsers}
-              >
+              <Button icon={<ExportOutlined />} onClick={handleExportUsers}>
                 Xuất Excel
               </Button>
             </Space>
@@ -775,9 +854,13 @@ const UserManagement = ({ showHeader = true }) => {
           rowKey="id"
           loading={loading}
           locale={{
-            emptyText: searchText || filters.status !== "all" || filters.role !== "all" || filters.department !== "all"
-              ? "Không có người dùng nào phù hợp với tìm kiếm hoặc bộ lọc."
-              : "Không có dữ liệu người dùng."
+            emptyText:
+              searchText ||
+              filters.status !== "all" ||
+              filters.role !== "all" ||
+              filters.department !== "all"
+                ? "Không có người dùng nào phù hợp với tìm kiếm hoặc bộ lọc."
+                : "Không có dữ liệu người dùng.",
           }}
           pagination={{
             total: filteredUsers.length,
@@ -916,13 +999,21 @@ const UserManagement = ({ showHeader = true }) => {
                   {
                     validator: (_, value) => {
                       if (!value) return Promise.resolve();
-                      const existing = users.find(u => u.employeeCode && u.employeeCode.toLowerCase() === value.toLowerCase() && u.id !== (editingUser?.id || ''));
+                      const existing = users.find(
+                        (u) =>
+                          u.employeeCode &&
+                          u.employeeCode.toLowerCase() ===
+                            value.toLowerCase() &&
+                          u.id !== (editingUser?.id || "")
+                      );
                       if (existing) {
-                        return Promise.reject(new Error("Mã nhân viên đã tồn tại"));
+                        return Promise.reject(
+                          new Error("Mã nhân viên đã tồn tại")
+                        );
                       }
                       return Promise.resolve();
-                    }
-                  }
+                    },
+                  },
                 ]}
               >
                 <Input placeholder="Nhập mã nhân viên" />
@@ -940,13 +1031,17 @@ const UserManagement = ({ showHeader = true }) => {
                   {
                     validator: (_, value) => {
                       if (!value) return Promise.resolve();
-                      const existing = users.find(u => u.email.toLowerCase() === value.toLowerCase() && u.id !== (editingUser?.id || ''));
+                      const existing = users.find(
+                        (u) =>
+                          u.email.toLowerCase() === value.toLowerCase() &&
+                          u.id !== (editingUser?.id || "")
+                      );
                       if (existing) {
                         return Promise.reject(new Error("Email đã tồn tại"));
                       }
                       return Promise.resolve();
-                    }
-                  }
+                    },
+                  },
                 ]}
               >
                 <Input placeholder="Nhập địa chỉ email" />
@@ -958,17 +1053,28 @@ const UserManagement = ({ showHeader = true }) => {
                 label="Số điện thoại"
                 rules={[
                   { required: true, message: "Vui lòng nhập số điện thoại" },
-                  { type: "string", min: 10, max: 11, message: "Số điện thoại không hợp lệ" },
+                  {
+                    type: "string",
+                    min: 10,
+                    max: 11,
+                    message: "Số điện thoại không hợp lệ",
+                  },
                   {
                     validator: (_, value) => {
                       if (!value) return Promise.resolve();
-                      const existing = users.find(u => u.phoneNumber === value && u.id !== (editingUser?.id || ''));
+                      const existing = users.find(
+                        (u) =>
+                          u.phoneNumber === value &&
+                          u.id !== (editingUser?.id || "")
+                      );
                       if (existing) {
-                        return Promise.reject(new Error("Số điện thoại đã tồn tại"));
+                        return Promise.reject(
+                          new Error("Số điện thoại đã tồn tại")
+                        );
                       }
                       return Promise.resolve();
-                    }
-                  }
+                    },
+                  },
                 ]}
               >
                 <Input placeholder="Nhập số điện thoại" />
@@ -980,7 +1086,7 @@ const UserManagement = ({ showHeader = true }) => {
               <Form.Item
                 name="department"
                 label="Phòng ban"
-              // rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
+                // rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
               >
                 <Select
                   placeholder="Chọn phòng ban"
@@ -998,7 +1104,7 @@ const UserManagement = ({ showHeader = true }) => {
               <Form.Item
                 name="position"
                 label="Chức vụ"
-              // rules={[{ required: true, message: "Vui lòng nhập chức vụ" }]}
+                // rules={[{ required: true, message: "Vui lòng nhập chức vụ" }]}
               >
                 <Input placeholder="Nhập chức vụ" />
               </Form.Item>
@@ -1007,11 +1113,21 @@ const UserManagement = ({ showHeader = true }) => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="role"
+                name="roleIds"
                 label="Vai trò"
-                rules={[{ required: true, message: "Vui lòng chọn vai trò" }]}
+                rules={[
+                  {
+                    required: true,
+                    message: "Vui lòng chọn ít nhất một vai trò",
+                  },
+                ]}
               >
-                <Select placeholder="Chọn vai trò" loading={roles.length === 0}>
+                <Select
+                  mode="multiple"
+                  placeholder="Chọn vai trò"
+                  loading={roles.length === 0}
+                  allowClear
+                >
                   {roles.map((role) => (
                     <Option key={role.id} value={role.id}>
                       {role.name}

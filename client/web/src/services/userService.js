@@ -22,7 +22,9 @@ export const userService = {
         // Default values for properties not in API
         department: "N/A",
         position: user.position || "N/A",
-        // Get first role from roles array, default to "User" if no roles
+        // Store all roles as array
+        roles: user.roles || [],
+        // Keep single role for backward compatibility
         role: user.roles && user.roles.length > 0 ? user.roles[0] : "User",
         status: user.isActive ? "active" : "inactive",
         emailConfirmed: user.emailConfirmed || false,
@@ -172,9 +174,9 @@ export const userService = {
       // Create blob and download
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = 'user-template.xlsx';
+      a.download = "user-template.xlsx";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -203,7 +205,7 @@ export const userService = {
       // Create blob and download
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `users-export-${new Date().toISOString().slice(0, 10)}.xlsx`;
       document.body.appendChild(a);
