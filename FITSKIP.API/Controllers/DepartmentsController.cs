@@ -39,20 +39,44 @@ namespace FITSKIP.API.Controllers
         [HttpPost]
         public async Task<ActionResult<DepartmentDTO>> Create([FromBody] CreateDepartmentRequest request, CancellationToken cancellationToken)
         {
-            var validationError = await ValidateManagerAsync(request.ManagerId, true);
-            if (validationError != null) return BadRequest(new { message = validationError });
-            var created = await departmentService.CreateAsync(request, cancellationToken);
-            return CreatedAtAction(nameof(GetById), new { id = created.DepartmentId }, created);
+            try
+            {
+                var validationError = await ValidateManagerAsync(request.ManagerId, true);
+                if (validationError != null) return BadRequest(new { message = validationError });
+                var created = await departmentService.CreateAsync(request, cancellationToken);
+                return CreatedAtAction(nameof(GetById), new { id = created.DepartmentId }, created);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Trả về thông báo lỗi cụ thể từ service layer
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi tạo phòng ban", details = ex.Message });
+            }
         }
 
         [HttpPut("{id:int}")]
         public async Task<ActionResult<DepartmentDTO>> Update(int id, [FromBody] UpdateDepartmentRequest request, CancellationToken cancellationToken)
         {
-            var validationError = await ValidateManagerAsync(request.ManagerId, false);
-            if (validationError != null) return BadRequest(new { message = validationError });
-            var updated = await departmentService.UpdateAsync(id, request, cancellationToken);
-            if (updated == null) return NotFound();
-            return Ok(updated);
+            try
+            {
+                var validationError = await ValidateManagerAsync(request.ManagerId, false);
+                if (validationError != null) return BadRequest(new { message = validationError });
+                var updated = await departmentService.UpdateAsync(id, request, cancellationToken);
+                if (updated == null) return NotFound();
+                return Ok(updated);
+            }
+            catch (InvalidOperationException ex)
+            {
+                // Trả về thông báo lỗi cụ thể từ service layer
+                return BadRequest(new { success = false, message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi cập nhật phòng ban", details = ex.Message });
+            }
         }
 
         private async Task<string?> ValidateManagerAsync(string? managerId, bool isRequired = true)

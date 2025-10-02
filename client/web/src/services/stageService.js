@@ -27,7 +27,8 @@ export const stageService = {
       });
     } catch (error) {
       console.error("Create stage error:", error);
-      throw error;
+      // Throw lại error message từ API để UI có thể hiển thị
+      throw new Error(error.message || "Tạo giai đoạn thất bại");
     }
   },
 
@@ -39,7 +40,8 @@ export const stageService = {
       });
     } catch (error) {
       console.error("Update stage error:", error);
-      throw error;
+      // Throw lại error message từ API để UI có thể hiển thị
+      throw new Error(error.message || "Cập nhật giai đoạn thất bại");
     }
   },
 

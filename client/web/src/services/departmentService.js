@@ -34,7 +34,8 @@ export const departmentService = {
       });
     } catch (error) {
       console.error("Error creating department:", error);
-      throw new Error("Không thể tạo phòng ban mới.");
+      // Throw lại error message từ API để UI có thể hiển thị
+      throw new Error(error.message || "Không thể tạo phòng ban mới.");
     }
   },
 
@@ -47,7 +48,8 @@ export const departmentService = {
       });
     } catch (error) {
       console.error("Error updating department:", error);
-      throw new Error("Không thể cập nhật thông tin phòng ban.");
+      // Throw lại error message từ API để UI có thể hiển thị
+      throw new Error(error.message || "Không thể cập nhật thông tin phòng ban.");
     }
   },
 

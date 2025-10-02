@@ -8,10 +8,12 @@ namespace FITSKIP.Application.Services;
 public class StageService : IStageService
 {
     private readonly IStageRepository _stageRepository;
+    private readonly ILineRepository _lineRepository;
 
-    public StageService(IStageRepository stageRepository)
+    public StageService(IStageRepository stageRepository, ILineRepository lineRepository)
     {
         _stageRepository = stageRepository;
+        _lineRepository = lineRepository;
     }
 
     public Task<IReadOnlyList<Stage>> GetStagesAsync(CancellationToken cancellationToken = default)
@@ -21,11 +23,19 @@ public class StageService : IStageService
 
     public async Task<Stage> CreateStageAsync(CreateStageRequest request, CancellationToken cancellationToken = default)
     {
+        // Get line info for detailed error message
+        var line = await _lineRepository.GetByIdAsync(request.LineId, cancellationToken);
+        if (line == null)
+        {
+            throw new InvalidOperationException($"Không tìm thấy chuyền sản xuất với ID: {request.LineId}");
+        }
+
         // Check duplicate stage name in same line
         var existingStages = await _stageRepository.GetByLineIdAsync(request.LineId, cancellationToken);
-        if (existingStages.Any(s => s.StageName.Trim().ToLower() == request.StageName.Trim().ToLower()))
+        var duplicateStage = existingStages.FirstOrDefault(s => s.StageName.Trim().ToLower() == request.StageName.Trim().ToLower());
+        if (duplicateStage != null)
         {
-            throw new InvalidOperationException($"Tên giai đoạn '{request.StageName}' đã tồn tại trong dây chuyền này");
+            throw new InvalidOperationException($" '{line.LineName}' đã có giai đoạn tên '{request.StageName}'");
         }
 
         var stage = new Stage
@@ -51,11 +61,19 @@ public class StageService : IStageService
             return null;
         }
 
+        // Get line info for detailed error message
+        var line = await _lineRepository.GetByIdAsync(request.LineId, cancellationToken);
+        if (line == null)
+        {
+            throw new InvalidOperationException($"Không tìm thấy chuyền sản xuất với ID: {request.LineId}");
+        }
+
         // Check duplicate stage name in same line (exclude current stage)
         var existingStages = await _stageRepository.GetByLineIdAsync(request.LineId, cancellationToken);
-        if (existingStages.Any(s => s.StageId != id && s.StageName.Trim().ToLower() == request.StageName.Trim().ToLower()))
+        var duplicateStage = existingStages.FirstOrDefault(s => s.StageId != id && s.StageName.Trim().ToLower() == request.StageName.Trim().ToLower());
+        if (duplicateStage != null)
         {
-            throw new InvalidOperationException($"Tên giai đoạn '{request.StageName}' đã tồn tại trong dây chuyền này");
+            throw new InvalidOperationException($"'{line.LineName}' đã có giai đoạn tên '{request.StageName}'");
         }
 
         existingStage.StageName = request.StageName;

@@ -37,6 +37,7 @@ export const lineService = {
       return response;
     } catch (error) {
       console.error("Create line error:", error);
+      // Throw lại error message từ API để UI có thể hiển thị
       throw new Error(error.message || "Tạo chuyền sản xuất thất bại");
     }
   },
@@ -51,6 +52,7 @@ export const lineService = {
       return response;
     } catch (error) {
       console.error("Update line error:", error);
+      // Throw lại error message từ API để UI có thể hiển thị
       throw new Error(error.message || "Cập nhật chuyền sản xuất thất bại");
     }
   },

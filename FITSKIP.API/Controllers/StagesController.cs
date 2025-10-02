@@ -67,6 +67,11 @@ public class StagesController : ControllerBase
             var stage = await _stageService.CreateStageAsync(request);
             return CreatedAtAction(nameof(GetStage), new { id = stage.StageId }, new { success = true, data = stage, message = "Tạo giai đoạn thành công" });
         }
+        catch (InvalidOperationException ex)
+        {
+            // Trả về thông báo lỗi cụ thể từ service layer
+            return BadRequest(new { success = false, message = ex.Message });
+        }
         catch (Exception ex)
         {
             return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi tạo giai đoạn", details = ex.Message });
@@ -88,6 +93,11 @@ public class StagesController : ControllerBase
                 return NotFound(new { success = false, message = "Không tìm thấy giai đoạn" });
             }
             return Ok(new { success = true, data = stage, message = "Cập nhật giai đoạn thành công" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Trả về thông báo lỗi cụ thể từ service layer
+            return BadRequest(new { success = false, message = ex.Message });
         }
         catch (Exception ex)
         {

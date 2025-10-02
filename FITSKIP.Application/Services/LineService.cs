@@ -8,10 +8,12 @@ namespace FITSKIP.Application.Services;
 public class LineService : ILineService
 {
     private readonly ILineRepository _lineRepository;
+    private readonly IDepartmentRepository _departmentRepository;
 
-    public LineService(ILineRepository lineRepository)
+    public LineService(ILineRepository lineRepository, IDepartmentRepository departmentRepository)
     {
         _lineRepository = lineRepository;
+        _departmentRepository = departmentRepository;
     }
 
     public Task<IReadOnlyList<Line>> GetLinesAsync(CancellationToken cancellationToken = default)
@@ -21,11 +23,19 @@ public class LineService : ILineService
 
     public async Task<Line> CreateLineAsync(CreateLineRequest request, CancellationToken cancellationToken = default)
     {
+        // Get department info for detailed error message
+        var department = await _departmentRepository.GetByIdAsync(request.DepartmentId, cancellationToken);
+        if (department == null)
+        {
+            throw new InvalidOperationException($"Không tìm thấy phòng ban với ID: {request.DepartmentId}");
+        }
+
         // Check duplicate line name in same department
         var existingLines = await _lineRepository.GetByDepartmentIdAsync(request.DepartmentId, cancellationToken);
-        if (existingLines.Any(l => l.LineName.Trim().ToLower() == request.LineName.Trim().ToLower()))
+        var duplicateLine = existingLines.FirstOrDefault(l => l.LineName.Trim().ToLower() == request.LineName.Trim().ToLower());
+        if (duplicateLine != null)
         {
-            throw new InvalidOperationException($"Tên chuyền '{request.LineName}' đã tồn tại trong phòng ban này");
+            throw new InvalidOperationException($"'{department.DepartmentName}' đã có chuyền sản xuất tên '{request.LineName}'");
         }
 
         var line = new Line
@@ -51,11 +61,19 @@ public class LineService : ILineService
             return null;
         }
 
+        // Get department info for detailed error message
+        var department = await _departmentRepository.GetByIdAsync(request.DepartmentId, cancellationToken);
+        if (department == null)
+        {
+            throw new InvalidOperationException($"Không tìm thấy phòng ban với ID: {request.DepartmentId}");
+        }
+
         // Check duplicate line name in same department (exclude current line)
         var existingLines = await _lineRepository.GetByDepartmentIdAsync(request.DepartmentId, cancellationToken);
-        if (existingLines.Any(l => l.LineId != id && l.LineName.Trim().ToLower() == request.LineName.Trim().ToLower()))
+        var duplicateLine = existingLines.FirstOrDefault(l => l.LineId != id && l.LineName.Trim().ToLower() == request.LineName.Trim().ToLower());
+        if (duplicateLine != null)
         {
-            throw new InvalidOperationException($"Tên chuyền '{request.LineName}' đã tồn tại trong phòng ban này");
+            throw new InvalidOperationException($"'{department.DepartmentName}' đã có chuyền sản xuất tên '{request.LineName}'");
         }
 
         existingLine.LineName = request.LineName;

@@ -247,14 +247,8 @@ const StageManagement = ({ showHeader = true }) => {
           }
         } catch (error) {
           console.error("Update stage error:", error);
-          if (
-            error.message &&
-            error.message.includes("đã tồn tại trong dây chuyền")
-          ) {
-            message.error("Tên công đoạn đã tồn tại trong dây chuyền này");
-          } else {
-            message.error("Cập nhật công đoạn thất bại");
-          }
+          // Hiển thị thông báo lỗi chi tiết từ API
+          message.error(error.message || "Cập nhật công đoạn thất bại");
         }
       } else {
         // Create new stage
@@ -270,14 +264,8 @@ const StageManagement = ({ showHeader = true }) => {
           }
         } catch (error) {
           console.error("Create stage error:", error);
-          if (
-            error.message &&
-            error.message.includes("đã tồn tại trong dây chuyền")
-          ) {
-            message.error("Tên công đoạn đã tồn tại trong dây chuyền này");
-          } else {
-            message.error("Tạo công đoạn thất bại");
-          }
+          // Hiển thị thông báo lỗi chi tiết từ API
+          message.error(error.message || "Tạo công đoạn thất bại");
         }
       }
     } catch (error) {

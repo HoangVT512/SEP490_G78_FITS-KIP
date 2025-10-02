@@ -28,6 +28,14 @@ public class DepartmentService : IDepartmentService
 
     public async Task<DepartmentDTO> CreateAsync(CreateDepartmentRequest request, CancellationToken cancellationToken = default)
     {
+        // Check duplicate department name
+        var existingDepartments = await repository.GetAllAsync(cancellationToken);
+        var duplicateDepartment = existingDepartments.FirstOrDefault(d => d.DepartmentName.Trim().ToLower() == request.DepartmentName.Trim().ToLower());
+        if (duplicateDepartment != null)
+        {
+            throw new InvalidOperationException($"Đã tồn tại phòng ban có tên '{request.DepartmentName}'");
+        }
+
         var entity = new Department
         {
             DepartmentName = request.DepartmentName,
@@ -42,6 +50,15 @@ public class DepartmentService : IDepartmentService
     {
         var entity = await repository.GetByIdAsync(id, cancellationToken);
         if (entity == null) return null;
+
+        // Check duplicate department name (exclude current department)
+        var existingDepartments = await repository.GetAllAsync(cancellationToken);
+        var duplicateDepartment = existingDepartments.FirstOrDefault(d => d.DepartmentId != id && d.DepartmentName.Trim().ToLower() == request.DepartmentName.Trim().ToLower());
+        if (duplicateDepartment != null)
+        {
+            throw new InvalidOperationException($"Đã tồn tại phòng ban có tên '{request.DepartmentName}'");
+        }
+
         entity.DepartmentName = request.DepartmentName;
         entity.ManagerId = request.ManagerId;
         entity.Description = request.Description;

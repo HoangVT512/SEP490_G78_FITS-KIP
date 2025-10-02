@@ -269,14 +269,8 @@ const LineManagement = ({ showHeader = true }) => {
           }
         } catch (error) {
           console.error("Update line error:", error);
-          if (
-            error.message &&
-            error.message.includes("đã tồn tại trong phòng ban")
-          ) {
-            message.error(`Tên dây chuyền đã tồn tại trong phòng ban này`);
-          } else {
-            message.error("Cập nhật dây chuyền thất bại");
-          }
+          // Hiển thị thông báo lỗi chi tiết từ API
+          message.error(error.message || "Cập nhật dây chuyền thất bại");
         }
       } else {
         // Create new line
@@ -292,14 +286,8 @@ const LineManagement = ({ showHeader = true }) => {
           }
         } catch (error) {
           console.error("Create line error:", error);
-          if (
-            error.message &&
-            error.message.includes("đã tồn tại trong phòng ban")
-          ) {
-            message.error(`Tên dây chuyền đã tồn tại trong phòng ban này`);
-          } else {
-            message.error("Tạo dây chuyền thất bại");
-          }
+          // Hiển thị thông báo lỗi chi tiết từ API
+          message.error(error.message || "Tạo dây chuyền thất bại");
         }
       }
     } catch (error) {

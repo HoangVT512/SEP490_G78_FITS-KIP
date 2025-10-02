@@ -68,6 +68,12 @@ public class LinesController : ControllerBase
             var line = await _lineService.CreateLineAsync(request);
             return CreatedAtAction(nameof(GetLine), new { id = line.LineId }, new { success = true, data = line, message = "Tạo chuyền sản xuất thành công" });
         }
+        catch (InvalidOperationException ex)
+        {
+            // Trả về thông báo lỗi cụ thể từ service layer
+            Console.WriteLine($"Business logic error: {ex.Message}");
+            return BadRequest(new { success = false, message = ex.Message });
+        }
         catch (Exception ex)
         {
             Console.WriteLine($"Error creating line: {ex.Message}");
@@ -91,6 +97,11 @@ public class LinesController : ControllerBase
                 return NotFound(new { success = false, message = "Không tìm thấy chuyền sản xuất" });
             }
             return Ok(new { success = true, data = line, message = "Cập nhật chuyền sản xuất thành công" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Trả về thông báo lỗi cụ thể từ service layer
+            return BadRequest(new { success = false, message = ex.Message });
         }
         catch (Exception ex)
         {
