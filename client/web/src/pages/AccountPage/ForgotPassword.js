@@ -10,6 +10,7 @@ import {
   Steps,
   message,
   Modal,
+  Radio,
 } from "antd";
 import {
   MailOutlined,
@@ -19,6 +20,7 @@ import {
   InfoCircleOutlined,
   CheckCircleOutlined,
   SafetyOutlined,
+  PhoneOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
@@ -29,24 +31,36 @@ const { Title, Text } = Typography;
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
-  const [currentStep, setCurrentStep] = useState(0); // 0: Enter Email, 1: Enter OTP, 2: Enter New Password
+  const [currentStep, setCurrentStep] = useState(0); // 0: Choose Method & Enter Contact, 1: Enter OTP, 2: Enter New Password
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [otpMethod, setOtpMethod] = useState("email"); // "email" or "phone"
   const [otp, setOtp] = useState("");
   const [form] = Form.useForm();
 
-  // Step 1: Send OTP to email
+  // Step 1: Send OTP to email or phone
   const handleSendOtp = async (values) => {
     setLoading(true);
     try {
-      await authService.sendForgotPasswordOtp(values.email);
-      setEmail(values.email);
-      message.success("Mã OTP đã được gửi đến email của bạn!");
+      if (otpMethod === "email") {
+        await authService.sendForgotPasswordOtp(values.email);
+        setEmail(values.email);
+        message.success("Mã OTP đã được gửi đến email của bạn!");
+      } else {
+        // TODO: Implement phone OTP service
+        // await authService.sendForgotPasswordOtpByPhone(values.phoneNumber);
+        setPhoneNumber(values.phoneNumber);
+        message.success("Mã OTP đã được gửi đến số điện thoại của bạn!");
+      }
       setCurrentStep(1);
     } catch (error) {
       console.error("Error sending OTP:", error);
       message.error(
-        error.message || "Không thể gửi mã OTP. Vui lòng kiểm tra lại email!"
+        error.message ||
+          `Không thể gửi mã OTP. Vui lòng kiểm tra lại ${
+            otpMethod === "email" ? "email" : "số điện thoại"
+          }!`
       );
     } finally {
       setLoading(false);
@@ -57,7 +71,8 @@ const ForgotPassword = () => {
   const handleVerifyOtp = async (values) => {
     setLoading(true);
     try {
-      await authService.verifyOtp(email, values.otp);
+      const contactInfo = otpMethod === "email" ? email : phoneNumber;
+      await authService.verifyOtp(contactInfo, values.otp);
       setOtp(values.otp);
       message.success("Xác thực OTP thành công!");
       setCurrentStep(2);
@@ -73,7 +88,12 @@ const ForgotPassword = () => {
   const handleResetPassword = async (values) => {
     setLoading(true);
     try {
-      await authService.resetPasswordWithOtp(email, otp, values.newPassword);
+      const contactInfo = otpMethod === "email" ? email : phoneNumber;
+      await authService.resetPasswordWithOtp(
+        contactInfo,
+        otp,
+        values.newPassword
+      );
 
       Modal.success({
         title: "Đặt lại mật khẩu thành công!",
@@ -108,7 +128,7 @@ const ForgotPassword = () => {
   const renderStepContent = () => {
     switch (currentStep) {
       case 0:
-        // Step 1: Enter Email
+        // Step 1: Choose Method and Enter Contact Info
         return (
           <Form
             form={form}
@@ -116,10 +136,11 @@ const ForgotPassword = () => {
             onFinish={handleSendOtp}
             layout="vertical"
             autoComplete="off"
+            initialValues={{ otpMethod: "email" }}
           >
             <Alert
-              message="Nhập email của bạn"
-              description="Chúng tôi sẽ gửi mã OTP 6 số đến email này để xác thực danh tính của bạn."
+              message="Chọn phương thức nhận OTP"
+              description="Chúng tôi sẽ gửi mã OTP 6 số để xác thực danh tính của bạn."
               type="info"
               icon={<InfoCircleOutlined />}
               className={styles.forgotPasswordGuideAlert}
@@ -127,28 +148,95 @@ const ForgotPassword = () => {
             />
 
             <Form.Item
-              name="email"
-              label="Email công ty"
-              rules={[
-                { required: true, message: "Vui lòng nhập email!" },
-                { type: "email", message: "Email không hợp lệ!" },
-              ]}
+              name="otpMethod"
+              label="Phương thức nhận OTP"
+              className={styles.forgotPasswordMethodLabel}
             >
-              <Input
-                prefix={<MailOutlined />}
-                placeholder="Nhập email đã đăng ký trong hệ thống"
-                size="large"
-              />
+              <Radio.Group
+                onChange={(e) => {
+                  setOtpMethod(e.target.value);
+                  form.resetFields(["email", "phoneNumber"]);
+                }}
+                className={styles.forgotPasswordMethodGroup}
+              >
+                <Space
+                  direction="vertical"
+                  className={styles.forgotPasswordMethodSpace}
+                >
+                  <Radio
+                    value="email"
+                    className={styles.forgotPasswordMethodRadio}
+                  >
+                    <Space>
+                      <MailOutlined
+                        className={`${styles.forgotPasswordMethodIcon} ${styles.emailIcon}`}
+                      />
+                      <span>Gửi qua Email</span>
+                    </Space>
+                  </Radio>
+                  <Radio
+                    value="phone"
+                    className={styles.forgotPasswordMethodRadio}
+                  >
+                    <Space>
+                      <PhoneOutlined
+                        className={`${styles.forgotPasswordMethodIcon} ${styles.phoneIcon}`}
+                      />
+                      <span>Gửi qua Số điện thoại</span>
+                    </Space>
+                  </Radio>
+                </Space>
+              </Radio.Group>
             </Form.Item>
 
-            <Form.Item>
+            {otpMethod === "email" ? (
+              <Form.Item
+                name="email"
+                label="Email công ty"
+                rules={[
+                  { required: true, message: "Vui lòng nhập email!" },
+                  { type: "email", message: "Email không hợp lệ!" },
+                ]}
+                className={styles.forgotPasswordInputItem}
+              >
+                <Input
+                  prefix={<MailOutlined />}
+                  placeholder="Nhập email đã đăng ký trong hệ thống"
+                  size="large"
+                />
+              </Form.Item>
+            ) : (
+              <Form.Item
+                name="phoneNumber"
+                label="Số điện thoại"
+                rules={[
+                  { required: true, message: "Vui lòng nhập số điện thoại!" },
+                  {
+                    pattern: /^[0-9]{10,11}$/,
+                    message: "Số điện thoại phải có 10-11 chữ số!",
+                  },
+                ]}
+                className={styles.forgotPasswordInputItem}
+              >
+                <Input
+                  prefix={<PhoneOutlined />}
+                  placeholder="Nhập số điện thoại đã đăng ký"
+                  size="large"
+                  maxLength={11}
+                />
+              </Form.Item>
+            )}
+
+            <Form.Item className={styles.forgotPasswordSubmitItem}>
               <Button
                 type="primary"
                 htmlType="submit"
                 loading={loading}
                 block
                 size="large"
-                icon={<MailOutlined />}
+                icon={
+                  otpMethod === "email" ? <MailOutlined /> : <PhoneOutlined />
+                }
                 style={{ backgroundColor: "#334766", borderColor: "#334766" }}
               >
                 {loading ? "Đang gửi mã OTP..." : "Gửi mã OTP"}
@@ -169,7 +257,11 @@ const ForgotPassword = () => {
           >
             <Alert
               message="Nhập mã OTP"
-              description={`Mã OTP đã được gửi đến email: ${email}. Vui lòng kiểm tra hộp thư và nhập mã OTP gồm 6 chữ số.`}
+              description={
+                otpMethod === "email"
+                  ? `Mã OTP đã được gửi đến email: ${email}. Vui lòng kiểm tra hộp thư và nhập mã OTP gồm 6 chữ số.`
+                  : `Mã OTP đã được gửi đến số điện thoại: ${phoneNumber}. Vui lòng kiểm tra tin nhắn và nhập mã OTP gồm 6 chữ số.`
+              }
               type="success"
               icon={<CheckCircleOutlined />}
               className={styles.forgotPasswordGuideAlert}
@@ -315,51 +407,127 @@ const ForgotPassword = () => {
   return (
     <Layout>
       <div className={styles.forgotPasswordContainer}>
-        <Card className={styles.forgotPasswordCard}>
-          <div className={styles.authHeader}>
-            <Space direction="vertical" size="small" align="center">
-              <KeyOutlined className={styles.forgotPasswordIcon} />
-              <Title level={2} className={styles.forgotPasswordTitle}>
-                Quên mật khẩu
-              </Title>
-              <Text className={styles.forgotPasswordSubtitle}>
-                Làm theo các bước để đặt lại mật khẩu của bạn
-              </Text>
-            </Space>
+        <div className={styles.forgotPasswordWrapper}>
+          {/* Left Section - Info */}
+          <div className={styles.forgotPasswordLogoSection}>
+            <div className={styles.forgotPasswordLogoContent}>
+              <div className={styles.forgotPasswordFactoryIcon}>🔐</div>
+              <div className={styles.forgotPasswordCompanyTitle}>
+                Khôi phục mật khẩu
+              </div>
+              <div className={styles.forgotPasswordCompanySubtitle}>
+                Đừng lo lắng! Chúng tôi sẽ giúp bạn lấy lại quyền truy cập
+                <br />
+                <br />
+                Làm theo 3 bước đơn giản để đặt lại mật khẩu của bạn một cách an
+                toàn
+              </div>
+
+              {/* Steps indicator in left section */}
+              <div className={styles.forgotPasswordStepsInfo}>
+                <div
+                  className={
+                    currentStep === 0
+                      ? styles.forgotPasswordStepActive
+                      : currentStep > 0
+                      ? styles.forgotPasswordStepCompleted
+                      : styles.forgotPasswordStepInactive
+                  }
+                >
+                  {otpMethod === "email" ? <MailOutlined /> : <PhoneOutlined />}{" "}
+                  Bước 1: Chọn phương thức
+                </div>
+                <div
+                  className={
+                    currentStep === 1
+                      ? styles.forgotPasswordStepActive
+                      : currentStep > 1
+                      ? styles.forgotPasswordStepCompleted
+                      : styles.forgotPasswordStepInactive
+                  }
+                >
+                  <SafetyOutlined /> Bước 2: Xác thực OTP
+                </div>
+                <div
+                  className={
+                    currentStep === 2
+                      ? styles.forgotPasswordStepActive
+                      : styles.forgotPasswordStepInactive
+                  }
+                >
+                  <LockOutlined /> Bước 3: Mật khẩu mới
+                </div>
+              </div>
+            </div>
           </div>
 
-          <Steps
-            current={currentStep}
-            style={{ marginBottom: 32 }}
-            items={[
-              {
-                title: "Nhập Email",
-                icon: <MailOutlined />,
-              },
-              {
-                title: "Xác thực OTP",
-                icon: <SafetyOutlined />,
-              },
-              {
-                title: "Mật khẩu mới",
-                icon: <LockOutlined />,
-              },
-            ]}
-          />
+          {/* Right Section - Form */}
+          <div className={styles.forgotPasswordFormSection}>
+            <div className={styles.forgotPasswordFormHeader}>
+              <Space direction="vertical" size="small">
+                <KeyOutlined className={styles.forgotPasswordHeaderIcon} />
+                <Title level={2} className={styles.forgotPasswordTitle}>
+                  {currentStep === 0
+                    ? "Chọn phương thức nhận OTP"
+                    : currentStep === 1
+                    ? "Xác thực OTP"
+                    : "Đặt mật khẩu mới"}
+                </Title>
+                <Typography.Text
+                  className={styles.forgotPasswordHeaderSubtitle}
+                >
+                  {currentStep === 0
+                    ? "Chọn email hoặc số điện thoại để nhận mã xác thực"
+                    : currentStep === 1
+                    ? `Nhập mã OTP đã gửi đến ${
+                        otpMethod === "email" ? "email" : "số điện thoại"
+                      } của bạn`
+                    : "Tạo mật khẩu mới cho tài khoản"}
+                </Typography.Text>
+              </Space>
+            </div>
 
-          {renderStepContent()}
+            <Steps
+              current={currentStep}
+              size="small"
+              style={{ marginBottom: 24 }}
+              items={[
+                {
+                  title: "Phương thức",
+                  icon:
+                    otpMethod === "email" ? (
+                      <MailOutlined />
+                    ) : (
+                      <PhoneOutlined />
+                    ),
+                },
+                {
+                  title: "OTP",
+                  icon: <SafetyOutlined />,
+                },
+                {
+                  title: "Mật khẩu",
+                  icon: <LockOutlined />,
+                },
+              ]}
+            />
 
-          <div className={styles.forgotPasswordBackContainer}>
-            <Button
-              type="link"
-              onClick={handleBack}
-              className={styles.forgotPasswordBackButton}
-              icon={<ArrowLeftOutlined />}
-            >
-              {currentStep === 0 ? "Quay lại đăng nhập" : "Quay lại bước trước"}
-            </Button>
+            {renderStepContent()}
+
+            <div className={styles.forgotPasswordBackContainer}>
+              <Button
+                type="link"
+                onClick={handleBack}
+                className={styles.forgotPasswordBackButton}
+                icon={<ArrowLeftOutlined />}
+              >
+                {currentStep === 0
+                  ? "Quay lại đăng nhập"
+                  : "Quay lại bước trước"}
+              </Button>
+            </div>
           </div>
-        </Card>
+        </div>
       </div>
     </Layout>
   );
