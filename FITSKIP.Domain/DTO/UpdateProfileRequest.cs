@@ -5,7 +5,8 @@ namespace FITSKIP.Domain.DTO;
 
 public class UpdateProfileRequest
 {
-    // Loại bỏ FullName vì không cho phép sửa tên
+    [Required(ErrorMessage = "Họ và tên là bắt buộc")]
+    public string FullName { get; set; } = string.Empty;
     
     [Required(ErrorMessage = "Email là bắt buộc")]
     [EmailAddress(ErrorMessage = "Email không đúng định dạng")]

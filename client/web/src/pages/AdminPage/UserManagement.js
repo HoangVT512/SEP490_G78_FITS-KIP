@@ -425,8 +425,23 @@ const UserManagement = ({ showHeader = true }) => {
       icon: user.status === "inactive" ? <UnlockOutlined /> : <LockOutlined />,
       label:
         user.status === "inactive" ? "Mở khóa tài khoản" : "Khóa tài khoản",
-      onClick: () =>
-        handleUserAction(user.status === "inactive" ? "unlock" : "lock", user),
+      danger: user.status === "active", // Make deactivate action red
+      onClick: () => {
+        const isActive = user.status === "active";
+        Modal.confirm({
+          title: isActive ? "Xác nhận khóa tài khoản" : "Xác nhận mở khóa tài khoản",
+          content: isActive
+            ? "Bạn có chắc chắn muốn ngừng hoạt động tài khoản này? Người dùng sẽ không thể đăng nhập."
+            : "Bạn có chắc chắn muốn kích hoạt lại tài khoản này?",
+          okText: isActive ? "Khóa tài khoản" : "Mở khóa tài khoản",
+          cancelText: "Hủy",
+          okButtonProps: {
+            danger: isActive,
+            style: isActive ? {} : { backgroundColor: "#52c41a", borderColor: "#52c41a" }
+          },
+          onOk: () => handleUserAction(isActive ? "lock" : "unlock", user),
+        });
+      },
     },
     // {
     //   key: "delete",

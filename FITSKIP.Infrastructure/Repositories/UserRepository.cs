@@ -312,7 +312,8 @@ public class UserRepository : IUserRepository
                 throw new ArgumentException("Đã có người dùng sử dụng số điện thoại này, không được dùng.");
             }
 
-            // Update only editable fields - NOT including FullName (không cho sửa tên)
+            // Update only editable fields 
+            existingUser.FullName = request.FullName;
             existingUser.Email = request.Email;
             existingUser.NormalizedEmail = request.Email.ToUpperInvariant();
             existingUser.PhoneNumber = request.PhoneNumber;

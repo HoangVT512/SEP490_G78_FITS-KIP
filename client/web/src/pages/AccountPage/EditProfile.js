@@ -92,8 +92,9 @@ const EditProfile = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // Prepare data to update (only editable fields - NOT including fullName)
+      // Prepare data to update (only editable fields)
       const updateData = {
+        fullName: values.fullName, 
         email: values.email,
         phoneNumber: values.phoneNumber || "",
         gender: values.gender,
@@ -154,6 +155,7 @@ const EditProfile = () => {
     const initialAvatarUrl = currentUser?.profileImageUrl || null;
 
     // Check if any editable field has changed
+    const hasFullNameChanged = currentValues.fullName !== initialValues.fullName;
     const hasEmailChanged = currentValues.email !== initialValues.email;
     const hasPhoneChanged =
       currentValues.phoneNumber !== initialValues.phoneNumber;
@@ -161,6 +163,7 @@ const EditProfile = () => {
     const hasAvatarChanged = currentAvatarUrl !== initialAvatarUrl;
 
     const changed =
+      hasFullNameChanged ||
       hasEmailChanged ||
       hasPhoneChanged ||
       hasGenderChanged ||
@@ -281,6 +284,7 @@ const EditProfile = () => {
                       Có thể chỉnh sửa:
                     </p>
                     <ul className={styles.editProfileAlertList}>
+                      <li>Họ và tên</li>
                       <li>Email</li>
                       <li>Số điện thoại (10 số bắt đầu bằng 0)</li>
                       <li>Giới tính</li>
@@ -290,7 +294,6 @@ const EditProfile = () => {
                       Chỉ xem (do Admin quản lý):
                     </p>
                     <ul className={styles.editProfileAlertList}>
-                      <li>Họ và tên</li>
                       <li>Mã nhân viên</li>
                       <li>Phòng ban</li>
                       <li>Chức vụ</li>
@@ -319,14 +322,14 @@ const EditProfile = () => {
                     <Form.Item
                       label="Họ và tên"
                       name="fullName"
-                      tooltip="Họ tên không thể thay đổi, do Admin quản lý"
+                      rules={[
+                        { required: true, message: "Vui lòng nhập họ và tên!" },
+                      ]}
                     >
                       <Input
                         prefix={<UserOutlined />}
-                        value={currentUser.fullName}
-                        disabled
+                        placeholder="Nhập họ và tên"
                         size="large"
-                        className={styles.editProfileDisabledField}
                       />
                     </Form.Item>
                   </Col>
