@@ -11,5 +11,7 @@ namespace FITSKIP.Domain.DTO
         public string? Position { get; set; }
         public string? PhoneNumber { get; set; }
         public string[]? RoleIds { get; set; }
+        public int? DepartmentId { get; set; } // Optional: assign as manager of this department
+        public int[]? LineIds { get; set; } // Optional: assign to these lines
     }
 }

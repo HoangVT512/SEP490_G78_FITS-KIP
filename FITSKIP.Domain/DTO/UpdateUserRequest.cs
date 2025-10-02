@@ -11,5 +11,7 @@ namespace FITSKIP.Domain.DTO
         public string? PhoneNumber { get; set; }
         public bool IsActive { get; set; } = true;
         public string[]? RoleIds { get; set; }
+        public int? DepartmentId { get; set; }
+        public List<int>? LineIds { get; set; }
     }
 }

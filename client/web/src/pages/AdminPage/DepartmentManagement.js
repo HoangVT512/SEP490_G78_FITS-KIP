@@ -43,7 +43,6 @@ const DepartmentManagement = ({ showHeader = true }) => {
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [editingDepartment, setEditingDepartment] = useState(null);
@@ -61,10 +60,37 @@ const DepartmentManagement = ({ showHeader = true }) => {
   // Archive icon component
   function ArchiveIcon() {
     return (
-      <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" style={{ verticalAlign: "middle" }}>
-        <rect x="3" y="7" width="18" height="13" rx="2" stroke="#334766" strokeWidth="2" />
-        <rect x="2" y="3" width="20" height="4" rx="1" stroke="#334766" strokeWidth="2" />
-        <path d="M9 12h6" stroke="#334766" strokeWidth="2" strokeLinecap="round" />
+      <svg
+        width="1em"
+        height="1em"
+        viewBox="0 0 24 24"
+        fill="none"
+        style={{ verticalAlign: "middle" }}
+      >
+        <rect
+          x="3"
+          y="7"
+          width="18"
+          height="13"
+          rx="2"
+          stroke="#334766"
+          strokeWidth="2"
+        />
+        <rect
+          x="2"
+          y="3"
+          width="20"
+          height="4"
+          rx="1"
+          stroke="#334766"
+          strokeWidth="2"
+        />
+        <path
+          d="M9 12h6"
+          stroke="#334766"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
       </svg>
     );
   }
@@ -75,7 +101,10 @@ const DepartmentManagement = ({ showHeader = true }) => {
 
   // Persist archive view state on change
   useEffect(() => {
-    localStorage.setItem("departmentArchiveView", showArchive ? "true" : "false");
+    localStorage.setItem(
+      "departmentArchiveView",
+      showArchive ? "true" : "false"
+    );
   }, [showArchive]);
 
   const loadDepartments = async () => {
@@ -165,7 +194,13 @@ const DepartmentManagement = ({ showHeader = true }) => {
           okText: "Xóa",
           cancelText: "Hủy",
           okType: "danger",
-          okButtonProps: { style: { backgroundColor: "#334766", borderColor: "#334766", color: "#fff" } },
+          okButtonProps: {
+            style: {
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              color: "#fff",
+            },
+          },
           onOk: () => handleDelete(department.departmentId),
         });
         break;
@@ -191,14 +226,23 @@ const DepartmentManagement = ({ showHeader = true }) => {
           okText: "Vô hiệu hóa",
           cancelText: "Hủy",
           okType: "danger",
-          okButtonProps: { style: { backgroundColor: "#ff4d4f", borderColor: "#ff4d4f", color: "#fff" } },
+          okButtonProps: {
+            style: {
+              backgroundColor: "#ff4d4f",
+              borderColor: "#ff4d4f",
+              color: "#fff",
+            },
+          },
           onOk: async () => {
             try {
               setLoading(true);
-              await departmentService.updateDepartment(department.departmentId, {
-                ...department,
-                isActive: false,
-              });
+              await departmentService.updateDepartment(
+                department.departmentId,
+                {
+                  ...department,
+                  isActive: false,
+                }
+              );
               message.success("Đã vô hiệu hóa phòng ban thành công");
               loadDepartments();
             } catch (error) {
@@ -234,7 +278,11 @@ const DepartmentManagement = ({ showHeader = true }) => {
       key: department.isActive ? "deactivate" : "activate",
       icon: department.isActive ? <LockOutlined /> : <UnlockOutlined />,
       label: department.isActive ? "Khóa phòng ban" : "Mở khóa phòng ban",
-      onClick: () => handleAction(department.isActive ? "deactivate" : "activate", department),
+      onClick: () =>
+        handleAction(
+          department.isActive ? "deactivate" : "activate",
+          department
+        ),
     },
   ];
 
@@ -426,7 +474,9 @@ const DepartmentManagement = ({ showHeader = true }) => {
             {showArchive ? "Lưu trữ phòng ban" : "Quản lý phòng ban"}
           </Title>
           <Text type="secondary">
-            {showArchive ? "Danh sách các phòng ban đã ngừng hoạt động" : "Quản lý thông tin các phòng ban trong công ty"}
+            {showArchive
+              ? "Danh sách các phòng ban đã ngừng hoạt động"
+              : "Quản lý thông tin các phòng ban trong công ty"}
           </Text>
         </div>
 
@@ -472,7 +522,11 @@ const DepartmentManagement = ({ showHeader = true }) => {
                 type={showArchive ? "primary" : "default"}
                 icon={<ArchiveIcon />}
                 onClick={() => setShowArchive(!showArchive)}
-                style={showArchive ? { backgroundColor: "#334766", borderColor: "#334766" } : {}}
+                style={
+                  showArchive
+                    ? { backgroundColor: "#334766", borderColor: "#334766" }
+                    : {}
+                }
               >
                 {showArchive ? "Thoát lưu trữ" : "Lưu trữ"}
               </Button>
@@ -508,10 +562,6 @@ const DepartmentManagement = ({ showHeader = true }) => {
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} của ${total} phòng ban`,
           }}
-          rowSelection={{
-            selectedRowKeys,
-            onChange: setSelectedRowKeys,
-          }}
           scroll={{ x: 1200 }}
           className="department-management-table"
         />
@@ -527,7 +577,11 @@ const DepartmentManagement = ({ showHeader = true }) => {
         okText={editingDepartment ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
         okButtonProps={{
-          style: { backgroundColor: "#334766", borderColor: "#334766", width: 100 },
+          style: {
+            backgroundColor: "#334766",
+            borderColor: "#334766",
+            width: 100,
+          },
         }}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>

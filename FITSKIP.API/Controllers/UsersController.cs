@@ -180,10 +180,7 @@ public class UsersController : ControllerBase
                 return BadRequest("Email không hợp lệ");
             }
 
-            // Hash password for demo purposes
-            var passwordHash = !string.IsNullOrEmpty(request.Password) ?
-                Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.Password)) :
-                null;
+            // Password will be handled by Identity in the service layer
 
             var user = new User
             {
@@ -199,12 +196,11 @@ public class UsersController : ControllerBase
                 PhoneNumber = request.PhoneNumber,
                 EmailConfirmed = true,
                 LockoutEnabled = true,
-                PasswordHash = passwordHash,
                 SecurityStamp = Guid.NewGuid().ToString(),
                 ConcurrencyStamp = Guid.NewGuid().ToString()
             };
 
-            var createdUser = await userService.CreateUserAsync(user, request.RoleIds, cancellationToken);
+            var createdUser = await userService.CreateUserWithAssignmentsAsync(request, cancellationToken);
 
             var response = new UserDTO
             {
@@ -363,7 +359,7 @@ public class UsersController : ControllerBase
                             ConcurrencyStamp = Guid.NewGuid().ToString()
                         };
 
-                        await userService.CreateUserAsync(user, null, cancellationToken);
+                        await userService.CreateUserAsync(user, "DefaultPassword123!", null, cancellationToken);
                         successCount++;
                     }
                     catch (Exception ex)

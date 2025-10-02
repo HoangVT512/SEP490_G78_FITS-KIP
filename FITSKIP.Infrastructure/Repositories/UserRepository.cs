@@ -18,7 +18,7 @@ public class UserRepository : IUserRepository
         this.userManager = userManager;
     }
 
-    public async Task<User> CreateUserAsync(User user, string[]? roleIds = null, CancellationToken cancellationToken = default)
+    public async Task<User> CreateUserAsync(User user, string password, string[]? roleIds = null, CancellationToken cancellationToken = default)
     {
         var existingUser = await db.Users.FirstOrDefaultAsync(u => u.UserName == user.UserName, cancellationToken);
         if (existingUser != null)
@@ -50,8 +50,14 @@ public class UserRepository : IUserRepository
             }
         }
 
-        await db.Users.AddAsync(user, cancellationToken);
-        await db.SaveChangesAsync(cancellationToken);
+        // Create user with password using Identity
+        var createResult = await userManager.CreateAsync(user, password);
+        if (!createResult.Succeeded)
+        {
+            throw new Exception($"Failed to create user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
+        }
+
+        // Note: User is already added to db by userManager.CreateAsync, no need to AddAsync again
 
         // Thêm roles cho user nếu có roleIds
         if (roleIds != null && roleIds.Length > 0)
@@ -106,6 +112,8 @@ public class UserRepository : IUserRepository
     public async Task<IReadOnlyList<UserDTO>> GetUsersWithRolesAsync(CancellationToken cancellationToken = default)
     {
         var users = await db.Users
+            .Include(u => u.UserLines)
+                .ThenInclude(ul => ul.Line)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
 
@@ -113,6 +121,15 @@ public class UserRepository : IUserRepository
         foreach (var user in users)
         {
             var roles = await userManager.GetRolesAsync(user);
+
+            // Get department where user is manager
+            var managedDepartment = await db.Departments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.ManagerId == user.Id, cancellationToken);
+
+            // Get lines assigned to user
+            var userLineIds = user.UserLines.Select(ul => ul.LineId).ToList();
+
             userDTOs.Add(new UserDTO
             {
                 Id = user.Id,
@@ -135,7 +152,10 @@ public class UserRepository : IUserRepository
                 EmployeeCode = user.EmployeeCode,
                 Position = user.Position,
                 IsActive = user.IsActive,
-                Roles = roles.ToList()
+                Roles = roles.ToList(),
+                DepartmentId = managedDepartment?.DepartmentId,
+                DepartmentName = managedDepartment?.DepartmentName,
+                LineIds = userLineIds
             });
         }
         return userDTOs;
@@ -229,10 +249,77 @@ public class UserRepository : IUserRepository
             }
         }
 
+        // Update department if provided
+        if (request.DepartmentId.HasValue)
+        {
+            // Verify department exists
+            var department = await db.Departments.FirstOrDefaultAsync(d => d.DepartmentId == request.DepartmentId.Value, cancellationToken);
+            if (department == null)
+            {
+                throw new Exception($"Department với ID '{request.DepartmentId.Value}' không tồn tại trong hệ thống");
+            }
+
+            // Unset previous manager if any
+            var previousManagerDepartment = await db.Departments.FirstOrDefaultAsync(d => d.ManagerId == id, cancellationToken);
+            if (previousManagerDepartment != null)
+            {
+                previousManagerDepartment.ManagerId = null;
+            }
+
+            // Set user as manager of the new department
+            department.ManagerId = id;
+        }
+
+        // Update lines if provided
+        if (request.LineIds != null)
+        {
+            // Remove all existing user lines
+            var existingUserLines = await db.UserLines
+                .Where(ul => ul.UserId == id)
+                .ToListAsync(cancellationToken);
+
+            if (existingUserLines.Any())
+            {
+                db.UserLines.RemoveRange(existingUserLines);
+            }
+
+            // Add new lines
+            if (request.LineIds.Count > 0)
+            {
+                foreach (var lineId in request.LineIds)
+                {
+                    // Verify line exists
+                    var line = await db.Lines.FirstOrDefaultAsync(l => l.LineId == lineId, cancellationToken);
+                    if (line == null)
+                    {
+                        throw new Exception($"Line với ID '{lineId}' không tồn tại trong hệ thống");
+                    }
+
+                    var userLine = new UserLine
+                    {
+                        UserId = id,
+                        LineId = lineId
+                    };
+                    await db.UserLines.AddAsync(userLine, cancellationToken);
+                }
+            }
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
-        // Return UserDTO with roles
+        // Return UserDTO with roles, department, and lines
         var userRoles = await userManager.GetRolesAsync(existingUser);
+
+        // Get department where user is manager
+        var managedDepartment = await db.Departments
+            .AsNoTracking()
+            .FirstOrDefaultAsync(d => d.ManagerId == id, cancellationToken);
+
+        // Get lines assigned to user
+        var userLines = await db.UserLines
+            .Where(ul => ul.UserId == id)
+            .Select(ul => ul.LineId)
+            .ToListAsync(cancellationToken);
 
         return new UserDTO
         {
@@ -256,7 +343,10 @@ public class UserRepository : IUserRepository
             EmployeeCode = existingUser.EmployeeCode,
             Position = existingUser.Position,
             IsActive = existingUser.IsActive,
-            Roles = userRoles.ToList()
+            Roles = userRoles.ToList(),
+            DepartmentId = managedDepartment?.DepartmentId,
+            DepartmentName = managedDepartment?.DepartmentName,
+            LineIds = userLines
         };
     }
 
@@ -328,6 +418,65 @@ public class UserRepository : IUserRepository
             Console.WriteLine($"UpdateProfile Error: {ex.Message}");
             throw;
         }
+    }
+
+    public async Task<User> CreateUserWithAssignmentsAsync(CreateUserRequest request, CancellationToken cancellationToken = default)
+    {
+        // Create the user entity from request
+        var user = new User
+        {
+            UserName = request.UserName,
+            Email = request.Email,
+            FullName = request.FullName,
+            Gender = request.Gender,
+            EmployeeCode = request.EmployeeCode,
+            Position = request.Position,
+            PhoneNumber = request.PhoneNumber
+        };
+
+        // Create user using existing method
+        var createdUser = await CreateUserAsync(user, request.Password, request.RoleIds, cancellationToken);
+
+        // Assign as manager of department if specified
+        if (request.DepartmentId.HasValue)
+        {
+            var department = await db.Departments.FirstOrDefaultAsync(d => d.DepartmentId == request.DepartmentId.Value, cancellationToken);
+            if (department != null)
+            {
+                department.ManagerId = createdUser.Id;
+                await db.SaveChangesAsync(cancellationToken);
+            }
+            else
+            {
+                throw new ArgumentException($"Department with ID '{request.DepartmentId}' does not exist.");
+            }
+        }
+
+        // Assign to lines if specified
+        if (request.LineIds != null && request.LineIds.Length > 0)
+        {
+            foreach (var lineId in request.LineIds)
+            {
+                var line = await db.Lines.FirstOrDefaultAsync(l => l.LineId == lineId, cancellationToken);
+                if (line != null)
+                {
+                    var userLine = new UserLine
+                    {
+                        UserId = createdUser.Id,
+                        LineId = lineId,
+                        CreateDate = DateTime.UtcNow
+                    };
+                    await db.UserLines.AddAsync(userLine, cancellationToken);
+                }
+                else
+                {
+                    throw new ArgumentException($"Line with ID '{lineId}' does not exist.");
+                }
+            }
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return createdUser;
     }
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)

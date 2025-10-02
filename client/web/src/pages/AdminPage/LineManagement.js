@@ -70,7 +70,6 @@ const LineManagement = ({ showHeader = true }) => {
   const [departments, setDepartments] = useState([]); // Changed from rooms to departments
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [editingLine, setEditingLine] = useState(null);
@@ -90,10 +89,37 @@ const LineManagement = ({ showHeader = true }) => {
   // Archive icon component
   function ArchiveIcon() {
     return (
-      <svg width="1em" height="1em" viewBox="0 0 24 24" fill="none" style={{ verticalAlign: "middle" }}>
-        <rect x="3" y="7" width="18" height="13" rx="2" stroke="#334766" strokeWidth="2" />
-        <rect x="2" y="3" width="20" height="4" rx="1" stroke="#334766" strokeWidth="2" />
-        <path d="M9 12h6" stroke="#334766" strokeWidth="2" strokeLinecap="round" />
+      <svg
+        width="1em"
+        height="1em"
+        viewBox="0 0 24 24"
+        fill="none"
+        style={{ verticalAlign: "middle" }}
+      >
+        <rect
+          x="3"
+          y="7"
+          width="18"
+          height="13"
+          rx="2"
+          stroke="#334766"
+          strokeWidth="2"
+        />
+        <rect
+          x="2"
+          y="3"
+          width="20"
+          height="4"
+          rx="1"
+          stroke="#334766"
+          strokeWidth="2"
+        />
+        <path
+          d="M9 12h6"
+          stroke="#334766"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
       </svg>
     );
   }
@@ -112,16 +138,18 @@ const LineManagement = ({ showHeader = true }) => {
     setLoading(true);
     try {
       const response = await lineService.getLines();
-      if (response.success) {
-        setLines(response.data || []); // Ensure data is array
+      if (Array.isArray(response)) {
+        setLines(response);
+      } else if (response.success) {
+        setLines(response.data || []);
       } else {
         message.error(response.message || "Không thể tải danh sách dây chuyền");
-        setLines([]); // Set empty array on error
+        setLines([]);
       }
     } catch (error) {
       console.error("Error loading lines:", error);
       message.error("Không thể tải danh sách dây chuyền");
-      setLines([]); // Set empty array on error
+      setLines([]);
     } finally {
       setLoading(false);
     }
@@ -202,7 +230,8 @@ const LineManagement = ({ showHeader = true }) => {
               const response = await lineService.toggleLineStatus(line.lineId);
               if (response.success) {
                 message.success(
-                  `Đã ${line.isActive ? "khóa" : "mở khóa"
+                  `Đã ${
+                    line.isActive ? "khóa" : "mở khóa"
                   } dây chuyền thành công`
                 );
                 loadLines();
@@ -404,7 +433,9 @@ const LineManagement = ({ showHeader = true }) => {
     if (showArchive) {
       return matchesSearch && matchesDepartment && !line.isActive;
     } else {
-      return matchesSearch && matchesStatus && matchesDepartment && line.isActive;
+      return (
+        matchesSearch && matchesStatus && matchesDepartment && line.isActive
+      );
     }
   });
 
@@ -439,9 +470,9 @@ const LineManagement = ({ showHeader = true }) => {
               value={
                 lines.length > 0
                   ? Math.round(
-                    lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) /
-                    lines.length
-                  )
+                      lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) /
+                        lines.length
+                    )
                   : 0
               }
               suffix="%"
@@ -552,7 +583,7 @@ const LineManagement = ({ showHeader = true }) => {
         <Row gutter={[16, 16]} style={{ marginBottom: "16px" }}>
           <Col>
             <Space>
-               <Button
+              <Button
                 type={showArchive ? "default" : "dashed"}
                 icon={<ArchiveIcon />}
                 onClick={() => setShowArchive(!showArchive)}
@@ -575,10 +606,6 @@ const LineManagement = ({ showHeader = true }) => {
             showQuickJumper: true,
             showTotal: (total, range) =>
               `${range[0]}-${range[1]} của ${total} dây chuyền`,
-          }}
-          rowSelection={{
-            selectedRowKeys,
-            onChange: setSelectedRowKeys,
           }}
           scroll={{ x: 1400 }}
           className="linegroup-management-table"
