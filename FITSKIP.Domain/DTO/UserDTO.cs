@@ -49,5 +49,11 @@ namespace FITSKIP.Domain.DTO
         public bool IsActive { get; set; }
 
         public List<string>? Roles { get; set; }
+
+        public int? DepartmentId { get; set; }
+
+        public string? DepartmentName { get; set; }
+
+        public List<int>? LineIds { get; set; }
     }
 }

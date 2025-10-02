@@ -55,6 +55,7 @@ import dayjs from "dayjs";
 import { userService } from "../../services/userService";
 import { departmentService } from "../../services/departmentService";
 import { roleService } from "../../services/roleService";
+import { lineService } from "../../services/lineService";
 import * as XLSX from "xlsx";
 
 const { Title, Text } = Typography;
@@ -66,7 +67,6 @@ const UserManagement = ({ showHeader = true }) => {
   const [loading, setLoading] = useState(false);
   const searchInput = useRef(null);
   const [searchText, setSearchText] = useState("");
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
@@ -81,6 +81,8 @@ const UserManagement = ({ showHeader = true }) => {
   });
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
+  const [lines, setLines] = useState([]);
+  const [filteredLines, setFilteredLines] = useState([]);
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
   const [importing, setImporting] = useState(false);
   const [showArchive, setShowArchive] = useState(() => {
@@ -133,11 +135,13 @@ const UserManagement = ({ showHeader = true }) => {
       userService.getUsers(),
       departmentService.getDepartments(),
       roleService.getRoles(),
+      lineService.getLines(),
     ])
-      .then(([usersData, departmentsData, rolesData]) => {
+      .then(([usersData, departmentsData, rolesData, linesData]) => {
         setUsers(usersData);
-        setDepartments(departmentsData);
-        setRoles(rolesData);
+        setDepartments(departmentsData || []);
+        setRoles(rolesData || []);
+        setLines(linesData || []);
       })
       .catch((error) => {
         message.error({
@@ -156,6 +160,15 @@ const UserManagement = ({ showHeader = true }) => {
   useEffect(() => {
     localStorage.setItem("userArchiveView", showArchive ? "true" : "false");
   }, [showArchive]);
+
+  // Filter lines based on selected department
+  useEffect(() => {
+    if (lines && Array.isArray(lines)) {
+      setFilteredLines(lines);
+    } else {
+      setFilteredLines([]);
+    }
+  }, [lines]);
 
   const formatDateTime = (dateString) => {
     return dayjs(dateString).format("DD/MM/YYYY HH:mm");
@@ -340,8 +353,18 @@ const UserManagement = ({ showHeader = true }) => {
         form.setFieldsValue({
           ...user,
           roleIds: userRoleIds,
+          departmentId: user.departmentId,
+          lineIds: user.lineIds || [],
           status: user.status === "active" ? "true" : "false",
         });
+
+        // Update filtered lines when editing user
+        if (user.departmentId && lines && Array.isArray(lines)) {
+          setFilteredLines(
+            lines.filter((line) => line.departmentId === user.departmentId)
+          );
+        }
+
         setIsModalVisible(true);
         break;
       case "delete":
@@ -429,7 +452,9 @@ const UserManagement = ({ showHeader = true }) => {
       onClick: () => {
         const isActive = user.status === "active";
         Modal.confirm({
-          title: isActive ? "Xác nhận khóa tài khoản" : "Xác nhận mở khóa tài khoản",
+          title: isActive
+            ? "Xác nhận khóa tài khoản"
+            : "Xác nhận mở khóa tài khoản",
           content: isActive
             ? "Bạn có chắc chắn muốn ngừng hoạt động tài khoản này? Người dùng sẽ không thể đăng nhập."
             : "Bạn có chắc chắn muốn kích hoạt lại tài khoản này?",
@@ -437,7 +462,9 @@ const UserManagement = ({ showHeader = true }) => {
           cancelText: "Hủy",
           okButtonProps: {
             danger: isActive,
-            style: isActive ? {} : { backgroundColor: "#52c41a", borderColor: "#52c41a" }
+            style: isActive
+              ? {}
+              : { backgroundColor: "#52c41a", borderColor: "#52c41a" },
           },
           onOk: () => handleUserAction(isActive ? "lock" : "unlock", user),
         });
@@ -453,7 +480,7 @@ const UserManagement = ({ showHeader = true }) => {
   ];
 
   // Department filter dropdown for the table
-  const departmentFilterOptions = departments.map((dept) => ({
+  const departmentFilterOptions = (departments || []).map((dept) => ({
     label: dept.departmentName,
     value: dept.departmentName,
   }));
@@ -568,6 +595,30 @@ const UserManagement = ({ showHeader = true }) => {
           <Text>{department}</Text>
         </div>
       ),
+    },
+    {
+      title: "Dây chuyền",
+      dataIndex: "lineIds",
+      key: "lineIds",
+      width: 180,
+      render: (lineIds) => {
+        if (!lineIds || lineIds.length === 0) {
+          return <Tag color="default">Chưa có dây chuyền</Tag>;
+        }
+
+        return (
+          <div>
+            {lineIds.map((lineId) => {
+              const line = lines.find((l) => l.lineId === lineId);
+              return line ? (
+                <Tag key={lineId} color="blue" style={{ marginBottom: 2 }}>
+                  {line.lineName}
+                </Tag>
+              ) : null;
+            })}
+          </div>
+        );
+      },
     },
     {
       title: "Vai trò",
@@ -712,6 +763,8 @@ const UserManagement = ({ showHeader = true }) => {
           position: values.position,
           gender: values.gender || "Nam",
           roleIds: values.roleIds || [],
+          departmentId: values.departmentId,
+          lineIds: values.lineIds || [],
         });
         message.success({
           content: "Tạo người dùng mới thành công",
@@ -789,11 +842,12 @@ const UserManagement = ({ showHeader = true }) => {
               loading={roles.length === 0}
             >
               <Option value="all">Tất cả vai trò</Option>
-              {roles.map((role) => (
-                <Option key={role.id} value={role.name}>
-                  {role.name}
-                </Option>
-              ))}
+              {roles &&
+                roles.map((role) => (
+                  <Option key={role.id} value={role.name}>
+                    {role.name}
+                  </Option>
+                ))}
             </Select>
           </Col>
         </Row>
@@ -880,10 +934,6 @@ const UserManagement = ({ showHeader = true }) => {
               `${range[0]}-${range[1]} của ${total} người dùng`,
           }}
           className={styles.userManagementTable}
-          rowSelection={{
-            selectedRowKeys,
-            onChange: setSelectedRowKeys,
-          }}
           scroll={{ x: 1200 }}
         />
       </Card>
@@ -988,7 +1038,25 @@ const UserManagement = ({ showHeader = true }) => {
           },
         }}
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form
+          form={form}
+          layout="vertical"
+          style={{ marginTop: 16 }}
+          onValuesChange={(changedValues) => {
+            if (changedValues.departmentId !== undefined) {
+              const deptId = changedValues.departmentId;
+              if (deptId && lines && Array.isArray(lines)) {
+                setFilteredLines(
+                  lines.filter((line) => line.departmentId === deptId)
+                );
+              } else {
+                setFilteredLines(lines || []);
+              }
+              // Clear selected lines if department changes
+              form.setFieldsValue({ lineIds: [] });
+            }
+          }}
+        >
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
@@ -1093,19 +1161,20 @@ const UserManagement = ({ showHeader = true }) => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="department"
-                label="Phòng ban"
+                name="departmentId"
+                label="Phòng ban (Manager)"
                 // rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
               >
                 <Select
                   placeholder="Chọn phòng ban"
-                  loading={departments.length === 0}
+                  loading={!departments || departments.length === 0}
                 >
-                  {departments.map((dept) => (
-                    <Option key={dept.departmentId} value={dept.departmentId}>
-                      {dept.departmentName}
-                    </Option>
-                  ))}
+                  {departments &&
+                    departments.map((dept) => (
+                      <Option key={dept.departmentId} value={dept.departmentId}>
+                        {dept.departmentName}
+                      </Option>
+                    ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -1137,11 +1206,12 @@ const UserManagement = ({ showHeader = true }) => {
                   loading={roles.length === 0}
                   allowClear
                 >
-                  {roles.map((role) => (
-                    <Option key={role.id} value={role.id}>
-                      {role.name}
-                    </Option>
-                  ))}
+                  {roles &&
+                    roles.map((role) => (
+                      <Option key={role.id} value={role.id}>
+                        {role.name}
+                      </Option>
+                    ))}
                 </Select>
               </Form.Item>
             </Col>
@@ -1159,6 +1229,30 @@ const UserManagement = ({ showHeader = true }) => {
                 </Select>
               </Form.Item>
             </Col>
+          </Row>
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="lineIds"
+                label="Dây chuyền"
+                // rules={[{ required: true, message: "Vui lòng chọn dây chuyền" }]}
+              >
+                <Select
+                  mode="multiple"
+                  placeholder="Chọn dây chuyền"
+                  loading={!lines || lines.length === 0}
+                  disabled={!form.getFieldValue("departmentId")}
+                  allowClear
+                >
+                  {filteredLines.map((line) => (
+                    <Option key={line.lineId} value={line.lineId}>
+                      {line.lineName}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>{/* Empty for now */}</Col>
           </Row>
           {!editingUser && (
             <Row gutter={16}>

@@ -5,7 +5,7 @@ export const lineService = {
   getLines: async () => {
     try {
       const response = await apiRequest("/Lines");
-      return response;
+      return response.data || response; // Handle both wrapped and direct responses
     } catch (error) {
       console.error("Get lines error:", error);
       throw new Error(

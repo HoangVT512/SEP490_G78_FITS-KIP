@@ -19,8 +19,10 @@ export const userService = {
         email: user.email || "N/A",
         phoneNumber: user.phoneNumber || "N/A",
         userName: user.userName || "N/A",
-        // Default values for properties not in API
-        department: "N/A",
+        // Department and lines from API
+        department: user.departmentName || "N/A",
+        departmentId: user.departmentId,
+        lineIds: user.lineIds || [],
         position: user.position || "N/A",
         // Store all roles as array
         roles: user.roles || [],
