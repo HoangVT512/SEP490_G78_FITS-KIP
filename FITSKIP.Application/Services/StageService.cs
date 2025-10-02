@@ -30,17 +30,21 @@ public class StageService : IStageService
             throw new InvalidOperationException($"Không tìm thấy chuyền sản xuất với ID: {request.LineId}");
         }
 
+        // Chuẩn hóa tên stage: trim và thay thế nhiều khoảng trắng liên tiếp thành 1 khoảng trắng
+        var normalizedStageName = System.Text.RegularExpressions.Regex.Replace(request.StageName.Trim(), @"\s+", " ");
+
         // Check duplicate stage name in same line
         var existingStages = await _stageRepository.GetByLineIdAsync(request.LineId, cancellationToken);
-        var duplicateStage = existingStages.FirstOrDefault(s => s.StageName.Trim().ToLower() == request.StageName.Trim().ToLower());
+        var duplicateStage = existingStages.FirstOrDefault(s => 
+            System.Text.RegularExpressions.Regex.Replace(s.StageName.Trim(), @"\s+", " ").ToLower() == normalizedStageName.ToLower());
         if (duplicateStage != null)
         {
-            throw new InvalidOperationException($" '{line.LineName}' đã có giai đoạn tên '{request.StageName}'");
+            throw new InvalidOperationException($"Chuyền sản xuất '{line.LineName}' đã có giai đoạn tên '{duplicateStage.StageName}'");
         }
 
         var stage = new Stage
         {
-            StageName = request.StageName,
+            StageName = normalizedStageName, // Sử dụng tên đã chuẩn hóa
             LineId = request.LineId,
             IsActive = request.IsActive
         };
@@ -68,15 +72,19 @@ public class StageService : IStageService
             throw new InvalidOperationException($"Không tìm thấy chuyền sản xuất với ID: {request.LineId}");
         }
 
+        // Chuẩn hóa tên stage: trim và thay thế nhiều khoảng trắng liên tiếp thành 1 khoảng trắng
+        var normalizedStageName = System.Text.RegularExpressions.Regex.Replace(request.StageName.Trim(), @"\s+", " ");
+
         // Check duplicate stage name in same line (exclude current stage)
         var existingStages = await _stageRepository.GetByLineIdAsync(request.LineId, cancellationToken);
-        var duplicateStage = existingStages.FirstOrDefault(s => s.StageId != id && s.StageName.Trim().ToLower() == request.StageName.Trim().ToLower());
+        var duplicateStage = existingStages.FirstOrDefault(s => s.StageId != id && 
+            System.Text.RegularExpressions.Regex.Replace(s.StageName.Trim(), @"\s+", " ").ToLower() == normalizedStageName.ToLower());
         if (duplicateStage != null)
         {
-            throw new InvalidOperationException($"'{line.LineName}' đã có giai đoạn tên '{request.StageName}'");
+            throw new InvalidOperationException($"Chuyền sản xuất '{line.LineName}' đã có giai đoạn tên '{duplicateStage.StageName}'");
         }
 
-        existingStage.StageName = request.StageName;
+        existingStage.StageName = normalizedStageName; // Sử dụng tên đã chuẩn hóa
         existingStage.LineId = request.LineId;
         existingStage.IsActive = request.IsActive;
 

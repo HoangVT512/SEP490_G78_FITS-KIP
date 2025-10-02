@@ -30,17 +30,21 @@ public class LineService : ILineService
             throw new InvalidOperationException($"Không tìm thấy phòng ban với ID: {request.DepartmentId}");
         }
 
+        // Chuẩn hóa tên line: trim và thay thế nhiều khoảng trắng liên tiếp thành 1 khoảng trắng
+        var normalizedLineName = System.Text.RegularExpressions.Regex.Replace(request.LineName.Trim(), @"\s+", " ");
+
         // Check duplicate line name in same department
         var existingLines = await _lineRepository.GetByDepartmentIdAsync(request.DepartmentId, cancellationToken);
-        var duplicateLine = existingLines.FirstOrDefault(l => l.LineName.Trim().ToLower() == request.LineName.Trim().ToLower());
+        var duplicateLine = existingLines.FirstOrDefault(l => 
+            System.Text.RegularExpressions.Regex.Replace(l.LineName.Trim(), @"\s+", " ").ToLower() == normalizedLineName.ToLower());
         if (duplicateLine != null)
         {
-            throw new InvalidOperationException($"'{department.DepartmentName}' đã có chuyền sản xuất tên '{request.LineName}'");
+            throw new InvalidOperationException($"Phòng ban '{department.DepartmentName}' đã có chuyền sản xuất tên '{duplicateLine.LineName}'");
         }
 
         var line = new Line
         {
-            LineName = request.LineName,
+            LineName = normalizedLineName, // Sử dụng tên đã chuẩn hóa
             DepartmentId = request.DepartmentId,
             IsActive = request.IsActive
         };
@@ -68,15 +72,19 @@ public class LineService : ILineService
             throw new InvalidOperationException($"Không tìm thấy phòng ban với ID: {request.DepartmentId}");
         }
 
+        // Chuẩn hóa tên line: trim và thay thế nhiều khoảng trắng liên tiếp thành 1 khoảng trắng
+        var normalizedLineName = System.Text.RegularExpressions.Regex.Replace(request.LineName.Trim(), @"\s+", " ");
+
         // Check duplicate line name in same department (exclude current line)
         var existingLines = await _lineRepository.GetByDepartmentIdAsync(request.DepartmentId, cancellationToken);
-        var duplicateLine = existingLines.FirstOrDefault(l => l.LineId != id && l.LineName.Trim().ToLower() == request.LineName.Trim().ToLower());
+        var duplicateLine = existingLines.FirstOrDefault(l => l.LineId != id && 
+            System.Text.RegularExpressions.Regex.Replace(l.LineName.Trim(), @"\s+", " ").ToLower() == normalizedLineName.ToLower());
         if (duplicateLine != null)
         {
-            throw new InvalidOperationException($"'{department.DepartmentName}' đã có chuyền sản xuất tên '{request.LineName}'");
+            throw new InvalidOperationException($"Phòng ban '{department.DepartmentName}' đã có chuyền sản xuất tên '{duplicateLine.LineName}'");
         }
 
-        existingLine.LineName = request.LineName;
+        existingLine.LineName = normalizedLineName; // Sử dụng tên đã chuẩn hóa
         existingLine.DepartmentId = request.DepartmentId;
         existingLine.IsActive = request.IsActive;
 
