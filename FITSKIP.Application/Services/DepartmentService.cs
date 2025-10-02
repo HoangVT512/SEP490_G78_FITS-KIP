@@ -28,17 +28,21 @@ public class DepartmentService : IDepartmentService
 
     public async Task<DepartmentDTO> CreateAsync(CreateDepartmentRequest request, CancellationToken cancellationToken = default)
     {
+        // Chuẩn hóa tên department: trim và thay thế nhiều khoảng trắng liên tiếp thành 1 khoảng trắng
+        var normalizedDepartmentName = System.Text.RegularExpressions.Regex.Replace(request.DepartmentName.Trim(), @"\s+", " ");
+
         // Check duplicate department name
         var existingDepartments = await repository.GetAllAsync(cancellationToken);
-        var duplicateDepartment = existingDepartments.FirstOrDefault(d => d.DepartmentName.Trim().ToLower() == request.DepartmentName.Trim().ToLower());
+        var duplicateDepartment = existingDepartments.FirstOrDefault(d => 
+            System.Text.RegularExpressions.Regex.Replace(d.DepartmentName.Trim(), @"\s+", " ").ToLower() == normalizedDepartmentName.ToLower());
         if (duplicateDepartment != null)
         {
-            throw new InvalidOperationException($"Đã tồn tại phòng ban có tên '{request.DepartmentName}'");
+            throw new InvalidOperationException($"Đã tồn tại phòng ban có tên '{duplicateDepartment.DepartmentName}'");
         }
 
         var entity = new Department
         {
-            DepartmentName = request.DepartmentName,
+            DepartmentName = normalizedDepartmentName, // Sử dụng tên đã chuẩn hóa
             ManagerId = request.ManagerId,
             Description = request.Description
         };
@@ -51,15 +55,19 @@ public class DepartmentService : IDepartmentService
         var entity = await repository.GetByIdAsync(id, cancellationToken);
         if (entity == null) return null;
 
+        // Chuẩn hóa tên department: trim và thay thế nhiều khoảng trắng liên tiếp thành 1 khoảng trắng
+        var normalizedDepartmentName = System.Text.RegularExpressions.Regex.Replace(request.DepartmentName.Trim(), @"\s+", " ");
+
         // Check duplicate department name (exclude current department)
         var existingDepartments = await repository.GetAllAsync(cancellationToken);
-        var duplicateDepartment = existingDepartments.FirstOrDefault(d => d.DepartmentId != id && d.DepartmentName.Trim().ToLower() == request.DepartmentName.Trim().ToLower());
+        var duplicateDepartment = existingDepartments.FirstOrDefault(d => d.DepartmentId != id && 
+            System.Text.RegularExpressions.Regex.Replace(d.DepartmentName.Trim(), @"\s+", " ").ToLower() == normalizedDepartmentName.ToLower());
         if (duplicateDepartment != null)
         {
-            throw new InvalidOperationException($"Đã tồn tại phòng ban có tên '{request.DepartmentName}'");
+            throw new InvalidOperationException($"Đã tồn tại phòng ban có tên '{duplicateDepartment.DepartmentName}'");
         }
 
-        entity.DepartmentName = request.DepartmentName;
+        entity.DepartmentName = normalizedDepartmentName; // Sử dụng tên đã chuẩn hóa
         entity.ManagerId = request.ManagerId;
         entity.Description = request.Description;
         entity.IsActive = request.IsActive;

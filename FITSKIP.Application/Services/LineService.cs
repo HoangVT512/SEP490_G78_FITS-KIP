@@ -39,7 +39,7 @@ public class LineService : ILineService
             System.Text.RegularExpressions.Regex.Replace(l.LineName.Trim(), @"\s+", " ").ToLower() == normalizedLineName.ToLower());
         if (duplicateLine != null)
         {
-            throw new InvalidOperationException($"Phòng ban '{department.DepartmentName}' đã có chuyền sản xuất tên '{duplicateLine.LineName}'");
+            throw new InvalidOperationException($"'{department.DepartmentName}' đã có chuyền sản xuất tên '{duplicateLine.LineName}'");
         }
 
         var line = new Line
@@ -81,7 +81,7 @@ public class LineService : ILineService
             System.Text.RegularExpressions.Regex.Replace(l.LineName.Trim(), @"\s+", " ").ToLower() == normalizedLineName.ToLower());
         if (duplicateLine != null)
         {
-            throw new InvalidOperationException($"Phòng ban '{department.DepartmentName}' đã có chuyền sản xuất tên '{duplicateLine.LineName}'");
+            throw new InvalidOperationException($"'{department.DepartmentName}' đã có chuyền sản xuất tên '{duplicateLine.LineName}'");
         }
 
         existingLine.LineName = normalizedLineName; // Sử dụng tên đã chuẩn hóa
