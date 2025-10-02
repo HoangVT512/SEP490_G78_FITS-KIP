@@ -18,7 +18,7 @@ public class UserRepository : IUserRepository
         this.userManager = userManager;
     }
 
-    public async Task<User> CreateUserAsync(User user, CancellationToken cancellationToken = default)
+    public async Task<User> CreateUserAsync(User user, string[]? roleIds = null, CancellationToken cancellationToken = default)
     {
         var existingUser = await db.Users.FirstOrDefaultAsync(u => u.UserName == user.UserName, cancellationToken);
         if (existingUser != null)
@@ -52,6 +52,42 @@ public class UserRepository : IUserRepository
 
         await db.Users.AddAsync(user, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+
+        // Thêm roles cho user nếu có roleIds
+        if (roleIds != null && roleIds.Length > 0)
+        {
+            foreach (var roleId in roleIds)
+            {
+                // Thử tìm role theo Id trước
+                var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
+
+                // Nếu không tìm thấy theo Id, thử tìm theo Name
+                if (role == null)
+                {
+                    role = await db.Roles.FirstOrDefaultAsync(r => r.Name == roleId, cancellationToken);
+                }
+
+                // Nếu không tìm thấy theo Name, thử tìm theo NormalizedName
+                if (role == null)
+                {
+                    role = await db.Roles.FirstOrDefaultAsync(r => r.NormalizedName == roleId.ToUpperInvariant(), cancellationToken);
+                }
+
+                if (role != null && !string.IsNullOrEmpty(role.Name))
+                {
+                    var result = await userManager.AddToRoleAsync(user, role.Name);
+                    if (!result.Succeeded)
+                    {
+                        throw new Exception($"Không thể thêm role '{role.Name}' cho user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+                    }
+                }
+                else
+                {
+                    throw new Exception($"Role với ID/Name '{roleId}' không tồn tại trong hệ thống");
+                }
+            }
+        }
+
         return user;
     }
 

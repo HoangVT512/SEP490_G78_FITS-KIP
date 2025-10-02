@@ -6,7 +6,7 @@ namespace FITSKIP.Domain.Interfaces;
 public interface IUserRepository
 {
     Task<IReadOnlyList<UserDTO>> GetUsersWithRolesAsync(CancellationToken cancellationToken = default);
-    Task<User> CreateUserAsync(User user, CancellationToken cancellationToken = default);
+    Task<User> CreateUserAsync(User user, string[]? roleIds = null, CancellationToken cancellationToken = default);
     Task<User?> GetByUsernameAsync(string fullName, CancellationToken cancellationToken = default);
     Task<User?> UpdateUserAsync(User user, CancellationToken cancellationToken = default);
     Task<User?> GetUserByIdAsync(string id, CancellationToken cancellationToken = default);

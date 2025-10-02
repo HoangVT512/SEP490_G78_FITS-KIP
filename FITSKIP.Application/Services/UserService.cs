@@ -14,7 +14,7 @@ public class UserService : IUserService
         this.userRepository = userRepository;
     }
 
-    public Task<User> CreateUserAsync(User user, CancellationToken cancellationToken = default) => userRepository.CreateUserAsync(user, cancellationToken);
+    public Task<User> CreateUserAsync(User user, string[]? roleIds = null, CancellationToken cancellationToken = default) => userRepository.CreateUserAsync(user, roleIds, cancellationToken);
 
     public Task<User?> DeleteUserAsync(string id, CancellationToken cancellationToken = default) => userRepository.DeleteUserAsync(id, cancellationToken);
 

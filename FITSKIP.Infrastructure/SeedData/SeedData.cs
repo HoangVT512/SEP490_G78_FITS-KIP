@@ -20,35 +20,35 @@ namespace FITSKIP.Infrastructure.SeedData
                     {
                         Id = Guid.NewGuid().ToString(),
                         Name = "Quản lý",
-                        NormalizedName = "QUAN LY",
+                        NormalizedName = "QUẢN LÝ",
                         ConcurrencyStamp = Guid.NewGuid().ToString()
                     },
                     new IdentityRole
                     {
                         Id = Guid.NewGuid().ToString(),
                         Name = "Tổ trưởng",
-                        NormalizedName = "TO TRUONG",
+                        NormalizedName = "TỔ TRƯỞNG",
                         ConcurrencyStamp = Guid.NewGuid().ToString()
                     },
                     new IdentityRole
                     {
                         Id = Guid.NewGuid().ToString(),
                         Name = "Quản lý kỹ thuật",
-                        NormalizedName = "QUAN LY KY THUAT",
+                        NormalizedName = "QUẢN LÝ KỸ THUẬT",
                         ConcurrencyStamp = Guid.NewGuid().ToString()
                     },
                     new IdentityRole
                     {
                         Id = Guid.NewGuid().ToString(),
                         Name = "Kỹ thuật viên",
-                        NormalizedName = "KY THUAT VIEN",
+                        NormalizedName = "KỸ THUẬT VIÊN",
                         ConcurrencyStamp = Guid.NewGuid().ToString()
                     },
                     new IdentityRole
                     {
                         Id = Guid.NewGuid().ToString(),
                         Name = "Quản trị viên",
-                        NormalizedName = "QUAN TRI VIEN",
+                        NormalizedName = "QUẢN TRỊ VIÊN",
                         ConcurrencyStamp = Guid.NewGuid().ToString()
                     }
                 };
@@ -56,6 +56,27 @@ namespace FITSKIP.Infrastructure.SeedData
                 await context.Roles.AddRangeAsync(roles);
                 await context.SaveChangesAsync();
             }
+            else
+            {
+                // Update NormalizedName của các roles đã tồn tại
+                await UpdateExistingRolesNormalizedName(context);
+            }
+        }
+
+        public static async Task UpdateExistingRolesNormalizedName(FitskipDbContext context)
+        {
+            var roles = await context.Roles.ToListAsync();
+
+            foreach (var role in roles)
+            {
+                if (!string.IsNullOrEmpty(role.Name))
+                {
+                    // Update NormalizedName với dấu tiếng Việt
+                    role.NormalizedName = role.Name.ToUpperInvariant();
+                }
+            }
+
+            await context.SaveChangesAsync();
         }
 
         public static async Task SeedDepartments(FitskipDbContext context)

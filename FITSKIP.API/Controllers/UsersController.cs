@@ -251,7 +251,7 @@ public class UsersController : ControllerBase
                 ConcurrencyStamp = Guid.NewGuid().ToString()
             };
 
-            var createdUser = await userService.CreateUserAsync(user, cancellationToken);
+            var createdUser = await userService.CreateUserAsync(user, request.RoleIds, cancellationToken);
 
             var response = new UserDTO
             {
@@ -410,7 +410,7 @@ public class UsersController : ControllerBase
                             ConcurrencyStamp = Guid.NewGuid().ToString()
                         };
 
-                        await userService.CreateUserAsync(user, cancellationToken);
+                        await userService.CreateUserAsync(user, null, cancellationToken);
                         successCount++;
                     }
                     catch (Exception ex)
