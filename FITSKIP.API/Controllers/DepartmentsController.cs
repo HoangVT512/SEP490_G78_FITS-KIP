@@ -28,6 +28,13 @@ namespace FITSKIP.API.Controllers
             return Ok(departments);
         }
 
+        [HttpGet("active")]
+        public async Task<ActionResult<IEnumerable<DepartmentDTO>>> GetActiveDepartments(CancellationToken cancellationToken)
+        {
+            var departments = await departmentService.GetActiveAsync(cancellationToken);
+            return Ok(new { success = true, data = departments });
+        }
+
         [HttpGet("{id:int}")]
         public async Task<ActionResult<DepartmentDTO>> GetById(int id, CancellationToken cancellationToken)
         {

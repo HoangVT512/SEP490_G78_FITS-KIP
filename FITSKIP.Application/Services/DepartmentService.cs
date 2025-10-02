@@ -20,6 +20,12 @@ public class DepartmentService : IDepartmentService
         return items.Select(MapToDto).ToList();
     }
 
+    public async Task<IReadOnlyList<DepartmentDTO>> GetActiveAsync(CancellationToken cancellationToken = default)
+    {
+        var items = await repository.GetAllAsync(cancellationToken);
+        return items.Where(d => d.IsActive).Select(MapToDto).ToList();
+    }
+
     public async Task<DepartmentDTO?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         var entity = await repository.GetByIdAsync(id, cancellationToken);

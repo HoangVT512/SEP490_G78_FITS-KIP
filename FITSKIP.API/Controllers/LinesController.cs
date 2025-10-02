@@ -35,6 +35,23 @@ public class LinesController : ControllerBase
     }
 
     /// <summary>
+    /// Lấy danh sách chuyền sản xuất đang hoạt động
+    /// </summary>
+    [HttpGet("active")]
+    public async Task<IActionResult> GetActiveLines()
+    {
+        try
+        {
+            var lines = await _lineService.GetActiveLinesAsync();
+            return Ok(new { success = true, data = lines });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Có lỗi xảy ra khi lấy danh sách chuyền sản xuất", details = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Lấy thông tin chuyền sản xuất theo ID
     /// </summary>
     [HttpGet("{id}")]

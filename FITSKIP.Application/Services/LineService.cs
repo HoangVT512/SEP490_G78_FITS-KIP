@@ -21,6 +21,12 @@ public class LineService : ILineService
         return _lineRepository.GetAllAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Line>> GetActiveLinesAsync(CancellationToken cancellationToken = default)
+    {
+        var lines = await _lineRepository.GetAllAsync(cancellationToken);
+        return lines.Where(l => l.IsActive).ToList();
+    }
+
     public async Task<Line> CreateLineAsync(CreateLineRequest request, CancellationToken cancellationToken = default)
     {
         // Get department info for detailed error message
