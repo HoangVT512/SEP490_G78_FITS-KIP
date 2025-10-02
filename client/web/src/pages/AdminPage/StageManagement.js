@@ -136,13 +136,22 @@ const StageManagement = ({ showHeader = true }) => {
   const loadLines = async () => {
     try {
       const response = await lineService.getLines();
-      if (response.success) {
-        setLines(response.data || []);
+      console.log("Lines response:", response); // Debug log
+      
+      // Handle different response formats from API
+      if (Array.isArray(response)) {
+        setLines(response);
+      } else if (response && response.success && Array.isArray(response.data)) {
+        setLines(response.data);
+      } else if (response && response.data) {
+        setLines(Array.isArray(response.data) ? response.data : []);
       } else {
+        console.warn("Unexpected lines response format:", response);
         setLines([]);
       }
     } catch (error) {
       console.error("Error loading lines:", error);
+      message.error("Không thể tải danh sách dây chuyền");
       setLines([]);
     }
   };
