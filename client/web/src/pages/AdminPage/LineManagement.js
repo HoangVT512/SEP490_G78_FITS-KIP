@@ -138,16 +138,18 @@ const LineManagement = ({ showHeader = true }) => {
     setLoading(true);
     try {
       const response = await lineService.getLines();
-      if (response.success) {
-        setLines(response.data || []); // Ensure data is array
+      if (Array.isArray(response)) {
+        setLines(response);
+      } else if (response.success) {
+        setLines(response.data || []);
       } else {
         message.error(response.message || "Không thể tải danh sách dây chuyền");
-        setLines([]); // Set empty array on error
+        setLines([]);
       }
     } catch (error) {
       console.error("Error loading lines:", error);
       message.error("Không thể tải danh sách dây chuyền");
-      setLines([]); // Set empty array on error
+      setLines([]);
     } finally {
       setLoading(false);
     }
