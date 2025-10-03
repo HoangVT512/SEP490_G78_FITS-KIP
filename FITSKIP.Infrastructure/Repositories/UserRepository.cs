@@ -59,38 +59,34 @@ public class UserRepository : IUserRepository
 
         // Note: User is already added to db by userManager.CreateAsync, no need to AddAsync again
 
-        // Thêm roles cho user nếu có roleIds
+        // Assign role to user if roleIds provided (only first role since User now has single RoleId)
         if (roleIds != null && roleIds.Length > 0)
         {
-            foreach (var roleId in roleIds)
+            var roleId = roleIds[0]; // Only take first role
+
+            // Try to find role by Id first
+            var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
+
+            // If not found by Id, try by Name
+            if (role == null)
             {
-                // Thử tìm role theo Id trước
-                var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
+                role = await db.Roles.FirstOrDefaultAsync(r => r.Name == roleId, cancellationToken);
+            }
 
-                // Nếu không tìm thấy theo Id, thử tìm theo Name
-                if (role == null)
-                {
-                    role = await db.Roles.FirstOrDefaultAsync(r => r.Name == roleId, cancellationToken);
-                }
+            // If not found by Name, try by NormalizedName
+            if (role == null)
+            {
+                role = await db.Roles.FirstOrDefaultAsync(r => r.NormalizedName == roleId.ToUpperInvariant(), cancellationToken);
+            }
 
-                // Nếu không tìm thấy theo Name, thử tìm theo NormalizedName
-                if (role == null)
-                {
-                    role = await db.Roles.FirstOrDefaultAsync(r => r.NormalizedName == roleId.ToUpperInvariant(), cancellationToken);
-                }
-
-                if (role != null && !string.IsNullOrEmpty(role.Name))
-                {
-                    var result = await userManager.AddToRoleAsync(user, role.Name);
-                    if (!result.Succeeded)
-                    {
-                        throw new Exception($"Không thể thêm role '{role.Name}' cho user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
-                    }
-                }
-                else
-                {
-                    throw new Exception($"Role với ID/Name '{roleId}' không tồn tại trong hệ thống");
-                }
+            if (role != null)
+            {
+                user.RoleId = role.Id;
+                await userManager.UpdateAsync(user);
+            }
+            else
+            {
+                throw new Exception($"Role với ID/Name '{roleId}' không tồn tại trong hệ thống");
             }
         }
 
@@ -120,7 +116,11 @@ public class UserRepository : IUserRepository
         var userDTOs = new List<UserDTO>();
         foreach (var user in users)
         {
-            var roles = await userManager.GetRolesAsync(user);
+            // Get role name from RoleId
+            var roleName = user.RoleId != null
+                ? (await db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == user.RoleId, cancellationToken))?.Name
+                : null;
+            var roles = roleName != null ? new List<string> { roleName } : new List<string>();
 
             // Get department where user is manager
             var managedDepartment = await db.Departments
@@ -213,40 +213,26 @@ public class UserRepository : IUserRepository
         existingUser.PhoneNumber = request.PhoneNumber;
         existingUser.IsActive = request.IsActive;
 
-        // Update roles if provided
-        if (request.RoleIds != null)
+        // Update role if provided (Now using RoleId in User entity)
+        if (request.RoleIds != null && request.RoleIds.Length > 0)
         {
-            // Remove all existing user roles directly from AspNetUserRoles table
-            var existingUserRoles = await db.UserRoles
-                .Where(ur => ur.UserId == id)
-                .ToListAsync(cancellationToken);
+            // Only take the first role since we now have 1-to-many relationship
+            var roleId = request.RoleIds[0];
 
-            if (existingUserRoles.Any())
+            // Verify role exists
+            var roleExists = await db.Roles.AnyAsync(r => r.Id == roleId, cancellationToken);
+            if (!roleExists)
             {
-                db.UserRoles.RemoveRange(existingUserRoles);
+                throw new Exception($"Role với ID '{roleId}' không tồn tại trong hệ thống");
             }
 
-            // Add new roles directly to AspNetUserRoles table
-            if (request.RoleIds.Length > 0)
-            {
-                foreach (var roleId in request.RoleIds)
-                {
-                    // Verify role exists
-                    var roleExists = await db.Roles.AnyAsync(r => r.Id == roleId, cancellationToken);
-                    if (!roleExists)
-                    {
-                        throw new Exception($"Role với ID '{roleId}' không tồn tại trong hệ thống");
-                    }
-
-                    // Add to AspNetUserRoles
-                    var userRole = new Microsoft.AspNetCore.Identity.IdentityUserRole<string>
-                    {
-                        UserId = id,
-                        RoleId = roleId
-                    };
-                    await db.UserRoles.AddAsync(userRole, cancellationToken);
-                }
-            }
+            // Set the RoleId directly in User entity
+            existingUser.RoleId = roleId;
+        }
+        else if (request.RoleIds != null && request.RoleIds.Length == 0)
+        {
+            // Clear role if empty array is provided
+            existingUser.RoleId = null;
         }
 
         // Update department if provided
@@ -307,8 +293,11 @@ public class UserRepository : IUserRepository
 
         await db.SaveChangesAsync(cancellationToken);
 
-        // Return UserDTO with roles, department, and lines
-        var userRoles = await userManager.GetRolesAsync(existingUser);
+        // Return UserDTO with role, department, and lines
+        // Get role name from the Role navigation property
+        var roleName = existingUser.RoleId != null
+            ? (await db.Roles.FirstOrDefaultAsync(r => r.Id == existingUser.RoleId, cancellationToken))?.Name
+            : null;
 
         // Get department where user is manager
         var managedDepartment = await db.Departments
@@ -343,7 +332,7 @@ public class UserRepository : IUserRepository
             EmployeeCode = existingUser.EmployeeCode,
             Position = existingUser.Position,
             IsActive = existingUser.IsActive,
-            Roles = userRoles.ToList(),
+            Roles = roleName != null ? new List<string> { roleName } : new List<string>(),
             DepartmentId = managedDepartment?.DepartmentId,
             DepartmentName = managedDepartment?.DepartmentName,
             LineIds = userLines
@@ -464,7 +453,7 @@ public class UserRepository : IUserRepository
                     {
                         UserId = createdUser.Id,
                         LineId = lineId,
-                        CreateDate = DateTime.UtcNow
+                        CreatedAt = DateTime.UtcNow
                     };
                     await db.UserLines.AddAsync(userLine, cancellationToken);
                 }

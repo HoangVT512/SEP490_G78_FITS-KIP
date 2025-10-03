@@ -36,19 +36,19 @@ public class StageRepository : IStageRepository
     {
         await _context.Stages.AddAsync(stage, cancellationToken);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         // Load the line and department after saving
         await _context.Entry(stage)
             .Reference(s => s.Line)
             .LoadAsync(cancellationToken);
-            
+
         if (stage.Line != null)
         {
             await _context.Entry(stage.Line)
                 .Reference(l => l.Department)
                 .LoadAsync(cancellationToken);
         }
-            
+
         return stage;
     }
 
@@ -56,19 +56,19 @@ public class StageRepository : IStageRepository
     {
         _context.Stages.Update(stage);
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         // Load the line and department after updating
         await _context.Entry(stage)
             .Reference(s => s.Line)
             .LoadAsync(cancellationToken);
-            
+
         if (stage.Line != null)
         {
             await _context.Entry(stage.Line)
                 .Reference(l => l.Department)
                 .LoadAsync(cancellationToken);
         }
-            
+
         return stage;
     }
 
@@ -99,13 +99,9 @@ public class StageRepository : IStageRepository
         var hasEquipment = await _context.Equipment.AnyAsync(e => e.StageId == stageId, cancellationToken);
         if (hasEquipment) return true;
 
-        // Check if stage has any production outputs
-        var hasProductionOutputs = await _context.ProductionOutputs.AnyAsync(p => p.StageId == stageId, cancellationToken);
-        if (hasProductionOutputs) return true;
+        // Note: ProductionOutputs no longer has StageId, so we remove this check
 
-        // Check if stage has any error histories
-        var hasErrorHistories = await _context.ErrorHistories.AnyAsync(e => e.StageId == stageId, cancellationToken);
-        if (hasErrorHistories) return true;
+        // Note: IncidentHistory no longer has StageId, so we remove this check
 
         return false;
     }

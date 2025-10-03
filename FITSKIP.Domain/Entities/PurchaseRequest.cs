@@ -13,17 +13,21 @@ public partial class PurchaseRequest
 
     public int Quantity { get; set; }
 
-    public string? Urgency { get; set; }
-
     public string? Reason { get; set; }
 
     public string? Status { get; set; }
 
     public string? ApprovedBy { get; set; }
 
+    public string? RejectedBy { get; set; }
+
     public DateTime? ApprovedAt { get; set; }
 
+    public DateTime? RejectedAt { get; set; }
+
     public virtual User? ApprovedByNavigation { get; set; }
+
+    public virtual User? RejectedByNavigation { get; set; }
 
     public virtual SparePart Part { get; set; } = null!;
 

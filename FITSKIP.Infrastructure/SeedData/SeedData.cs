@@ -230,61 +230,74 @@ namespace FITSKIP.Infrastructure.SeedData
 
         public static async Task SeedUserRoles(FitskipDbContext context)
         {
-            // Phân quyền cho người dùng
-            if (!await context.UserRoles.AnyAsync())
+            // Phân quyền cho người dùng (sử dụng RoleId trong User)
+            var roles = await context.Roles.ToListAsync();
+            var dbUsers = await context.Users.ToListAsync();
+
+            bool hasChanges = false;
+
+            // Phân quyền Quản trị viên
+            var adminRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN TRỊ VIÊN");
+            if (adminRole != null)
             {
-
-                var roles = await context.Roles.ToListAsync();
-                var dbUsers = await context.Users.ToListAsync();
-
-                var userRoleAssignments = new List<IdentityUserRole<string>>();
-
-                // Phân quyền Quản trị viên
-                var adminRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN TRỊ VIÊN");
-                var adminUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("QTV") == true).ToList();
+                var adminUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("QTV") == true && u.RoleId == null).ToList();
                 foreach (var user in adminUsers)
                 {
-                    if (adminRole != null)
-                        userRoleAssignments.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = adminRole.Id });
+                    user.RoleId = adminRole.Id;
+                    hasChanges = true;
                 }
+            }
 
-                // Phân quyền Quản lý
-                var managerRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN LÝ");
-                var managerUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("QL") == true).ToList();
+            // Phân quyền Quản lý
+            var managerRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN LÝ");
+            if (managerRole != null)
+            {
+                var managerUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("QL") == true && !u.EmployeeCode.StartsWith("QLKT") && u.RoleId == null).ToList();
                 foreach (var user in managerUsers)
                 {
-                    if (managerRole != null)
-                        userRoleAssignments.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = managerRole.Id });
+                    user.RoleId = managerRole.Id;
+                    hasChanges = true;
                 }
+            }
 
-                // Phân quyền Quản lý kỹ thuật
-                var techManagerRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN LÝ KỸ THUẬT");
-                var techManagerUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("QLKT") == true).ToList();
+            // Phân quyền Quản lý kỹ thuật
+            var techManagerRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN LÝ KỸ THUẬT");
+            if (techManagerRole != null)
+            {
+                var techManagerUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("QLKT") == true && u.RoleId == null).ToList();
                 foreach (var user in techManagerUsers)
                 {
-                    if (techManagerRole != null)
-                        userRoleAssignments.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = techManagerRole.Id });
+                    user.RoleId = techManagerRole.Id;
+                    hasChanges = true;
                 }
+            }
 
-                // Phân quyền Tổ trưởng
-                var teamLeaderRole = roles.FirstOrDefault(r => r.NormalizedName == "TỔ TRƯỞNG");
-                var teamLeaderUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("TT") == true).ToList();
+            // Phân quyền Tổ trưởng
+            var teamLeaderRole = roles.FirstOrDefault(r => r.NormalizedName == "TỔ TRƯỞNG");
+            if (teamLeaderRole != null)
+            {
+                var teamLeaderUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("TT") == true && u.RoleId == null).ToList();
                 foreach (var user in teamLeaderUsers)
                 {
-                    if (teamLeaderRole != null)
-                        userRoleAssignments.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = teamLeaderRole.Id });
+                    user.RoleId = teamLeaderRole.Id;
+                    hasChanges = true;
                 }
+            }
 
-                // Phân quyền Kỹ thuật viên
-                var technicianRole = roles.FirstOrDefault(r => r.NormalizedName == "KỸ THUẬT VIÊN");
-                var technicianUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("KTV") == true).ToList();
+            // Phân quyền Kỹ thuật viên
+            var technicianRole = roles.FirstOrDefault(r => r.NormalizedName == "KỸ THUẬT VIÊN");
+            if (technicianRole != null)
+            {
+                var technicianUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("KTV") == true && u.RoleId == null).ToList();
                 foreach (var user in technicianUsers)
                 {
-                    if (technicianRole != null)
-                        userRoleAssignments.Add(new IdentityUserRole<string> { UserId = user.Id, RoleId = technicianRole.Id });
+                    user.RoleId = technicianRole.Id;
+                    hasChanges = true;
                 }
+            }
 
-                await context.UserRoles.AddRangeAsync(userRoleAssignments);
+            if (hasChanges)
+            {
                 await context.SaveChangesAsync();
             }
         }

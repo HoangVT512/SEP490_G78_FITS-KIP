@@ -13,12 +13,14 @@ namespace FITSKIP.API.Controllers
         private readonly IUserService _userService;
         private readonly IDepartmentService departmentService;
         private readonly UserManager<User> userManager;
+        private readonly RoleManager<IdentityRole> roleManager;
 
-        public DepartmentsController(IUserService userService, IDepartmentService departmentService, UserManager<User> userManager)
+        public DepartmentsController(IUserService userService, IDepartmentService departmentService, UserManager<User> userManager, RoleManager<IdentityRole> roleManager)
         {
             _userService = userService;
             this.departmentService = departmentService;
             this.userManager = userManager;
+            this.roleManager = roleManager;
         }
 
         [HttpGet]
@@ -95,11 +97,13 @@ namespace FITSKIP.API.Controllers
             var user = await userManager.FindByIdAsync(managerId);
             if (user == null) return "Manager không tồn tại.";
             if (!user.IsActive) return "Manager đã bị vô hiệu hóa.";
-            
+
             // Check if user has QUAN LY role
-            var roles = await userManager.GetRolesAsync(user);
-            if (!roles.Contains("Quản lý")) return "Manager phải có role 'Quản lý'.";
-            
+            var roleName = user.RoleId != null
+                ? (await roleManager.FindByIdAsync(user.RoleId))?.Name
+                : null;
+            if (roleName != "Quản lý") return "Manager phải có role 'Quản lý'.";
+
             return null;
         }
 

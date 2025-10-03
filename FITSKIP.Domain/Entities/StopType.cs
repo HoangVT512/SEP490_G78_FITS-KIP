@@ -9,5 +9,5 @@ public partial class StopType
 
     public string? TypeName { get; set; }
 
-    public virtual ICollection<ErrorHistory> ErrorHistories { get; set; } = new List<ErrorHistory>();
+    public virtual ICollection<IncidentHistory> IncidentHistories { get; set; } = new List<IncidentHistory>();
 }

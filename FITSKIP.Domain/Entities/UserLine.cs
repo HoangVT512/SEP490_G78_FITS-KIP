@@ -11,7 +11,7 @@ public partial class UserLine
 
     public int LineId { get; set; }
 
-    public DateTime? CreateDate { get; set; }
+    public DateTime CreatedAt { get; set; }
 
     public virtual Line Line { get; set; } = null!;
 

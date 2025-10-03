@@ -9,19 +9,23 @@ public partial class ProductionOutput
 
     public int LineId { get; set; }
 
-    public int StageId { get; set; }
-
-    public int ShiftId { get; set; }
+    public int SlotId { get; set; }
 
     public DateOnly Date { get; set; }
 
-    public decimal ActualQuantity { get; set; }
+    public decimal TargetQuantity { get; set; }
+
+    public int PlannedProductionTime { get; set; } // minutes
+
+    public int ActualQuantity { get; set; }
+
+    public int GoodQuantity { get; set; }
 
     public int DowntimeMinutes { get; set; }
 
+    public decimal IdealCycleTime { get; set; }
+
     public virtual Line Line { get; set; } = null!;
 
-    public virtual Shift Shift { get; set; } = null!;
-
-    public virtual Stage Stage { get; set; } = null!;
+    public virtual ShiftSlot Slot { get; set; } = null!;
 }

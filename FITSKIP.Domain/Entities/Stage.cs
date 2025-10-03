@@ -13,11 +13,7 @@ public partial class Stage
 
     public bool IsActive { get; set; } = true;
 
-    public virtual ICollection<Equipment> Equipment { get; set; } = new List<Equipment>();
-
-    public virtual ICollection<ErrorHistory> ErrorHistories { get; set; } = new List<ErrorHistory>();
-
     public virtual Line? Line { get; set; }
 
-    public virtual ICollection<ProductionOutput> ProductionOutputs { get; set; } = new List<ProductionOutput>();
+    public virtual ICollection<Equipment> Equipment { get; set; } = new List<Equipment>();
 }

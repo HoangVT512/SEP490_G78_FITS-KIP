@@ -15,6 +15,7 @@ public class AuthService : IAuthService
     private readonly IEmailService _emailService;
     private readonly IMemoryCache _memoryCache;
     private readonly IConfiguration _configuration;
+    private readonly RoleManager<IdentityRole> _roleManager;
 
     public AuthService(
         UserManager<User> userManager,
@@ -22,7 +23,8 @@ public class AuthService : IAuthService
         IJwtTokenService jwtTokenService,
         IEmailService emailService,
         IMemoryCache memoryCache,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        RoleManager<IdentityRole> roleManager)
     {
         _userManager = userManager;
         _signInManager = signInManager;
@@ -30,6 +32,7 @@ public class AuthService : IAuthService
         _emailService = emailService;
         _memoryCache = memoryCache;
         _configuration = configuration;
+        _roleManager = roleManager;
     }
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
@@ -56,8 +59,11 @@ public class AuthService : IAuthService
             throw new UnauthorizedAccessException("Thông tin đăng nhập không chính xác");
         }
 
-        // Get user roles
-        var roles = await _userManager.GetRolesAsync(user);
+        // Get user role from RoleId
+        var roleName = user.RoleId != null
+            ? (await _roleManager.FindByIdAsync(user.RoleId))?.Name
+            : null;
+        var roles = roleName != null ? new List<string> { roleName } : new List<string>();
 
         // Generate JWT token
         var token = await _jwtTokenService.GenerateTokenAsync(user, roles);

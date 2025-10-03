@@ -10,12 +10,18 @@ public class User : IdentityUser
     public string? Position { get; set; }
     public bool IsActive { get; set; } = true;
 
+    // Foreign Key to Role (1-to-many relationship)
+    public string? RoleId { get; set; }
+
     // Navigation properties
+    public virtual IdentityRole? Role { get; set; }
     public virtual ICollection<Department> Departments { get; set; } = new List<Department>();
-    public virtual ICollection<MaintenanceAssignment> MaintenanceAssignments { get; set; } = new List<MaintenanceAssignment>();
     public virtual ICollection<PurchaseRequest> PurchaseRequestApprovedByNavigations { get; set; } = new List<PurchaseRequest>();
+    public virtual ICollection<PurchaseRequest> PurchaseRequestRejectedByNavigations { get; set; } = new List<PurchaseRequest>();
     public virtual ICollection<PurchaseRequest> PurchaseRequestRequestedByNavigations { get; set; } = new List<PurchaseRequest>();
     public virtual ICollection<UserLine> UserLines { get; set; } = new List<UserLine>();
+    public virtual ICollection<MaintenancePlan> MaintenancePlans { get; set; } = new List<MaintenancePlan>();
+    public virtual ICollection<ReplacementHistory> ReplacementHistories { get; set; } = new List<ReplacementHistory>();
 }
 
 

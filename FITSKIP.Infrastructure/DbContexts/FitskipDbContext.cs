@@ -21,15 +21,19 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
     public virtual DbSet<Equipment> Equipment { get; set; }
 
-    public virtual DbSet<ErrorHistory> ErrorHistories { get; set; }
+    public virtual DbSet<IncidentHistory> IncidentHistories { get; set; }
 
     public virtual DbSet<Line> Lines { get; set; }
 
-    public virtual DbSet<MaintenanceAssignment> MaintenanceAssignments { get; set; }
+    public virtual DbSet<MaintenancePlan> MaintenancePlans { get; set; }
+
+    public virtual DbSet<MaintenanceChecklistItem> MaintenanceChecklistItems { get; set; }
 
     public virtual DbSet<ProductionOutput> ProductionOutputs { get; set; }
 
     public virtual DbSet<PurchaseRequest> PurchaseRequests { get; set; }
+
+    public virtual DbSet<ReplacementHistory> ReplacementHistories { get; set; }
 
     public virtual DbSet<Shift> Shifts { get; set; }
 
@@ -52,7 +56,14 @@ public partial class FitskipDbContext : IdentityDbContext<User>
     {
         base.OnModelCreating(modelBuilder); // Important: Call base để Identity có thể configure
 
-        // Configure custom User properties
+        // Ignore Identity tables that we don't need
+        modelBuilder.Ignore<Microsoft.AspNetCore.Identity.IdentityUserToken<string>>();
+        modelBuilder.Ignore<Microsoft.AspNetCore.Identity.IdentityUserLogin<string>>();
+        modelBuilder.Ignore<Microsoft.AspNetCore.Identity.IdentityUserClaim<string>>();
+        modelBuilder.Ignore<Microsoft.AspNetCore.Identity.IdentityUserRole<string>>();
+        // Keep AspNetRoleClaims table - don't ignore it
+
+        // Configure custom User properties and relationship with Role
         modelBuilder.Entity<User>(entity =>
         {
             entity.Property(e => e.FullName).HasMaxLength(250);
@@ -60,6 +71,14 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.EmployeeCode).HasMaxLength(50);
             entity.Property(e => e.Position).HasMaxLength(250);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.RoleId).HasMaxLength(450);
+
+            // Configure one-to-many relationship with Role
+            entity.HasOne(e => e.Role)
+                .WithMany()
+                .HasForeignKey(e => e.RoleId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_AspNetUsers_AspNetRoles_RoleId");
         });
 
         // Department configuration
@@ -87,58 +106,36 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.EquipmentName).HasMaxLength(255);
             entity.Property(e => e.IdCode).HasMaxLength(250);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
-            entity.Property(e => e.IsWorking).HasDefaultValue(true);
-            entity.Property(e => e.LineId).HasColumnName("LineID");
             entity.Property(e => e.Origin).HasMaxLength(150);
             entity.Property(e => e.Qrcode).HasColumnName("QRCode");
             entity.Property(e => e.StageId).HasColumnName("StageID");
             entity.Property(e => e.Yom).HasColumnName("YOM");
-
-            entity.HasOne(d => d.Line).WithMany(p => p.Equipment)
-                .HasForeignKey(d => d.LineId)
-                .HasConstraintName("FK__Equipment__LineI__71D1E811");
 
             entity.HasOne(d => d.Stage).WithMany(p => p.Equipment)
                 .HasForeignKey(d => d.StageId)
                 .HasConstraintName("FK__Equipment__Stage__70DDC3D8");
         });
 
-        modelBuilder.Entity<ErrorHistory>(entity =>
+        modelBuilder.Entity<IncidentHistory>(entity =>
         {
-            entity.HasKey(e => e.ErrorId).HasName("PK__ErrorHis__358565CA8E27F35E");
+            entity.HasKey(e => e.IncidentId).HasName("PK__Incident__5F46CAB00C9D9F0A");
 
-            entity.ToTable("ErrorHistory");
+            entity.ToTable("IncidentHistory");
 
-            entity.Property(e => e.ErrorId).HasColumnName("ErrorID");
+            entity.Property(e => e.IncidentId).HasColumnName("IncidentID");
             entity.Property(e => e.Duration).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.EndTime).HasColumnType("datetime");
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
-            entity.Property(e => e.ErrorDescription).HasMaxLength(255);
-            entity.Property(e => e.LineId).HasColumnName("LineID");
-            entity.Property(e => e.SlotId).HasColumnName("SlotID");
-            entity.Property(e => e.StageId).HasColumnName("StageID");
             entity.Property(e => e.StartTime).HasColumnType("datetime");
             entity.Property(e => e.TypeId).HasColumnName("TypeID");
 
-            entity.HasOne(d => d.Equipment).WithMany(p => p.ErrorHistories)
+            entity.HasOne(d => d.Equipment).WithMany(p => p.IncidentHistories)
                 .HasForeignKey(d => d.EquipmentId)
-                .HasConstraintName("FK__ErrorHist__Equip__7B5B524B");
+                .HasConstraintName("FK__IncidentH__Equip__7B5B524B");
 
-            entity.HasOne(d => d.Line).WithMany(p => p.ErrorHistories)
-                .HasForeignKey(d => d.LineId)
-                .HasConstraintName("FK__ErrorHist__LineI__7D439ABD");
-
-            entity.HasOne(d => d.Slot).WithMany(p => p.ErrorHistories)
-                .HasForeignKey(d => d.SlotId)
-                .HasConstraintName("FK__ErrorHist__SlotI__7E37BEF6");
-
-            entity.HasOne(d => d.Stage).WithMany(p => p.ErrorHistories)
-                .HasForeignKey(d => d.StageId)
-                .HasConstraintName("FK__ErrorHist__Stage__7C4F7684");
-
-            entity.HasOne(d => d.Type).WithMany(p => p.ErrorHistories)
+            entity.HasOne(d => d.Type).WithMany(p => p.IncidentHistories)
                 .HasForeignKey(d => d.TypeId)
-                .HasConstraintName("FK__ErrorHist__TypeI__7F2BE32F");
+                .HasConstraintName("FK__IncidentH__TypeI__7F2BE32F");
         });
 
         modelBuilder.Entity<Line>(entity =>
@@ -155,29 +152,39 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .HasConstraintName("FK__Lines__Departmen__6A30C650");
         });
 
-        modelBuilder.Entity<MaintenanceAssignment>(entity =>
+        modelBuilder.Entity<MaintenancePlan>(entity =>
         {
-            entity.HasKey(e => e.AssignmentId).HasName("PK__Maintena__32499E57A8B16523");
+            entity.HasKey(e => e.PlanId).HasName("PK__Maintena__755C22D75A5E8C31");
 
-            entity.Property(e => e.AssignmentId).HasColumnName("AssignmentID");
-            entity.Property(e => e.AssignedAt)
-                .HasDefaultValueSql("(getdate())")
-                .HasColumnType("datetime");
-            entity.Property(e => e.CompletedAt).HasColumnType("datetime");
-            entity.Property(e => e.ErrorId).HasColumnName("ErrorID");
-            entity.Property(e => e.TechnicianId)
-                .HasMaxLength(450)
-                .HasColumnName("TechnicianID");
+            entity.Property(e => e.PlanId).HasColumnName("PlanID");
+            entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
+            entity.Property(e => e.IntervalType).HasMaxLength(20);
+            entity.Property(e => e.AssignedToUserId).HasMaxLength(450);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
 
-            entity.HasOne(d => d.Error).WithMany(p => p.MaintenanceAssignments)
-                .HasForeignKey(d => d.ErrorId)
+            entity.HasOne(d => d.Equipment).WithMany(p => p.MaintenancePlans)
+                .HasForeignKey(d => d.EquipmentId)
+                .HasConstraintName("FK__MaintenanPlan__Equip__1234567");
+
+            entity.HasOne(d => d.AssignedToUser).WithMany(p => p.MaintenancePlans)
+                .HasForeignKey(d => d.AssignedToUserId)
+                .HasConstraintName("FK__MaintenanPlan__User__2345678");
+        });
+
+        modelBuilder.Entity<MaintenanceChecklistItem>(entity =>
+        {
+            entity.HasKey(e => e.ChecklistId).HasName("PK__Maintena__26C4E2F5A1234567");
+
+            entity.Property(e => e.ChecklistId).HasColumnName("ChecklistID");
+            entity.Property(e => e.PlanId).HasColumnName("PlanID");
+            entity.Property(e => e.StepName).HasMaxLength(200);
+            entity.Property(e => e.CompletedDate).HasColumnType("datetime");
+            entity.Property(e => e.Notes).HasMaxLength(500);
+
+            entity.HasOne(d => d.Plan).WithMany(p => p.ChecklistItems)
+                .HasForeignKey(d => d.PlanId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Maintenan__Error__18EBB532");
-
-            entity.HasOne(d => d.Technician).WithMany(p => p.MaintenanceAssignments)
-                .HasForeignKey(d => d.TechnicianId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Maintenan__Techn__19DFD96B");
+                .HasConstraintName("FK__Maintena__PlanID__3456789");
         });
 
         modelBuilder.Entity<ProductionOutput>(entity =>
@@ -185,25 +192,20 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.HasKey(e => e.OutputId).HasName("PK__Producti__CE7609460B69FF1F");
 
             entity.Property(e => e.OutputId).HasColumnName("OutputID");
-            entity.Property(e => e.ActualQuantity).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.LineId).HasColumnName("LineID");
-            entity.Property(e => e.ShiftId).HasColumnName("ShiftID");
-            entity.Property(e => e.StageId).HasColumnName("StageID");
+            entity.Property(e => e.SlotId).HasColumnName("SlotID");
+            entity.Property(e => e.TargetQuantity).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.IdealCycleTime).HasColumnType("decimal(10, 4)");
 
             entity.HasOne(d => d.Line).WithMany(p => p.ProductionOutputs)
                 .HasForeignKey(d => d.LineId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Productio__LineI__08B54D69");
 
-            entity.HasOne(d => d.Shift).WithMany(p => p.ProductionOutputs)
-                .HasForeignKey(d => d.ShiftId)
+            entity.HasOne(d => d.Slot).WithMany(p => p.ProductionOutputs)
+                .HasForeignKey(d => d.SlotId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Productio__Shift__0A9D95DB");
-
-            entity.HasOne(d => d.Stage).WithMany(p => p.ProductionOutputs)
-                .HasForeignKey(d => d.StageId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Productio__Stage__09A971A2");
+                .HasConstraintName("FK__Productio__SlotI__0A9D95DB");
         });
 
         modelBuilder.Entity<PurchaseRequest>(entity =>
@@ -212,20 +214,23 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
             entity.Property(e => e.RequestId).HasColumnName("RequestID");
             entity.Property(e => e.ApprovedAt).HasColumnType("datetime");
+            entity.Property(e => e.RejectedAt).HasColumnType("datetime");
             entity.Property(e => e.ApprovedBy).HasMaxLength(450);
+            entity.Property(e => e.RejectedBy).HasMaxLength(450);
             entity.Property(e => e.PartId).HasColumnName("PartID");
             entity.Property(e => e.Reason).HasMaxLength(500);
             entity.Property(e => e.RequestedBy).HasMaxLength(450);
             entity.Property(e => e.Status)
                 .HasMaxLength(50)
                 .HasDefaultValue("Pending");
-            entity.Property(e => e.Urgency)
-                .HasMaxLength(50)
-                .HasDefaultValue("Normal");
 
             entity.HasOne(d => d.ApprovedByNavigation).WithMany(p => p.PurchaseRequestApprovedByNavigations)
                 .HasForeignKey(d => d.ApprovedBy)
                 .HasConstraintName("FK__PurchaseR__Appro__151B244E");
+
+            entity.HasOne(d => d.RejectedByNavigation).WithMany(p => p.PurchaseRequestRejectedByNavigations)
+                .HasForeignKey(d => d.RejectedBy)
+                .HasConstraintName("FK__PurchaseR__Rejec__151B245F");
 
             entity.HasOne(d => d.Part).WithMany(p => p.PurchaseRequests)
                 .HasForeignKey(d => d.PartId)
@@ -236,6 +241,35 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .HasForeignKey(d => d.RequestedBy)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__PurchaseR__Reque__14270015");
+        });
+
+        modelBuilder.Entity<ReplacementHistory>(entity =>
+        {
+            entity.HasKey(e => e.ReplacementId).HasName("PK__Replacem__55AB07E93456789A");
+
+            entity.Property(e => e.ReplacementId).HasColumnName("ReplacementID");
+            entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
+            entity.Property(e => e.PartId).HasColumnName("PartID");
+            entity.Property(e => e.ReplacedDate).HasColumnType("datetime");
+            entity.Property(e => e.ReplacedBy).HasMaxLength(450);
+            entity.Property(e => e.Status)
+                .HasMaxLength(20)
+                .HasDefaultValue("Pending");
+            entity.Property(e => e.Remarks).HasMaxLength(500);
+
+            entity.HasOne(d => d.Equipment).WithMany(p => p.ReplacementHistories)
+                .HasForeignKey(d => d.EquipmentId)
+                .HasConstraintName("FK__Replaceme__Equip__4567890A");
+
+            entity.HasOne(d => d.Part).WithMany(p => p.ReplacementHistories)
+                .HasForeignKey(d => d.PartId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__Replaceme__PartI__5678901B");
+
+            entity.HasOne(d => d.ReplacedByNavigation).WithMany(p => p.ReplacementHistories)
+                .HasForeignKey(d => d.ReplacedBy)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__Replaceme__Repla__6789012C");
         });
 
         modelBuilder.Entity<Shift>(entity =>
@@ -300,7 +334,7 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.HasKey(e => e.UserLineId).HasName("PK__UserLine__3B1F2081CE44FE03");
 
             entity.Property(e => e.UserLineId).HasColumnName("UserLineID");
-            entity.Property(e => e.CreateDate)
+            entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");
             entity.Property(e => e.LineId).HasColumnName("LineID");

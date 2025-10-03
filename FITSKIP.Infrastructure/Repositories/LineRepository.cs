@@ -72,17 +72,13 @@ public class LineRepository : ILineRepository
         var hasStages = await _context.Stages.AnyAsync(s => s.LineId == lineId, cancellationToken);
         if (hasStages) return true;
 
-        // Check if line has any equipment
-        var hasEquipment = await _context.Equipment.AnyAsync(e => e.LineId == lineId, cancellationToken);
-        if (hasEquipment) return true;
+        // Note: Equipment no longer has LineId, so we remove this check
 
         // Check if line has any production outputs
         var hasProductionOutputs = await _context.ProductionOutputs.AnyAsync(p => p.LineId == lineId, cancellationToken);
         if (hasProductionOutputs) return true;
 
-        // Check if line has any error histories
-        var hasErrorHistories = await _context.ErrorHistories.AnyAsync(e => e.LineId == lineId, cancellationToken);
-        if (hasErrorHistories) return true;
+        // Note: IncidentHistory no longer has LineId, so we remove this check
 
         // Check if line has any user assignments
         var hasUserLines = await _context.UserLines.AnyAsync(u => u.LineId == lineId, cancellationToken);

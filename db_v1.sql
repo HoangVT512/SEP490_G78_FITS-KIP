@@ -3,7 +3,7 @@
 use SEP490_G78_FITSKIP
 
 -- ===========================
--- 1. ASP.NET Identity tables
+-- 1. ASP.NET Identity tables (Simplified)
 -- ===========================
 
 CREATE TABLE [dbo].[AspNetRoles](
@@ -32,24 +32,10 @@ CREATE TABLE [dbo].[AspNetUsers](
     [FullName] NVARCHAR(100) NULL,
     [Gender] NVARCHAR(10) NULL,
     [EmployeeCode] NVARCHAR(50) NULL,
-    [Position] NVARCHAR(100) NULL
-
-);
-
-CREATE TABLE [dbo].[AspNetUserRoles](
-    [UserId] NVARCHAR(450) NOT NULL,
-    [RoleId] NVARCHAR(450) NOT NULL,
-    PRIMARY KEY(UserId, RoleId),
-    FOREIGN KEY(UserId) REFERENCES AspNetUsers(Id),
-    FOREIGN KEY(RoleId) REFERENCES AspNetRoles(Id)
-);
-
-CREATE TABLE [dbo].[AspNetUserClaims](
-    [Id] INT IDENTITY(1,1) PRIMARY KEY,
-    [UserId] NVARCHAR(450) NOT NULL,
-    [ClaimType] NVARCHAR(MAX) NULL,
-    [ClaimValue] NVARCHAR(MAX) NULL,
-    FOREIGN KEY(UserId) REFERENCES AspNetUsers(Id)
+    [Position] NVARCHAR(100) NULL,
+    [IsActive] BIT NOT NULL DEFAULT 1,
+    [RoleId] NVARCHAR(450) NULL,
+    FOREIGN KEY(RoleId) REFERENCES AspNetRoles(Id) ON DELETE SET NULL
 );
 
 CREATE TABLE [dbo].[AspNetRoleClaims](
@@ -58,24 +44,6 @@ CREATE TABLE [dbo].[AspNetRoleClaims](
     [ClaimType] NVARCHAR(MAX) NULL,
     [ClaimValue] NVARCHAR(MAX) NULL,
     FOREIGN KEY(RoleId) REFERENCES AspNetRoles(Id)
-);
-
-CREATE TABLE [dbo].[AspNetUserLogins](
-    [LoginProvider] NVARCHAR(450) NOT NULL,
-    [ProviderKey] NVARCHAR(450) NOT NULL,
-    [ProviderDisplayName] NVARCHAR(100) NULL,
-    [UserId] NVARCHAR(450) NOT NULL,
-    PRIMARY KEY(LoginProvider, ProviderKey),
-    FOREIGN KEY(UserId) REFERENCES AspNetUsers(Id)
-);
-
-CREATE TABLE [dbo].[AspNetUserTokens](
-    [UserId] NVARCHAR(450) NOT NULL,
-    [LoginProvider] NVARCHAR(450) NOT NULL,
-    [Name] NVARCHAR(450) NOT NULL,
-    [Value] NVARCHAR(MAX) NULL,
-    PRIMARY KEY(UserId, LoginProvider, Name),
-    FOREIGN KEY(UserId) REFERENCES AspNetUsers(Id)
 );
 
 -- ===========================

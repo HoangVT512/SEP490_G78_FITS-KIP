@@ -15,7 +15,7 @@ public partial class ShiftSlot
 
     public int Duration { get; set; }
 
-    public virtual ICollection<ErrorHistory> ErrorHistories { get; set; } = new List<ErrorHistory>();
-
     public virtual Shift Shift { get; set; } = null!;
+
+    public virtual ICollection<ProductionOutput> ProductionOutputs { get; set; } = new List<ProductionOutput>();
 }

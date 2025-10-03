@@ -17,7 +17,7 @@ public partial class Line
 
     public virtual ICollection<Equipment> Equipment { get; set; } = new List<Equipment>();
 
-    public virtual ICollection<ErrorHistory> ErrorHistories { get; set; } = new List<ErrorHistory>();
+    public virtual ICollection<IncidentHistory> IncidentHistories { get; set; } = new List<IncidentHistory>();
 
     public virtual ICollection<ProductionOutput> ProductionOutputs { get; set; } = new List<ProductionOutput>();
 
