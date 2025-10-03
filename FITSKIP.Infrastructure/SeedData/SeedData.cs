@@ -240,7 +240,7 @@ namespace FITSKIP.Infrastructure.SeedData
                 var userRoleAssignments = new List<IdentityUserRole<string>>();
 
                 // Phân quyền Quản trị viên
-                var adminRole = roles.FirstOrDefault(r => r.NormalizedName == "QUAN TRI VIEN");
+                var adminRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN TRỊ VIÊN");
                 var adminUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("QTV") == true).ToList();
                 foreach (var user in adminUsers)
                 {
@@ -249,7 +249,7 @@ namespace FITSKIP.Infrastructure.SeedData
                 }
 
                 // Phân quyền Quản lý
-                var managerRole = roles.FirstOrDefault(r => r.NormalizedName == "QUAN LY");
+                var managerRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN LÝ");
                 var managerUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("QL") == true).ToList();
                 foreach (var user in managerUsers)
                 {
@@ -258,7 +258,7 @@ namespace FITSKIP.Infrastructure.SeedData
                 }
 
                 // Phân quyền Quản lý kỹ thuật
-                var techManagerRole = roles.FirstOrDefault(r => r.NormalizedName == "QUAN LY KY THUAT");
+                var techManagerRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN LÝ KỸ THUẬT");
                 var techManagerUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("QLKT") == true).ToList();
                 foreach (var user in techManagerUsers)
                 {
@@ -267,7 +267,7 @@ namespace FITSKIP.Infrastructure.SeedData
                 }
 
                 // Phân quyền Tổ trưởng
-                var teamLeaderRole = roles.FirstOrDefault(r => r.NormalizedName == "TO TRUONG");
+                var teamLeaderRole = roles.FirstOrDefault(r => r.NormalizedName == "TỔ TRƯỞNG");
                 var teamLeaderUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("TT") == true).ToList();
                 foreach (var user in teamLeaderUsers)
                 {
@@ -276,7 +276,7 @@ namespace FITSKIP.Infrastructure.SeedData
                 }
 
                 // Phân quyền Kỹ thuật viên
-                var technicianRole = roles.FirstOrDefault(r => r.NormalizedName == "KY THUAT VIEN");
+                var technicianRole = roles.FirstOrDefault(r => r.NormalizedName == "KỸ THUẬT VIÊN");
                 var technicianUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("KTV") == true).ToList();
                 foreach (var user in technicianUsers)
                 {
