@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   Form,
   Input,
@@ -21,6 +21,7 @@ import {
   CheckCircleOutlined,
   SafetyOutlined,
   PhoneOutlined,
+  ClockCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import Layout from "../../components/Layout";
@@ -37,7 +38,31 @@ const ForgotPassword = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [otpMethod, setOtpMethod] = useState("email"); // "email" or "phone"
   const [otp, setOtp] = useState("");
+  const [otpDigits, setOtpDigits] = useState(["", "", "", "", "", ""]);
+  const otpInputRefs = useRef([]);
+  const [otpTimer, setOtpTimer] = useState(300); // 5 minutes = 300 seconds
+  const [canResendOtp, setCanResendOtp] = useState(false);
   const [form] = Form.useForm();
+
+  // Countdown timer effect
+  useEffect(() => {
+    let interval = null;
+    if (currentStep === 1 && otpTimer > 0) {
+      interval = setInterval(() => {
+        setOtpTimer((prevTimer) => {
+          if (prevTimer <= 1) {
+            setCanResendOtp(true);
+            clearInterval(interval);
+            return 0;
+          }
+          return prevTimer - 1;
+        });
+      }, 1000);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [currentStep, otpTimer]);
 
   // Step 1: Send OTP to email or phone
   const handleSendOtp = async (values) => {
@@ -53,6 +78,8 @@ const ForgotPassword = () => {
         setPhoneNumber(values.phoneNumber);
         message.success("Mã OTP đã được gửi đến số điện thoại của bạn!");
       }
+      setOtpTimer(300); // Reset timer to 5 minutes
+      setCanResendOtp(false);
       setCurrentStep(1);
     } catch (error) {
       console.error("Error sending OTP:", error);
@@ -114,11 +141,90 @@ const ForgotPassword = () => {
     }
   };
 
+  // Handle OTP input change
+  const handleOtpChange = (index, value) => {
+    // Only allow digits
+    if (value && !/^\d$/.test(value)) return;
+
+    const newOtpDigits = [...otpDigits];
+    newOtpDigits[index] = value;
+    setOtpDigits(newOtpDigits);
+
+    // Auto focus next input
+    if (value && index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+
+    // Update form field with complete OTP
+    const completeOtp = newOtpDigits.join("");
+    form.setFieldsValue({ otp: completeOtp });
+  };
+
+  // Handle OTP input keydown
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === "Backspace") {
+      if (!otpDigits[index] && index > 0) {
+        // Move to previous input if current is empty
+        otpInputRefs.current[index - 1]?.focus();
+      }
+    } else if (e.key === "ArrowLeft" && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    } else if (e.key === "ArrowRight" && index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  // Handle OTP input paste
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text").slice(0, 6);
+    if (/^\d+$/.test(pastedData)) {
+      const newOtpDigits = pastedData
+        .split("")
+        .concat(Array(6).fill(""))
+        .slice(0, 6);
+      setOtpDigits(newOtpDigits);
+      form.setFieldsValue({ otp: pastedData });
+      // Focus the next empty input or the last one
+      const nextIndex = Math.min(pastedData.length, 5);
+      otpInputRefs.current[nextIndex]?.focus();
+    }
+  };
+
+  // Handle resend OTP
+  const handleResendOtp = async () => {
+    setLoading(true);
+    try {
+      if (otpMethod === "email") {
+        await authService.sendForgotPasswordOtp(email);
+        message.success("Mã OTP mới đã được gửi đến email của bạn!");
+      } else {
+        // await authService.sendForgotPasswordOtpByPhone(phoneNumber);
+        message.success("Mã OTP mới đã được gửi đến số điện thoại của bạn!");
+      }
+      setOtpTimer(300); // Reset timer to 5 minutes
+      setCanResendOtp(false);
+      setOtpDigits(["", "", "", "", "", ""]); // Reset OTP digits
+      form.resetFields(["otp"]);
+      otpInputRefs.current[0]?.focus();
+    } catch (error) {
+      console.error("Error resending OTP:", error);
+      message.error(
+        error.message || "Không thể gửi lại mã OTP. Vui lòng thử lại!"
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle back button
   const handleBack = () => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
       form.resetFields();
+      setOtpDigits(["", "", "", "", "", ""]); // Reset OTP digits
+      setOtpTimer(300); // Reset timer
+      setCanResendOtp(false);
     } else {
       navigate("/login");
     }
@@ -268,29 +374,91 @@ const ForgotPassword = () => {
               style={{ marginBottom: 24 }}
             />
 
+            {/* Hidden Form.Item to store OTP value */}
             <Form.Item
               name="otp"
-              label="Mã OTP"
               rules={[
-                { required: true, message: "Vui lòng nhập mã OTP!" },
+                { required: true, message: "Vui lòng nhập đủ 6 chữ số OTP!" },
                 {
-                  pattern: /^[0-9]{6}$/,
-                  message: "Mã OTP phải có 6 chữ số!",
+                  len: 6,
+                  message: "Mã OTP phải có đúng 6 chữ số!",
                 },
               ]}
+              hidden
             >
-              <Input
-                prefix={<SafetyOutlined />}
-                placeholder="Nhập mã OTP 6 số"
-                size="large"
-                maxLength={6}
-                style={{
-                  fontSize: "20px",
-                  letterSpacing: "8px",
-                  textAlign: "center",
-                }}
-              />
+              <Input />
             </Form.Item>
+
+            {/* Countdown Timer */}
+            <div
+              style={{
+                marginBottom: 16,
+                textAlign: "center",
+                fontWeight: 600,
+                fontSize: 16,
+                color: otpTimer <= 60 ? "#ff4d4f" : "#d97706",
+              }}
+            >
+              <ClockCircleOutlined style={{ marginRight: 8 }} />
+              Thời gian còn lại:{" "}
+              {`${String(Math.floor(otpTimer / 60)).padStart(2, "0")}:${String(
+                otpTimer % 60
+              ).padStart(2, "0")}`}
+            </div>
+
+            {otpTimer === 0 && (
+              <Alert
+                message="Mã OTP đã hết hạn"
+                description="Vui lòng gửi lại mã OTP mới để tiếp tục."
+                type="error"
+                showIcon
+                style={{ marginBottom: 16 }}
+              />
+            )}
+
+            {/* Visual OTP Input Boxes */}
+            <div style={{ marginBottom: 24 }}>
+              <label
+                style={{
+                  display: "block",
+                  marginBottom: "8px",
+                  fontSize: "14px",
+                  fontWeight: "500",
+                }}
+              >
+                Mã OTP
+              </label>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "12px",
+                  justifyContent: "center",
+                }}
+              >
+                {otpDigits.map((digit, index) => (
+                  <Input
+                    key={index}
+                    ref={(el) => (otpInputRefs.current[index] = el)}
+                    value={digit}
+                    onChange={(e) => handleOtpChange(index, e.target.value)}
+                    onKeyDown={(e) => handleOtpKeyDown(index, e)}
+                    onPaste={index === 0 ? handleOtpPaste : undefined}
+                    maxLength={1}
+                    disabled={otpTimer === 0}
+                    style={{
+                      width: "50px",
+                      height: "50px",
+                      fontSize: "24px",
+                      fontWeight: "600",
+                      textAlign: "center",
+                      borderRadius: "8px",
+                      border: "2px solid #d9d9d9",
+                    }}
+                    className={styles.otpInput}
+                  />
+                ))}
+              </div>
+            </div>
 
             <Form.Item>
               <Button
@@ -301,6 +469,7 @@ const ForgotPassword = () => {
                 size="large"
                 icon={<CheckCircleOutlined />}
                 style={{ backgroundColor: "#334766", borderColor: "#334766" }}
+                disabled={otpTimer === 0}
               >
                 {loading ? "Đang xác thực..." : "Xác thực OTP"}
               </Button>
@@ -308,16 +477,22 @@ const ForgotPassword = () => {
 
             <div style={{ textAlign: "center", marginTop: 16 }}>
               <Text type="secondary">Không nhận được mã OTP? </Text>
-              <Button
-                type="link"
-                onClick={() => {
-                  setCurrentStep(0);
-                  form.resetFields();
-                }}
-                style={{ padding: 0 }}
-              >
-                Gửi lại
-              </Button>
+              {canResendOtp || otpTimer === 0 ? (
+                <Button
+                  type="link"
+                  onClick={handleResendOtp}
+                  loading={loading}
+                  style={{ padding: 0, fontWeight: 600 }}
+                >
+                  Gửi lại mã OTP
+                </Button>
+              ) : (
+                <Text type="secondary">
+                  Gửi lại sau{" "}
+                  {String(Math.floor(otpTimer / 60)).padStart(2, "0")}:
+                  {String(otpTimer % 60).padStart(2, "0")}
+                </Text>
+              )}
             </div>
           </Form>
         );
@@ -486,31 +661,6 @@ const ForgotPassword = () => {
                 </Typography.Text>
               </Space>
             </div>
-
-            <Steps
-              current={currentStep}
-              size="small"
-              style={{ marginBottom: 24 }}
-              items={[
-                {
-                  title: "Phương thức",
-                  icon:
-                    otpMethod === "email" ? (
-                      <MailOutlined />
-                    ) : (
-                      <PhoneOutlined />
-                    ),
-                },
-                {
-                  title: "OTP",
-                  icon: <SafetyOutlined />,
-                },
-                {
-                  title: "Mật khẩu",
-                  icon: <LockOutlined />,
-                },
-              ]}
-            />
 
             {renderStepContent()}
 
