@@ -252,8 +252,19 @@ public class UserRepository : IUserRepository
                     throw new Exception($"Department với ID '{request.DepartmentId.Value}' không tồn tại trong hệ thống");
                 }
 
-                // Unset previous manager if any
-                var previousManagerDepartment = await db.Departments.FirstOrDefaultAsync(d => d.ManagerId == id, cancellationToken);
+                // Check if department already has a different manager
+                if (deptToManage.ManagerId != null && deptToManage.ManagerId != id)
+                {
+                    // Unset the other manager
+                    var otherManagerDept = await db.Departments.FirstOrDefaultAsync(d => d.ManagerId == deptToManage.ManagerId, cancellationToken);
+                    if (otherManagerDept != null)
+                    {
+                        otherManagerDept.ManagerId = null;
+                    }
+                }
+
+                // Unset previous manager if any (if user was managing a different department)
+                var previousManagerDepartment = await db.Departments.FirstOrDefaultAsync(d => d.ManagerId == id && d.DepartmentId != request.DepartmentId.Value, cancellationToken);
                 if (previousManagerDepartment != null)
                 {
                     previousManagerDepartment.ManagerId = null;
@@ -393,19 +404,23 @@ public class UserRepository : IUserRepository
     {
         try
         {
-            // Handle specific encoding issues for Vietnamese role names
-            var actualRoleName = roleName;
-            if (roleName == "Quản lý")
-                actualRoleName = "Quan ly";
+            Console.WriteLine($"GetUsersByRoleAsync called with roleName: {roleName}");
 
-            var usersInRole = await userManager.GetUsersInRoleAsync(actualRoleName);
-            var activeUsers = usersInRole.Where(u => u.IsActive).ToList();
+            // Get users by RoleId instead of role name
+            // Note: Removed IsActive filter to include all managers
+            var users = await db.Users
+                .Include(u => u.Role)
+                .Where(u => u.Role != null && u.Role.Name == roleName)
+                .ToListAsync(cancellationToken);
 
-            return activeUsers;
+            Console.WriteLine($"Found {users.Count} users with role {roleName}");
+
+            return users;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"Error in GetUsersByRoleAsync: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
             return new List<User>();
         }
     }

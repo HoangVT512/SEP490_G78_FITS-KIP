@@ -764,7 +764,11 @@ const UserManagement = ({ showHeader = true }) => {
           const departmentDetails = await departmentService.getDepartmentById(
             values.departmentId
           );
-          if (departmentDetails.managerId) {
+          // Only show error if department has a manager AND it's not the current user being edited
+          if (
+            departmentDetails.managerId &&
+            departmentDetails.managerId !== editingUser?.id
+          ) {
             message.error({
               content: `Phòng ban "${departmentDetails.departmentName}" đã có quản lý. Không thể thêm vai trò quản lý cho phòng ban này.`,
               placement: "topRight",

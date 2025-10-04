@@ -534,14 +534,15 @@ public class UsersController : ControllerBase
     {
         try
         {
-            var managers = await userService.GetUsersByRoleAsync("Quan ly");
+            var managers = await userService.GetUsersByRoleAsync("Quản lý");
             var managerDTOs = managers.Select(manager => new UserDTO
             {
                 Id = manager.Id,
                 UserName = manager.UserName,
                 Email = manager.Email,
                 PhoneNumber = manager.PhoneNumber,
-                FullName = manager.FullName
+                FullName = manager.FullName,
+                EmployeeCode = manager.EmployeeCode
             }).ToList();
 
             return Ok(managerDTOs);

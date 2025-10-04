@@ -34,6 +34,7 @@ import {
 import Layout from "../../components/Layout/Layout";
 import { departmentService } from "../../services/departmentService";
 import { userService } from "../../services/userService";
+import { lineService } from "../../services/lineService";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -49,6 +50,7 @@ const DepartmentManagement = ({ showHeader = true }) => {
   const [viewingDepartment, setViewingDepartment] = useState(null);
   const [managers, setManagers] = useState([]);
   const [loadingManagers, setLoadingManagers] = useState(false);
+  const [lines, setLines] = useState([]);
   const [form] = Form.useForm();
 
   const [showArchive, setShowArchive] = useState(() => {
@@ -57,43 +59,7 @@ const DepartmentManagement = ({ showHeader = true }) => {
     return saved === "true";
   });
 
-  // Archive icon component
-  function ArchiveIcon() {
-    return (
-      <svg
-        width="1em"
-        height="1em"
-        viewBox="0 0 24 24"
-        fill="none"
-        style={{ verticalAlign: "middle" }}
-      >
-        <rect
-          x="3"
-          y="7"
-          width="18"
-          height="13"
-          rx="2"
-          stroke="#334766"
-          strokeWidth="2"
-        />
-        <rect
-          x="2"
-          y="3"
-          width="20"
-          height="4"
-          rx="1"
-          stroke="#334766"
-          strokeWidth="2"
-        />
-        <path
-          d="M9 12h6"
-          stroke="#334766"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
+  // (Using Ant Design icon EyeOutlined for archive toggle)
 
   useEffect(() => {
     loadDepartments();
@@ -110,22 +76,45 @@ const DepartmentManagement = ({ showHeader = true }) => {
   const loadDepartments = async () => {
     setLoading(true);
     try {
-      const [departmentsData, managersData] = await Promise.all([
+      const [departmentsData, allUsersData, linesData] = await Promise.all([
         departmentService.getDepartments(),
-        userService.getManagers(),
+        userService.getUsers(), // Get all users to find managers
+        lineService.getLines(),
       ]);
 
-      // Map manager names to departments
-      const departmentsWithManagerNames = departmentsData.map((dept) => {
-        const manager = managersData.find((m) => m.id === dept.managerId);
+      // Map manager names and line counts to departments
+      const departmentsWithDetails = departmentsData.map((dept) => {
+        const departmentLines = linesData.filter(
+          (line) => line.departmentId === dept.departmentId
+        );
+
+        // Find manager: user with role "Quản lý" AND assigned to this department (via lines)
+        const manager = allUsersData.find((user) => {
+          const hasManagerRole = user.roles && user.roles.includes("Quản lý");
+          const belongsToDepartment = user.departmentId === dept.departmentId;
+          return hasManagerRole && belongsToDepartment;
+        });
+
+        console.log(
+          "Department:",
+          dept.departmentName,
+          "Found manager:",
+          manager
+        );
+
         return {
           ...dept,
           managerName: manager ? manager.fullName : null,
+          managerId: manager ? manager.id : dept.managerId, // Update managerId if found
+          lineCount: departmentLines.length,
         };
       });
 
-      setDepartments(departmentsWithManagerNames);
+      setDepartments(departmentsWithDetails);
+      // Still keep managers for the dropdown
+      const managersData = await userService.getManagers();
       setManagers(managersData);
+      setLines(linesData);
       setLoading(false);
     } catch (error) {
       console.error("Error loading departments:", error);
@@ -341,10 +330,22 @@ const DepartmentManagement = ({ showHeader = true }) => {
       width: 200,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: "500" }}>
-            <UserOutlined style={{ marginRight: "4px", color: "#334766" }} />
-            {record.managerName || "Chưa có"}
+          <div
+            style={{
+              fontWeight: "500",
+              color: record.managerName ? "#334766" : "#9ca3af",
+            }}
+          >
+            <UserOutlined style={{ marginRight: "4px" }} />
+            {record.managerName || "Chưa có quản lý"}
           </div>
+          {record.managerName && (
+            <div
+              style={{ fontSize: "12px", color: "#6b7280", marginTop: "2px" }}
+            >
+              ID: {record.managerId}
+            </div>
+          )}
         </div>
       ),
     },
@@ -355,7 +356,7 @@ const DepartmentManagement = ({ showHeader = true }) => {
       align: "center",
       render: (_, record) => (
         <Badge
-          count={record.lines ? record.lines.length : 0}
+          count={record.lineCount || 0}
           showZero
           style={{ backgroundColor: "#334766" }}
         />
@@ -520,7 +521,7 @@ const DepartmentManagement = ({ showHeader = true }) => {
             <Space style={{ float: "right" }}>
               <Button
                 type={showArchive ? "primary" : "default"}
-                icon={<ArchiveIcon />}
+                icon={<EyeOutlined />}
                 onClick={() => setShowArchive(!showArchive)}
                 style={
                   showArchive
@@ -528,7 +529,9 @@ const DepartmentManagement = ({ showHeader = true }) => {
                     : {}
                 }
               >
-                {showArchive ? "Thoát lưu trữ" : "Lưu trữ"}
+                {showArchive
+                  ? "Xem phòng ban đang hoạt động"
+                  : "Xem phòng ban ngừng hoạt động"}
               </Button>
               <Button
                 type="primary"
@@ -611,10 +614,36 @@ const DepartmentManagement = ({ showHeader = true }) => {
           </Row>
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item name="managerId" label="Người quản lý">
+              <Form.Item
+                name="managerId"
+                label={
+                  <span>
+                    Người quản lý
+                    {editingDepartment && (
+                      <Text
+                        type="secondary"
+                        style={{
+                          fontSize: "12px",
+                          fontWeight: "normal",
+                          marginLeft: "8px",
+                        }}
+                      >
+                        (Chỉ xem - Thay đổi quản lý tại trang "Quản lý người
+                        dùng")
+                      </Text>
+                    )}
+                  </span>
+                }
+              >
                 <Select
-                  placeholder="Chọn người quản lý (tùy chọn)"
+                  placeholder={
+                    editingDepartment
+                      ? "Không có người quản lý"
+                      : "Chọn người quản lý (tùy chọn)"
+                  }
                   allowClear
+                  disabled={editingDepartment} // Disable when editing
+                  suffixIcon={null}
                   loading={loadingManagers}
                   options={managers}
                   showSearch
@@ -625,6 +654,40 @@ const DepartmentManagement = ({ showHeader = true }) => {
                   }
                 />
               </Form.Item>
+              {editingDepartment && (
+                <div
+                  style={{
+                    marginTop: "-16px",
+                    marginBottom: "16px",
+                    padding: "8px 12px",
+                    backgroundColor: "#f0f9ff",
+                    border: "1px solid #bae6fd",
+                    borderRadius: "6px",
+                  }}
+                >
+                  <Text type="secondary" style={{ fontSize: "13px" }}>
+                    💡 <strong>Lưu ý:</strong> Để thay đổi người quản lý phòng
+                    ban, vui lòng:
+                  </Text>
+                  <ol
+                    style={{
+                      margin: "4px 0 0 0",
+                      paddingLeft: "20px",
+                      fontSize: "13px",
+                      color: "#64748b",
+                    }}
+                  >
+                    <li>
+                      Vào trang <strong>"Quản lý người dùng"</strong>
+                    </li>
+                    <li>Chọn người dùng cần làm quản lý</li>
+                    <li>
+                      Chỉnh sửa và gán vai trò <strong>"Quản lý"</strong> + chọn
+                      phòng ban tương ứng
+                    </li>
+                  </ol>
+                </div>
+              )}
             </Col>
           </Row>
         </Form>
