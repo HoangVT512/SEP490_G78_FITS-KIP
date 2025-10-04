@@ -571,9 +571,7 @@ const RoleManagement = ({ showHeader = true }) => {
           trigger={["click"]}
           placement="bottomRight"
         >
-          <Button type="text" icon={<SettingOutlined />} size="small">
-            <DownOutlined />
-          </Button>
+          <Button type="text" icon={<DownOutlined />} size="small"></Button>
         </Dropdown>
       ),
     },
@@ -618,7 +616,14 @@ const RoleManagement = ({ showHeader = true }) => {
           );
           return;
         }
-        handleDelete(record.id);
+        Modal.confirm({
+          title: "Xác nhận xóa vai trò",
+          content: `Bạn có chắc chắn muốn xóa vai trò "${record.name}" không? Hành động này không thể hoàn tác.`,
+          okText: "Xóa",
+          okType: "danger",
+          cancelText: "Hủy",
+          onOk: () => handleDelete(record.id),
+        });
       },
       disabled: record.isSystemRole || record.userCount > 0,
     },

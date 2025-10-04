@@ -19,23 +19,8 @@ namespace FITSKIP.API.Controllers
         [HttpGet]
         public async Task<IActionResult> GetRoles()
         {
-            var roles = await roleService.GetRolesAsync();
-            if (roles == null)
-            {
-                throw new Exception("No roles found");
-            }
-            var response = new List<RoleDTO>();
-            foreach (var role in roles)
-            {
-                response.Add(new RoleDTO
-                {
-                    Id = role.Id,
-                    Name = role.Name,
-                    NormalizedName = role.NormalizedName,
-                    ConcurrencyStamp = role.ConcurrencyStamp
-                });
-            }
-            return Ok(response);
+            var roles = await roleService.GetRolesWithUserCountAsync();
+            return Ok(roles);
         }
 
         [HttpGet]
@@ -82,7 +67,8 @@ namespace FITSKIP.API.Controllers
                 var role = new IdentityRole
                 {
                     Name = request.Name,
-                    NormalizedName = request.Name.ToUpper().Replace(" ", "_")
+                    NormalizedName = request.Name.ToUpperInvariant(),
+                    ConcurrencyStamp = Guid.NewGuid().ToString()
                 };
                 var createdRole = await roleService.CreateRoleAsync(role);
                 var response = new RoleDTO
