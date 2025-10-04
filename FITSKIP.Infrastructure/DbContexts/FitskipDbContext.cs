@@ -79,6 +79,9 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .HasForeignKey(e => e.RoleId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_AspNetUsers_AspNetRoles_RoleId");
+
+            // Ignore MaintenancePlans collection to prevent shadow UserId in MaintenancePlan
+            entity.Ignore(e => e.MaintenancePlans);
         });
 
         // Department configuration
@@ -111,7 +114,8 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.StageId).HasColumnName("StageID");
             entity.Property(e => e.Yom).HasColumnName("YOM");
 
-            entity.HasOne(d => d.Stage).WithMany(p => p.Equipment)
+            // Only StageId relationship - Stage.Equipment collection is ignored
+            entity.HasOne(d => d.Stage).WithMany()
                 .HasForeignKey(d => d.StageId)
                 .HasConstraintName("FK__Equipment__Stage__70DDC3D8");
         });
@@ -129,7 +133,8 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.StartTime).HasColumnType("datetime");
             entity.Property(e => e.TypeId).HasColumnName("TypeID");
 
-            entity.HasOne(d => d.Equipment).WithMany(p => p.IncidentHistories)
+            // Equipment and Type relationships - no reverse collections
+            entity.HasOne(d => d.Equipment).WithMany()
                 .HasForeignKey(d => d.EquipmentId)
                 .HasConstraintName("FK__IncidentH__Equip__7B5B524B");
 
@@ -150,6 +155,10 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.HasOne(d => d.Department).WithMany(p => p.Lines)
                 .HasForeignKey(d => d.DepartmentId)
                 .HasConstraintName("FK__Lines__Departmen__6A30C650");
+
+            // Ignore collections to prevent shadow properties
+            entity.Ignore(e => e.Equipment);
+            entity.Ignore(e => e.IncidentHistories);
         });
 
         modelBuilder.Entity<MaintenancePlan>(entity =>
@@ -159,15 +168,17 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.PlanId).HasColumnName("PlanID");
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
             entity.Property(e => e.IntervalType).HasMaxLength(20);
-            entity.Property(e => e.AssignedToUserId).HasMaxLength(450);
+            entity.Property(e => e.AssignedTo).HasMaxLength(450);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
-            entity.HasOne(d => d.Equipment).WithMany(p => p.MaintenancePlans)
+            // Equipment relationship - no reverse collection
+            entity.HasOne(d => d.Equipment).WithMany()
                 .HasForeignKey(d => d.EquipmentId)
                 .HasConstraintName("FK__MaintenanPlan__Equip__1234567");
 
-            entity.HasOne(d => d.AssignedToUser).WithMany(p => p.MaintenancePlans)
-                .HasForeignKey(d => d.AssignedToUserId)
+            // AssignedTo relationship - no reverse collection
+            entity.HasOne(d => d.AssignedToUser).WithMany()
+                .HasForeignKey(d => d.AssignedTo)
                 .HasConstraintName("FK__MaintenanPlan__User__2345678");
         });
 
@@ -193,7 +204,7 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
             entity.Property(e => e.OutputId).HasColumnName("OutputID");
             entity.Property(e => e.LineId).HasColumnName("LineID");
-            entity.Property(e => e.SlotId).HasColumnName("SlotID");
+            entity.Property(e => e.ShiftSlotId).HasColumnName("ShiftSlotID");
             entity.Property(e => e.TargetQuantity).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.IdealCycleTime).HasColumnType("decimal(10, 4)");
 
@@ -202,10 +213,11 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Productio__LineI__08B54D69");
 
-            entity.HasOne(d => d.Slot).WithMany(p => p.ProductionOutputs)
-                .HasForeignKey(d => d.SlotId)
+            // ShiftSlot relationship - no reverse collection to prevent ShiftId shadow property
+            entity.HasOne(d => d.ShiftSlot).WithMany()
+                .HasForeignKey(d => d.ShiftSlotId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Productio__SlotI__0A9D95DB");
+                .HasConstraintName("FK__Productio__ShiftSlot__0A9D95DB");
         });
 
         modelBuilder.Entity<PurchaseRequest>(entity =>
@@ -257,7 +269,8 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .HasDefaultValue("Pending");
             entity.Property(e => e.Remarks).HasMaxLength(500);
 
-            entity.HasOne(d => d.Equipment).WithMany(p => p.ReplacementHistories)
+            // Equipment relationship - no reverse collection
+            entity.HasOne(d => d.Equipment).WithMany()
                 .HasForeignKey(d => d.EquipmentId)
                 .HasConstraintName("FK__Replaceme__Equip__4567890A");
 
@@ -278,6 +291,9 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
             entity.Property(e => e.ShiftId).HasColumnName("ShiftID");
             entity.Property(e => e.ShiftName).HasMaxLength(50);
+
+            // Ignore ProductionOutputs collection to prevent shadow ShiftId
+            entity.Ignore(e => e.ProductionOutputs);
         });
 
         modelBuilder.Entity<ShiftSlot>(entity =>
@@ -291,6 +307,9 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .HasForeignKey(d => d.ShiftId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__ShiftSlot__Shift__76969D2E");
+
+            // Ignore ProductionOutputs collection - already handled in ProductionOutput config
+            entity.Ignore(e => e.ProductionOutputs);
         });
 
         modelBuilder.Entity<SparePart>(entity =>
@@ -317,6 +336,9 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.HasOne(d => d.Line).WithMany(p => p.Stages)
                 .HasForeignKey(d => d.LineId)
                 .HasConstraintName("FK__Stages__LineID__6D0D32F4");
+
+            // Ignore Equipment collection to prevent shadow StageId in Equipment
+            entity.Ignore(e => e.Equipment);
         });
 
         modelBuilder.Entity<StopType>(entity =>

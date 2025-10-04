@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251003181331_RemoveUnusedIdentityTablesAndSimplifyRoleRelation")]
-    partial class RemoveUnusedIdentityTablesAndSimplifyRoleRelation
+    [Migration("20251004110627_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -89,17 +89,8 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
-                    b.Property<bool>("IsWorking")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
                     b.Property<string>("Issue")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("LineId")
-                        .HasColumnType("int")
-                        .HasColumnName("LineID");
 
                     b.Property<string>("Origin")
                         .HasMaxLength(150)
@@ -120,21 +111,19 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.HasKey("EquipmentId")
                         .HasName("PK__Equipmen__34474599BD4FBDFE");
 
-                    b.HasIndex("LineId");
-
                     b.HasIndex("StageId");
 
                     b.ToTable("Equipment");
                 });
 
-            modelBuilder.Entity("FITSKIP.Domain.Entities.ErrorHistory", b =>
+            modelBuilder.Entity("FITSKIP.Domain.Entities.IncidentHistory", b =>
                 {
-                    b.Property<int>("ErrorId")
+                    b.Property<int>("IncidentId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("ErrorID");
+                        .HasColumnName("IncidentID");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ErrorId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IncidentId"));
 
                     b.Property<decimal?>("Duration")
                         .HasColumnType("decimal(10, 2)");
@@ -146,27 +135,11 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("EquipmentID");
 
-                    b.Property<string>("ErrorDescription")
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<int?>("LineId")
-                        .HasColumnType("int")
-                        .HasColumnName("LineID");
-
                     b.Property<string>("Reason")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int?>("SlotId")
-                        .HasColumnType("int")
-                        .HasColumnName("SlotID");
-
                     b.Property<string>("Solution")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int?>("StageId")
-                        .HasColumnType("int")
-                        .HasColumnName("StageID");
 
                     b.Property<DateTime?>("StartTime")
                         .HasColumnType("datetime");
@@ -175,20 +148,14 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("TypeID");
 
-                    b.HasKey("ErrorId")
-                        .HasName("PK__ErrorHis__358565CA8E27F35E");
+                    b.HasKey("IncidentId")
+                        .HasName("PK__Incident__5F46CAB00C9D9F0A");
 
                     b.HasIndex("EquipmentId");
 
-                    b.HasIndex("LineId");
-
-                    b.HasIndex("SlotId");
-
-                    b.HasIndex("StageId");
-
                     b.HasIndex("TypeId");
 
-                    b.ToTable("ErrorHistory", (string)null);
+                    b.ToTable("IncidentHistory", (string)null);
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Line", b =>
@@ -222,44 +189,86 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.ToTable("Lines");
                 });
 
-            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceAssignment", b =>
+            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceChecklistItem", b =>
                 {
-                    b.Property<int>("AssignmentId")
+                    b.Property<int>("ChecklistId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
-                        .HasColumnName("AssignmentID");
+                        .HasColumnName("ChecklistID");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AssignmentId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ChecklistId"));
 
-                    b.Property<DateTime>("AssignedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasDefaultValueSql("(getdate())");
-
-                    b.Property<DateTime?>("CompletedAt")
+                    b.Property<DateTime?>("CompletedDate")
                         .HasColumnType("datetime");
 
-                    b.Property<int>("ErrorId")
+                    b.Property<bool?>("IsChecked")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("PlanId")
                         .HasColumnType("int")
-                        .HasColumnName("ErrorID");
+                        .HasColumnName("PlanID");
 
-                    b.Property<string>("ResolutionDetail")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("TechnicianId")
+                    b.Property<string>("StepName")
                         .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("ChecklistId")
+                        .HasName("PK__Maintena__26C4E2F5A1234567");
+
+                    b.HasIndex("PlanId");
+
+                    b.ToTable("MaintenanceChecklistItems");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenancePlan", b =>
+                {
+                    b.Property<int>("PlanId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("PlanID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlanId"));
+
+                    b.Property<string>("AssignedTo")
                         .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)")
-                        .HasColumnName("TechnicianID");
+                        .HasColumnType("nvarchar(450)");
 
-                    b.HasKey("AssignmentId")
-                        .HasName("PK__Maintena__32499E57A8B16523");
+                    b.Property<int?>("EquipmentId")
+                        .HasColumnType("int")
+                        .HasColumnName("EquipmentID");
 
-                    b.HasIndex("ErrorId");
+                    b.Property<string>("IntervalType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
 
-                    b.HasIndex("TechnicianId");
+                    b.Property<int>("IntervalValue")
+                        .HasColumnType("int");
 
-                    b.ToTable("MaintenanceAssignments");
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateOnly>("NextDueDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("StartDate")
+                        .HasColumnType("date");
+
+                    b.HasKey("PlanId")
+                        .HasName("PK__Maintena__755C22D75A5E8C31");
+
+                    b.HasIndex("AssignedTo");
+
+                    b.HasIndex("EquipmentId");
+
+                    b.ToTable("MaintenancePlans");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.ProductionOutput", b =>
@@ -271,8 +280,8 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OutputId"));
 
-                    b.Property<decimal>("ActualQuantity")
-                        .HasColumnType("decimal(10, 2)");
+                    b.Property<int>("ActualQuantity")
+                        .HasColumnType("int");
 
                     b.Property<DateOnly>("Date")
                         .HasColumnType("date");
@@ -280,26 +289,32 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<int>("DowntimeMinutes")
                         .HasColumnType("int");
 
+                    b.Property<int>("GoodQuantity")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("IdealCycleTime")
+                        .HasColumnType("decimal(10, 4)");
+
                     b.Property<int>("LineId")
                         .HasColumnType("int")
                         .HasColumnName("LineID");
 
-                    b.Property<int>("ShiftId")
-                        .HasColumnType("int")
-                        .HasColumnName("ShiftID");
+                    b.Property<int>("PlannedProductionTime")
+                        .HasColumnType("int");
 
-                    b.Property<int>("StageId")
+                    b.Property<int>("ShiftSlotId")
                         .HasColumnType("int")
-                        .HasColumnName("StageID");
+                        .HasColumnName("ShiftSlotID");
+
+                    b.Property<decimal>("TargetQuantity")
+                        .HasColumnType("decimal(10, 2)");
 
                     b.HasKey("OutputId")
                         .HasName("PK__Producti__CE7609460B69FF1F");
 
                     b.HasIndex("LineId");
 
-                    b.HasIndex("ShiftId");
-
-                    b.HasIndex("StageId");
+                    b.HasIndex("ShiftSlotId");
 
                     b.ToTable("ProductionOutputs");
                 });
@@ -331,6 +346,13 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<DateTime?>("RejectedAt")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("RejectedBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("RequestedBy")
                         .IsRequired()
                         .HasMaxLength(450)
@@ -342,12 +364,6 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasDefaultValue("Pending");
 
-                    b.Property<string>("Urgency")
-                        .ValueGeneratedOnAdd()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasDefaultValue("Normal");
-
                     b.HasKey("RequestId")
                         .HasName("PK__Purchase__33A8519A9AC26C34");
 
@@ -355,9 +371,62 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     b.HasIndex("PartId");
 
+                    b.HasIndex("RejectedBy");
+
                     b.HasIndex("RequestedBy");
 
                     b.ToTable("PurchaseRequests");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.ReplacementHistory", b =>
+                {
+                    b.Property<int>("ReplacementId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("ReplacementID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReplacementId"));
+
+                    b.Property<int?>("EquipmentId")
+                        .HasColumnType("int")
+                        .HasColumnName("EquipmentID");
+
+                    b.Property<int>("PartId")
+                        .HasColumnType("int")
+                        .HasColumnName("PartID");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Remarks")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ReplacedBy")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("ReplacedDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Pending");
+
+                    b.HasKey("ReplacementId")
+                        .HasName("PK__Replacem__55AB07E93456789A");
+
+                    b.HasIndex("EquipmentId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("ReplacedBy");
+
+                    b.ToTable("ReplacementHistories");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Shift", b =>
@@ -603,7 +672,7 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("UserLineId"));
 
-                    b.Property<DateTime?>("CreateDate")
+                    b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime")
                         .HasDefaultValueSql("(getdate())");
@@ -654,6 +723,31 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.ToTable("AspNetRoles", (string)null);
                 });
 
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ClaimType")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ClaimValue")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RoleId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleId");
+
+                    b.ToTable("AspNetRoleClaims", (string)null);
+                });
+
             modelBuilder.Entity("FITSKIP.Domain.Entities.Department", b =>
                 {
                     b.HasOne("FITSKIP.Domain.Entities.User", "Manager")
@@ -666,55 +760,27 @@ namespace FITSKIP.Infrastructure.Migrations
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Equipment", b =>
                 {
-                    b.HasOne("FITSKIP.Domain.Entities.Line", "Line")
-                        .WithMany("Equipment")
-                        .HasForeignKey("LineId")
-                        .HasConstraintName("FK__Equipment__LineI__71D1E811");
-
                     b.HasOne("FITSKIP.Domain.Entities.Stage", "Stage")
-                        .WithMany("Equipment")
+                        .WithMany()
                         .HasForeignKey("StageId")
                         .HasConstraintName("FK__Equipment__Stage__70DDC3D8");
-
-                    b.Navigation("Line");
 
                     b.Navigation("Stage");
                 });
 
-            modelBuilder.Entity("FITSKIP.Domain.Entities.ErrorHistory", b =>
+            modelBuilder.Entity("FITSKIP.Domain.Entities.IncidentHistory", b =>
                 {
                     b.HasOne("FITSKIP.Domain.Entities.Equipment", "Equipment")
-                        .WithMany("ErrorHistories")
+                        .WithMany()
                         .HasForeignKey("EquipmentId")
-                        .HasConstraintName("FK__ErrorHist__Equip__7B5B524B");
-
-                    b.HasOne("FITSKIP.Domain.Entities.Line", "Line")
-                        .WithMany("ErrorHistories")
-                        .HasForeignKey("LineId")
-                        .HasConstraintName("FK__ErrorHist__LineI__7D439ABD");
-
-                    b.HasOne("FITSKIP.Domain.Entities.ShiftSlot", "Slot")
-                        .WithMany("ErrorHistories")
-                        .HasForeignKey("SlotId")
-                        .HasConstraintName("FK__ErrorHist__SlotI__7E37BEF6");
-
-                    b.HasOne("FITSKIP.Domain.Entities.Stage", "Stage")
-                        .WithMany("ErrorHistories")
-                        .HasForeignKey("StageId")
-                        .HasConstraintName("FK__ErrorHist__Stage__7C4F7684");
+                        .HasConstraintName("FK__IncidentH__Equip__7B5B524B");
 
                     b.HasOne("FITSKIP.Domain.Entities.StopType", "Type")
-                        .WithMany("ErrorHistories")
+                        .WithMany("IncidentHistories")
                         .HasForeignKey("TypeId")
-                        .HasConstraintName("FK__ErrorHist__TypeI__7F2BE32F");
+                        .HasConstraintName("FK__IncidentH__TypeI__7F2BE32F");
 
                     b.Navigation("Equipment");
-
-                    b.Navigation("Line");
-
-                    b.Navigation("Slot");
-
-                    b.Navigation("Stage");
 
                     b.Navigation("Type");
                 });
@@ -729,23 +795,32 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("Department");
                 });
 
-            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceAssignment", b =>
+            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceChecklistItem", b =>
                 {
-                    b.HasOne("FITSKIP.Domain.Entities.ErrorHistory", "Error")
-                        .WithMany("MaintenanceAssignments")
-                        .HasForeignKey("ErrorId")
+                    b.HasOne("FITSKIP.Domain.Entities.MaintenancePlan", "Plan")
+                        .WithMany("ChecklistItems")
+                        .HasForeignKey("PlanId")
                         .IsRequired()
-                        .HasConstraintName("FK__Maintenan__Error__18EBB532");
+                        .HasConstraintName("FK__Maintena__PlanID__3456789");
 
-                    b.HasOne("FITSKIP.Domain.Entities.User", "Technician")
-                        .WithMany("MaintenanceAssignments")
-                        .HasForeignKey("TechnicianId")
-                        .IsRequired()
-                        .HasConstraintName("FK__Maintenan__Techn__19DFD96B");
+                    b.Navigation("Plan");
+                });
 
-                    b.Navigation("Error");
+            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenancePlan", b =>
+                {
+                    b.HasOne("FITSKIP.Domain.Entities.User", "AssignedToUser")
+                        .WithMany()
+                        .HasForeignKey("AssignedTo")
+                        .HasConstraintName("FK__MaintenanPlan__User__2345678");
 
-                    b.Navigation("Technician");
+                    b.HasOne("FITSKIP.Domain.Entities.Equipment", "Equipment")
+                        .WithMany()
+                        .HasForeignKey("EquipmentId")
+                        .HasConstraintName("FK__MaintenanPlan__Equip__1234567");
+
+                    b.Navigation("AssignedToUser");
+
+                    b.Navigation("Equipment");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.ProductionOutput", b =>
@@ -756,23 +831,15 @@ namespace FITSKIP.Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__Productio__LineI__08B54D69");
 
-                    b.HasOne("FITSKIP.Domain.Entities.Shift", "Shift")
-                        .WithMany("ProductionOutputs")
-                        .HasForeignKey("ShiftId")
+                    b.HasOne("FITSKIP.Domain.Entities.ShiftSlot", "ShiftSlot")
+                        .WithMany()
+                        .HasForeignKey("ShiftSlotId")
                         .IsRequired()
-                        .HasConstraintName("FK__Productio__Shift__0A9D95DB");
-
-                    b.HasOne("FITSKIP.Domain.Entities.Stage", "Stage")
-                        .WithMany("ProductionOutputs")
-                        .HasForeignKey("StageId")
-                        .IsRequired()
-                        .HasConstraintName("FK__Productio__Stage__09A971A2");
+                        .HasConstraintName("FK__Productio__ShiftSlot__0A9D95DB");
 
                     b.Navigation("Line");
 
-                    b.Navigation("Shift");
-
-                    b.Navigation("Stage");
+                    b.Navigation("ShiftSlot");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.PurchaseRequest", b =>
@@ -788,6 +855,11 @@ namespace FITSKIP.Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__PurchaseR__PartI__1332DBDC");
 
+                    b.HasOne("FITSKIP.Domain.Entities.User", "RejectedByNavigation")
+                        .WithMany("PurchaseRequestRejectedByNavigations")
+                        .HasForeignKey("RejectedBy")
+                        .HasConstraintName("FK__PurchaseR__Rejec__151B245F");
+
                     b.HasOne("FITSKIP.Domain.Entities.User", "RequestedByNavigation")
                         .WithMany("PurchaseRequestRequestedByNavigations")
                         .HasForeignKey("RequestedBy")
@@ -798,7 +870,35 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     b.Navigation("Part");
 
+                    b.Navigation("RejectedByNavigation");
+
                     b.Navigation("RequestedByNavigation");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.ReplacementHistory", b =>
+                {
+                    b.HasOne("FITSKIP.Domain.Entities.Equipment", "Equipment")
+                        .WithMany()
+                        .HasForeignKey("EquipmentId")
+                        .HasConstraintName("FK__Replaceme__Equip__4567890A");
+
+                    b.HasOne("FITSKIP.Domain.Entities.SparePart", "Part")
+                        .WithMany("ReplacementHistories")
+                        .HasForeignKey("PartId")
+                        .IsRequired()
+                        .HasConstraintName("FK__Replaceme__PartI__5678901B");
+
+                    b.HasOne("FITSKIP.Domain.Entities.User", "ReplacedByNavigation")
+                        .WithMany("ReplacementHistories")
+                        .HasForeignKey("ReplacedBy")
+                        .IsRequired()
+                        .HasConstraintName("FK__Replaceme__Repla__6789012C");
+
+                    b.Navigation("Equipment");
+
+                    b.Navigation("Part");
+
+                    b.Navigation("ReplacedByNavigation");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.ShiftSlot", b =>
@@ -852,27 +952,22 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
+                {
+                    b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
+                        .WithMany()
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("FITSKIP.Domain.Entities.Department", b =>
                 {
                     b.Navigation("Lines");
                 });
 
-            modelBuilder.Entity("FITSKIP.Domain.Entities.Equipment", b =>
-                {
-                    b.Navigation("ErrorHistories");
-                });
-
-            modelBuilder.Entity("FITSKIP.Domain.Entities.ErrorHistory", b =>
-                {
-                    b.Navigation("MaintenanceAssignments");
-                });
-
             modelBuilder.Entity("FITSKIP.Domain.Entities.Line", b =>
                 {
-                    b.Navigation("Equipment");
-
-                    b.Navigation("ErrorHistories");
-
                     b.Navigation("ProductionOutputs");
 
                     b.Navigation("Stages");
@@ -880,46 +975,39 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("UserLines");
                 });
 
-            modelBuilder.Entity("FITSKIP.Domain.Entities.Shift", b =>
+            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenancePlan", b =>
                 {
-                    b.Navigation("ProductionOutputs");
-
-                    b.Navigation("ShiftSlots");
+                    b.Navigation("ChecklistItems");
                 });
 
-            modelBuilder.Entity("FITSKIP.Domain.Entities.ShiftSlot", b =>
+            modelBuilder.Entity("FITSKIP.Domain.Entities.Shift", b =>
                 {
-                    b.Navigation("ErrorHistories");
+                    b.Navigation("ShiftSlots");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.SparePart", b =>
                 {
                     b.Navigation("PurchaseRequests");
-                });
 
-            modelBuilder.Entity("FITSKIP.Domain.Entities.Stage", b =>
-                {
-                    b.Navigation("Equipment");
-
-                    b.Navigation("ErrorHistories");
-
-                    b.Navigation("ProductionOutputs");
+                    b.Navigation("ReplacementHistories");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.StopType", b =>
                 {
-                    b.Navigation("ErrorHistories");
+                    b.Navigation("IncidentHistories");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.User", b =>
                 {
                     b.Navigation("Departments");
 
-                    b.Navigation("MaintenanceAssignments");
-
                     b.Navigation("PurchaseRequestApprovedByNavigations");
 
+                    b.Navigation("PurchaseRequestRejectedByNavigations");
+
                     b.Navigation("PurchaseRequestRequestedByNavigations");
+
+                    b.Navigation("ReplacementHistories");
 
                     b.Navigation("UserLines");
                 });

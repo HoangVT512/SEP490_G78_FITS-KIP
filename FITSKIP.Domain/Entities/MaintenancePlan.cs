@@ -17,7 +17,7 @@ public partial class MaintenancePlan
 
     public DateOnly NextDueDate { get; set; }
 
-    public string? AssignedToUserId { get; set; }
+    public string? AssignedTo { get; set; }
 
     public bool IsActive { get; set; } = true;
 

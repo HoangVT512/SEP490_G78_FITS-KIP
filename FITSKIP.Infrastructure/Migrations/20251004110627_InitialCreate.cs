@@ -26,36 +26,6 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "AspNetUsers",
-                columns: table => new
-                {
-                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    FullName = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
-                    Gender = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
-                    EmployeeCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    Position = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
-                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
-                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
-                    TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
-                    LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
-                    AccessFailedCount = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Shifts",
                 columns: table => new
                 {
@@ -122,109 +92,40 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "AspNetUserClaims",
+                name: "AspNetUsers",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ClaimType = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ClaimValue = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    FullName = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
+                    Gender = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
+                    EmployeeCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Position = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    RoleId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    NormalizedEmail = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
+                    EmailConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    PasswordHash = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    SecurityStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ConcurrencyStamp = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumber = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    PhoneNumberConfirmed = table.Column<bool>(type: "bit", nullable: false),
+                    TwoFactorEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    LockoutEnd = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
+                    LockoutEnabled = table.Column<bool>(type: "bit", nullable: false),
+                    AccessFailedCount = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_AspNetUserClaims", x => x.Id);
+                    table.PrimaryKey("PK_AspNetUsers", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_AspNetUserClaims_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetUserLogins",
-                columns: table => new
-                {
-                    LoginProvider = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ProviderKey = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    ProviderDisplayName = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUserLogins", x => new { x.LoginProvider, x.ProviderKey });
-                    table.ForeignKey(
-                        name: "FK_AspNetUserLogins_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetUserRoles",
-                columns: table => new
-                {
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    RoleId = table.Column<string>(type: "nvarchar(450)", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUserRoles", x => new { x.UserId, x.RoleId });
-                    table.ForeignKey(
-                        name: "FK_AspNetUserRoles_AspNetRoles_RoleId",
+                        name: "FK_AspNetUsers_AspNetRoles_RoleId",
                         column: x => x.RoleId,
                         principalTable: "AspNetRoles",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_AspNetUserRoles_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "AspNetUserTokens",
-                columns: table => new
-                {
-                    UserId = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    LoginProvider = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(450)", nullable: false),
-                    Value = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_AspNetUserTokens", x => new { x.UserId, x.LoginProvider, x.Name });
-                    table.ForeignKey(
-                        name: "FK_AspNetUserTokens_AspNetUsers_UserId",
-                        column: x => x.UserId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Departments",
-                columns: table => new
-                {
-                    DepartmentID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    DepartmentName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    ManagerId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
-                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK__Departme__B2079BCDAEAF02C2", x => x.DepartmentID);
-                    table.ForeignKey(
-                        name: "FK__Departmen__Manag__619B8048",
-                        column: x => x.ManagerId,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
+                        onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateTable(
@@ -249,6 +150,27 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Departments",
+                columns: table => new
+                {
+                    DepartmentID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    DepartmentName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    ManagerId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Departme__B2079BCDAEAF02C2", x => x.DepartmentID);
+                    table.ForeignKey(
+                        name: "FK__Departmen__Manag__619B8048",
+                        column: x => x.ManagerId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "PurchaseRequests",
                 columns: table => new
                 {
@@ -257,11 +179,12 @@ namespace FITSKIP.Infrastructure.Migrations
                     PartID = table.Column<int>(type: "int", nullable: false),
                     RequestedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
-                    Urgency = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true, defaultValue: "Normal"),
                     Reason = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true, defaultValue: "Pending"),
                     ApprovedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
-                    ApprovedAt = table.Column<DateTime>(type: "datetime", nullable: true)
+                    RejectedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    ApprovedAt = table.Column<DateTime>(type: "datetime", nullable: true),
+                    RejectedAt = table.Column<DateTime>(type: "datetime", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -276,6 +199,11 @@ namespace FITSKIP.Infrastructure.Migrations
                         column: x => x.PartID,
                         principalTable: "SpareParts",
                         principalColumn: "PartID");
+                    table.ForeignKey(
+                        name: "FK__PurchaseR__Rejec__151B245F",
+                        column: x => x.RejectedBy,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK__PurchaseR__Reque__14270015",
                         column: x => x.RequestedBy,
@@ -301,6 +229,37 @@ namespace FITSKIP.Infrastructure.Migrations
                         column: x => x.DepartmentID,
                         principalTable: "Departments",
                         principalColumn: "DepartmentID");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ProductionOutputs",
+                columns: table => new
+                {
+                    OutputID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    LineID = table.Column<int>(type: "int", nullable: false),
+                    ShiftSlotID = table.Column<int>(type: "int", nullable: false),
+                    Date = table.Column<DateOnly>(type: "date", nullable: false),
+                    TargetQuantity = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
+                    PlannedProductionTime = table.Column<int>(type: "int", nullable: false),
+                    ActualQuantity = table.Column<int>(type: "int", nullable: false),
+                    GoodQuantity = table.Column<int>(type: "int", nullable: false),
+                    DowntimeMinutes = table.Column<int>(type: "int", nullable: false),
+                    IdealCycleTime = table.Column<decimal>(type: "decimal(10,4)", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Producti__CE7609460B69FF1F", x => x.OutputID);
+                    table.ForeignKey(
+                        name: "FK__Productio__LineI__08B54D69",
+                        column: x => x.LineID,
+                        principalTable: "Lines",
+                        principalColumn: "LineID");
+                    table.ForeignKey(
+                        name: "FK__Productio__ShiftSlot__0A9D95DB",
+                        column: x => x.ShiftSlotID,
+                        principalTable: "ShiftSlots",
+                        principalColumn: "SlotID");
                 });
 
             migrationBuilder.CreateTable(
@@ -331,7 +290,7 @@ namespace FITSKIP.Infrastructure.Migrations
                         .Annotation("SqlServer:Identity", "1, 1"),
                     UserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
                     LineID = table.Column<int>(type: "int", nullable: false),
-                    CreateDate = table.Column<DateTime>(type: "datetime", nullable: true, defaultValueSql: "(getdate())")
+                    CreatedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getdate())")
                 },
                 constraints: table =>
                 {
@@ -360,21 +319,14 @@ namespace FITSKIP.Infrastructure.Migrations
                     Origin = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
                     YOM = table.Column<int>(type: "int", nullable: true),
                     QRCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    IdCode = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
                     StageID = table.Column<int>(type: "int", nullable: true),
                     Issue = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IdCode = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
-                    LineID = table.Column<int>(type: "int", nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
-                    IsWorking = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Equipmen__34474599BD4FBDFE", x => x.EquipmentID);
-                    table.ForeignKey(
-                        name: "FK__Equipment__LineI__71D1E811",
-                        column: x => x.LineID,
-                        principalTable: "Lines",
-                        principalColumn: "LineID");
                     table.ForeignKey(
                         name: "FK__Equipment__Stage__70DDC3D8",
                         column: x => x.StageID,
@@ -383,111 +335,117 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ProductionOutputs",
+                name: "IncidentHistory",
                 columns: table => new
                 {
-                    OutputID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    LineID = table.Column<int>(type: "int", nullable: false),
-                    StageID = table.Column<int>(type: "int", nullable: false),
-                    ShiftID = table.Column<int>(type: "int", nullable: false),
-                    Date = table.Column<DateOnly>(type: "date", nullable: false),
-                    ActualQuantity = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
-                    DowntimeMinutes = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK__Producti__CE7609460B69FF1F", x => x.OutputID);
-                    table.ForeignKey(
-                        name: "FK__Productio__LineI__08B54D69",
-                        column: x => x.LineID,
-                        principalTable: "Lines",
-                        principalColumn: "LineID");
-                    table.ForeignKey(
-                        name: "FK__Productio__Shift__0A9D95DB",
-                        column: x => x.ShiftID,
-                        principalTable: "Shifts",
-                        principalColumn: "ShiftID");
-                    table.ForeignKey(
-                        name: "FK__Productio__Stage__09A971A2",
-                        column: x => x.StageID,
-                        principalTable: "Stages",
-                        principalColumn: "StageID");
-                });
-
-            migrationBuilder.CreateTable(
-                name: "ErrorHistory",
-                columns: table => new
-                {
-                    ErrorID = table.Column<int>(type: "int", nullable: false)
+                    IncidentID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     EquipmentID = table.Column<int>(type: "int", nullable: true),
-                    ErrorDescription = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
                     StartTime = table.Column<DateTime>(type: "datetime", nullable: true),
                     EndTime = table.Column<DateTime>(type: "datetime", nullable: true),
-                    StageID = table.Column<int>(type: "int", nullable: true),
-                    LineID = table.Column<int>(type: "int", nullable: true),
-                    SlotID = table.Column<int>(type: "int", nullable: true),
+                    Duration = table.Column<decimal>(type: "decimal(10,2)", nullable: true),
                     TypeID = table.Column<int>(type: "int", nullable: true),
                     Reason = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Solution = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Duration = table.Column<decimal>(type: "decimal(10,2)", nullable: true)
+                    Solution = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__ErrorHis__358565CA8E27F35E", x => x.ErrorID);
+                    table.PrimaryKey("PK__Incident__5F46CAB00C9D9F0A", x => x.IncidentID);
                     table.ForeignKey(
-                        name: "FK__ErrorHist__Equip__7B5B524B",
+                        name: "FK__IncidentH__Equip__7B5B524B",
                         column: x => x.EquipmentID,
                         principalTable: "Equipment",
                         principalColumn: "EquipmentID");
                     table.ForeignKey(
-                        name: "FK__ErrorHist__LineI__7D439ABD",
-                        column: x => x.LineID,
-                        principalTable: "Lines",
-                        principalColumn: "LineID");
-                    table.ForeignKey(
-                        name: "FK__ErrorHist__SlotI__7E37BEF6",
-                        column: x => x.SlotID,
-                        principalTable: "ShiftSlots",
-                        principalColumn: "SlotID");
-                    table.ForeignKey(
-                        name: "FK__ErrorHist__Stage__7C4F7684",
-                        column: x => x.StageID,
-                        principalTable: "Stages",
-                        principalColumn: "StageID");
-                    table.ForeignKey(
-                        name: "FK__ErrorHist__TypeI__7F2BE32F",
+                        name: "FK__IncidentH__TypeI__7F2BE32F",
                         column: x => x.TypeID,
                         principalTable: "StopType",
                         principalColumn: "TypeID");
                 });
 
             migrationBuilder.CreateTable(
-                name: "MaintenanceAssignments",
+                name: "MaintenancePlans",
                 columns: table => new
                 {
-                    AssignmentID = table.Column<int>(type: "int", nullable: false)
+                    PlanID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    ErrorID = table.Column<int>(type: "int", nullable: false),
-                    TechnicianID = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
-                    AssignedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "(getdate())"),
-                    CompletedAt = table.Column<DateTime>(type: "datetime", nullable: true),
-                    ResolutionDetail = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    EquipmentID = table.Column<int>(type: "int", nullable: true),
+                    IntervalType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    IntervalValue = table.Column<int>(type: "int", nullable: false),
+                    StartDate = table.Column<DateOnly>(type: "date", nullable: false),
+                    NextDueDate = table.Column<DateOnly>(type: "date", nullable: false),
+                    AssignedTo = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK__Maintena__32499E57A8B16523", x => x.AssignmentID);
+                    table.PrimaryKey("PK__Maintena__755C22D75A5E8C31", x => x.PlanID);
                     table.ForeignKey(
-                        name: "FK__Maintenan__Error__18EBB532",
-                        column: x => x.ErrorID,
-                        principalTable: "ErrorHistory",
-                        principalColumn: "ErrorID");
+                        name: "FK__MaintenanPlan__Equip__1234567",
+                        column: x => x.EquipmentID,
+                        principalTable: "Equipment",
+                        principalColumn: "EquipmentID");
                     table.ForeignKey(
-                        name: "FK__Maintenan__Techn__19DFD96B",
-                        column: x => x.TechnicianID,
+                        name: "FK__MaintenanPlan__User__2345678",
+                        column: x => x.AssignedTo,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "ReplacementHistories",
+                columns: table => new
+                {
+                    ReplacementID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    EquipmentID = table.Column<int>(type: "int", nullable: true),
+                    PartID = table.Column<int>(type: "int", nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    ReplacedDate = table.Column<DateTime>(type: "datetime", nullable: false),
+                    ReplacedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
+                    Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Replacem__55AB07E93456789A", x => x.ReplacementID);
+                    table.ForeignKey(
+                        name: "FK__Replaceme__Equip__4567890A",
+                        column: x => x.EquipmentID,
+                        principalTable: "Equipment",
+                        principalColumn: "EquipmentID");
+                    table.ForeignKey(
+                        name: "FK__Replaceme__PartI__5678901B",
+                        column: x => x.PartID,
+                        principalTable: "SpareParts",
+                        principalColumn: "PartID");
+                    table.ForeignKey(
+                        name: "FK__Replaceme__Repla__6789012C",
+                        column: x => x.ReplacedBy,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MaintenanceChecklistItems",
+                columns: table => new
+                {
+                    ChecklistID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    PlanID = table.Column<int>(type: "int", nullable: false),
+                    StepName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    IsChecked = table.Column<bool>(type: "bit", nullable: true),
+                    CompletedDate = table.Column<DateTime>(type: "datetime", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Maintena__26C4E2F5A1234567", x => x.ChecklistID);
+                    table.ForeignKey(
+                        name: "FK__Maintena__PlanID__3456789",
+                        column: x => x.PlanID,
+                        principalTable: "MaintenancePlans",
+                        principalColumn: "PlanID");
                 });
 
             migrationBuilder.CreateIndex(
@@ -503,24 +461,14 @@ namespace FITSKIP.Infrastructure.Migrations
                 filter: "[NormalizedName] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
-                name: "IX_AspNetUserClaims_UserId",
-                table: "AspNetUserClaims",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetUserLogins_UserId",
-                table: "AspNetUserLogins",
-                column: "UserId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_AspNetUserRoles_RoleId",
-                table: "AspNetUserRoles",
-                column: "RoleId");
-
-            migrationBuilder.CreateIndex(
                 name: "EmailIndex",
                 table: "AspNetUsers",
                 column: "NormalizedEmail");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_RoleId",
+                table: "AspNetUsers",
+                column: "RoleId");
 
             migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
@@ -535,38 +483,18 @@ namespace FITSKIP.Infrastructure.Migrations
                 column: "ManagerId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Equipment_LineID",
-                table: "Equipment",
-                column: "LineID");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Equipment_StageID",
                 table: "Equipment",
                 column: "StageID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ErrorHistory_EquipmentID",
-                table: "ErrorHistory",
+                name: "IX_IncidentHistory_EquipmentID",
+                table: "IncidentHistory",
                 column: "EquipmentID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ErrorHistory_LineID",
-                table: "ErrorHistory",
-                column: "LineID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ErrorHistory_SlotID",
-                table: "ErrorHistory",
-                column: "SlotID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ErrorHistory_StageID",
-                table: "ErrorHistory",
-                column: "StageID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ErrorHistory_TypeID",
-                table: "ErrorHistory",
+                name: "IX_IncidentHistory_TypeID",
+                table: "IncidentHistory",
                 column: "TypeID");
 
             migrationBuilder.CreateIndex(
@@ -575,14 +503,19 @@ namespace FITSKIP.Infrastructure.Migrations
                 column: "DepartmentID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MaintenanceAssignments_ErrorID",
-                table: "MaintenanceAssignments",
-                column: "ErrorID");
+                name: "IX_MaintenanceChecklistItems_PlanID",
+                table: "MaintenanceChecklistItems",
+                column: "PlanID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MaintenanceAssignments_TechnicianID",
-                table: "MaintenanceAssignments",
-                column: "TechnicianID");
+                name: "IX_MaintenancePlans_AssignedTo",
+                table: "MaintenancePlans",
+                column: "AssignedTo");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenancePlans_EquipmentID",
+                table: "MaintenancePlans",
+                column: "EquipmentID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ProductionOutputs_LineID",
@@ -590,14 +523,9 @@ namespace FITSKIP.Infrastructure.Migrations
                 column: "LineID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductionOutputs_ShiftID",
+                name: "IX_ProductionOutputs_ShiftSlotID",
                 table: "ProductionOutputs",
-                column: "ShiftID");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ProductionOutputs_StageID",
-                table: "ProductionOutputs",
-                column: "StageID");
+                column: "ShiftSlotID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PurchaseRequests_ApprovedBy",
@@ -610,9 +538,29 @@ namespace FITSKIP.Infrastructure.Migrations
                 column: "PartID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_PurchaseRequests_RejectedBy",
+                table: "PurchaseRequests",
+                column: "RejectedBy");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_PurchaseRequests_RequestedBy",
                 table: "PurchaseRequests",
                 column: "RequestedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReplacementHistories_EquipmentID",
+                table: "ReplacementHistories",
+                column: "EquipmentID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReplacementHistories_PartID",
+                table: "ReplacementHistories",
+                column: "PartID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ReplacementHistories_ReplacedBy",
+                table: "ReplacementHistories",
+                column: "ReplacedBy");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ShiftSlots_ShiftID",
@@ -642,19 +590,10 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "AspNetRoleClaims");
 
             migrationBuilder.DropTable(
-                name: "AspNetUserClaims");
+                name: "IncidentHistory");
 
             migrationBuilder.DropTable(
-                name: "AspNetUserLogins");
-
-            migrationBuilder.DropTable(
-                name: "AspNetUserRoles");
-
-            migrationBuilder.DropTable(
-                name: "AspNetUserTokens");
-
-            migrationBuilder.DropTable(
-                name: "MaintenanceAssignments");
+                name: "MaintenanceChecklistItems");
 
             migrationBuilder.DropTable(
                 name: "ProductionOutputs");
@@ -663,13 +602,19 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "PurchaseRequests");
 
             migrationBuilder.DropTable(
+                name: "ReplacementHistories");
+
+            migrationBuilder.DropTable(
                 name: "UserLines");
 
             migrationBuilder.DropTable(
-                name: "AspNetRoles");
+                name: "StopType");
 
             migrationBuilder.DropTable(
-                name: "ErrorHistory");
+                name: "MaintenancePlans");
+
+            migrationBuilder.DropTable(
+                name: "ShiftSlots");
 
             migrationBuilder.DropTable(
                 name: "SpareParts");
@@ -678,16 +623,10 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "Equipment");
 
             migrationBuilder.DropTable(
-                name: "ShiftSlots");
-
-            migrationBuilder.DropTable(
-                name: "StopType");
+                name: "Shifts");
 
             migrationBuilder.DropTable(
                 name: "Stages");
-
-            migrationBuilder.DropTable(
-                name: "Shifts");
 
             migrationBuilder.DropTable(
                 name: "Lines");
@@ -697,6 +636,9 @@ namespace FITSKIP.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
+
+            migrationBuilder.DropTable(
+                name: "AspNetRoles");
         }
     }
 }

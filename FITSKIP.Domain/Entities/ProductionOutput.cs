@@ -9,7 +9,7 @@ public partial class ProductionOutput
 
     public int LineId { get; set; }
 
-    public int SlotId { get; set; }
+    public int ShiftSlotId { get; set; }
 
     public DateOnly Date { get; set; }
 
@@ -27,5 +27,5 @@ public partial class ProductionOutput
 
     public virtual Line Line { get; set; } = null!;
 
-    public virtual ShiftSlot Slot { get; set; } = null!;
+    public virtual ShiftSlot ShiftSlot { get; set; } = null!;
 }
