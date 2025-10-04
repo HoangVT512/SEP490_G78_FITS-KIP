@@ -219,14 +219,14 @@ public class UserRepository : IUserRepository
             // Only take the first role since we now have 1-to-many relationship
             var roleId = request.RoleIds[0];
 
-            // Verify role exists
-            var roleExists = await db.Roles.AnyAsync(r => r.Id == roleId, cancellationToken);
-            if (!roleExists)
+            // Verify role exists and has name
+            var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
+            if (role == null || string.IsNullOrEmpty(role.Name))
             {
-                throw new Exception($"Role với ID '{roleId}' không tồn tại trong hệ thống");
+                throw new Exception($"Role với ID '{roleId}' không tồn tại hoặc không hợp lệ trong hệ thống");
             }
 
-            // Set the RoleId directly in User entity
+            // Update RoleId in User entity for navigation
             existingUser.RoleId = roleId;
         }
         else if (request.RoleIds != null && request.RoleIds.Length == 0)

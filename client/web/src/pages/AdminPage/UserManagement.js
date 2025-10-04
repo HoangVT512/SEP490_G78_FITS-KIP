@@ -796,7 +796,7 @@ const UserManagement = ({ showHeader = true }) => {
           position: values.position,
           phoneNumber: values.phoneNumber,
           isActive: values.status === "true",
-          roleId: values.roleIds,
+          roleIds: values.roleIds ? [values.roleIds] : [],
           departmentId: values.departmentId,
           lineIds: values.lineIds || [],
         });
