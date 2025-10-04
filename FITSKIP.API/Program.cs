@@ -71,6 +71,8 @@ namespace FITSKIP.API
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IRoleService, FITSKIP.Application.Services.RoleService>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IStageRepository, FITSKIP.Infrastructure.Repositories.StageRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IStageService, FITSKIP.Application.Services.StageService>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IEquipmentRepository, FITSKIP.Infrastructure.Repositories.EquipmentRepository>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IEquipmentService, FITSKIP.Application.Services.EquipmentService>();
 
             // Import Excel service
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IExcelImportService,

@@ -1,365 +1,300 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import {
   Card,
   Table,
   Button,
-  Space,
   Input,
+  Space,
   Modal,
   Form,
-  message,
-  Popconfirm,
-  Tag,
-  Select,
-  DatePicker,
   Row,
   Col,
   Typography,
-  Tooltip,
   Badge,
-  Divider,
-  Switch,
+  Dropdown,
+  message,
+  Tooltip,
+  Descriptions,
+  Select,
+  DatePicker,
+  Tag,
+  Statistic,
 } from "antd";
-import QRCode from "qrcode";
 import {
+  SearchOutlined,
   PlusOutlined,
   EditOutlined,
   DeleteOutlined,
-  SearchOutlined,
-  ReloadOutlined,
+  EyeOutlined,
   ToolOutlined,
+  DownOutlined,
+  ReloadOutlined,
   QrcodeOutlined,
-  ExportOutlined,
-  ImportOutlined,
   WarningOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
-  SettingOutlined,
+  LockOutlined,
+  UnlockOutlined,
 } from "@ant-design/icons";
 import Layout from "../../components/Layout/Layout";
+import { equipmentService } from "../../services/equipmentService";
+import { stageService } from "../../services/stageService";
 import dayjs from "dayjs";
-import styles from "../../styles/pages/EquipmentManagement.module.css";
 
 const { Title, Text } = Typography;
-const { Option } = Select;
+const { Search } = Input;
 const { TextArea } = Input;
 
 const EquipmentManagement = ({ showHeader = true }) => {
-  const [equipment, setEquipment] = useState([]);
+  const [equipments, setEquipments] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editingEquipment, setEditingEquipment] = useState(null);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [workingFilter, setWorkingFilter] = useState("all");
-  const [stageFilter, setStageFilter] = useState("all");
-  const [lineFilter, setLineFilter] = useState("all");
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isViewModalVisible, setIsViewModalVisible] = useState(false);
+  const [editingEquipment, setEditingEquipment] = useState(null);
+  const [viewingEquipment, setViewingEquipment] = useState(null);
+  const [stages, setStages] = useState([]);
   const [form] = Form.useForm();
-  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
-  const [qrCodePreview, setQrCodePreview] = useState(null);
 
-  // Mock data for stages and lines
-  const [stages, setStages] = useState([
-    { stageId: 1, stageName: "Giai đoạn 1 - Chuẩn bị" },
-    { stageId: 2, stageName: "Giai đoạn 2 - Sản xuất" },
-    { stageId: 3, stageName: "Giai đoạn 3 - Kiểm tra" },
-    { stageId: 4, stageName: "Giai đoạn 4 - Đóng gói" },
-  ]);
-
-  const [lines, setLines] = useState([
-    { lineId: 1, lineName: "Dây chuyền A" },
-    { lineId: 2, lineName: "Dây chuyền B" },
-    { lineId: 3, lineName: "Dây chuyền C" },
-    { lineId: 4, lineName: "Dây chuyền D" },
-  ]);
-
-  // Mock equipment data
-  const mockEquipment = [
-    {
-      equipmentId: 1,
-      equipmentCode: "EQ001",
-      equipmentName: "Máy cắt CNC",
-      dateUse: "2020-01-15",
-      origin: "Đức",
-      yom: 2019,
-      qrCode: "QR001_CNC_MACHINE",
-      stageId: 2,
-      issue: null,
-      idCode: "ID_CNC_001",
-      lineId: 1,
-      isActive: true,
-      isWorking: true,
-    },
-    {
-      equipmentId: 2,
-      equipmentCode: "EQ002",
-      equipmentName: "Máy hàn tự động",
-      dateUse: "2021-03-10",
-      origin: "Nhật Bản",
-      yom: 2020,
-      qrCode: "QR002_WELDING_AUTO",
-      stageId: 2,
-      issue: "Cần bảo trì định kỳ",
-      idCode: "ID_WELD_002",
-      lineId: 2,
-      isActive: true,
-      isWorking: false,
-    },
-    {
-      equipmentId: 3,
-      equipmentCode: "EQ003",
-      equipmentName: "Máy kiểm tra chất lượng",
-      dateUse: "2022-06-01",
-      origin: "Hàn Quốc",
-      yom: 2021,
-      qrCode: "QR003_QUALITY_CHECK",
-      stageId: 3,
-      issue: null,
-      idCode: "ID_QC_003",
-      lineId: 3,
-      isActive: true,
-      isWorking: true,
-    },
-    {
-      equipmentId: 4,
-      equipmentCode: "EQ004",
-      equipmentName: "Máy đóng gói tự động",
-      dateUse: "2023-02-20",
-      origin: "Trung Quốc",
-      yom: 2022,
-      qrCode: "QR004_PACKING_AUTO",
-      stageId: 4,
-      issue: "Lỗi cảm biến",
-      idCode: "ID_PACK_004",
-      lineId: 4,
-      isActive: false,
-      isWorking: false,
-    },
-    {
-      equipmentId: 5,
-      equipmentCode: "EQ005",
-      equipmentName: "Máy phay CNC 5 trục",
-      dateUse: "2023-08-15",
-      origin: "Thụy Sĩ",
-      yom: 2023,
-      qrCode: "QR005_MILL_5AXIS",
-      stageId: 2,
-      issue: null,
-      idCode: "ID_MILL_005",
-      lineId: 1,
-      isActive: true,
-      isWorking: true,
-    },
-  ];
+  const [showArchive, setShowArchive] = useState(() => {
+    const saved = localStorage.getItem("equipmentArchiveView");
+    return saved === "true";
+  });
 
   useEffect(() => {
-    fetchEquipment();
-    // Generate QR codes for demo equipment
-    generateDemoQRCodes();
+    loadEquipments();
+    loadStages();
   }, []);
 
-  const generateDemoQRCodes = async () => {
-    try {
-      const updatedEquipment = await Promise.all(
-        mockEquipment.map(async (item) => {
-          if (item.idCode) {
-            try {
-              const qrCodeDataURL = await QRCode.toDataURL(item.idCode, {
-                width: 120,
-                height: 120,
-                margin: 1,
-                color: {
-                  dark: '#000000',
-                  light: '#FFFFFF'
-                },
-                errorCorrectionLevel: 'M'
-              });
-              return { ...item, qrCode: qrCodeDataURL };
-            } catch (error) {
-              console.error(`Error generating QR for ${item.idCode}:`, error);
-              return item;
-            }
-          }
-          return item;
-        })
-      );
+  useEffect(() => {
+    localStorage.setItem(
+      "equipmentArchiveView",
+      showArchive ? "true" : "false"
+    );
+  }, [showArchive]);
 
-      // Update the mock data with real QR codes
-      mockEquipment.splice(0, mockEquipment.length, ...updatedEquipment);
-    } catch (error) {
-      console.error('Error generating demo QR codes:', error);
-    }
-  };
-
-  const fetchEquipment = async () => {
+  const loadEquipments = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      setTimeout(() => {
-        setEquipment(mockEquipment);
-        setLoading(false);
-      }, 1000);
+      const data = await equipmentService.getEquipments();
+      setEquipments(data);
     } catch (error) {
-      console.error("Error fetching equipment:", error);
+      console.error("Error loading equipments:", error);
       message.error("Không thể tải danh sách thiết bị");
+    } finally {
       setLoading(false);
     }
   };
 
-  const handleAddEquipment = () => {
-    setEditingEquipment(null);
-    form.resetFields();
-    setQrCodePreview(null);
-    setModalVisible(true);
-  };
-
-  const handleEditEquipment = (record) => {
-    setEditingEquipment(record);
-    form.setFieldsValue({
-      ...record,
-      dateUse: record.dateUse ? dayjs(record.dateUse) : null,
-    });
-    // Set QR code preview if it exists
-    if (record.qrCode && record.qrCode.startsWith('data:image')) {
-      setQrCodePreview(record.qrCode);
-    } else {
-      setQrCodePreview(null);
-    }
-    setModalVisible(true);
-  };
-
-  const handleDeleteEquipment = async (equipmentId) => {
+  const loadStages = async () => {
     try {
-      // TODO: Replace with actual API call
-      setEquipment(equipment.filter(item => item.equipmentId !== equipmentId));
-      message.success("Xóa thiết bị thành công");
+      const data = await stageService.getStages();
+      // Đảm bảo data là array
+      setStages(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error loading stages:", error);
+      message.error("Không thể tải danh sách công đoạn");
+      setStages([]); // Set về empty array nếu có lỗi
+    }
+  };
+
+  const handleDelete = async (equipmentId) => {
+    try {
+      setLoading(true);
+      await equipmentService.deleteEquipment(equipmentId);
+      message.success("Đã xóa thiết bị thành công");
+      loadEquipments();
     } catch (error) {
       console.error("Error deleting equipment:", error);
-      message.error("Không thể xóa thiết bị");
+      message.error(
+        error.message || "Không thể xóa thiết bị. Vui lòng thử lại."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleModalSubmit = async () => {
+  const handleAction = async (action, equipment) => {
+    switch (action) {
+      case "view":
+        try {
+          setLoading(true);
+          const equipmentDetail = await equipmentService.getEquipment(
+            equipment.equipmentId
+          );
+          setViewingEquipment(equipmentDetail);
+          setIsViewModalVisible(true);
+        } catch (error) {
+          console.error("Error loading equipment detail:", error);
+          message.error("Không thể tải thông tin chi tiết thiết bị");
+        } finally {
+          setLoading(false);
+        }
+        break;
+      case "edit":
+        setEditingEquipment(equipment);
+        form.setFieldsValue({
+          equipmentCode: equipment.equipmentCode,
+          equipmentName: equipment.equipmentName,
+          origin: equipment.origin,
+          yom: equipment.yom,
+          dateUse: equipment.dateUse ? dayjs(equipment.dateUse) : null,
+          stageId: equipment.stageId,
+          idCode: equipment.idCode,
+          issue: equipment.issue,
+        });
+        setIsModalVisible(true);
+        break;
+      case "delete":
+        Modal.confirm({
+          title: "Xác nhận xóa thiết bị",
+          content: `Bạn có chắc chắn muốn xóa thiết bị "${equipment.equipmentName}"?`,
+          okText: "Xóa",
+          cancelText: "Hủy",
+          okType: "danger",
+          okButtonProps: {
+            style: {
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              color: "#fff",
+            },
+          },
+          onOk: () => handleDelete(equipment.equipmentId),
+        });
+        break;
+      case "activate":
+        try {
+          setLoading(true);
+          await equipmentService.toggleEquipmentStatus(equipment.equipmentId);
+          message.success("Đã kích hoạt thiết bị thành công");
+          loadEquipments();
+        } catch (error) {
+          console.error("Error activating equipment:", error);
+          message.error("Không thể kích hoạt thiết bị");
+        } finally {
+          setLoading(false);
+        }
+        break;
+      case "deactivate":
+        Modal.confirm({
+          title: "Xác nhận vô hiệu hóa thiết bị",
+          content: `Bạn có chắc chắn muốn vô hiệu hóa thiết bị "${equipment.equipmentName}"?`,
+          okText: "Vô hiệu hóa",
+          cancelText: "Hủy",
+          okType: "danger",
+          okButtonProps: {
+            style: {
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              color: "#fff",
+            },
+          },
+          onOk: async () => {
+            try {
+              setLoading(true);
+              await equipmentService.toggleEquipmentStatus(
+                equipment.equipmentId
+              );
+              message.success("Đã vô hiệu hóa thiết bị thành công");
+              loadEquipments();
+            } catch (error) {
+              console.error("Error deactivating equipment:", error);
+              message.error("Không thể vô hiệu hóa thiết bị");
+            } finally {
+              setLoading(false);
+            }
+          },
+        });
+        break;
+      default:
+        break;
+    }
+  };
+
+  const handleSubmit = async (values) => {
     try {
-      const values = await form.validateFields();
-      const formattedValues = {
+      setLoading(true);
+      const equipmentData = {
         ...values,
         dateUse: values.dateUse ? values.dateUse.format("YYYY-MM-DD") : null,
       };
 
       if (editingEquipment) {
-        // Update equipment
-        const updatedEquipment = equipment.map(item =>
-          item.equipmentId === editingEquipment.equipmentId
-            ? { ...item, ...formattedValues }
-            : item
+        await equipmentService.updateEquipment(
+          editingEquipment.equipmentId,
+          equipmentData
         );
-        setEquipment(updatedEquipment);
         message.success("Cập nhật thiết bị thành công");
       } else {
-        // Add new equipment
-        const newEquipment = {
-          equipmentId: equipment.length + 1,
-          ...formattedValues,
-          isActive: true,
-          isWorking: true,
-        };
-        setEquipment([...equipment, newEquipment]);
-        message.success("Thêm thiết bị thành công");
+        await equipmentService.createEquipment(equipmentData);
+        message.success("Thêm thiết bị mới thành công");
       }
 
-      setModalVisible(false);
+      setIsModalVisible(false);
+      setEditingEquipment(null);
       form.resetFields();
+      loadEquipments();
     } catch (error) {
       console.error("Error saving equipment:", error);
+      message.error(error.message || "Không thể lưu thông tin thiết bị");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleToggleStatus = async (equipmentId, field, value) => {
-    try {
-      const updatedEquipment = equipment.map(item =>
-        item.equipmentId === equipmentId
-          ? { ...item, [field]: value }
-          : item
-      );
-      setEquipment(updatedEquipment);
-      message.success(`Cập nhật trạng thái thiết bị thành công`);
-    } catch (error) {
-      console.error("Error updating equipment status:", error);
-      message.error("Không thể cập nhật trạng thái thiết bị");
-    }
+  const handleCancel = () => {
+    setIsModalVisible(false);
+    setEditingEquipment(null);
+    form.resetFields();
   };
 
-  const generateQRCode = async (idCode) => {
-    try {
-      if (!idCode) {
-        message.warning("Vui lòng nhập mã định danh trước!");
-        return;
-      }
+  const handleViewCancel = () => {
+    setIsViewModalVisible(false);
+    setViewingEquipment(null);
+  };
 
-      // Generate real QR code using the qrcode library with IdCode as content
-      const qrCodeDataURL = await QRCode.toDataURL(idCode, {
-        width: 120,
-        height: 120,
-        margin: 1,
-        color: {
-          dark: '#000000',
-          light: '#FFFFFF'
-        },
-        errorCorrectionLevel: 'M'
+  const getActionMenuItems = (equipment) => {
+    const items = [
+      {
+        key: "view",
+        icon: <EyeOutlined />,
+        label: "Xem chi tiết",
+      },
+      {
+        key: "edit",
+        icon: <EditOutlined />,
+        label: "Chỉnh sửa",
+      },
+    ];
+
+    if (equipment.isActive) {
+      items.push({
+        key: "deactivate",
+        icon: <LockOutlined />,
+        label: "Vô hiệu hóa",
+        danger: true,
       });
-
-      form.setFieldsValue({ qrCode: qrCodeDataURL });
-      setQrCodePreview(qrCodeDataURL);
-      message.success("Tạo mã QR thành công");
-    } catch (error) {
-      console.error('Error generating QR code:', error);
-      message.error("Lỗi khi tạo mã QR");
+    } else {
+      items.push({
+        key: "activate",
+        icon: <UnlockOutlined />,
+        label: "Kích hoạt",
+      });
     }
-  };
 
-  // Filter equipment
-  const filteredEquipment = equipment.filter(item => {
-    const matchesSearch =
-      item.equipmentName?.toLowerCase().includes(searchText.toLowerCase()) ||
-      item.equipmentCode?.toLowerCase().includes(searchText.toLowerCase()) ||
-      item.origin?.toLowerCase().includes(searchText.toLowerCase());
+    items.push({
+      type: "divider",
+    });
 
-    const matchesStatus = statusFilter === "all" ||
-      (statusFilter === "active" && item.isActive) ||
-      (statusFilter === "inactive" && !item.isActive);
+    items.push({
+      key: "delete",
+      icon: <DeleteOutlined />,
+      label: "Xóa",
+      danger: true,
+    });
 
-    const matchesWorking = workingFilter === "all" ||
-      (workingFilter === "working" && item.isWorking) ||
-      (workingFilter === "not-working" && !item.isWorking);
-
-    const matchesStage = stageFilter === "all" || item.stageId === parseInt(stageFilter);
-    const matchesLine = lineFilter === "all" || item.lineId === parseInt(lineFilter);
-
-    return matchesSearch && matchesStatus && matchesWorking && matchesStage && matchesLine;
-  });
-
-  const getStatusTag = (isActive, isWorking, issue) => {
-    if (!isActive) {
-      return <Tag color="red" icon={<CloseCircleOutlined />}>Ngừng hoạt động</Tag>;
-    }
-    if (!isWorking) {
-      return <Tag color="orange" icon={<WarningOutlined />}>Đang sửa chữa</Tag>;
-    }
-    if (issue) {
-      return <Tag color="yellow" icon={<WarningOutlined />}>Có vấn đề</Tag>;
-    }
-    return <Tag color="green" icon={<CheckCircleOutlined />}>Hoạt động tốt</Tag>;
-  };
-
-  const getStageName = (stageId) => {
-    const stage = stages.find(s => s.stageId === stageId);
-    return stage ? stage.stageName : "Chưa phân công";
-  };
-
-  const getLineName = (lineId) => {
-    const line = lines.find(l => l.lineId === lineId);
-    return line ? line.lineName : "Chưa phân công";
+    return items;
   };
 
   const columns = [
@@ -368,330 +303,308 @@ const EquipmentManagement = ({ showHeader = true }) => {
       dataIndex: "equipmentCode",
       key: "equipmentCode",
       width: 120,
-      fixed: "left",
-      render: (text) => <Text strong>{text}</Text>,
+      filteredValue: [searchText],
+      onFilter: (value, record) => {
+        return (
+          record.equipmentCode?.toLowerCase().includes(value.toLowerCase()) ||
+          record.equipmentName?.toLowerCase().includes(value.toLowerCase()) ||
+          record.origin?.toLowerCase().includes(value.toLowerCase()) ||
+          record.idCode?.toLowerCase().includes(value.toLowerCase())
+        );
+      },
+      render: (text) => <Text strong>{text || "N/A"}</Text>,
     },
     {
       title: "Tên thiết bị",
       dataIndex: "equipmentName",
       key: "equipmentName",
       width: 200,
-      ellipsis: {
-        showTitle: false,
+      render: (text) => <Text>{text || "N/A"}</Text>,
+    },
+    {
+      title: "Công đoạn",
+      dataIndex: "stageId",
+      key: "stageId",
+      width: 150,
+      render: (stageId) => {
+        const stage = Array.isArray(stages)
+          ? stages.find((s) => s.stageId === stageId)
+          : null;
+        return stage ? (
+          <Tag color="blue">{stage.stageName}</Tag>
+        ) : (
+          <Text type="secondary">Chưa phân công</Text>
+        );
       },
-      render: (text) => (
-        <Tooltip placement="topLeft" title={text}>
-          {text}
-        </Tooltip>
-      ),
     },
     {
       title: "Xuất xứ",
       dataIndex: "origin",
       key: "origin",
       width: 120,
+      render: (text) => <Text>{text || "N/A"}</Text>,
     },
     {
-      title: "Năm SX",
+      title: "Năm sản xuất",
       dataIndex: "yom",
       key: "yom",
-      width: 100,
+      width: 120,
       align: "center",
+      render: (yom) => <Text>{yom || "N/A"}</Text>,
     },
     {
       title: "Ngày đưa vào sử dụng",
       dataIndex: "dateUse",
       key: "dateUse",
-      width: 140,
-      render: (text) => text ? dayjs(text).format("DD/MM/YYYY") : "Chưa xác định",
-    },
-    {
-      title: "Giai đoạn",
-      dataIndex: "stageId",
-      key: "stageId",
       width: 150,
-      render: (stageId) => getStageName(stageId),
-    },
-    {
-      title: "Dây chuyền",
-      dataIndex: "lineId",
-      key: "lineId",
-      width: 130,
-      render: (lineId) => getLineName(lineId),
+      render: (date) => (
+        <Text>{date ? dayjs(date).format("DD/MM/YYYY") : "N/A"}</Text>
+      ),
     },
     {
       title: "Trạng thái",
-      key: "status",
-      width: 150,
-      render: (_, record) => getStatusTag(record.isActive, record.isWorking, record.issue),
+      dataIndex: "isActive",
+      key: "isActive",
+      width: 120,
+      align: "center",
+      filters: [
+        { text: "Hoạt động", value: true },
+        { text: "Không hoạt động", value: false },
+      ],
+      filteredValue:
+        statusFilter === "all" ? null : [statusFilter === "active"],
+      onFilter: (value, record) => record.isActive === value,
+      render: (isActive) => (
+        <Badge
+          status={isActive ? "success" : "error"}
+          text={isActive ? "Hoạt động" : "Không hoạt động"}
+        />
+      ),
     },
     {
       title: "Vấn đề",
       dataIndex: "issue",
       key: "issue",
       width: 200,
-      ellipsis: {
-        showTitle: false,
-      },
-      render: (text) => text ? (
-        <Tooltip placement="topLeft" title={text}>
-          <Text type="warning">{text}</Text>
-        </Tooltip>
-      ) : (
-        <Text type="secondary">Không có</Text>
-      ),
-    },
-    {
-      title: "Hoạt động",
-      key: "isActive",
-      width: 100,
-      align: "center",
-      render: (_, record) => (
-        <Switch
-          checked={record.isActive}
-          onChange={(checked) => handleToggleStatus(record.equipmentId, "isActive", checked)}
-          checkedChildren="Bật"
-          unCheckedChildren="Tắt"
-        />
-      ),
-    },
-    {
-      title: "Đang làm việc",
-      key: "isWorking",
-      width: 120,
-      align: "center",
-      render: (_, record) => (
-        <Switch
-          checked={record.isWorking}
-          onChange={(checked) => handleToggleStatus(record.equipmentId, "isWorking", checked)}
-          checkedChildren="Có"
-          unCheckedChildren="Không"
-          disabled={!record.isActive}
-        />
-      ),
+      render: (issue) =>
+        issue ? (
+          <Tooltip title={issue}>
+            <Tag icon={<WarningOutlined />} color="warning">
+              Có vấn đề
+            </Tag>
+          </Tooltip>
+        ) : (
+          <Tag icon={<CheckCircleOutlined />} color="success">
+            Bình thường
+          </Tag>
+        ),
     },
     {
       title: "Thao tác",
       key: "actions",
-      width: 120,
       fixed: "right",
+      width: 100,
+      align: "center",
       render: (_, record) => (
-        <Space>
-          <Tooltip title="Chỉnh sửa">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleEditEquipment(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Xóa thiết bị"
-            description="Bạn có chắc chắn muốn xóa thiết bị này?"
-            onConfirm={() => handleDeleteEquipment(record.equipmentId)}
-            okText="Có"
-            okButtonProps={{
-              style: { backgroundColor: "#334766", borderColor: "#334766", width: 100 },
-            }}
-            cancelText="Không"
-          >
-            <Tooltip title="Xóa">
-              <Button type="text" danger icon={<DeleteOutlined />} />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
+        <Dropdown
+          menu={{
+            items: getActionMenuItems(record),
+            onClick: ({ key }) => handleAction(key, record),
+          }}
+          trigger={["click"]}
+        >
+          <Button type="text" icon={<DownOutlined />}>
+            Thao tác
+          </Button>
+        </Dropdown>
       ),
     },
   ];
 
-  const content = (
-    <div className={styles.container}>
-      {/* <div className={styles.header}>
-        <Title level={3} className={styles.title}>
-          <ToolOutlined className={styles.titleIcon} />
-          Quản lý thiết bị
-        </Title>
-        <Text type="secondary">
-          Quản lý thông tin thiết bị, máy móc trong hệ thống sản xuất
-        </Text>
-      </div> */}
+  const filteredEquipments = equipments.filter((equipment) => {
+    const matchesArchive = showArchive
+      ? !equipment.isActive
+      : equipment.isActive;
+    return matchesArchive;
+  });
 
-      {/* Filters */}
-      <Card className={styles.filterCard}>
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} md={6}>
-            <Input
-              placeholder="Tìm kiếm thiết bị..."
-              prefix={<SearchOutlined />}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
+  const stats = {
+    total: equipments.length,
+    active: equipments.filter((e) => e.isActive).length,
+    inactive: equipments.filter((e) => !e.isActive).length,
+    hasIssue: equipments.filter((e) => e.issue && e.issue.trim() !== "").length,
+  };
+
+  return (
+    <Layout showHeader={false} showFooter={false}>
+      {showHeader && (
+        <div style={{ marginBottom: 24 }}>
+          <Title level={2}>
+            <ToolOutlined /> Quản lý thiết bị
+          </Title>
+        </div>
+      )}
+
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Tổng thiết bị"
+              value={stats.total}
+              valueStyle={{ color: "#334766" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Đang hoạt động"
+              value={stats.active}
+              valueStyle={{ color: "#52c41a" }}
+              prefix={<CheckCircleOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Không hoạt động"
+              value={stats.inactive}
+              valueStyle={{ color: "#ff4d4f" }}
+              prefix={<CloseCircleOutlined />}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card>
+            <Statistic
+              title="Có vấn đề"
+              value={stats.hasIssue}
+              valueStyle={{ color: "#faad14" }}
+              prefix={<WarningOutlined />}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Card>
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} md={8}>
+            <Search
+              placeholder="Tìm kiếm theo mã, tên, xuất xứ..."
               allowClear
+              enterButton={<SearchOutlined />}
+              onSearch={(value) => setSearchText(value)}
+              onChange={(e) => setSearchText(e.target.value)}
             />
           </Col>
-          <Col xs={24} sm={12} md={4}>
+          <Col xs={24} md={4}>
             <Select
-              placeholder="Trạng thái"
+              style={{ width: "100%" }}
+              placeholder="Lọc trạng thái"
               value={statusFilter}
               onChange={setStatusFilter}
-              style={{ width: "100%" }}
             >
-              <Option value="all">Tất cả trạng thái</Option>
-              <Option value="active">Đang hoạt động</Option>
-              <Option value="inactive">Ngừng hoạt động</Option>
+              <Select.Option value="all">Tất cả</Select.Option>
+              <Select.Option value="active">Hoạt động</Select.Option>
+              <Select.Option value="inactive">Không hoạt động</Select.Option>
             </Select>
           </Col>
-          <Col xs={24} sm={12} md={4}>
-            <Select
-              placeholder="Tình trạng"
-              value={workingFilter}
-              onChange={setWorkingFilter}
-              style={{ width: "100%" }}
+          <Col xs={24} md={4}>
+            <Button
+              icon={<EyeOutlined />}
+              onClick={() => setShowArchive(!showArchive)}
+              style={{
+                width: "100%",
+                backgroundColor: showArchive ? "#334766" : "#fff",
+                color: showArchive ? "#fff" : "#000",
+                borderColor: "#334766",
+              }}
             >
-              <Option value="all">Tất cả tình trạng</Option>
-              <Option value="working">Đang làm việc</Option>
-              <Option value="not-working">Không làm việc</Option>
-            </Select>
+              {showArchive ? "Đang lưu trữ" : "Lưu trữ"}
+            </Button>
           </Col>
-          <Col xs={24} sm={12} md={5}>
-            <Select
-              placeholder="Giai đoạn"
-              value={stageFilter}
-              onChange={setStageFilter}
+          <Col xs={24} md={4}>
+            <Button
+              type="default"
+              icon={<ReloadOutlined />}
+              onClick={loadEquipments}
+              loading={loading}
               style={{ width: "100%" }}
             >
-              <Option value="all">Tất cả giai đoạn</Option>
-              {stages.map(stage => (
-                <Option key={stage.stageId} value={stage.stageId}>
-                  {stage.stageName}
-                </Option>
-              ))}
-            </Select>
+              Làm mới
+            </Button>
           </Col>
-          <Col xs={24} sm={12} md={5}>
-            <Select
-              placeholder="Dây chuyền"
-              value={lineFilter}
-              onChange={setLineFilter}
-              style={{ width: "100%" }}
+          <Col xs={24} md={4}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setEditingEquipment(null);
+                form.resetFields();
+                setIsModalVisible(true);
+              }}
+              style={{
+                width: "100%",
+                backgroundColor: "#334766",
+                borderColor: "#334766",
+              }}
             >
-              <Option value="all">Tất cả dây chuyền</Option>
-              {lines.map(line => (
-                <Option key={line.lineId} value={line.lineId}>
-                  {line.lineName}
-                </Option>
-              ))}
-            </Select>
+              Thêm thiết bị
+            </Button>
           </Col>
         </Row>
-      </Card>
 
-      {/* Action buttons */}
-      <Card className={styles.actionsCard}>
-        <Space>
-          <Button
-            className={styles.addEquipmentButton}
-            icon={<PlusOutlined />}
-            onClick={handleAddEquipment}
-          >
-            Thêm thiết bị
-          </Button>
-          <Button icon={<ReloadOutlined />} onClick={fetchEquipment}>
-            Làm mới
-          </Button>
-          <Button icon={<ExportOutlined />}>
-            Xuất Excel
-          </Button>
-          <Button icon={<ImportOutlined />}>
-            Nhập Excel
-          </Button>
-        </Space>
-        <div className={styles.summary}>
-          <Space split={<Divider type="vertical" />}>
-            <Text>
-              <Badge status="success" />
-              Tổng: <strong>{filteredEquipment.length}</strong>
-            </Text>
-            <Text>
-              <Badge status="processing" />
-              Hoạt động: <strong>{filteredEquipment.filter(e => e.isActive).length}</strong>
-            </Text>
-            <Text>
-              <Badge status="warning" />
-              Có vấn đề: <strong>{filteredEquipment.filter(e => e.issue).length}</strong>
-            </Text>
-          </Space>
-        </div>
-      </Card>
-
-      {/* Equipment table */}
-      <Card className={styles.tableCard}>
         <Table
           columns={columns}
-          dataSource={filteredEquipment}
+          dataSource={filteredEquipments}
           rowKey="equipmentId"
           loading={loading}
-          scroll={{ x: 1500, y: 500 }}
-          rowSelection={{
-            selectedRowKeys,
-            onChange: setSelectedRowKeys,
-            onSelectAll: (selected, selectedRows, changeRows) => {
-              if (selected) {
-                setSelectedRowKeys(filteredEquipment.map(item => item.equipmentId));
-              } else {
-                setSelectedRowKeys([]);
-              }
-            },
-          }}
           pagination={{
-            total: filteredEquipment.length,
             pageSize: 10,
             showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} thiết bị`,
+            showTotal: (total) => `Tổng ${total} thiết bị`,
           }}
-          size="middle"
+          scroll={{ x: 1200 }}
         />
       </Card>
 
-      {/* Add/Edit Modal */}
       <Modal
-        title={editingEquipment ? "Chỉnh sửa thiết bị" : "Thêm thiết bị mới"}
-        open={modalVisible}
-        onOk={handleModalSubmit}
-        onCancel={() => {
-          setModalVisible(false);
-          setQrCodePreview(null);
-          form.resetFields();
-        }}
-        width={1000}
-        okText={editingEquipment ? "Cập nhật" : "Thêm"}
-        cancelText="Hủy"
-        okButtonProps={{
-          style: { backgroundColor: "#334766", borderColor: "#334766", width: 100 },
-        }}
+        title={
+          <Space>
+            <ToolOutlined />
+            {editingEquipment ? "Chỉnh sửa thiết bị" : "Thêm thiết bị mới"}
+          </Space>
+        }
+        open={isModalVisible}
+        onCancel={handleCancel}
+        footer={null}
+        width={700}
       >
-        <Form form={form} layout="vertical">
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          autoComplete="off"
+        >
           <Row gutter={16}>
             <Col span={12}>
-              {/* Disable editing for equipment code */}
               <Form.Item
-                name="equipmentCode"
                 label="Mã thiết bị"
+                name="equipmentCode"
                 rules={[
-                  { required: true, message: "Vui lòng nhập mã thiết bị!" },
-                  { max: 50, message: "Mã thiết bị không được quá 50 ký tự!" },
+                  { required: true, message: "Vui lòng nhập mã thiết bị" },
                 ]}
               >
-                <Input placeholder="Nhập mã thiết bị (VD: EQ001)" disabled={editingEquipment} />
+                <Input placeholder="Nhập mã thiết bị" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                name="equipmentName"
                 label="Tên thiết bị"
+                name="equipmentName"
                 rules={[
-                  { required: true, message: "Vui lòng nhập tên thiết bị!" },
-                  { max: 255, message: "Tên thiết bị không được quá 255 ký tự!" },
+                  { required: true, message: "Vui lòng nhập tên thiết bị" },
                 ]}
               >
                 <Input placeholder="Nhập tên thiết bị" />
@@ -701,36 +614,12 @@ const EquipmentManagement = ({ showHeader = true }) => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="origin"
-                label="Xuất xứ"
-                rules={[
-                  { max: 150, message: "Xuất xứ không được quá 150 ký tự!" },
-                ]}
-              >
-                <Input placeholder="Nhập xuất xứ (VD: Đức, Nhật Bản)" />
+              <Form.Item label="Xuất xứ" name="origin">
+                <Input placeholder="Nhập xuất xứ" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="yom"
-                label="Năm sản xuất"
-                rules={[
-                  {
-                    validator: (_, value) => {
-                      if (!value) return Promise.resolve();
-                      const year = parseInt(value);
-                      if (isNaN(year)) {
-                        return Promise.reject(new Error('Năm sản xuất phải là số!'));
-                      }
-                      if (year < 1900 || year > new Date().getFullYear()) {
-                        return Promise.reject(new Error('Năm sản xuất không hợp lệ!'));
-                      }
-                      return Promise.resolve();
-                    }
-                  }
-                ]}
-              >
+              <Form.Item label="Năm sản xuất" name="yom">
                 <Input type="number" placeholder="Nhập năm sản xuất" />
               </Form.Item>
             </Col>
@@ -738,161 +627,145 @@ const EquipmentManagement = ({ showHeader = true }) => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="dateUse"
-                label="Ngày đưa vào sử dụng"
-              >
+              <Form.Item label="Ngày đưa vào sử dụng" name="dateUse">
                 <DatePicker
                   style={{ width: "100%" }}
-                  placeholder="Chọn ngày đưa vào sử dụng"
                   format="DD/MM/YYYY"
+                  placeholder="Chọn ngày"
                 />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="idCode"
-                label="Mã định danh"
-                rules={[
-                  { max: 250, message: "Mã định danh không được quá 250 ký tự!" },
-                ]}
-              >
-                <Input placeholder="Nhập mã định danh" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="stageId"
-                label="Giai đoạn"
-                rules={[
-                  { required: true, message: "Vui lòng chọn giai đoạn!" },
-                ]}
-              >
-                <Select placeholder="Chọn giai đoạn">
-                  {stages.map(stage => (
-                    <Option key={stage.stageId} value={stage.stageId}>
-                      {stage.stageName}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="lineId"
-                label="Dây chuyền"
-                rules={[
-                  { required: true, message: "Vui lòng chọn dây chuyền!" },
-                ]}
-              >
-                <Select placeholder="Chọn dây chuyền">
-                  {lines.map(line => (
-                    <Option key={line.lineId} value={line.lineId}>
-                      {line.lineName}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={20}>
-              <Form.Item
-                name="qrCode"
-                label="Mã QR"
-              >
-                <Input placeholder="Mã QR sẽ được tạo tự động" />
-              </Form.Item>
-            </Col>
-            <Col span={4}>
-              <Form.Item label=" ">
-                <Button
-                  icon={<QrcodeOutlined />}
-                  onClick={() => {
-                    const idCode = form.getFieldValue("idCode");
-                    if (idCode) {
-                      generateQRCode(idCode);
-                    } else {
-                      message.warning("Vui lòng nhập mã định danh trước!");
-                    }
-                  }}
+              <Form.Item label="Công đoạn" name="stageId">
+                <Select
+                  placeholder="Chọn công đoạn"
+                  allowClear
+                  showSearch
+                  optionFilterProp="children"
                 >
-                  Tạo QR
-                </Button>
+                  {Array.isArray(stages) &&
+                    stages.map((stage) => (
+                      <Select.Option key={stage.stageId} value={stage.stageId}>
+                        {stage.stageName}
+                      </Select.Option>
+                    ))}
+                </Select>
               </Form.Item>
             </Col>
           </Row>
 
-          {/* QR Code Preview */}
-          {qrCodePreview && (
-            <Row gutter={16}>
-              <Col span={24}>
-                <div className={styles.qrCodePreviewContainer}>
-                  <Text className={styles.qrCodePreviewTitle}>
-                    Ảnh QRCode:
-                  </Text>
-                  <div className={styles.qrCodePreviewImageContainer}>
-                    <img
-                      src={qrCodePreview}
-                      alt="QR Code Preview"
-                      className={styles.qrCodePreviewImage}
-                    />
-                  </div>
-                </div>
-              </Col>
-            </Row>
-          )}
+          <Form.Item label="Mã định danh" name="idCode">
+            <Input placeholder="Nhập mã định danh" />
+          </Form.Item>
 
-          <Form.Item
-            name="issue"
-            label="Vấn đề hiện tại"
-          >
+          <Form.Item label="Vấn đề/Ghi chú" name="issue">
             <TextArea
-              rows={3}
-              placeholder="Mô tả vấn đề hiện tại của thiết bị (nếu có)"
-              maxLength={500}
-              showCount
+              rows={4}
+              placeholder="Nhập vấn đề hoặc ghi chú về thiết bị"
             />
           </Form.Item>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="isActive"
-                label="Trạng thái hoạt động"
-                valuePropName="checked"
-                initialValue={true}
+          <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
+            <Space>
+              <Button onClick={handleCancel}>Hủy</Button>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                style={{
+                  backgroundColor: "#334766",
+                  borderColor: "#334766",
+                }}
               >
-                <Switch
-                  checkedChildren="Hoạt động"
-                  unCheckedChildren="Ngừng hoạt động"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="isWorking"
-                label="Đang làm việc"
-                valuePropName="checked"
-                initialValue={true}
-              >
-                <Switch
-                  checkedChildren="Đang làm việc"
-                  unCheckedChildren="Không làm việc"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+                {editingEquipment ? "Cập nhật" : "Thêm mới"}
+              </Button>
+            </Space>
+          </Form.Item>
         </Form>
       </Modal>
-    </div>
-  );
 
-  return showHeader ? <Layout>{content}</Layout> : content;
+      <Modal
+        title={
+          <Space>
+            <ToolOutlined />
+            Chi tiết thiết bị
+          </Space>
+        }
+        open={isViewModalVisible}
+        onCancel={handleViewCancel}
+        footer={[
+          <Button key="close" onClick={handleViewCancel}>
+            Đóng
+          </Button>,
+        ]}
+        width={700}
+      >
+        {viewingEquipment && (
+          <Descriptions bordered column={2}>
+            <Descriptions.Item label="Mã thiết bị" span={1}>
+              <Text strong>{viewingEquipment.equipmentCode || "N/A"}</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Tên thiết bị" span={1}>
+              <Text strong>{viewingEquipment.equipmentName || "N/A"}</Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Công đoạn" span={2}>
+              {viewingEquipment.stageId ? (
+                <Tag color="blue">
+                  {Array.isArray(stages)
+                    ? stages.find((s) => s.stageId === viewingEquipment.stageId)
+                        ?.stageName || "N/A"
+                    : "N/A"}
+                </Tag>
+              ) : (
+                <Text type="secondary">Chưa phân công</Text>
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="Xuất xứ" span={1}>
+              {viewingEquipment.origin || "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Năm sản xuất" span={1}>
+              {viewingEquipment.yom || "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày đưa vào sử dụng" span={1}>
+              {viewingEquipment.dateUse
+                ? dayjs(viewingEquipment.dateUse).format("DD/MM/YYYY")
+                : "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Mã định danh" span={1}>
+              {viewingEquipment.idCode || "N/A"}
+            </Descriptions.Item>
+            <Descriptions.Item label="Mã QR" span={2}>
+              {viewingEquipment.qrcode ? (
+                <Space>
+                  <QrcodeOutlined />
+                  <Text copyable>{viewingEquipment.qrcode}</Text>
+                </Space>
+              ) : (
+                <Text type="secondary">Chưa tạo</Text>
+              )}
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái" span={2}>
+              <Badge
+                status={viewingEquipment.isActive ? "success" : "error"}
+                text={
+                  viewingEquipment.isActive ? "Hoạt động" : "Không hoạt động"
+                }
+              />
+            </Descriptions.Item>
+            <Descriptions.Item label="Vấn đề/Ghi chú" span={2}>
+              {viewingEquipment.issue ? (
+                <Text>{viewingEquipment.issue}</Text>
+              ) : (
+                <Tag icon={<CheckCircleOutlined />} color="success">
+                  Không có vấn đề
+                </Tag>
+              )}
+            </Descriptions.Item>
+          </Descriptions>
+        )}
+      </Modal>
+    </Layout>
+  );
 };
 
 export default EquipmentManagement;

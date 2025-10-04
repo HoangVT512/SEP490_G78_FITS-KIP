@@ -36,9 +36,9 @@ import DepartmentManagement from "../AdminPage/DepartmentManagement";
 import LineGroupManagement from "./LineManagement";
 import StageManagement from "../AdminPage/StageManagement";
 import RoleManagement from "../AdminPage/RoleManagement";
+import EquipmentManagement from "../AdminPage/EquipmentManagement";
 import SystemSettings from "../AdminPage/SystemSettings";
 import AdminReports from "../AdminPage/AdminReports";
-import EquipmentManagement from "../AdminPage/EquipmentManagement";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
