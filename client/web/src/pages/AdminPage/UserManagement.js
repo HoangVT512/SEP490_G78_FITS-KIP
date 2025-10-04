@@ -42,6 +42,7 @@ import {
   FilterOutlined,
   CalendarOutlined,
   EnvironmentOutlined,
+  WarningOutlined,
   IdcardOutlined,
   SafetyOutlined,
   CheckCircleOutlined,
@@ -352,7 +353,7 @@ const UserManagement = ({ showHeader = true }) => {
 
         form.setFieldsValue({
           ...user,
-          roleIds: userRoleIds,
+          roleIds: userRoleIds.length > 0 ? userRoleIds[0] : null,
           departmentId: user.departmentId,
           lineIds: user.lineIds || [],
           status: user.status === "active" ? "true" : "false",
@@ -480,7 +481,9 @@ const UserManagement = ({ showHeader = true }) => {
   ];
 
   // Department filter dropdown for the table
-  const departmentFilterOptions = (Array.isArray(departments) ? departments : []).map((dept) => ({
+  const departmentFilterOptions = (
+    Array.isArray(departments) ? departments : []
+  ).map((dept) => ({
     label: dept.departmentName,
     value: dept.departmentName,
   }));
@@ -582,8 +585,9 @@ const UserManagement = ({ showHeader = true }) => {
         ? departments
             .filter(
               (dept, idx, arr) =>
-                arr.findIndex((d) => d.departmentName === dept.departmentName) ===
-                idx
+                arr.findIndex(
+                  (d) => d.departmentName === dept.departmentName
+                ) === idx
             )
             .map((dept) => ({
               text: dept.departmentName,
@@ -594,7 +598,7 @@ const UserManagement = ({ showHeader = true }) => {
       render: (department) => (
         <div>
           <TeamOutlined style={{ color: "#334766", marginRight: 6 }} />
-          <Text>{department}</Text>
+          <Text>{department || "Chưa có PB"}</Text>
         </div>
       ),
     },
@@ -745,6 +749,43 @@ const UserManagement = ({ showHeader = true }) => {
     try {
       const values = await form.validateFields();
       setLoading(true);
+
+      // Check if selected role is a management role and department is selected
+      const selectedRole = roles.find((r) => r.id === values.roleIds);
+      const isManagementRole =
+        selectedRole &&
+        (selectedRole.name.includes("Quản lý") ||
+          selectedRole.name.includes("Manager") ||
+          selectedRole.name.toLowerCase().includes("manager"));
+
+      if (isManagementRole && values.departmentId) {
+        try {
+          // Check if department already has a manager
+          const departmentDetails = await departmentService.getDepartmentById(
+            values.departmentId
+          );
+          if (departmentDetails.managerId) {
+            message.error({
+              content: `Phòng ban "${departmentDetails.departmentName}" đã có quản lý. Không thể thêm vai trò quản lý cho phòng ban này.`,
+              placement: "topRight",
+              duration: 5,
+            });
+            setLoading(false);
+            return;
+          }
+        } catch (error) {
+          console.error("Error checking department manager:", error);
+          message.error({
+            content:
+              "Không thể kiểm tra thông tin quản lý phòng ban. Vui lòng thử lại.",
+            placement: "topRight",
+            duration: 3,
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
       if (editingUser) {
         await userService.updateUser(editingUser.id, {
           userName: values.email,
@@ -755,7 +796,7 @@ const UserManagement = ({ showHeader = true }) => {
           position: values.position,
           phoneNumber: values.phoneNumber,
           isActive: values.status === "true",
-          roleIds: values.roleIds || [],
+          roleId: values.roleIds,
           departmentId: values.departmentId,
           lineIds: values.lineIds || [],
         });
@@ -768,13 +809,13 @@ const UserManagement = ({ showHeader = true }) => {
         await userService.createUser({
           userName: values.email,
           email: values.email,
-          password: values.password,
+          password: "123456",
           fullName: values.fullName,
           employeeCode: values.employeeCode,
           phoneNumber: values.phoneNumber,
           position: values.position,
           gender: values.gender || "Nam",
-          roleIds: values.roleIds || [],
+          roleIds: values.roleIds ? [values.roleIds] : [],
           departmentId: values.departmentId,
           lineIds: values.lineIds || [],
         });
@@ -1179,7 +1220,9 @@ const UserManagement = ({ showHeader = true }) => {
               >
                 <Select
                   placeholder="Chọn phòng ban"
-                  loading={!Array.isArray(departments) || departments.length === 0}
+                  loading={
+                    !Array.isArray(departments) || departments.length === 0
+                  }
                   showSearch
                   optionFilterProp="children"
                   filterOption={(input, option) =>
@@ -1197,59 +1240,6 @@ const UserManagement = ({ showHeader = true }) => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="position"
-                label="Chức vụ"
-                // rules={[{ required: true, message: "Vui lòng nhập chức vụ" }]}
-              >
-                <Input placeholder="Nhập chức vụ" />
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="roleIds"
-                label="Vai trò"
-                rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng chọn ít nhất một vai trò",
-                  },
-                ]}
-              >
-                <Select
-                  mode="multiple"
-                  placeholder="Chọn vai trò"
-                  loading={roles.length === 0}
-                  allowClear
-                >
-                  {roles &&
-                    roles.map((role) => (
-                      <Option key={role.id} value={role.id}>
-                        {role.name}
-                      </Option>
-                    ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="status"
-                label="Trạng thái"
-                rules={[
-                  { required: true, message: "Vui lòng chọn trạng thái" },
-                ]}
-              >
-                <Select placeholder="Chọn trạng thái">
-                  <Option value="true">Hoạt động</Option>
-                  <Option value="false">Ngừng hoạt động</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
                 name="lineIds"
                 label="Dây chuyền"
                 // rules={[{ required: true, message: "Vui lòng chọn dây chuyền" }]}
@@ -1265,6 +1255,23 @@ const UserManagement = ({ showHeader = true }) => {
                   filterOption={(input, option) =>
                     option.children.toLowerCase().includes(input.toLowerCase())
                   }
+                  notFoundContent={
+                    !form.getFieldValue("departmentId") ? (
+                      <div
+                        style={{
+                          textAlign: "center",
+                          color: "#ff4d4f",
+                          padding: "8px",
+                        }}
+                      >
+                        <EnvironmentOutlined style={{ marginRight: 8 }} />
+                        Bạn cần chọn phòng ban trước để chọn dây chuyền trong
+                        phòng ban đó
+                      </div>
+                    ) : (
+                      "Không có dây chuyền nào"
+                    )
+                  }
                 >
                   {filteredLines.map((line) => (
                     <Option key={line.lineId} value={line.lineId}>
@@ -1272,49 +1279,75 @@ const UserManagement = ({ showHeader = true }) => {
                     </Option>
                   ))}
                 </Select>
+                {!form.getFieldValue("departmentId") && (
+                  <Typography.Text
+                    type="danger"
+                    style={{
+                      fontSize: "12px",
+                      marginTop: "4px",
+                      display: "block",
+                    }}
+                  >
+                    <WarningOutlined style={{ marginRight: "4px" }} />
+                    Vui lòng chọn phòng ban trước để chọn dây chuyền
+                  </Typography.Text>
+                )}
               </Form.Item>
             </Col>
-            <Col span={12}>{/* Empty for now */}</Col>
           </Row>
-          {!editingUser && (
-            <Row gutter={16}>
-              <Col span={12}>
-                <Form.Item
-                  name="password"
-                  label="Mật khẩu"
-                  rules={[
-                    { required: true, message: "Vui lòng nhập mật khẩu" },
-                    { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự" },
-                  ]}
-                >
-                  <Input.Password placeholder="Nhập mật khẩu" />
-                </Form.Item>
-              </Col>
-              <Col span={12}>
-                <Form.Item
-                  name="confirmPassword"
-                  label="Xác nhận mật khẩu"
-                  dependencies={["password"]}
-                  rules={[
-                    { required: true, message: "Vui lòng xác nhận mật khẩu" },
-                    ({ getFieldValue }) => ({
-                      validator(_, value) {
-                        if (!value || getFieldValue("password") === value) {
-                          return Promise.resolve();
-                        }
-                        return Promise.reject(
-                          new Error("Mật khẩu xác nhận không khớp!")
-                        );
-                      },
-                    }),
-                  ]}
-                >
-                  <Input.Password placeholder="Nhập lại mật khẩu" />
-                </Form.Item>
-              </Col>
-            </Row>
-          )}
+
           <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="roleIds"
+                label="Vai trò"
+                rules={[
+                  {
+                    required: true,
+                    message: "Vui lòng chọn một vai trò",
+                  },
+                ]}
+              >
+                <Select
+                  placeholder="Chọn vai trò"
+                  loading={roles.length === 0}
+                  allowClear
+                >
+                  {roles &&
+                    roles.map((role) => (
+                      <Option key={role.id} value={role.id}>
+                        {role.name}
+                      </Option>
+                    ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="position"
+                label="Chức vụ"
+                // rules={[{ required: true, message: "Vui lòng nhập chức vụ" }]}
+              >
+                <Input placeholder="Nhập chức vụ" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="status"
+                label="Trạng thái"
+                rules={[
+                  { required: true, message: "Vui lòng chọn trạng thái" },
+                ]}
+              >
+                <Select placeholder="Chọn trạng thái">
+                  <Option value="true">Hoạt động</Option>
+                  <Option value="false">Ngừng hoạt động</Option>
+                </Select>
+              </Form.Item>
+            </Col>
             <Col span={12}>
               <Form.Item name="gender" label="Giới tính">
                 <Select placeholder="Chọn giới tính">
@@ -1325,6 +1358,16 @@ const UserManagement = ({ showHeader = true }) => {
               </Form.Item>
             </Col>
           </Row>
+
+          {!editingUser && (
+            <Alert
+              message="Mật khẩu mặc định"
+              description="Mật khẩu mặc định cho người dùng mới là '123456'. Người dùng có thể thay đổi mật khẩu sau khi đăng nhập."
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
         </Form>
       </Modal>
 

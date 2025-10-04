@@ -20,7 +20,7 @@ export const userService = {
         phoneNumber: user.phoneNumber || "N/A",
         userName: user.userName || "N/A",
         // Department and lines from API
-        department: user.departmentName || "N/A",
+        department: user.departmentName || null,
         departmentId: user.departmentId,
         lineIds: user.lineIds || [],
         position: user.position || "N/A",

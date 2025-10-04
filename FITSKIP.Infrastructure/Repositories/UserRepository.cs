@@ -423,8 +423,9 @@ public class UserRepository : IUserRepository
             PhoneNumber = request.PhoneNumber
         };
 
-        // Create user using existing method
-        var createdUser = await CreateUserAsync(user, request.Password, request.RoleIds, cancellationToken);
+        // Create user using existing method with default password if not provided
+        var password = string.IsNullOrEmpty(request.Password) ? "123456" : request.Password;
+        var createdUser = await CreateUserAsync(user, password, request.RoleIds, cancellationToken);
 
         // Assign as manager of department if specified
         if (request.DepartmentId.HasValue)

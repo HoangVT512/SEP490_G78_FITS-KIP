@@ -44,7 +44,7 @@ namespace FITSKIP.API
                 options.Password.RequireLowercase = false;
                 options.Password.RequireNonAlphanumeric = false;
                 options.Password.RequireUppercase = false;
-                options.Password.RequiredLength = 8;
+                options.Password.RequiredLength = 6;
                 options.Password.RequiredUniqueChars = 0;
 
                 // Lockout settings (optional - you can adjust these)
