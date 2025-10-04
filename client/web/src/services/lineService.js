@@ -14,6 +14,19 @@ export const lineService = {
     }
   },
 
+  // Lấy danh sách các dây chuyền sản xuất đang hoạt động
+  getActiveLines: async () => {
+    try {
+      const response = await apiRequest("/Lines/active");
+      return response.data || response;
+    } catch (error) {
+      console.error("Get active lines error:", error);
+      throw new Error(
+        error.message || "Lấy danh sách dây chuyền sản xuất đang hoạt động thất bại"
+      );
+    }
+  },
+
   // Lấy thông tin chuyền sản xuất theo ID
   getLineById: async (id) => {
     try {

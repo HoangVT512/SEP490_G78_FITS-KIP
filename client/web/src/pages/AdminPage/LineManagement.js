@@ -68,6 +68,7 @@ const { Option } = Select;
 const LineManagement = ({ showHeader = true }) => {
   const [lines, setLines] = useState([]);
   const [departments, setDepartments] = useState([]); // Changed from rooms to departments
+  const [departmentActive, setDepartmentActive] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -127,6 +128,7 @@ const LineManagement = ({ showHeader = true }) => {
   useEffect(() => {
     loadLines();
     loadDepartments();
+    loadDepartmentActive();
   }, []);
 
   // Persist archive view state on change
@@ -170,6 +172,23 @@ const LineManagement = ({ showHeader = true }) => {
       console.error("Error loading departments:", error);
       message.error("Không thể tải danh sách phòng ban");
       setDepartments([]);
+    }
+  };
+
+  const loadDepartmentActive = async () => {
+    try {
+      const response = await departmentService.getActiveDepartments();
+      if (Array.isArray(response)) {
+        setDepartmentActive(response);
+      } else if (response.success && Array.isArray(response.data)) {
+        setDepartmentActive(response.data);
+      } else {
+        setDepartmentActive([]);
+      }
+    } catch (error) {
+      console.error("Error loading active departments:", error);
+      message.error("Không thể tải danh sách phòng ban hoạt động");
+      setDepartmentActive([]);
     }
   };
 
@@ -230,8 +249,7 @@ const LineManagement = ({ showHeader = true }) => {
               const response = await lineService.toggleLineStatus(line.lineId);
               if (response.success) {
                 message.success(
-                  `Đã ${
-                    line.isActive ? "khóa" : "mở khóa"
+                  `Đã ${line.isActive ? "khóa" : "mở khóa"
                   } dây chuyền thành công`
                 );
                 loadLines();
@@ -470,9 +488,9 @@ const LineManagement = ({ showHeader = true }) => {
               value={
                 lines.length > 0
                   ? Math.round(
-                      lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) /
-                        lines.length
-                    )
+                    lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) /
+                    lines.length
+                  )
                   : 0
               }
               suffix="%"
@@ -550,7 +568,7 @@ const LineManagement = ({ showHeader = true }) => {
               size="large"
             >
               <Option value="all">Tất cả phòng ban</Option>
-              {departments.map((department) => (
+              {departmentActive.map((department) => (
                 <Option
                   key={department.departmentId}
                   value={department.departmentId.toString()}
@@ -696,14 +714,19 @@ const LineManagement = ({ showHeader = true }) => {
               >
                 <Select
                   placeholder="Chọn phòng ban"
-                  loading={departments.length === 0}
+                  loading={departmentActive.length === 0}
                   notFoundContent={
-                    departments.length === 0
+                    departmentActive.length === 0
                       ? "Đang tải..."
                       : "Không có phòng ban nào"
                   }
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().includes(input.toLowerCase())
+                  }
                 >
-                  {departments.map((department) => (
+                  {departmentActive.map((department) => (
                     <Option
                       key={department.departmentId}
                       value={department.departmentId}

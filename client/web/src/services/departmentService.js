@@ -14,6 +14,19 @@ export const departmentService = {
     }
   },
 
+  // Get all active departments
+  async getActiveDepartments() {
+    try {
+      const response = await apiRequest("/Departments/active");
+      return response.data || response;
+    } catch (error) {
+      console.error("Error fetching active departments:", error);
+      throw new Error(
+        "Không thể tải danh sách phòng ban hoạt động. Vui lòng thử lại sau."
+      );
+    }
+  },
+
   // Get department by ID
   async getDepartmentById(id) {
     try {

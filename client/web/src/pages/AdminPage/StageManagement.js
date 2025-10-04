@@ -42,6 +42,7 @@ import {
 import Layout from "../../components/Layout/Layout";
 import { stageService } from "../../services/stageService";
 import { lineService } from "../../services/lineService";
+import { departmentService } from "../../services/departmentService";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -49,6 +50,11 @@ const { Option } = Select;
 const StageManagement = ({ showHeader = true }) => {
   const [stages, setStages] = useState([]);
   const [lines, setLines] = useState([]);
+  const [lineActive, setLineActive] = useState([]);
+  const [filteredLines, setFilteredLines] = useState([]);
+  const [filteredActiveLines, setFilteredActiveLines] = useState([]);
+  const [departmentActive, setDepartmentActive] = useState([]);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -107,12 +113,25 @@ const StageManagement = ({ showHeader = true }) => {
   useEffect(() => {
     loadStages();
     loadLines();
+    loadLineActive();
+    loadDepartmentActive();
   }, []);
 
   // Persist archive view state on change
   useEffect(() => {
     localStorage.setItem("stageArchiveView", showArchive ? "true" : "false");
   }, [showArchive]);
+
+  // Filter active lines based on selected department in form
+  useEffect(() => {
+    if (selectedDepartmentId) {
+      setFilteredActiveLines(
+        lineActive.filter((line) => line.departmentId === selectedDepartmentId)
+      );
+    } else {
+      setFilteredActiveLines(lineActive);
+    }
+  }, [lineActive, selectedDepartmentId]);
 
   const loadStages = async () => {
     setLoading(true);
@@ -137,7 +156,7 @@ const StageManagement = ({ showHeader = true }) => {
     try {
       const response = await lineService.getLines();
       console.log("Lines response:", response); // Debug log
-      
+
       // Handle different response formats from API
       if (Array.isArray(response)) {
         setLines(response);
@@ -156,6 +175,38 @@ const StageManagement = ({ showHeader = true }) => {
     }
   };
 
+  const loadLineActive = async () => {
+    try {
+      const response = await lineService.getActiveLines();
+      if (Array.isArray(response)) {
+        setLineActive(response);
+      } else {
+        console.warn("Unexpected active lines response format:", response);
+        setLineActive([]);
+      }
+    } catch (error) {
+      console.error("Error loading active lines:", error);
+      message.error("Không thể tải danh sách dây chuyền hoạt động");
+      setLineActive([]);
+    }
+  };
+
+  const loadDepartmentActive = async () => {
+    try {
+      const response = await departmentService.getActiveDepartments();
+      if (Array.isArray(response)) {
+        setDepartmentActive(response);
+      } else {
+        console.warn("Unexpected active departments response format:", response);
+        setDepartmentActive([]);
+      }
+    } catch (error) {
+      console.error("Error loading active departments:", error);
+      message.error("Không thể tải danh sách phòng ban hoạt động");
+      setDepartmentActive([]);
+    }
+  };
+
   const handleAction = async (action, stage) => {
     switch (action) {
       case "view":
@@ -164,11 +215,14 @@ const StageManagement = ({ showHeader = true }) => {
         break;
       case "edit":
         setEditingStage(stage);
+        const departmentId = stage.line?.departmentId;
         form.setFieldsValue({
           stageName: stage.stageName,
+          departmentId: departmentId,
           lineId: stage.lineId,
           isActive: stage.isActive,
         });
+        setSelectedDepartmentId(departmentId);
         setIsModalVisible(true);
         break;
       case "toggle-status":
@@ -214,16 +268,14 @@ const StageManagement = ({ showHeader = true }) => {
               } else {
                 message.error(
                   response.message ||
-                    `${
-                      actionText.charAt(0).toUpperCase() + actionText.slice(1)
-                    } công đoạn thất bại`
+                  `${actionText.charAt(0).toUpperCase() + actionText.slice(1)
+                  } công đoạn thất bại`
                 );
               }
             } catch (error) {
               console.error("Toggle stage status error:", error);
               message.error(
-                `${
-                  actionText.charAt(0).toUpperCase() + actionText.slice(1)
+                `${actionText.charAt(0).toUpperCase() + actionText.slice(1)
                 } công đoạn thất bại`
               );
             }
@@ -263,13 +315,15 @@ const StageManagement = ({ showHeader = true }) => {
   const handleModalOk = async () => {
     try {
       const values = await form.validateFields();
+      // Remove departmentId from API payload since it's not needed (lineId contains department info)
+      const { departmentId, ...apiValues } = values;
 
       if (editingStage) {
         // Update existing stage
         try {
           const response = await stageService.updateStage(
             editingStage.stageId,
-            values
+            apiValues
           );
           if (response.success) {
             message.success("Cập nhật công đoạn thành công!");
@@ -288,7 +342,7 @@ const StageManagement = ({ showHeader = true }) => {
       } else {
         // Create new stage
         try {
-          const response = await stageService.createStage(values);
+          const response = await stageService.createStage(apiValues);
           if (response.success) {
             message.success("Tạo công đoạn mới thành công!");
             setIsModalVisible(false);
@@ -312,6 +366,7 @@ const StageManagement = ({ showHeader = true }) => {
   const handleModalCancel = () => {
     setIsModalVisible(false);
     setEditingStage(null);
+    setSelectedDepartmentId(null);
     form.resetFields();
   };
 
@@ -473,8 +528,8 @@ const StageManagement = ({ showHeader = true }) => {
               value={
                 lines.length > 0
                   ? (
-                      stages.length / new Set(stages.map((s) => s.lineId)).size
-                    ).toFixed(1)
+                    stages.length / new Set(stages.map((s) => s.lineId)).size
+                  ).toFixed(1)
                   : 0
               }
               prefix={<LineChartOutlined style={{ color: "#722ed1" }} />}
@@ -540,6 +595,7 @@ const StageManagement = ({ showHeader = true }) => {
                 icon={<PlusOutlined />}
                 onClick={() => {
                   setEditingStage(null);
+                  setSelectedDepartmentId(null);
                   form.resetFields();
                   setIsModalVisible(true);
                 }}
@@ -608,6 +664,7 @@ const StageManagement = ({ showHeader = true }) => {
                   icon={<PlusOutlined />}
                   onClick={() => {
                     setEditingStage(null);
+                    setSelectedDepartmentId(null);
                     form.resetFields();
                     setIsModalVisible(true);
                   }}
@@ -631,7 +688,7 @@ const StageManagement = ({ showHeader = true }) => {
         okText={editingStage ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
         okButtonProps={{
-          style: { backgroundColor: "#1890ff", borderColor: "#1890ff" },
+          style: { backgroundColor: "#334766", borderColor: "#334766" },
         }}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
@@ -652,6 +709,44 @@ const StageManagement = ({ showHeader = true }) => {
             </Col>
             <Col span={12}>
               <Form.Item
+                name="departmentId"
+                label="Phòng ban"
+                rules={[
+                  { required: true, message: "Vui lòng chọn phòng ban" },
+                ]}
+              >
+                <Select
+                  placeholder="Chọn phòng ban"
+                  loading={departmentActive.length === 0}
+                  notFoundContent={
+                    departmentActive.length === 0
+                      ? "Đang tải..."
+                      : "Không có phòng ban nào"
+                  }
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().includes(input.toLowerCase())
+                  }
+                  onChange={(value) => {
+                    setSelectedDepartmentId(value);
+                    // Clear line selection when department changes
+                    form.setFieldsValue({ lineId: undefined });
+                  }}
+                >
+                  {departmentActive.map((department) => (
+                    <Option
+                      key={department.departmentId}
+                      value={department.departmentId}
+                    >
+                      {department.departmentName || "Không xác định"}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
                 name="lineId"
                 label="Dây chuyền"
                 rules={[
@@ -660,17 +755,24 @@ const StageManagement = ({ showHeader = true }) => {
               >
                 <Select
                   placeholder="Chọn dây chuyền"
-                  loading={lines.length === 0}
+                  loading={lineActive.length === 0}
+                  disabled={!selectedDepartmentId}
                   notFoundContent={
-                    lines.length === 0
-                      ? "Đang tải..."
-                      : "Không có dây chuyền nào"
+                    !selectedDepartmentId
+                      ? "Vui lòng chọn phòng ban trước"
+                      : filteredActiveLines.length === 0
+                      ? "Không có dây chuyền nào"
+                      : "Đang tải..."
+                  }
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().includes(input.toLowerCase())
                   }
                 >
-                  {lines.map((line) => (
+                  {filteredActiveLines.map((line) => (
                     <Option key={line.lineId} value={line.lineId}>
-                      {line.lineName} (
-                      {line.department?.departmentName || "Không xác định"})
+                      {line.lineName}
                     </Option>
                   ))}
                 </Select>

@@ -133,13 +133,13 @@ const UserManagement = ({ showHeader = true }) => {
     setLoading(true);
     Promise.all([
       userService.getUsers(),
-      departmentService.getDepartments(),
+      departmentService.getActiveDepartments(),
       roleService.getRoles(),
-      lineService.getLines(),
+      lineService.getActiveLines(),
     ])
       .then(([usersData, departmentsData, rolesData, linesData]) => {
         setUsers(usersData);
-        setDepartments(departmentsData || []);
+        setDepartments(Array.isArray(departmentsData) ? departmentsData : []);
         setRoles(rolesData || []);
         setLines(linesData || []);
       })
@@ -480,7 +480,7 @@ const UserManagement = ({ showHeader = true }) => {
   ];
 
   // Department filter dropdown for the table
-  const departmentFilterOptions = (departments || []).map((dept) => ({
+  const departmentFilterOptions = (Array.isArray(departments) ? departments : []).map((dept) => ({
     label: dept.departmentName,
     value: dept.departmentName,
   }));
@@ -578,16 +578,18 @@ const UserManagement = ({ showHeader = true }) => {
       dataIndex: "department",
       key: "department",
       width: 150,
-      filters: departments
-        .filter(
-          (dept, idx, arr) =>
-            arr.findIndex((d) => d.departmentName === dept.departmentName) ===
-            idx
-        )
-        .map((dept) => ({
-          text: dept.departmentName,
-          value: dept.departmentName,
-        })),
+      filters: Array.isArray(departments)
+        ? departments
+            .filter(
+              (dept, idx, arr) =>
+                arr.findIndex((d) => d.departmentName === dept.departmentName) ===
+                idx
+            )
+            .map((dept) => ({
+              text: dept.departmentName,
+              value: dept.departmentName,
+            }))
+        : [],
       onFilter: (value, record) => record.department === value,
       render: (department) => (
         <div>
@@ -601,24 +603,32 @@ const UserManagement = ({ showHeader = true }) => {
       dataIndex: "lineIds",
       key: "lineIds",
       width: 180,
-      render: (lineIds) => {
-        if (!lineIds || lineIds.length === 0) {
-          return <Tag color="default">Chưa có dây chuyền</Tag>;
-        }
-
-        return (
-          <div>
-            {lineIds.map((lineId) => {
+      filters: Array.isArray(lines)
+        ? lines
+            .filter((line) => line.lineName)
+            .map((line) => ({
+              text: line.lineName,
+              value: line.lineId,
+            }))
+        : [],
+      onFilter: (value, record) =>
+        record.lineIds && record.lineIds.includes(value),
+      render: (lineIds) => (
+        <div>
+          {lineIds && lineIds.length > 0 ? (
+            lineIds.map((lineId) => {
               const line = lines.find((l) => l.lineId === lineId);
               return line ? (
                 <Tag key={lineId} color="blue" style={{ marginBottom: 2 }}>
                   {line.lineName}
                 </Tag>
               ) : null;
-            })}
-          </div>
-        );
-      },
+            })
+          ) : (
+            <Tag color="default">Chưa có dây chuyền</Tag>
+          )}
+        </div>
+      ),
     },
     {
       title: "Vai trò",
@@ -1164,14 +1174,19 @@ const UserManagement = ({ showHeader = true }) => {
             <Col span={12}>
               <Form.Item
                 name="departmentId"
-                label="Phòng ban (Manager)"
+                label="Phòng ban"
                 // rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
               >
                 <Select
                   placeholder="Chọn phòng ban"
-                  loading={!departments || departments.length === 0}
+                  loading={!Array.isArray(departments) || departments.length === 0}
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().includes(input.toLowerCase())
+                  }
                 >
-                  {departments &&
+                  {Array.isArray(departments) &&
                     departments.map((dept) => (
                       <Option key={dept.departmentId} value={dept.departmentId}>
                         {dept.departmentName}
@@ -1245,6 +1260,11 @@ const UserManagement = ({ showHeader = true }) => {
                   loading={!lines || lines.length === 0}
                   disabled={!form.getFieldValue("departmentId")}
                   allowClear
+                  showSearch
+                  optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().includes(input.toLowerCase())
+                  }
                 >
                   {filteredLines.map((line) => (
                     <Option key={line.lineId} value={line.lineId}>
