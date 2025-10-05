@@ -8,7 +8,7 @@ public class ChangePasswordRequest
     public string CurrentPassword { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Mật khẩu mới là bắt buộc")]
-    [MinLength(8, ErrorMessage = "Mật khẩu mới phải có ít nhất 8 ký tự")]
+    [MinLength(6, ErrorMessage = "Mật khẩu mới phải có ít nhất 6 ký tự")]
     public string NewPassword { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "Xác nhận mật khẩu là bắt buộc")]
