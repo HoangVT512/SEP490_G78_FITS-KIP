@@ -4,6 +4,7 @@ using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 using OfficeOpenXml;
+using System.Text.RegularExpressions;
 
 namespace FITSKIP.API.Controllers;
 
@@ -239,6 +240,14 @@ public class UsersController : ControllerBase
             return false;
         }
     }
+    public static bool IsValidVietnamPhoneNumber(string phoneNumber)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            return false;
+
+        string pattern = @"^(?:\+84|0)(?:3|5|7|8|9)[0-9]{8}$";
+        return Regex.IsMatch(phoneNumber, pattern);
+    }
 
     [HttpPost("import-excel")]
     public async Task<ActionResult> ImportUsersFromExcel(IFormFile file, CancellationToken cancellationToken)
@@ -277,6 +286,8 @@ public class UsersController : ControllerBase
 
                 var successCount = 0;
                 var failedUsers = new List<object>();
+
+                const string defaultPassword = "123456";
 
                 foreach (var request in userRequests)
                 {
@@ -335,10 +346,16 @@ public class UsersController : ControllerBase
                             });
                             continue;
                         }
-
-                        var passwordHash = !string.IsNullOrEmpty(request.Password) ?
-                            Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(request.Password)) :
-                            null;
+                        if (!IsValidVietnamPhoneNumber(request.PhoneNumber))
+                        {
+                            failedUsers.Add(new
+                            {
+                                UserName = request.UserName,
+                                Email = request.Email,
+                                Error = "Số điện thoại không hợp lệ"
+                            });
+                            continue;
+                        }
 
                         var user = new User
                         {
@@ -354,12 +371,17 @@ public class UsersController : ControllerBase
                             PhoneNumber = request.PhoneNumber,
                             EmailConfirmed = true,
                             LockoutEnabled = true,
-                            PasswordHash = passwordHash,
                             SecurityStamp = Guid.NewGuid().ToString(),
                             ConcurrencyStamp = Guid.NewGuid().ToString()
                         };
 
-                        await userService.CreateUserAsync(user, "DefaultPassword123!", null, cancellationToken);
+                        // Sử dụng password từ Excel hoặc default password
+                        var password = !string.IsNullOrWhiteSpace(request.Password)
+                            ? request.Password
+                            : defaultPassword;
+
+                        // Truyền RoleIds vào CreateUserAsync
+                        await userService.CreateUserAsync(user, password, request.RoleIds, cancellationToken);
                         successCount++;
                     }
                     catch (Exception ex)
@@ -379,7 +401,7 @@ public class UsersController : ControllerBase
                     TotalUsers = userRequests.Count,
                     SuccessCount = successCount,
                     FailedCount = failedUsers.Count,
-                    FailedUsers = failedUsers
+                    FailedUsers = failedUsers,
                 });
             }
         }
