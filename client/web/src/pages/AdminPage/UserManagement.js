@@ -22,6 +22,7 @@ import {
   DatePicker,
   Upload,
   Alert,
+  Descriptions,
 } from "antd";
 import {
   SearchOutlined,
@@ -336,7 +337,25 @@ const UserManagement = ({ showHeader = true }) => {
   const handleUserAction = async (action, user) => {
     switch (action) {
       case "view":
-        setViewingUser(user);
+        // Normalize user object for the view modal: ensure departments and roles are arrays
+        const normalizedUser = {
+          ...user,
+          departments: user.departmentId
+            ? [
+                {
+                  departmentId: user.departmentId,
+                  departmentName: user.department,
+                },
+              ]
+            : [],
+          roles: Array.isArray(user.roles)
+            ? user.roles
+            : user.role
+            ? [user.role]
+            : [],
+          isActive: user.status === "active",
+        };
+        setViewingUser(normalizedUser);
         setIsViewModalVisible(true);
         break;
       case "edit":
@@ -1424,339 +1443,46 @@ const UserManagement = ({ showHeader = true }) => {
       >
         {viewingUser && (
           <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
-            {/* Thông tin cơ bản */}
-            <Card
-              title={
-                <span
-                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                >
-                  <UserOutlined /> Thông tin cơ bản
-                </span>
-              }
-              size="small"
-              style={{ marginBottom: "16px" }}
-            >
-              <Row gutter={[24, 12]}>
-                <Col xs={24} sm={12}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">Họ và tên</Text>
-                    <div style={{ fontWeight: 500 }}>
-                      {viewingUser.fullName}
-                    </div>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">Mã nhân viên</Text>
-                    <div style={{ fontWeight: 500 }}>
-                      {viewingUser.employeeCode}
-                    </div>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">Ngày sinh</Text>
-                    <div style={{ fontWeight: 500 }}>
-                      {viewingUser.birthDate
-                        ? dayjs(viewingUser.birthDate).format("DD/MM/YYYY")
-                        : "Chưa cập nhật"}
-                    </div>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">Giới tính</Text>
-                    <div style={{ fontWeight: 500 }}>
-                      {viewingUser.gender || "Chưa cập nhật"}
-                    </div>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">CCCD/CMND</Text>
-                    <div style={{ fontWeight: 500 }}>
-                      {viewingUser.nationalId || "Chưa cập nhật"}
-                    </div>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">Ngày vào làm</Text>
-                    <div style={{ fontWeight: 500 }}>
-                      {viewingUser.joinDate
-                        ? dayjs(viewingUser.joinDate).format("DD/MM/YYYY")
-                        : "Chưa cập nhật"}
-                    </div>
-                  </div>
-                </Col>
-                <Col xs={24}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">Địa chỉ</Text>
-                    <div style={{ fontWeight: 500 }}>
-                      {viewingUser.address || "Chưa cập nhật"}
-                    </div>
-                  </div>
-                </Col>
-              </Row>
-            </Card>
-
-            {/* Thông tin liên hệ */}
-            <Card
-              title={
-                <span
-                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                >
-                  <PhoneOutlined /> Thông tin liên hệ
-                </span>
-              }
-              size="small"
-              style={{ marginBottom: "16px" }}
-            >
-              <Row gutter={[24, 12]}>
-                <Col xs={24} sm={12}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">Email</Text>
-                    <div
-                      style={{
-                        fontWeight: 500,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      {viewingUser.email}
-                      {viewingUser.emailConfirmed ? (
-                        <CheckCircleOutlined style={{ color: "#10b981" }} />
-                      ) : (
-                        <CloseCircleOutlined style={{ color: "#ef4444" }} />
-                      )}
-                    </div>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">Số điện thoại</Text>
-                    <div
-                      style={{
-                        fontWeight: 500,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "8px",
-                      }}
-                    >
-                      {viewingUser.phoneNumber}
-                      {viewingUser.phoneConfirmed ? (
-                        <CheckCircleOutlined style={{ color: "#10b981" }} />
-                      ) : (
-                        <CloseCircleOutlined style={{ color: "#ef4444" }} />
-                      )}
-                    </div>
-                  </div>
-                </Col>
-                {viewingUser.emergencyContact && (
-                  <>
-                    <Col xs={24} sm={12}>
-                      <div style={{ marginBottom: "8px" }}>
-                        <Text type="secondary">Người liên hệ khẩn cấp</Text>
-                        <div style={{ fontWeight: 500 }}>
-                          {viewingUser.emergencyContact.name} (
-                          {viewingUser.emergencyContact.relationship})
-                        </div>
-                      </div>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <div style={{ marginBottom: "8px" }}>
-                        <Text type="secondary">SĐT khẩn cấp</Text>
-                        <div style={{ fontWeight: 500 }}>
-                          {viewingUser.emergencyContact.phone}
-                        </div>
-                      </div>
-                    </Col>
-                  </>
-                )}
-              </Row>
-            </Card>
-
-            {/* Thông tin công việc */}
-            <Card
-              title={
-                <span
-                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                >
-                  <TeamOutlined /> Thông tin công việc
-                </span>
-              }
-              size="small"
-              style={{ marginBottom: "16px" }}
-            >
-              <Row gutter={[24, 12]}>
-                <Col xs={24} sm={12}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">Phòng ban</Text>
-                    <div style={{ fontWeight: 500 }}>
-                      {viewingUser.department}
-                    </div>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">Chức vụ</Text>
-                    <div style={{ fontWeight: 500 }}>
-                      {viewingUser.position}
-                    </div>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">Vai trò hệ thống</Text>
-                    <div>
-                      <Tag color={getRoleColor(viewingUser.role)}>
-                        {viewingUser.role}
-                      </Tag>
-                    </div>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">Trạng thái</Text>
-                    <div>
-                      <Badge
-                        status={getStatusColor(viewingUser.status)}
-                        text={getStatusText(viewingUser.status)}
-                      />
-                    </div>
-                  </div>
-                </Col>
-                {viewingUser.salary && (
-                  <Col xs={24} sm={12}>
-                    <div style={{ marginBottom: "8px" }}>
-                      <Text type="secondary">Mức lương</Text>
-                      <div style={{ fontWeight: 500 }}>
-                        {new Intl.NumberFormat("vi-VN", {
-                          style: "currency",
-                          currency: "VND",
-                        }).format(viewingUser.salary)}
-                      </div>
-                    </div>
-                  </Col>
-                )}
-              </Row>
-            </Card>
-
-            {/* Quyền hạn */}
-            {viewingUser.permissions && viewingUser.permissions.length > 0 && (
-              <Card
-                title={
-                  <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <SafetyOutlined /> Quyền hạn hệ thống
-                  </span>
-                }
-                size="small"
-                style={{ marginBottom: "16px" }}
-              >
-                <div>
-                  {viewingUser.permissions.map((permission) => {
-                    const permissionMap = {
-                      user_management: "Quản lý người dùng",
-                      system_settings: "Cài đặt hệ thống",
-                      reports: "Xem báo cáo",
-                      dashboard: "Truy cập Dashboard",
-                    };
-                    return (
-                      <Tag
-                        key={permission}
-                        color="blue"
-                        style={{ marginBottom: "4px" }}
-                      >
-                        {permissionMap[permission] || permission}
-                      </Tag>
-                    );
-                  })}
-                </div>
-              </Card>
-            )}
-
-            {/* Hoạt động gần đây */}
-            <Card
-              title={
-                <span
-                  style={{ display: "flex", alignItems: "center", gap: "8px" }}
-                >
-                  <ClockCircleOutlined /> Hoạt động gần đây
-                </span>
-              }
-              size="small"
-            >
-              <Row gutter={[24, 12]}>
-                <Col xs={24} sm={12}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">Đăng nhập cuối</Text>
-                    <div style={{ fontWeight: 500 }}>
-                      {dayjs(viewingUser.lastLoginDate).format(
-                        "DD/MM/YYYY HH:mm"
-                      )}
-                    </div>
-                  </div>
-                </Col>
-                <Col xs={24} sm={12}>
-                  <div style={{ marginBottom: "8px" }}>
-                    <Text type="secondary">Ngày tạo tài khoản</Text>
-                    <div style={{ fontWeight: 500 }}>
-                      {dayjs(viewingUser.createdDate).format(
-                        "DD/MM/YYYY HH:mm"
-                      )}
-                    </div>
-                  </div>
-                </Col>
-              </Row>
-
-              {viewingUser.loginHistory &&
-                viewingUser.loginHistory.length > 0 && (
-                  <div style={{ marginTop: "16px" }}>
-                    <Text type="secondary" strong>
-                      Lịch sử đăng nhập gần đây:
-                    </Text>
-                    <div style={{ marginTop: "8px" }}>
-                      {viewingUser.loginHistory
-                        .slice(0, 3)
-                        .map((login, index) => (
-                          <div
-                            key={index}
-                            style={{
-                              padding: "8px 12px",
-                              background: "#f8fafc",
-                              borderRadius: "6px",
-                              marginBottom: "4px",
-                              fontSize: "13px",
-                            }}
-                          >
-                            <div
-                              style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                              }}
-                            >
-                              <span>
-                                {dayjs(login.date).format("DD/MM/YYYY HH:mm")}
-                              </span>
-                              <span style={{ color: "#6b7280" }}>
-                                IP: {login.ip}
-                              </span>
-                            </div>
-                            <div style={{ color: "#6b7280", fontSize: "12px" }}>
-                              Device: {login.device}
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
-                )}
+            {/* Simplified user details — only fields present in DB */}
+            <Card size="small" style={{ marginBottom: 16 }}>
+              <Descriptions column={1} bordered>
+                <Descriptions.Item label="Họ và tên">
+                  {viewingUser.fullName || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Mã nhân viên">
+                  {viewingUser.employeeCode || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Tên đăng nhập">
+                  {viewingUser.userName || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Email">
+                  {viewingUser.email || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Số điện thoại">
+                  {viewingUser.phoneNumber || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Giới tính">
+                  {viewingUser.gender || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Chức vụ">
+                  {viewingUser.position || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Vai trò">
+                  {Array.isArray(viewingUser.roles)
+                    ? viewingUser.roles.join(", ")
+                    : viewingUser.role || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Phòng ban">
+                  {viewingUser.departments && viewingUser.departments.length > 0
+                    ? viewingUser.departments
+                        .map((d) => d.departmentName)
+                        .join(", ")
+                    : "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Trạng thái">
+                  {viewingUser.isActive ? "Hoạt động" : "Không hoạt động"}
+                </Descriptions.Item>
+              </Descriptions>
             </Card>
           </div>
         )}
