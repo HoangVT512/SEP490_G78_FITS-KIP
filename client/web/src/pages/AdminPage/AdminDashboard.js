@@ -152,8 +152,12 @@ const AdminDashboard = ({ showHeader = true }) => {
       login: <CheckCircleOutlined className={styles.activityIconLogin} />,
       logout: <ClockCircleOutlined className={styles.activityIconLogout} />,
       update: <SettingOutlined className={styles.activityIconUpdate} />,
-      failed_login: <WarningOutlined className={styles.activityIconFailedLogin} />,
-      account_locked: <SafetyOutlined className={styles.activityIconAccountLocked} />,
+      failed_login: (
+        <WarningOutlined className={styles.activityIconFailedLogin} />
+      ),
+      account_locked: (
+        <SafetyOutlined className={styles.activityIconAccountLocked} />
+      ),
     };
     return icons[type] || <UserOutlined />;
   };
@@ -201,7 +205,7 @@ const AdminDashboard = ({ showHeader = true }) => {
       <div className={styles.header}>
         <Title level={3} className={styles.title}>
           <DashboardOutlined className={styles.titleIcon} />
-          Dashboard quản trị viên
+          Bảng điều khiển quản trị viên
         </Title>
         <Text type="secondary">
           Tổng quan về tình trạng hệ thống và hoạt động của người dùng
@@ -229,7 +233,9 @@ const AdminDashboard = ({ showHeader = true }) => {
             <Statistic
               title="Đang hoạt động"
               value={stats.activeUsers}
-              prefix={<CheckCircleOutlined className={styles.statsIconActive} />}
+              prefix={
+                <CheckCircleOutlined className={styles.statsIconActive} />
+              }
               valueStyle={{ color: "#1f2937" }}
             />
             <Text type="secondary" className={styles.statDescription}>
@@ -277,10 +283,7 @@ const AdminDashboard = ({ showHeader = true }) => {
           </Card>
         </Col>
         <Col xs={24} lg={8}>
-          <Card
-            title="Phân bố vai trò người dùng"
-            className={styles.card}
-          >
+          <Card title="Phân bố vai trò người dùng" className={styles.card}>
             <Pie {...roleDistributionConfig} height={300} />
           </Card>
         </Col>
@@ -307,10 +310,7 @@ const AdminDashboard = ({ showHeader = true }) => {
                     title={
                       <Space>
                         <Text strong>{activity.user}</Text>
-                        <Text
-                          type="secondary"
-                          className={styles.activityTime}
-                        >
+                        <Text type="secondary" className={styles.activityTime}>
                           {dayjs(activity.time).format("HH:mm:ss")}
                         </Text>
                       </Space>
@@ -353,10 +353,7 @@ const AdminDashboard = ({ showHeader = true }) => {
                     title={
                       <Space>
                         <Text strong>{alert.title}</Text>
-                        <Text
-                          type="secondary"
-                          className={styles.alertTime}
-                        >
+                        <Text type="secondary" className={styles.alertTime}>
                           {dayjs(alert.time).format("DD/MM HH:mm")}
                         </Text>
                       </Space>

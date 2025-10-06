@@ -343,7 +343,7 @@ const RoleManagement = ({ showHeader = true }) => {
         },
         {
           key: "dashboard_view",
-          name: "Xem dashboard",
+          name: "Xem bảng điều khiển",
           description: "Có thể truy cập trang tổng quan",
         },
         {

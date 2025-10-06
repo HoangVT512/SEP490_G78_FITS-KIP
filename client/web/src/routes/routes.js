@@ -86,7 +86,7 @@ export const routes = [
   },
   {
     path: "/admin/dashboard",
-    name: "Admin Dashboard",
+    name: "Bảng điều khiển quản trị",
     page: AdminDashboard,
     isShowHeader: true,
     requiredPermissions: 2, // Admin only

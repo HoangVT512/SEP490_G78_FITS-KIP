@@ -64,7 +64,7 @@ const AdminLayout = () => {
     {
       key: "dashboard",
       icon: <DashboardOutlined />,
-      label: "Dashboard",
+      label: "Bảng điều khiển",
     },
     {
       key: "users",
@@ -238,7 +238,7 @@ const AdminLayout = () => {
         title: "Admin Panel",
       },
       {
-        title: currentMenu?.label || "Dashboard",
+        title: currentMenu?.label || "Bảng điều khiển",
       },
     ];
   };
