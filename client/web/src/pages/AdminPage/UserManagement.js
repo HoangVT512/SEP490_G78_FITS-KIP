@@ -994,14 +994,7 @@ const UserManagement = ({ showHeader = true }) => {
                 </p>
                 <ol style={{ paddingLeft: 20, marginBottom: 8 }}>
                   <li>
-                    <strong>UserName</strong> - Tên đăng nhập (bắt buộc)
-                  </li>
-                  <li>
                     <strong>Email</strong> - Email (bắt buộc, phải duy nhất)
-                  </li>
-                  <li>
-                    <strong>Password</strong> - Mật khẩu (để trống = mật khẩu
-                    mặc định)
                   </li>
                   <li>
                     <strong>FullName</strong> - Họ và tên đầy đủ
@@ -1013,15 +1006,39 @@ const UserManagement = ({ showHeader = true }) => {
                     <strong>EmployeeCode</strong> - Mã nhân viên (phải duy nhất)
                   </li>
                   <li>
-                    <strong>Position</strong> - Chức vụ
+                    <strong>Role</strong> - Vai trò (chọn từ dropdown có sẵn
+                    trong file Excel)
                   </li>
                   <li>
                     <strong>PhoneNumber</strong> - Số điện thoại
                   </li>
                 </ol>
+                <div
+                  style={{
+                    backgroundColor: "#f6ffed",
+                    border: "1px solid #b7eb8f",
+                    padding: "12px",
+                    borderRadius: "4px",
+                    marginBottom: 8,
+                  }}
+                >
+                  <strong>ℹ️ Thông tin tự động:</strong>
+                  <br />
+                  • Tên đăng nhập sẽ được tự động đặt bằng địa chỉ email
+                  <br />• Mật khẩu mặc định sẽ được tự động đặt là{" "}
+                  <strong>'123456'</strong>
+                  <br />• <strong>Cột Role:</strong> Sử dụng dropdown để chọn từ
+                  danh sách roles có sẵn trong hệ thống
+                </div>
                 <p style={{ color: "#ff4d4f", marginTop: 8 }}>
-                  ⚠️ Lưu ý: Email và Mã nhân viên phải là duy nhất, không được
-                  trùng với dữ liệu đã có
+                  ⚠️ Lưu ý quan trọng:
+                  <br />
+                  • Email, Mã nhân viên và Số điện thoại phải là duy nhất, không
+                  được trùng với dữ liệu đã có
+                  <br />• <strong>Số điện thoại:</strong> Nếu số bắt đầu bằng 0
+                  (như 0123456789), hãy nhập với dấu nháy đơn ở đầu (ví dụ:
+                  '0123456789) hoặc định dạng cột là Text trong Excel để tránh
+                  mất số 0
                 </p>
               </div>
             }
@@ -1030,12 +1047,15 @@ const UserManagement = ({ showHeader = true }) => {
             style={{ marginBottom: 16 }}
           />
 
-          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+          <Space
+            size="middle"
+            style={{ width: "100%", justifyContent: "center" }}
+          >
             <Button
               icon={<ExportOutlined />}
               onClick={handleDownloadTemplate}
-              block
               type="dashed"
+              style={{ width: "250px" }}
             >
               Tải file mẫu Excel
             </Button>
@@ -1050,7 +1070,7 @@ const UserManagement = ({ showHeader = true }) => {
                 icon={<UploadOutlined />}
                 loading={importing}
                 type="primary"
-                block
+                style={{ width: "250px" }}
               >
                 {importing
                   ? "Đang nhập dữ liệu..."

@@ -13,10 +13,12 @@ namespace FITSKIP.API.Controllers;
 public class UsersController : ControllerBase
 {
     private readonly IUserService userService;
+    private readonly IRoleService roleService;
 
-    public UsersController(IUserService userService)
+    public UsersController(IUserService userService, IRoleService roleService)
     {
         this.userService = userService;
+        this.roleService = roleService;
     }
 
     [HttpGet]
@@ -413,42 +415,59 @@ public class UsersController : ControllerBase
 
 
     [HttpGet("download-template")]
-    public IActionResult DownloadExcelTemplate()
+    public async Task<IActionResult> DownloadExcelTemplate()
     {
         try
         {
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
+            // Lấy danh sách roles từ hệ thống
+            var roles = await roleService.GetRolesWithUserCountAsync();
+
             using (var package = new ExcelPackage())
             {
                 var worksheet = package.Workbook.Worksheets.Add("Users");
 
+                // Tạo sheet ẩn chứa danh sách roles
+                var rolesSheet = package.Workbook.Worksheets.Add("RolesList");
+                rolesSheet.Hidden = eWorkSheetHidden.Hidden;
 
-                worksheet.Cells[1, 1].Value = "UserName";
-                worksheet.Cells[1, 2].Value = "Email";
-                worksheet.Cells[1, 3].Value = "Password";
-                worksheet.Cells[1, 4].Value = "FullName";
-                worksheet.Cells[1, 5].Value = "Gender";
-                worksheet.Cells[1, 6].Value = "EmployeeCode";
-                worksheet.Cells[1, 7].Value = "Position";
-                worksheet.Cells[1, 8].Value = "PhoneNumber";
+                // Thêm danh sách roles vào sheet ẩn
+                for (int i = 0; i < roles.Count; i++)
+                {
+                    rolesSheet.Cells[i + 1, 1].Value = roles[i].Name;
+                }
 
-                using (var range = worksheet.Cells[1, 1, 1, 8])
+                worksheet.Cells[1, 1].Value = "Email";
+                worksheet.Cells[1, 2].Value = "FullName";
+                worksheet.Cells[1, 3].Value = "Gender";
+                worksheet.Cells[1, 4].Value = "EmployeeCode";
+                worksheet.Cells[1, 5].Value = "Role";
+                worksheet.Cells[1, 6].Value = "PhoneNumber";
+
+                using (var range = worksheet.Cells[1, 1, 1, 6])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
                     range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
                 }
 
+                // Định dạng cột PhoneNumber là Text để tránh mất số 0 ở đầu
+                worksheet.Column(6).Style.Numberformat.Format = "@";
 
-                worksheet.Cells[2, 1].Value = "Trung";
-                worksheet.Cells[2, 2].Value = "Trungnd98@fpt.com";
-                worksheet.Cells[2, 3].Value = "123";
-                worksheet.Cells[2, 4].Value = "Duc Trung";
-                worksheet.Cells[2, 5].Value = "Male";
-                worksheet.Cells[2, 6].Value = "EMP001";
-                worksheet.Cells[2, 7].Value = "Engineer";
-                worksheet.Cells[2, 8].Value = "0973771789";
+                // Tạo dropdown validation cho cột Role (cột 5)
+                var roleValidation = worksheet.DataValidations.AddListValidation("E2:E1000");
+                roleValidation.Formula.ExcelFormula = $"=RolesList!$A$1:$A${roles.Count}";
+                roleValidation.ShowErrorMessage = true;
+                roleValidation.ErrorTitle = "Giá trị không hợp lệ";
+                roleValidation.Error = "Vui lòng chọn role từ danh sách có sẵn.";
+
+                worksheet.Cells[2, 1].Value = "Trungnd98@fpt.com";
+                worksheet.Cells[2, 2].Value = "Duc Trung";
+                worksheet.Cells[2, 3].Value = "Male";
+                worksheet.Cells[2, 4].Value = "EMP001";
+                worksheet.Cells[2, 5].Value = roles.FirstOrDefault()?.Name ?? "User";
+                worksheet.Cells[2, 6].Value = "'0973771789"; // Thêm dấu nháy đơn để đảm bảo là text
 
                 worksheet.Cells.AutoFitColumns();
 

@@ -197,7 +197,10 @@ const StageManagement = ({ showHeader = true }) => {
       if (Array.isArray(response)) {
         setDepartmentActive(response);
       } else {
-        console.warn("Unexpected active departments response format:", response);
+        console.warn(
+          "Unexpected active departments response format:",
+          response
+        );
         setDepartmentActive([]);
       }
     } catch (error) {
@@ -268,14 +271,16 @@ const StageManagement = ({ showHeader = true }) => {
               } else {
                 message.error(
                   response.message ||
-                  `${actionText.charAt(0).toUpperCase() + actionText.slice(1)
-                  } công đoạn thất bại`
+                    `${
+                      actionText.charAt(0).toUpperCase() + actionText.slice(1)
+                    } công đoạn thất bại`
                 );
               }
             } catch (error) {
               console.error("Toggle stage status error:", error);
               message.error(
-                `${actionText.charAt(0).toUpperCase() + actionText.slice(1)
+                `${
+                  actionText.charAt(0).toUpperCase() + actionText.slice(1)
                 } công đoạn thất bại`
               );
             }
@@ -528,8 +533,8 @@ const StageManagement = ({ showHeader = true }) => {
               value={
                 lines.length > 0
                   ? (
-                    stages.length / new Set(stages.map((s) => s.lineId)).size
-                  ).toFixed(1)
+                      stages.length / new Set(stages.map((s) => s.lineId)).size
+                    ).toFixed(1)
                   : 0
               }
               prefix={<LineChartOutlined style={{ color: "#722ed1" }} />}
@@ -602,9 +607,6 @@ const StageManagement = ({ showHeader = true }) => {
                 style={{ backgroundColor: "#334766", borderColor: "#334766" }}
               >
                 Thêm công đoạn
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={loadStages}>
-                Làm mới
               </Button>
               <Button
                 type={showArchive ? "default" : "dashed"}
@@ -711,9 +713,7 @@ const StageManagement = ({ showHeader = true }) => {
               <Form.Item
                 name="departmentId"
                 label="Phòng ban"
-                rules={[
-                  { required: true, message: "Vui lòng chọn phòng ban" },
-                ]}
+                rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
               >
                 <Select
                   placeholder="Chọn phòng ban"

@@ -23,13 +23,13 @@ public class UserRepository : IUserRepository
         var existingUser = await db.Users.FirstOrDefaultAsync(u => u.UserName == user.UserName, cancellationToken);
         if (existingUser != null)
         {
-            throw new ArgumentException("User with the same username already exists.");
+            throw new ArgumentException("Người dùng với tên đăng nhập này đã tồn tại.");
         }
 
         var existingEmail = await db.Users.FirstOrDefaultAsync(u => u.Email == user.Email, cancellationToken);
         if (existingEmail != null)
         {
-            throw new ArgumentException("User with the same email already exists.");
+            throw new ArgumentException("Người dùng với email này đã tồn tại.");
         }
 
         if (!string.IsNullOrEmpty(user.EmployeeCode))
@@ -37,7 +37,7 @@ public class UserRepository : IUserRepository
             var existingEmployeeCode = await db.Users.FirstOrDefaultAsync(u => u.EmployeeCode == user.EmployeeCode, cancellationToken);
             if (existingEmployeeCode != null)
             {
-                throw new ArgumentException("User with the same employee code already exists.");
+                throw new ArgumentException("Người dùng với mã nhân viên này đã tồn tại.");
             }
         }
 
@@ -46,7 +46,7 @@ public class UserRepository : IUserRepository
             var existingPhone = await db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == user.PhoneNumber, cancellationToken);
             if (existingPhone != null)
             {
-                throw new ArgumentException("User with the same phone number already exists.");
+                throw new ArgumentException("Người dùng với số điện thoại này đã tồn tại.");
             }
         }
 
