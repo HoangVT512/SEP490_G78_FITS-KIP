@@ -573,13 +573,6 @@ const UserManagement = ({ showHeader = true }) => {
           <div style={{ marginBottom: 4 }}>
             <MailOutlined style={{ color: "#334766", marginRight: 6 }} />
             <Text style={{ fontSize: "13px" }}>{record.email}</Text>
-            {record.emailConfirmed && (
-              <Badge
-                status="success"
-                style={{ marginLeft: 6 }}
-                title="Email đã xác thực"
-              />
-            )}
           </div>
           <div>
             <PhoneOutlined style={{ color: "#334766", marginRight: 6 }} />
@@ -756,7 +749,6 @@ const UserManagement = ({ showHeader = true }) => {
     } else {
       return (
         searchMatch &&
-        statusMatch &&
         roleMatch &&
         departmentMatch &&
         user.status !== "inactive"
@@ -899,18 +891,6 @@ const UserManagement = ({ showHeader = true }) => {
           </Col>
           <Col xs={24} sm={12} md={4}>
             <Select
-              value={filters.status}
-              onChange={(value) => setFilters({ ...filters, status: value })}
-              className={styles.userSearchInput}
-              placeholder="Trạng thái"
-            >
-              <Option value="all">Tất cả trạng thái</Option>
-              <Option value="active">Hoạt động</Option>
-              <Option value="inactive">Ngừng hoạt động</Option>
-            </Select>
-          </Col>
-          <Col xs={24} sm={12} md={4}>
-            <Select
               value={filters.role}
               onChange={(value) => setFilters({ ...filters, role: value })}
               style={{ width: "100%" }}
@@ -948,22 +928,6 @@ const UserManagement = ({ showHeader = true }) => {
                 Thêm người dùng
               </Button>
               <Button
-                icon={<ReloadOutlined />}
-                onClick={async () => {
-                  setLoading(true);
-                  try {
-                    const userData = await userService.getUsers();
-                    setUsers(userData);
-                  } catch (error) {
-                    message.error("Không thể tải lại danh sách người dùng");
-                  } finally {
-                    setLoading(false);
-                  }
-                }}
-              >
-                Làm mới
-              </Button>
-              <Button
                 type={showArchive ? "default" : "dashed"}
                 icon={<ArchiveIcon />}
                 onClick={() => setShowArchive(!showArchive)}
@@ -995,7 +959,6 @@ const UserManagement = ({ showHeader = true }) => {
           locale={{
             emptyText:
               searchText ||
-              filters.status !== "all" ||
               filters.role !== "all" ||
               filters.department !== "all"
                 ? "Không có người dùng nào phù hợp với tìm kiếm hoặc bộ lọc."
