@@ -106,6 +106,7 @@ const DepartmentManagement = ({ showHeader = true }) => {
           ...dept,
           managerName: manager ? manager.fullName : null,
           managerId: manager ? manager.id : dept.managerId, // Update managerId if found
+          managerEmployeeCode: manager ? manager.employeeCode : null,
           lineCount: departmentLines.length,
         };
       });
@@ -153,19 +154,8 @@ const DepartmentManagement = ({ showHeader = true }) => {
   const handleAction = async (action, department) => {
     switch (action) {
       case "view":
-        try {
-          setLoading(true);
-          const departmentDetail = await departmentService.getDepartmentById(
-            department.departmentId
-          );
-          setViewingDepartment(departmentDetail);
-          setIsViewModalVisible(true);
-          setLoading(false);
-        } catch (error) {
-          console.error("Error loading department detail:", error);
-          message.error("Không thể tải thông tin chi tiết phòng ban");
-          setLoading(false);
-        }
+        setViewingDepartment(department);
+        setIsViewModalVisible(true);
         break;
       case "edit":
         setEditingDepartment(department);
@@ -343,7 +333,7 @@ const DepartmentManagement = ({ showHeader = true }) => {
             <div
               style={{ fontSize: "12px", color: "#6b7280", marginTop: "2px" }}
             >
-              ID: {record.managerId}
+              Mã NV: {record.managerEmployeeCode}
             </div>
           )}
         </div>
@@ -545,9 +535,6 @@ const DepartmentManagement = ({ showHeader = true }) => {
               >
                 Thêm phòng ban
               </Button>
-              <Button icon={<ReloadOutlined />} onClick={loadDepartments}>
-                Làm mới
-              </Button>
             </Space>
           </Col>
         </Row>
@@ -734,8 +721,8 @@ const DepartmentManagement = ({ showHeader = true }) => {
               <Descriptions.Item label="Mô tả" span={2}>
                 {viewingDepartment.description}
               </Descriptions.Item>
-              <Descriptions.Item label="ID Quản lý">
-                {viewingDepartment.managerId || "Chưa có"}
+              <Descriptions.Item label="Mã nhân viên">
+                {viewingDepartment.managerEmployeeCode || "Chưa có"}
               </Descriptions.Item>
               <Descriptions.Item label="Tên quản lý">
                 {viewingDepartment.managerName || "Chưa có"}
