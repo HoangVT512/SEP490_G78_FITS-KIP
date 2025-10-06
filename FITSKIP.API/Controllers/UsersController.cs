@@ -467,7 +467,7 @@ public class UsersController : ControllerBase
                 worksheet.Cells[2, 3].Value = "Male";
                 worksheet.Cells[2, 4].Value = "EMP001";
                 worksheet.Cells[2, 5].Value = roles.FirstOrDefault()?.Name ?? "User";
-                worksheet.Cells[2, 6].Value = "'0973771789"; // Thêm dấu nháy đơn để đảm bảo là text
+                worksheet.Cells[2, 6].Value = "0973771789";
 
                 worksheet.Cells.AutoFitColumns();
 

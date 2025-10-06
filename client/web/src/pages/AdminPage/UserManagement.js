@@ -1036,9 +1036,8 @@ const UserManagement = ({ showHeader = true }) => {
                   • Email, Mã nhân viên và Số điện thoại phải là duy nhất, không
                   được trùng với dữ liệu đã có
                   <br />• <strong>Số điện thoại:</strong> Nếu số bắt đầu bằng 0
-                  (như 0123456789), hãy nhập với dấu nháy đơn ở đầu (ví dụ:
-                  '0123456789) hoặc định dạng cột là Text trong Excel để tránh
-                  mất số 0
+                  (như 0123456789), hãy định dạng cột là Text trong Excel để
+                  tránh mất số 0
                 </p>
               </div>
             }
