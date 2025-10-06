@@ -27,12 +27,13 @@ namespace FITSKIP.Application.Services
                     {
                         var userName = worksheet.Cells[row, 1].Value?.ToString()?.Trim();
                         var email = worksheet.Cells[row, 2].Value?.ToString()?.Trim();
-                        var password = worksheet.Cells[row, 3].Value?.ToString()?.Trim();
-                        var fullName = worksheet.Cells[row, 4].Value?.ToString()?.Trim();
-                        var gender = worksheet.Cells[row, 5].Value?.ToString()?.Trim();
-                        var employeeCode = worksheet.Cells[row, 6].Value?.ToString()?.Trim();
-                        var position = worksheet.Cells[row, 7].Value?.ToString()?.Trim();
-                        var phoneNumber = worksheet.Cells[row, 8].Value?.ToString()?.Trim();
+                        var password = "123456";
+                        var fullName = worksheet.Cells[row, 3].Value?.ToString()?.Trim();
+                        var gender = worksheet.Cells[row, 4].Value?.ToString()?.Trim();
+                        var employeeCode = worksheet.Cells[row, 5].Value?.ToString()?.Trim();
+                        var position = worksheet.Cells[row, 6].Value?.ToString()?.Trim();
+                        var phoneNumber = worksheet.Cells[row, 7].Value?.ToString()?.Trim();
+                        var roleIds = worksheet.Cells[row, 8].Value?.ToString()?.Trim().Split(',').Select(r => r.Trim()).ToArray();
 
                         if (string.IsNullOrEmpty(userName) || string.IsNullOrEmpty(email))
                         {
@@ -43,12 +44,13 @@ namespace FITSKIP.Application.Services
                         {
                             UserName = userName,
                             Email = email,
-                            Password = password ?? "DefaultPassword123!",
+                            Password = password,
                             FullName = fullName,
                             Gender = gender,
                             EmployeeCode = employeeCode,
                             Position = position,
-                            PhoneNumber = phoneNumber
+                            PhoneNumber = phoneNumber,
+                            RoleIds = roleIds
                         });
                     }
                     catch (Exception)
