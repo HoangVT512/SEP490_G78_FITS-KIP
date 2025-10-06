@@ -24,7 +24,6 @@ import {
   LockOutlined,
   DashboardOutlined,
 } from "@ant-design/icons";
-import { Pie } from "@ant-design/plots";
 import styles from "../../styles/pages/AdminDashboard.module.css";
 import { dashboardService } from "../../services/dashboardService";
 
@@ -63,73 +62,6 @@ const AdminDashboard = ({ showHeader = true }) => {
 
     fetchDashboardData();
   }, []);
-
-  // Cấu hình biểu đồ phân bố vai trò
-  const getRoleDistributionConfig = () => {
-    if (!statistics?.summary || !statistics?.usersByRole) {
-      console.log("No data for chart:", {
-        summary: statistics?.summary,
-        usersByRole: statistics?.usersByRole,
-      });
-      return null;
-    }
-
-    const data = statistics.usersByRole.map((role) => ({
-      type: role.roleName,
-      value: role.userCount,
-    }));
-
-    console.log("Chart data:", data);
-
-    return {
-      data,
-      angleField: "value",
-      colorField: "type",
-      radius: 0.8,
-      label: {
-        formatter: (datum) => (datum ? `${datum.type}: ${datum.value}` : ""),
-      },
-      tooltip: {
-        customContent: (title, data) => {
-          // Robust tooltip rendering: accept multiple possible shapes from the plotting lib
-          console.log("Tooltip data:", { title, data });
-          if (!data || data.length === 0) return "";
-          const item = data[0];
-          console.log("Tooltip item:", item);
-
-          // Try multiple places for the role name and value to avoid nulls
-          const roleName =
-            item?.data?.type ??
-            item?.data?.name ??
-            item?.name ??
-            item?.title ??
-            title ??
-            "";
-          const userCount =
-            item?.data?.value ?? item?.value ?? item?.y ?? item?.count ?? 0;
-          const color =
-            item?.color ?? (item?.data && item.data.color) ?? "#1890ff";
-
-          return `
-            <div style="padding: 8px 12px; background: white; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
-              <div style="margin-bottom: 4px; font-weight: 600; color: #333;">${
-                roleName || ""
-              }</div>
-              <div style="display: flex; align-items: center;">
-                <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background-color: ${color}; margin-right: 8px;"></span>
-                <span style="color: #666;">Số lượng: <strong style="color: #333;">${userCount} người dùng</strong></span>
-              </div>
-            </div>
-          `;
-        },
-      },
-      interactions: [{ type: "element-selected" }, { type: "element-active" }],
-      color: ["#334766", "#7c3aed", "#dc2626", "#ea580c", "#16a34a"],
-      legend: {
-        position: "bottom",
-      },
-    };
-  };
 
   // Columns cho bảng phòng ban
   const departmentColumns = [
@@ -237,8 +169,6 @@ const AdminDashboard = ({ showHeader = true }) => {
     );
   }
 
-  const roleDistributionConfig = getRoleDistributionConfig();
-
   const content = (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -334,19 +264,87 @@ const AdminDashboard = ({ showHeader = true }) => {
       </Row>
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-        <Col xs={24} lg={12}>
-          <Card title="Phân bố vai trò người dùng" className={styles.card}>
-            {roleDistributionConfig &&
-            roleDistributionConfig.data &&
-            roleDistributionConfig.data.length > 0 ? (
-              <Pie {...roleDistributionConfig} height={300} />
-            ) : (
-              <Empty description="Không có dữ liệu vai trò" />
-            )}
+        <Col xs={24} lg={12} style={{ display: "flex" }}>
+          <Card
+            title="Phân bố vai trò người dùng"
+            className={styles.card}
+            style={{ width: "100%" }}
+          >
+            <Row gutter={[8, 8]}>
+              {statistics.usersByRole &&
+                statistics.usersByRole.map((role, index) => (
+                  <Col span={24} key={index}>
+                    <Card
+                      size="small"
+                      style={{
+                        background: [
+                          "#f0f5ff",
+                          "#f9f0ff",
+                          "#fff7e6",
+                          "#f6ffed",
+                          "#fff1f0",
+                        ][index % 5],
+                        border: `1px solid ${
+                          [
+                            "#91d5ff",
+                            "#d3adf7",
+                            "#ffd591",
+                            "#b7eb8f",
+                            "#ffa39e",
+                          ][index % 5]
+                        }`,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                        }}
+                      >
+                        <div>
+                          <Text strong style={{ fontSize: "16px" }}>
+                            {role.roleName}
+                          </Text>
+                          <div style={{ marginTop: 4 }}>
+                            <Text type="secondary" style={{ fontSize: "12px" }}>
+                              {role.percentage.toFixed(1)}% tổng số người dùng
+                            </Text>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: "right" }}>
+                          <div
+                            style={{
+                              fontSize: "24px",
+                              fontWeight: "bold",
+                              color: [
+                                "#1890ff",
+                                "#722ed1",
+                                "#fa8c16",
+                                "#52c41a",
+                                "#f5222d",
+                              ][index % 5],
+                            }}
+                          >
+                            {role.userCount}
+                          </div>
+                          <Text type="secondary" style={{ fontSize: "12px" }}>
+                            người dùng
+                          </Text>
+                        </div>
+                      </div>
+                    </Card>
+                  </Col>
+                ))}
+            </Row>
           </Card>
         </Col>
-        <Col xs={24} lg={12}>
-          <Card title="Tình trạng tài khoản" className={styles.card}>
+        <Col xs={24} lg={12} style={{ display: "flex" }}>
+          <Card
+            title="Tình trạng tài khoản"
+            className={styles.card}
+            style={{ width: "100%" }}
+          >
             <Row gutter={[16, 16]}>
               <Col span={12}>
                 <Card
