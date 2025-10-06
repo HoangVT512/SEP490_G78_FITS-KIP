@@ -691,13 +691,6 @@ const RoleManagement = ({ showHeader = true }) => {
                 >
                   Tạo vai trò mới
                 </Button>
-                <Button
-                  icon={<ReloadOutlined />}
-                  size="large"
-                  onClick={loadRoles}
-                >
-                  Tải lại
-                </Button>
               </div>
             </Col>
           </Row>

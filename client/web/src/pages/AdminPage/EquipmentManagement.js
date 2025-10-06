@@ -526,17 +526,6 @@ const EquipmentManagement = ({ showHeader = true }) => {
           </Col>
           <Col xs={24} md={4}>
             <Button
-              type="default"
-              icon={<ReloadOutlined />}
-              onClick={loadEquipments}
-              loading={loading}
-              style={{ width: "100%" }}
-            >
-              Làm mới
-            </Button>
-          </Col>
-          <Col xs={24} md={4}>
-            <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => {
