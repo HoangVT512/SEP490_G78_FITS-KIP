@@ -249,7 +249,8 @@ const LineManagement = ({ showHeader = true }) => {
               const response = await lineService.toggleLineStatus(line.lineId);
               if (response.success) {
                 message.success(
-                  `Đã ${line.isActive ? "khóa" : "mở khóa"
+                  `Đã ${
+                    line.isActive ? "khóa" : "mở khóa"
                   } dây chuyền thành công`
                 );
                 loadLines();
@@ -438,11 +439,6 @@ const LineManagement = ({ showHeader = true }) => {
         ?.toLowerCase()
         .includes(searchText.toLowerCase());
 
-    const matchesStatus =
-      filters.status === "all" ||
-      (filters.status === "active" && line.isActive) ||
-      (filters.status === "inactive" && !line.isActive);
-
     const matchesDepartment =
       filters.department === "all" ||
       line.departmentId?.toString() === filters.department;
@@ -451,9 +447,7 @@ const LineManagement = ({ showHeader = true }) => {
     if (showArchive) {
       return matchesSearch && matchesDepartment && !line.isActive;
     } else {
-      return (
-        matchesSearch && matchesStatus && matchesDepartment && line.isActive
-      );
+      return matchesSearch && matchesDepartment && line.isActive;
     }
   });
 
@@ -488,9 +482,9 @@ const LineManagement = ({ showHeader = true }) => {
               value={
                 lines.length > 0
                   ? Math.round(
-                    lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) /
-                    lines.length
-                  )
+                      lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) /
+                        lines.length
+                    )
                   : 0
               }
               suffix="%"
@@ -546,19 +540,6 @@ const LineManagement = ({ showHeader = true }) => {
           </Col>
           <Col xs={24} sm={8} md={4}>
             <Select
-              value={filters.status}
-              onChange={(value) => setFilters({ ...filters, status: value })}
-              style={{ width: "100%" }}
-              placeholder="Trạng thái"
-              size="large"
-            >
-              <Option value="all">Tất cả trạng thái</Option>
-              <Option value="active">Hoạt động</Option>
-              <Option value="inactive">Dừng hoạt động</Option>
-            </Select>
-          </Col>
-          <Col xs={24} sm={8} md={4}>
-            <Select
               value={filters.department}
               onChange={(value) =>
                 setFilters({ ...filters, department: value })
@@ -591,9 +572,6 @@ const LineManagement = ({ showHeader = true }) => {
                 style={{ backgroundColor: "#334766", borderColor: "#334766" }}
               >
                 Thêm dây chuyền
-              </Button>
-              <Button icon={<ReloadOutlined />} onClick={loadLines}>
-                Làm mới
               </Button>
             </Space>
           </Col>
