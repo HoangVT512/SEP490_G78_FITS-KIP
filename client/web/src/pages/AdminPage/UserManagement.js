@@ -1320,31 +1320,46 @@ const UserManagement = ({ showHeader = true }) => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                label="Trạng thái"
-                tooltip="Trạng thái mặc định khi tạo người dùng mới"
-              >
-                <div
-                  style={{
-                    padding: "4px 11px",
-                    border: "1px solid #d9d9d9",
-                    borderRadius: "6px",
-                    backgroundColor: "#f6ffed",
-                    borderColor: "#b7eb8f",
-                    display: "flex",
-                    alignItems: "center",
-                  }}
+              {editingUser ? (
+                <Form.Item
+                  name="status"
+                  label="Trạng thái"
+                  rules={[
+                    { required: true, message: "Vui lòng chọn trạng thái" },
+                  ]}
                 >
-                  <CheckCircleOutlined
-                    style={{ color: "#52c41a", marginRight: "8px" }}
-                  />
-                  <Typography.Text
-                    style={{ color: "#52c41a", fontWeight: "500" }}
+                  <Select placeholder="Chọn trạng thái">
+                    <Option value="true">Hoạt động</Option>
+                    <Option value="false">Ngừng hoạt động</Option>
+                  </Select>
+                </Form.Item>
+              ) : (
+                <Form.Item
+                  label="Trạng thái"
+                  tooltip="Trạng thái mặc định khi tạo người dùng mới"
+                >
+                  <div
+                    style={{
+                      padding: "4px 11px",
+                      border: "1px solid #d9d9d9",
+                      borderRadius: "6px",
+                      backgroundColor: "#f6ffed",
+                      borderColor: "#b7eb8f",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
                   >
-                    Hoạt động (Mặc định)
-                  </Typography.Text>
-                </div>
-              </Form.Item>
+                    <CheckCircleOutlined
+                      style={{ color: "#52c41a", marginRight: "8px" }}
+                    />
+                    <Typography.Text
+                      style={{ color: "#52c41a", fontWeight: "500" }}
+                    >
+                      Hoạt động (Mặc định)
+                    </Typography.Text>
+                  </div>
+                </Form.Item>
+              )}
             </Col>
           </Row>
 
