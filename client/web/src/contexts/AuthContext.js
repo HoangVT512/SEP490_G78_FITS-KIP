@@ -124,6 +124,14 @@ export const AuthProvider = ({ children }) => {
     );
   };
 
+  const isTeamLeader = () => {
+    return (
+      user &&
+      user.roles &&
+      (user.roles.includes("Tổ trưởng") || user.roles.includes("TOTRUONG"))
+    );
+  };
+
   const hasRole = (role) => {
     return user && user.roles && user.roles.includes(role);
   };
@@ -136,6 +144,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     isLoggingOut,
     isAdmin,
+    isTeamLeader,
     hasRole,
     checkAuthStatus,
   };

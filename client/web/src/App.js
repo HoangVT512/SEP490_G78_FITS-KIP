@@ -43,6 +43,19 @@ function App() {
                   }
                 />
               );
+            } else if (route.requiredPermissions === 3) {
+              // TeamLeader-only routes
+              return (
+                <Route
+                  key={idx}
+                  path={route.path}
+                  element={
+                    <ProtectedRoute requireTeamLeader={true}>
+                      {element}
+                    </ProtectedRoute>
+                  }
+                />
+              );
             }
             return null;
           })}

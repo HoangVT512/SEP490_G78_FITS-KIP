@@ -23,7 +23,8 @@ const { Title } = Typography;
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated, user, isAdmin, isLoggingOut } = useAuth();
+  const { login, isAuthenticated, user, isAdmin, isTeamLeader, isLoggingOut } =
+    useAuth();
   const [loading, setLoading] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [form] = Form.useForm();
@@ -52,18 +53,28 @@ const Login = () => {
     if (isAuthenticated && user && user.roles) {
       console.log("Auto-redirecting authenticated user...");
       console.log("Checking roles for redirect:", user.roles);
+
       const isUserAdmin =
         user.roles &&
         (user.roles.includes("Quản trị viên") ||
           user.roles.includes("QUANTRI"));
+
+      const isUserTeamLeader =
+        user.roles &&
+        (user.roles.includes("Tổ trưởng") || user.roles.includes("TOTRUONG"));
+
       console.log("Is admin:", isUserAdmin);
+      console.log("Is team leader:", isUserTeamLeader);
 
       if (isUserAdmin) {
         console.log("Redirecting to admin page");
         navigate("/admin");
+      } else if (isUserTeamLeader) {
+        console.log("Redirecting to team leader page");
+        navigate("/team-leader");
       } else {
-        console.log("Redirecting to admin");
-        navigate("/admin");
+        console.log("Redirecting to default page");
+        navigate("/team-leader");
       }
     }
   }, [isAuthenticated, user, navigate, isLoggingOut]);
@@ -83,9 +94,32 @@ const Login = () => {
 
       message.success("Đăng nhập thành công!");
 
-      // Redirect all authenticated users to admin
-      console.log("Redirecting to admin page for all users");
-      navigate("/admin");
+      // Redirect based on user role
+      console.log(
+        "Login successful, checking user roles:",
+        response.user?.roles
+      );
+
+      const isUserAdmin =
+        response.user?.roles &&
+        (response.user.roles.includes("Quản trị viên") ||
+          response.user.roles.includes("QUANTRI"));
+
+      const isUserTeamLeader =
+        response.user?.roles &&
+        (response.user.roles.includes("Tổ trưởng") ||
+          response.user.roles.includes("TOTRUONG"));
+
+      if (isUserAdmin) {
+        console.log("Redirecting to admin page");
+        navigate("/admin");
+      } else if (isUserTeamLeader) {
+        console.log("Redirecting to team leader page");
+        navigate("/team-leader");
+      } else {
+        console.log("Redirecting to default page");
+        navigate("/team-leader");
+      }
     } catch (error) {
       // Check if error is due to inactive account
       const errorMessage = error.message || "";

@@ -11,6 +11,10 @@ import RoleManagement from "../pages/AdminPage/RoleManagement";
 import AdminDashboard from "../pages/AdminPage/AdminDashboard";
 import SystemSettings from "../pages/AdminPage/SystemSettings";
 import AdminReports from "../pages/AdminPage/AdminReports";
+// TeamLeader imports
+import TeamLeaderLayout from "../pages/TeamLeaderPage/TeamLeaderLayout";
+import TeamLeaderDashboard from "../pages/TeamLeaderPage/TeamLeaderDashboard";
+import TeamLeaderEquipment from "../pages/TeamLeaderPage/TeamLeaderEquipment";
 
 export const routes = [
   {
@@ -104,5 +108,27 @@ export const routes = [
     page: AdminReports,
     isShowHeader: true,
     requiredPermissions: 2, // Admin only
+  },
+  // TeamLeader routes
+  {
+    path: "/team-leader",
+    name: "Team Leader Panel",
+    page: TeamLeaderLayout,
+    isShowHeader: false, // TeamLeaderLayout has its own header
+    requiredPermissions: 3, // TeamLeader only
+  },
+  {
+    path: "/team-leader/dashboard",
+    name: "Team Leader Dashboard",
+    page: TeamLeaderDashboard,
+    isShowHeader: true,
+    requiredPermissions: 3, // TeamLeader only
+  },
+  {
+    path: "/team-leader/equipment",
+    name: "Team Leader Equipment",
+    page: TeamLeaderEquipment,
+    isShowHeader: true,
+    requiredPermissions: 3, // TeamLeader only
   },
 ];

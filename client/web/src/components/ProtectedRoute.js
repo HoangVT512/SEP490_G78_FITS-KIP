@@ -6,9 +6,10 @@ import { Spin } from "antd";
 const ProtectedRoute = ({
   children,
   requireAdmin = false,
+  requireTeamLeader = false,
   redirectTo = "/login",
 }) => {
-  const { isAuthenticated, loading, isAdmin, user } = useAuth();
+  const { isAuthenticated, loading, isAdmin, isTeamLeader, user } = useAuth();
 
   if (loading) {
     return (
@@ -35,7 +36,11 @@ const ProtectedRoute = ({
   }
 
   if (requireAdmin && !isAdmin()) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/team-leader" replace />;
+  }
+
+  if (requireTeamLeader && !isTeamLeader()) {
+    return <Navigate to="/admin" replace />;
   }
 
   return children;
