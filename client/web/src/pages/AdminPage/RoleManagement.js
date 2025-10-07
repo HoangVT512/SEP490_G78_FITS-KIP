@@ -66,6 +66,7 @@ const RoleManagement = ({ showHeader = true }) => {
     useState(false);
   const [editingRole, setEditingRole] = useState(null);
   const [viewingRole, setViewingRole] = useState(null);
+  const [users, setUsers] = useState([]);
   const [form] = Form.useForm();
   const [permissionForm] = Form.useForm();
 
@@ -81,6 +82,7 @@ const RoleManagement = ({ showHeader = true }) => {
         userService.getUsers(),
       ]);
       setRoles(rolesData);
+      setUsers(usersData);
       setTotalUsers(usersData.length);
     } catch (error) {
       console.error("Error loading roles:", error);
@@ -830,7 +832,15 @@ const RoleManagement = ({ showHeader = true }) => {
                   <Text code>{viewingRole.normalizedName}</Text>
                 </Descriptions.Item>
                 <Descriptions.Item label="Số người dùng">
-                  <Badge count={viewingRole.userCount} showZero />
+                  <Badge
+                    count={
+                      users.filter(
+                        (user) =>
+                          user.roles && user.roles.includes(viewingRole.name)
+                      ).length
+                    }
+                    showZero
+                  />
                 </Descriptions.Item>
               </Descriptions>
 
@@ -869,6 +879,54 @@ const RoleManagement = ({ showHeader = true }) => {
                     showIcon
                   />
                 )}
+              </div>
+
+              <Divider>
+                Người dùng có vai trò này (
+                {
+                  users.filter(
+                    (user) =>
+                      user.roles && user.roles.includes(viewingRole.name)
+                  ).length
+                }
+                )
+              </Divider>
+              <div style={{ maxHeight: 300, overflow: "auto" }}>
+                {(() => {
+                  // Get users with this role
+                  const roleUsers = users.filter(
+                    (user) =>
+                      user.roles && user.roles.includes(viewingRole.name)
+                  );
+
+                  if (roleUsers.length === 0) {
+                    return (
+                      <Alert
+                        message="Chưa có người dùng nào"
+                        description="Không có người dùng nào được gán vai trò này."
+                        type="info"
+                        showIcon
+                      />
+                    );
+                  }
+
+                  return (
+                    <div
+                      style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}
+                    >
+                      {roleUsers.map((user) => (
+                        <Tag
+                          key={user.id}
+                          color="green"
+                          style={{ marginBottom: 4, padding: "4px 8px" }}
+                        >
+                          <UserOutlined style={{ marginRight: "4px" }} />
+                          {user.fullName} ({user.employeeCode})
+                        </Tag>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
           )}
