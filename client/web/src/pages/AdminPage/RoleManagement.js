@@ -48,6 +48,7 @@ import {
 import Layout from "../../components/Layout/Layout";
 import styles from "../../styles/pages/RoleManagement.module.css";
 import { roleService } from "../../services/roleService";
+import { userService } from "../../services/userService";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -58,6 +59,7 @@ const RoleManagement = ({ showHeader = true }) => {
   const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [totalUsers, setTotalUsers] = useState(0);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
   const [isPermissionModalVisible, setIsPermissionModalVisible] =
@@ -74,8 +76,12 @@ const RoleManagement = ({ showHeader = true }) => {
   const loadRoles = async () => {
     setLoading(true);
     try {
-      const rolesData = await roleService.getRoles();
+      const [rolesData, usersData] = await Promise.all([
+        roleService.getRoles(),
+        userService.getUsers(),
+      ]);
       setRoles(rolesData);
+      setTotalUsers(usersData.length);
     } catch (error) {
       console.error("Error loading roles:", error);
       message.error("Không thể tải danh sách vai trò");
@@ -732,7 +738,7 @@ const RoleManagement = ({ showHeader = true }) => {
                 <div
                   style={{ fontSize: 24, fontWeight: 600, color: "#722ed1" }}
                 >
-                  {roles.reduce((sum, role) => sum + role.userCount, 0)}
+                  {totalUsers}
                 </div>
                 <div style={{ color: "#666" }}>Tổng người dùng</div>
               </Card>
