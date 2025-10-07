@@ -158,6 +158,16 @@ const TeamLeaderLayout = () => {
     },
   ];
 
+  const logoStyle = {
+    height: "60px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: collapsed ? "center" : "flex-start",
+    padding: collapsed ? "0" : "0 16px",
+    borderBottom: "1px solid rgba(255,255,255,0.1)",
+    marginBottom: "8px",
+  };
+
   return (
     <Layout className={styles.teamLeaderLayout}>
       <Sider
@@ -176,8 +186,8 @@ const TeamLeaderLayout = () => {
           boxShadow: "2px 0 8px rgba(0,0,0,0.15)",
         }}
       >
-        <div className={styles.logo}>
-          <div className={styles.logoIcon}>🏭</div>
+        <div style={logoStyle}>
+          <div style={{ color: "#fff", fontSize: "20px" }}>🏭</div>
           {!collapsed && (
             <div className={styles.logoText}>
               <div className={styles.logoTitle}>FITS-KIP</div>
