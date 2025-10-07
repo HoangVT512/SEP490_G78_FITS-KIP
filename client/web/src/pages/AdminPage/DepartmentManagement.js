@@ -31,6 +31,7 @@ import {
   LockOutlined,
   UnlockOutlined,
 } from "@ant-design/icons";
+import { ArchiveIcon } from "../../assets/icons";
 import Layout from "../../components/Layout/Layout";
 import { departmentService } from "../../services/departmentService";
 import { userService } from "../../services/userService";
@@ -510,8 +511,8 @@ const DepartmentManagement = ({ showHeader = true }) => {
           <Col xs={24} sm={6} md={12}>
             <Space style={{ float: "right" }}>
               <Button
-                type={showArchive ? "primary" : "default"}
-                icon={<EyeOutlined />}
+                type={showArchive ? "primary" : "dashed"}
+                icon={showArchive ? <EyeOutlined /> : <ArchiveIcon />}
                 onClick={() => setShowArchive(!showArchive)}
                 style={
                   showArchive
@@ -520,8 +521,8 @@ const DepartmentManagement = ({ showHeader = true }) => {
                 }
               >
                 {showArchive
-                  ? "Xem phòng ban đang hoạt động"
-                  : "Xem phòng ban ngừng hoạt động"}
+                  ? "Hiển thị (Hoạt động)"
+                  : "Lưu trữ (Ngừng hoạt động)"}
               </Button>
               <Button
                 type="primary"

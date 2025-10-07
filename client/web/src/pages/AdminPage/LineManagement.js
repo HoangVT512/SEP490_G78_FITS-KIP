@@ -50,6 +50,7 @@ import {
   LockOutlined,
   UnlockOutlined,
 } from "@ant-design/icons";
+import { ArchiveIcon } from "../../assets/icons";
 import Layout from "../../components/Layout/Layout";
 import { lineService } from "../../services/lineService";
 import { departmentService } from "../../services/departmentService";
@@ -86,44 +87,6 @@ const LineManagement = ({ showHeader = true }) => {
     const saved = localStorage.getItem("lineArchiveView");
     return saved ? saved === "true" : false;
   });
-
-  // Archive icon component
-  function ArchiveIcon() {
-    return (
-      <svg
-        width="1em"
-        height="1em"
-        viewBox="0 0 24 24"
-        fill="none"
-        style={{ verticalAlign: "middle" }}
-      >
-        <rect
-          x="3"
-          y="7"
-          width="18"
-          height="13"
-          rx="2"
-          stroke="#334766"
-          strokeWidth="2"
-        />
-        <rect
-          x="2"
-          y="3"
-          width="20"
-          height="4"
-          rx="1"
-          stroke="#334766"
-          strokeWidth="2"
-        />
-        <path
-          d="M9 12h6"
-          stroke="#334766"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
 
   useEffect(() => {
     loadLines();
@@ -249,8 +212,7 @@ const LineManagement = ({ showHeader = true }) => {
               const response = await lineService.toggleLineStatus(line.lineId);
               if (response.success) {
                 message.success(
-                  `Đã ${
-                    line.isActive ? "khóa" : "mở khóa"
+                  `Đã ${line.isActive ? "khóa" : "mở khóa"
                   } dây chuyền thành công`
                 );
                 loadLines();
@@ -482,9 +444,9 @@ const LineManagement = ({ showHeader = true }) => {
               value={
                 lines.length > 0
                   ? Math.round(
-                      lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) /
-                        lines.length
-                    )
+                    lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) /
+                    lines.length
+                  )
                   : 0
               }
               suffix="%"
@@ -580,11 +542,16 @@ const LineManagement = ({ showHeader = true }) => {
           <Col>
             <Space>
               <Button
-                type={showArchive ? "default" : "dashed"}
-                icon={<ArchiveIcon />}
+                type={showArchive ? "primary" : "dashed"}
+                icon={showArchive ? <EyeOutlined /> : <ArchiveIcon />}
                 onClick={() => setShowArchive(!showArchive)}
+                style={
+                  showArchive
+                    ? { backgroundColor: "#334766", borderColor: "#334766" }
+                    : {}
+                }
               >
-                {showArchive ? "Hiển thị tất cả" : "Lưu trữ (Ngừng hoạt động)"}
+                {showArchive ? "Hiển thị (Hoạt động)" : "Lưu trữ (Ngừng hoạt động)"}
               </Button>
             </Space>
           </Col>

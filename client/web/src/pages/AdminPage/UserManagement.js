@@ -51,6 +51,7 @@ import {
   ClockCircleOutlined,
   UploadOutlined,
 } from "@ant-design/icons";
+import { ArchiveIcon } from "../../assets/icons";
 import styles from "../../styles/pages/UserManagement.module.css";
 import Layout from "../../components/Layout/Layout";
 import dayjs from "dayjs";
@@ -92,44 +93,6 @@ const UserManagement = ({ showHeader = true }) => {
     const saved = localStorage.getItem("userArchiveView");
     return saved === "true";
   });
-
-  // Archive icon component
-  function ArchiveIcon() {
-    return (
-      <svg
-        width="1em"
-        height="1em"
-        viewBox="0 0 24 24"
-        fill="none"
-        style={{ verticalAlign: "middle" }}
-      >
-        <rect
-          x="3"
-          y="7"
-          width="18"
-          height="13"
-          rx="2"
-          stroke="#334766"
-          strokeWidth="2"
-        />
-        <rect
-          x="2"
-          y="3"
-          width="20"
-          height="4"
-          rx="1"
-          stroke="#334766"
-          strokeWidth="2"
-        />
-        <path
-          d="M9 12h6"
-          stroke="#334766"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
 
   useEffect(() => {
     setLoading(true);
@@ -342,17 +305,17 @@ const UserManagement = ({ showHeader = true }) => {
           ...user,
           departments: user.departmentId
             ? [
-                {
-                  departmentId: user.departmentId,
-                  departmentName: user.department,
-                },
-              ]
+              {
+                departmentId: user.departmentId,
+                departmentName: user.department,
+              },
+            ]
             : [],
           roles: Array.isArray(user.roles)
             ? user.roles
             : user.role
-            ? [user.role]
-            : [],
+              ? [user.role]
+              : [],
           isActive: user.status === "active",
         };
         setViewingUser(normalizedUser);
@@ -363,11 +326,11 @@ const UserManagement = ({ showHeader = true }) => {
         // Convert role names to role IDs for form
         const userRoleIds = user.roles
           ? user.roles
-              .map((roleName) => {
-                const role = roles.find((r) => r.name === roleName);
-                return role ? role.id : null;
-              })
-              .filter((id) => id !== null)
+            .map((roleName) => {
+              const role = roles.find((r) => r.name === roleName);
+              return role ? role.id : null;
+            })
+            .filter((id) => id !== null)
           : [];
 
         form.setFieldsValue({
@@ -595,16 +558,16 @@ const UserManagement = ({ showHeader = true }) => {
       width: 150,
       filters: Array.isArray(departments)
         ? departments
-            .filter(
-              (dept, idx, arr) =>
-                arr.findIndex(
-                  (d) => d.departmentName === dept.departmentName
-                ) === idx
-            )
-            .map((dept) => ({
-              text: dept.departmentName,
-              value: dept.departmentName,
-            }))
+          .filter(
+            (dept, idx, arr) =>
+              arr.findIndex(
+                (d) => d.departmentName === dept.departmentName
+              ) === idx
+          )
+          .map((dept) => ({
+            text: dept.departmentName,
+            value: dept.departmentName,
+          }))
         : [],
       onFilter: (value, record) => record.department === value,
       render: (department) => (
@@ -621,11 +584,11 @@ const UserManagement = ({ showHeader = true }) => {
       width: 180,
       filters: Array.isArray(lines)
         ? lines
-            .filter((line) => line.lineName)
-            .map((line) => ({
-              text: line.lineName,
-              value: line.lineId,
-            }))
+          .filter((line) => line.lineName)
+          .map((line) => ({
+            text: line.lineName,
+            value: line.lineId,
+          }))
         : [],
       onFilter: (value, record) =>
         record.lineIds && record.lineIds.includes(value),
@@ -928,11 +891,16 @@ const UserManagement = ({ showHeader = true }) => {
                 Thêm người dùng
               </Button>
               <Button
-                type={showArchive ? "default" : "dashed"}
-                icon={<ArchiveIcon />}
+                type={showArchive ? "primary" : "dashed"}
+                icon={showArchive ? <EyeOutlined /> : <ArchiveIcon />}
                 onClick={() => setShowArchive(!showArchive)}
+                style={
+                  showArchive
+                    ? { backgroundColor: "#334766", borderColor: "#334766" }
+                    : {}
+                }
               >
-                {showArchive ? "Hiển thị tất cả" : "Lưu trữ (Ngừng hoạt động)"}
+                {showArchive ? "Hiển thị (Hoạt động)" : "Lưu trữ (Ngừng hoạt động)"}
               </Button>
             </Space>
           </Col>
@@ -959,8 +927,8 @@ const UserManagement = ({ showHeader = true }) => {
           locale={{
             emptyText:
               searchText ||
-              filters.role !== "all" ||
-              filters.department !== "all"
+                filters.role !== "all" ||
+                filters.department !== "all"
                 ? "Không có người dùng nào phù hợp với tìm kiếm hoặc bộ lọc."
                 : "Không có dữ liệu người dùng.",
           }}
@@ -1138,7 +1106,7 @@ const UserManagement = ({ showHeader = true }) => {
                         (u) =>
                           u.employeeCode &&
                           u.employeeCode.toLowerCase() ===
-                            value.toLowerCase() &&
+                          value.toLowerCase() &&
                           u.id !== (editingUser?.id || "")
                       );
                       if (existing) {
@@ -1221,7 +1189,7 @@ const UserManagement = ({ showHeader = true }) => {
               <Form.Item
                 name="departmentId"
                 label="Phòng ban"
-                // rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
+              // rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
               >
                 <Select
                   placeholder="Chọn phòng ban"
@@ -1247,7 +1215,7 @@ const UserManagement = ({ showHeader = true }) => {
               <Form.Item
                 name="lineIds"
                 label="Dây chuyền"
-                // rules={[{ required: true, message: "Vui lòng chọn dây chuyền" }]}
+              // rules={[{ required: true, message: "Vui lòng chọn dây chuyền" }]}
               >
                 <Select
                   mode="multiple"
@@ -1331,7 +1299,7 @@ const UserManagement = ({ showHeader = true }) => {
               <Form.Item
                 name="position"
                 label="Chức vụ"
-                // rules={[{ required: true, message: "Vui lòng nhập chức vụ" }]}
+              // rules={[{ required: true, message: "Vui lòng nhập chức vụ" }]}
               >
                 <Input placeholder="Nhập chức vụ" />
               </Form.Item>
@@ -1457,8 +1425,8 @@ const UserManagement = ({ showHeader = true }) => {
                 <Descriptions.Item label="Phòng ban">
                   {viewingUser.departments && viewingUser.departments.length > 0
                     ? viewingUser.departments
-                        .map((d) => d.departmentName)
-                        .join(", ")
+                      .map((d) => d.departmentName)
+                      .join(", ")
                     : "-"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Trạng thái">

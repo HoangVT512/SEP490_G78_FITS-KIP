@@ -39,6 +39,7 @@ import {
   LockOutlined,
   UnlockOutlined,
 } from "@ant-design/icons";
+import { ArchiveIcon } from "../../assets/icons";
 import Layout from "../../components/Layout/Layout";
 import { stageService } from "../../services/stageService";
 import { lineService } from "../../services/lineService";
@@ -71,44 +72,6 @@ const StageManagement = ({ showHeader = true }) => {
     const saved = localStorage.getItem("stageArchiveView");
     return saved ? saved === "true" : false;
   });
-
-  // Archive icon component
-  function ArchiveIcon() {
-    return (
-      <svg
-        width="1em"
-        height="1em"
-        viewBox="0 0 24 24"
-        fill="none"
-        style={{ verticalAlign: "middle" }}
-      >
-        <rect
-          x="3"
-          y="7"
-          width="18"
-          height="13"
-          rx="2"
-          stroke="#334766"
-          strokeWidth="2"
-        />
-        <rect
-          x="2"
-          y="3"
-          width="20"
-          height="4"
-          rx="1"
-          stroke="#334766"
-          strokeWidth="2"
-        />
-        <path
-          d="M9 12h6"
-          stroke="#334766"
-          strokeWidth="2"
-          strokeLinecap="round"
-        />
-      </svg>
-    );
-  }
 
   useEffect(() => {
     loadStages();
@@ -271,16 +234,14 @@ const StageManagement = ({ showHeader = true }) => {
               } else {
                 message.error(
                   response.message ||
-                    `${
-                      actionText.charAt(0).toUpperCase() + actionText.slice(1)
-                    } công đoạn thất bại`
+                  `${actionText.charAt(0).toUpperCase() + actionText.slice(1)
+                  } công đoạn thất bại`
                 );
               }
             } catch (error) {
               console.error("Toggle stage status error:", error);
               message.error(
-                `${
-                  actionText.charAt(0).toUpperCase() + actionText.slice(1)
+                `${actionText.charAt(0).toUpperCase() + actionText.slice(1)
                 } công đoạn thất bại`
               );
             }
@@ -533,8 +494,8 @@ const StageManagement = ({ showHeader = true }) => {
               value={
                 lines.length > 0
                   ? (
-                      stages.length / new Set(stages.map((s) => s.lineId)).size
-                    ).toFixed(1)
+                    stages.length / new Set(stages.map((s) => s.lineId)).size
+                  ).toFixed(1)
                   : 0
               }
               prefix={<LineChartOutlined style={{ color: "#722ed1" }} />}
@@ -609,11 +570,16 @@ const StageManagement = ({ showHeader = true }) => {
                 Thêm công đoạn
               </Button>
               <Button
-                type={showArchive ? "default" : "dashed"}
-                icon={<ArchiveIcon />}
+                type={showArchive ? "primary" : "dashed"}
+                icon={showArchive ? <EyeOutlined /> : <ArchiveIcon />}
                 onClick={() => setShowArchive(!showArchive)}
+                style={
+                  showArchive
+                    ? { backgroundColor: "#334766", borderColor: "#334766" }
+                    : {}
+                }
               >
-                {showArchive ? "Hiển thị tất cả" : "Lưu trữ (Ngừng hoạt động)"}
+                {showArchive ? "Hiển thị (Hoạt động)" : "Lưu trữ (Ngừng hoạt động)"}
               </Button>
             </Space>
           </Col>
@@ -761,8 +727,8 @@ const StageManagement = ({ showHeader = true }) => {
                     !selectedDepartmentId
                       ? "Vui lòng chọn phòng ban trước"
                       : filteredActiveLines.length === 0
-                      ? "Không có dây chuyền nào"
-                      : "Đang tải..."
+                        ? "Không có dây chuyền nào"
+                        : "Đang tải..."
                   }
                   showSearch
                   optionFilterProp="children"

@@ -36,6 +36,7 @@ import {
   LockOutlined,
   UnlockOutlined,
 } from "@ant-design/icons";
+import { ArchiveIcon } from "../../assets/icons";
 import Layout from "../../components/Layout/Layout";
 import { equipmentService } from "../../services/equipmentService";
 import { stageService } from "../../services/stageService";
@@ -489,7 +490,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
 
       <Card>
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-          <Col xs={24} md={8}>
+          <Col xs={24} sm={12} md={8}>
             <Search
               placeholder="Tìm kiếm theo mã, tên, xuất xứ..."
               allowClear
@@ -498,49 +499,38 @@ const EquipmentManagement = ({ showHeader = true }) => {
               onChange={(e) => setSearchText(e.target.value)}
             />
           </Col>
-          <Col xs={24} md={4}>
-            <Select
-              style={{ width: "100%" }}
-              placeholder="Lọc trạng thái"
-              value={statusFilter}
-              onChange={setStatusFilter}
-            >
-              <Select.Option value="all">Tất cả</Select.Option>
-              <Select.Option value="active">Hoạt động</Select.Option>
-              <Select.Option value="inactive">Không hoạt động</Select.Option>
-            </Select>
-          </Col>
-          <Col xs={24} md={4}>
-            <Button
-              icon={<EyeOutlined />}
-              onClick={() => setShowArchive(!showArchive)}
-              style={{
-                width: "100%",
-                backgroundColor: showArchive ? "#334766" : "#fff",
-                color: showArchive ? "#fff" : "#000",
-                borderColor: "#334766",
-              }}
-            >
-              {showArchive ? "Đang lưu trữ" : "Lưu trữ"}
-            </Button>
-          </Col>
-          <Col xs={24} md={4}>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => {
-                setEditingEquipment(null);
-                form.resetFields();
-                setIsModalVisible(true);
-              }}
-              style={{
-                width: "100%",
-                backgroundColor: "#334766",
-                borderColor: "#334766",
-              }}
-            >
-              Thêm thiết bị
-            </Button>
+          <Col xs={24} sm={6} md={12}>
+            <Space style={{ float: "right" }}>
+              <Button
+                type={showArchive ? "primary" : "dashed"}
+                icon={showArchive ? <EyeOutlined /> : <ArchiveIcon />}
+                onClick={() => setShowArchive(!showArchive)}
+                style={
+                  showArchive
+                    ? { backgroundColor: "#334766", borderColor: "#334766" }
+                    : {}
+                }
+              >
+                {showArchive
+                  ? "Hiển thị (Hoạt động)"
+                  : "Lưu trữ (Ngừng hoạt động)"}
+              </Button>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  setEditingEquipment(null);
+                  form.resetFields();
+                  setIsModalVisible(true);
+                }}
+                style={{
+                  backgroundColor: "#334766",
+                  borderColor: "#334766",
+                }}
+              >
+                Thêm thiết bị
+              </Button>
+            </Space>
           </Col>
         </Row>
 
@@ -705,7 +695,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
                 <Tag color="blue">
                   {Array.isArray(stages)
                     ? stages.find((s) => s.stageId === viewingEquipment.stageId)
-                        ?.stageName || "N/A"
+                      ?.stageName || "N/A"
                     : "N/A"}
                 </Tag>
               ) : (
