@@ -50,7 +50,7 @@ namespace FITSKIP.API.Controllers
         {
             try
             {
-                var validationError = await ValidateManagerAsync(request.ManagerId, true);
+                var validationError = await ValidateManagerAsync(request.ManagerId, false);
                 if (validationError != null) return BadRequest(new { message = validationError });
                 var created = await departmentService.CreateAsync(request, cancellationToken);
                 return CreatedAtAction(nameof(GetById), new { id = created.DepartmentId }, created);

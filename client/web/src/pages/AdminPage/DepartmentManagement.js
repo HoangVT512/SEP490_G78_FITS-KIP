@@ -419,7 +419,6 @@ const DepartmentManagement = ({ showHeader = true }) => {
         // Create new department
         await departmentService.createDepartment({
           departmentName: values.departmentName,
-          managerId: values.managerId || null,
           description: values.description || "",
         });
         message.success("Tạo phòng ban mới thành công!");
@@ -626,24 +625,70 @@ const DepartmentManagement = ({ showHeader = true }) => {
                   </span>
                 }
               >
-                <Select
-                  placeholder={
-                    editingDepartment
-                      ? "Không có người quản lý"
-                      : "Chọn người quản lý (tùy chọn)"
-                  }
-                  allowClear
-                  disabled={editingDepartment} // Disable when editing
-                  suffixIcon={null}
-                  loading={loadingManagers}
-                  options={managers}
-                  showSearch
-                  filterOption={(input, option) =>
-                    (option?.label ?? "")
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
-                />
+                {editingDepartment ? (
+                  <Select
+                    placeholder="Không có người quản lý"
+                    allowClear
+                    disabled={true} // Always disabled for viewing
+                    suffixIcon={null}
+                    loading={loadingManagers}
+                    options={managers}
+                    showSearch
+                    filterOption={(input, option) =>
+                      (option?.label ?? "")
+                        .toLowerCase()
+                        .includes(input.toLowerCase())
+                    }
+                  />
+                ) : (
+                  <div
+                    style={{
+                      padding: "12px 16px",
+                      backgroundColor: "#f0f9ff",
+                      border: "1px solid #bae6fd",
+                      borderRadius: "6px",
+                      display: "flex",
+                      alignItems: "flex-start",
+                    }}
+                  >
+                    <UserOutlined
+                      style={{
+                        color: "#334766",
+                        fontSize: "16px",
+                        marginRight: "12px",
+                        marginTop: "2px",
+                      }}
+                    />
+                    <div>
+                      <Text
+                        strong
+                        style={{ color: "#334766", display: "block" }}
+                      >
+                        Quản lý phòng ban
+                      </Text>
+                      <Text style={{ color: "#666", fontSize: "13px" }}>
+                        Để gán người quản lý cho phòng ban, vui lòng:
+                      </Text>
+                      <ol
+                        style={{
+                          margin: "4px 0 0 0",
+                          paddingLeft: "20px",
+                          fontSize: "13px",
+                          color: "#666",
+                        }}
+                      >
+                        <li>
+                          Vào trang <strong>"Quản lý người dùng"</strong>
+                        </li>
+                        <li>Chọn hoặc tạo người dùng cần làm quản lý</li>
+                        <li>
+                          Gán vai trò <strong>"Quản lý"</strong> và chọn phòng
+                          ban này
+                        </li>
+                      </ol>
+                    </div>
+                  </div>
+                )}
               </Form.Item>
               {editingDepartment && (
                 <div
