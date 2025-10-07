@@ -554,6 +554,9 @@ const DepartmentManagement = ({ showHeader = true }) => {
           }}
           scroll={{ x: 1200 }}
           className="department-management-table"
+          locale={{
+            emptyText: "Không có dữ liệu phòng ban",
+          }}
         />
       </Card>
 

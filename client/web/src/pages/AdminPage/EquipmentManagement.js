@@ -555,6 +555,9 @@ const EquipmentManagement = ({ showHeader = true }) => {
             showTotal: (total) => `Tổng ${total} thiết bị`,
           }}
           scroll={{ x: 1200 }}
+          locale={{
+            emptyText: "Không có dữ liệu thiết bị",
+          }}
         />
       </Card>
 
