@@ -16,6 +16,7 @@ import {
   Tooltip,
   Descriptions,
   Select,
+  Tag,
 } from "antd";
 import {
   SearchOutlined,
@@ -775,6 +776,40 @@ const DepartmentManagement = ({ showHeader = true }) => {
               </Descriptions.Item>
               <Descriptions.Item label="Tên quản lý">
                 {viewingDepartment.managerName || "Chưa có"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Dây chuyền" span={2}>
+                {(() => {
+                  const departmentLines = lines.filter(
+                    (line) =>
+                      line.departmentId === viewingDepartment.departmentId
+                  );
+                  if (departmentLines.length === 0) {
+                    return "Chưa có dây chuyền nào";
+                  }
+                  return (
+                    <div>
+                      <Text
+                        strong
+                        style={{ marginBottom: 8, display: "block" }}
+                      >
+                        Tổng cộng: {departmentLines.length} dây chuyền
+                      </Text>
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "8px",
+                        }}
+                      >
+                        {departmentLines.map((line) => (
+                          <Tag key={line.lineId} color="blue">
+                            {line.lineName}
+                          </Tag>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
               </Descriptions.Item>
             </Descriptions>
           </div>

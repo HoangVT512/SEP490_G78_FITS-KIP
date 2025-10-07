@@ -269,7 +269,7 @@ const AdminLayout = () => {
               level={4}
               style={{ color: "#fff", margin: 0, fontSize: "16px" }}
             >
-              🏭 FITS-KIP Admin
+              🏭 FITS-KIP Quản trị
             </Title>
           )}
           {collapsed && (
