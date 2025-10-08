@@ -209,11 +209,16 @@ const Login = () => {
 
               <Form.Item
                 name="password"
-                rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập mật khẩu!" },
+                  { min: 6, message: "Mật khẩu phải có ít nhất 6 ký tự!" },
+                ]}
                 className={styles.loginFormItem}
                 label="Mật khẩu"
-                validateStatus={loginError ? "error" : ""}
-                help={loginError}
+                // Let Form display validation errors (required/min) normally.
+                // Only display server-side loginError in help when it exists.
+                validateStatus={loginError ? "error" : undefined}
+                help={loginError || undefined}
               >
                 <Input.Password
                   prefix={<LockOutlined />}
