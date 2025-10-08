@@ -494,20 +494,6 @@ const DepartmentManagement = ({ showHeader = true }) => {
               />
             </Input.Group>
           </Col>
-          <Col xs={24} sm={6} md={4}>
-            <Select
-              placeholder="Trạng thái"
-              size="large"
-              value={statusFilter}
-              onChange={setStatusFilter}
-              style={{ width: "100%" }}
-              options={[
-                { value: "all", label: "Tất cả vai trò" },
-                { value: "active", label: "Hoạt động" },
-                { value: "inactive", label: "Ngừng hoạt động" },
-              ]}
-            />
-          </Col>
           <Col xs={24} sm={6} md={12}>
             <Space style={{ float: "right" }}>
               <Button

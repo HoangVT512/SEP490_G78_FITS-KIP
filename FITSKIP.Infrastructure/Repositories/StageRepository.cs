@@ -23,12 +23,21 @@ public class StageRepository : IStageRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Stage>> GetActiveAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.Stages
+            .Include(s => s.Line)
+            .ThenInclude(l => l.Department)
+            .Where(s => s.IsActive)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<Stage?> GetByIdAsync(int id, CancellationToken cancellationToken = default)
     {
         return await _context.Stages
             .Include(s => s.Line)
             .ThenInclude(l => l.Department)
-            .Include(s => s.Equipment)
             .FirstOrDefaultAsync(s => s.StageId == id, cancellationToken);
     }
 

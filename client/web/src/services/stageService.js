@@ -3,16 +3,29 @@ import apiRequest from "./api";
 export const stageService = {
   async getStages() {
     try {
-      return await apiRequest("/stages");
+      const response = await apiRequest("/Stages");
+      return response;
     } catch (error) {
       console.error("Get stages error:", error);
       throw error;
     }
   },
 
+  getActiveStages: async () => {
+    try {
+      const response = await apiRequest("/Stages/active");
+      return response;
+    } catch (error) {
+      console.error("Get active stages error:", error);
+      throw new Error(
+        error.message || "Lấy danh sách công đoạn đang hoạt động thất bại"
+      );
+    }
+  },
+
   async getStage(id) {
     try {
-      return await apiRequest(`/stages/${id}`);
+      return await apiRequest(`/Stages/${id}`);
     } catch (error) {
       console.error("Get stage error:", error);
       throw error;
@@ -21,7 +34,7 @@ export const stageService = {
 
   async createStage(stageData) {
     try {
-      return await apiRequest("/stages", {
+      return await apiRequest("/Stages", {
         method: "POST",
         body: JSON.stringify(stageData),
       });
@@ -34,7 +47,7 @@ export const stageService = {
 
   async updateStage(id, stageData) {
     try {
-      return await apiRequest(`/stages/${id}`, {
+      return await apiRequest(`/Stages/${id}`, {
         method: "PUT",
         body: JSON.stringify(stageData),
       });
@@ -47,7 +60,7 @@ export const stageService = {
 
   async toggleStageStatus(id) {
     try {
-      return await apiRequest(`/stages/${id}/toggle-status`, {
+      return await apiRequest(`/Stages/${id}/toggle-status`, {
         method: "PATCH",
       });
     } catch (error) {
@@ -58,7 +71,7 @@ export const stageService = {
 
   async getStagesByLine(lineId) {
     try {
-      return await apiRequest(`/stages/line/${lineId}`);
+      return await apiRequest(`/Stages/line/${lineId}`);
     } catch (error) {
       console.error("Get stages by line error:", error);
       throw error;

@@ -360,12 +360,13 @@ const LineManagement = ({ showHeader = true }) => {
     },
     {
       title: "Trạng thái",
-      key: "status",
+      key: "isActive",
       width: 150,
       render: (_, record) => (
-        <Tag color={record.isActive ? "success" : "error"}>
-          {record.isActive ? "Hoạt động" : "Dừng hoạt động"}
-        </Tag>
+        <Badge
+          status={record.isActive ? "success" : "error"}
+          text={record.isActive ? "Hoạt động" : "Ngừng hoạt động"}
+        />
       ),
     },
     {
@@ -479,7 +480,7 @@ const LineManagement = ({ showHeader = true }) => {
         </div>
 
         <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
-          <Col xs={24} sm={8} md={6}>
+          <Col xs={24} sm={12} md={8}>
             <Input.Group compact>
               <Input
                 placeholder="Tìm kiếm dây chuyền..."
@@ -500,7 +501,7 @@ const LineManagement = ({ showHeader = true }) => {
               />
             </Input.Group>
           </Col>
-          <Col xs={24} sm={8} md={4}>
+          <Col xs={24} sm={6} md={4}>
             <Select
               value={filters.department}
               onChange={(value) =>
@@ -521,8 +522,8 @@ const LineManagement = ({ showHeader = true }) => {
               ))}
             </Select>
           </Col>
-          <Col xs={24} sm={8} md={6}>
-            <Space>
+          <Col xs={24} sm={6} md={12}>
+            <Space style={{ float: "right" }}>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
@@ -535,12 +536,6 @@ const LineManagement = ({ showHeader = true }) => {
               >
                 Thêm dây chuyền
               </Button>
-            </Space>
-          </Col>
-        </Row>
-        <Row gutter={[16, 16]} style={{ marginBottom: "16px" }}>
-          <Col>
-            <Space>
               <Button
                 type={showArchive ? "primary" : "dashed"}
                 icon={showArchive ? <EyeOutlined /> : <ArchiveIcon />}

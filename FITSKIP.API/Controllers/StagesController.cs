@@ -35,6 +35,23 @@ public class StagesController : ControllerBase
     }
 
     /// <summary>
+    /// Lấy danh sách giai đoạn đang hoạt động
+    /// </summary>
+    [HttpGet("active")]
+    public async Task<IActionResult> GetActiveStages()
+    {
+        try
+        {
+            var stages = await _stageService.GetActiveStagesAsync();
+            return Ok(new { success = true, data = stages });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi lấy danh sách giai đoạn đang hoạt động", details = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Lấy thông tin giai đoạn theo ID
     /// </summary>
     [HttpGet("{id}")]

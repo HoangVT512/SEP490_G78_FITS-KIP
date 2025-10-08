@@ -3,7 +3,7 @@ import apiRequest from "./api";
 export const equipmentService = {
   async getEquipments() {
     try {
-      const response = await apiRequest("/equipments");
+      const response = await apiRequest("/Equipments");
       return response.data || response;
     } catch (error) {
       console.error("Get equipments error:", error);
@@ -13,7 +13,7 @@ export const equipmentService = {
 
   async getEquipment(id) {
     try {
-      const response = await apiRequest(`/equipments/${id}`);
+      const response = await apiRequest(`/Equipments/${id}`);
       return response.data || response;
     } catch (error) {
       console.error("Get equipment error:", error);
@@ -23,7 +23,7 @@ export const equipmentService = {
 
   async createEquipment(equipmentData) {
     try {
-      const response = await apiRequest("/equipments", {
+      const response = await apiRequest("/Equipments", {
         method: "POST",
         body: JSON.stringify(equipmentData),
       });
@@ -36,7 +36,7 @@ export const equipmentService = {
 
   async updateEquipment(id, equipmentData) {
     try {
-      const response = await apiRequest(`/equipments/${id}`, {
+      const response = await apiRequest(`/Equipments/${id}`, {
         method: "PUT",
         body: JSON.stringify(equipmentData),
       });
@@ -49,7 +49,7 @@ export const equipmentService = {
 
   async deleteEquipment(id) {
     try {
-      const response = await apiRequest(`/equipments/${id}`, {
+      const response = await apiRequest(`/Equipments/${id}`, {
         method: "DELETE",
       });
       return response.data || response;
@@ -61,7 +61,7 @@ export const equipmentService = {
 
   async toggleEquipmentStatus(id) {
     try {
-      const response = await apiRequest(`/equipments/${id}/toggle-status`, {
+      const response = await apiRequest(`/Equipments/${id}/toggle-status`, {
         method: "PATCH",
       });
       return response.data || response;
@@ -73,8 +73,8 @@ export const equipmentService = {
 
   async getEquipmentsByStage(stageId) {
     try {
-      const response = await apiRequest(`/equipments/by-stage/${stageId}`);
-      return response.data || response;
+      const response = await apiRequest(`/Equipments/by-stage/${stageId}`);
+      return response;
     } catch (error) {
       console.error("Get equipments by stage error:", error);
       throw error;
@@ -83,7 +83,7 @@ export const equipmentService = {
 
   async generateQRCode(id) {
     try {
-      const response = await apiRequest(`/equipments/${id}/generate-qr`, {
+      const response = await apiRequest(`/Equipments/${id}/generate-qr`, {
         method: "POST",
       });
       return response.data || response;

@@ -44,6 +44,7 @@ import Layout from "../../components/Layout/Layout";
 import { stageService } from "../../services/stageService";
 import { lineService } from "../../services/lineService";
 import { departmentService } from "../../services/departmentService";
+import { equipmentService } from "../../services/equipmentService";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -56,6 +57,7 @@ const StageManagement = ({ showHeader = true }) => {
   const [filteredActiveLines, setFilteredActiveLines] = useState([]);
   const [departmentActive, setDepartmentActive] = useState([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
+  const [equipmentByStage, setEquipmentByStage] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -173,10 +175,23 @@ const StageManagement = ({ showHeader = true }) => {
     }
   };
 
+  const loadEquipmentByStage = async (stageId) => {
+    try {
+      const response = await equipmentService.getEquipmentsByStage(stageId);
+      setEquipmentByStage(response.data || []);
+    } catch (error) {
+      console.error("Error loading equipment by stage:", error);
+      message.error("Không thể tải danh sách thiết bị theo công đoạn");
+      setEquipmentByStage([]);
+    }
+  };
+
   const handleAction = async (action, stage) => {
     switch (action) {
       case "view":
         setViewingStage(stage);
+        // Load equipment for this stage
+        await loadEquipmentByStage(stage.stageId);
         setIsViewModalVisible(true);
         break;
       case "edit":
@@ -360,7 +375,7 @@ const StageManagement = ({ showHeader = true }) => {
               width: "48px",
               height: "48px",
               borderRadius: "8px",
-              background: "linear-gradient(135deg, #1890ff 0%, #096dd9 100%)",
+              background: "linear-gradient(135deg, #4c566aff 0%, #283652 100%)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -410,12 +425,14 @@ const StageManagement = ({ showHeader = true }) => {
     },
     {
       title: "Trạng thái",
-      key: "status",
+      key: "isActive",
       width: 120,
+      align: "center",
       render: (_, record) => (
-        <Tag color={record.isActive ? "success" : "error"}>
-          {record.isActive ? "Hoạt động" : "Dừng hoạt động"}
-        </Tag>
+        <Badge
+          status={record.isActive ? "success" : "error"}
+          text={record.isActive ? "Hoạt động" : "Ngừng hoạt động"}
+        />
       ),
     },
     {
@@ -478,10 +495,7 @@ const StageManagement = ({ showHeader = true }) => {
           <Card>
             <Statistic
               title="Thiết bị"
-              value={stages.reduce(
-                (sum, s) => sum + (s.equipment?.length || 0),
-                0
-              )}
+              value={equipmentByStage?.length || 0}
               prefix={<ToolOutlined style={{ color: "#faad14" }} />}
               valueStyle={{ color: "#faad14" }}
             />
@@ -517,7 +531,7 @@ const StageManagement = ({ showHeader = true }) => {
         </div>
 
         <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
-          <Col xs={24} sm={8} md={6}>
+          <Col xs={24} sm={12} md={8}>
             <Input.Group compact>
               <Input
                 placeholder="Tìm kiếm công đoạn..."
@@ -538,7 +552,7 @@ const StageManagement = ({ showHeader = true }) => {
               />
             </Input.Group>
           </Col>
-          <Col xs={24} sm={8} md={4}>
+          <Col xs={24} sm={6} md={4}>
             <Select
               value={filters.line}
               onChange={(value) => setFilters({ ...filters, line: value })}
@@ -554,8 +568,8 @@ const StageManagement = ({ showHeader = true }) => {
               ))}
             </Select>
           </Col>
-          <Col xs={24} sm={8} md={6}>
-            <Space>
+          <Col xs={24} sm={6} md={12}>
+            <Space style={{ float: "right" }}>
               <Button
                 type="primary"
                 icon={<PlusOutlined />}
@@ -782,7 +796,7 @@ const StageManagement = ({ showHeader = true }) => {
               setIsViewModalVisible(false);
               handleAction("edit", viewingStage);
             }}
-            style={{ backgroundColor: "#1890ff", borderColor: "#1890ff" }}
+            style={{ backgroundColor: "#394660ff", borderColor: "#283652" }}
           >
             Chỉnh sửa
           </Button>,
@@ -800,7 +814,7 @@ const StageManagement = ({ showHeader = true }) => {
               </Descriptions.Item>
               <Descriptions.Item label="Dây chuyền">
                 <Space>
-                  <GroupOutlined style={{ color: "#1890ff" }} />
+                  <GroupOutlined style={{ color: "#283652" }} />
                   {viewingStage.line?.lineName || "Chưa phân dây chuyền"}
                 </Space>
               </Descriptions.Item>
@@ -812,9 +826,9 @@ const StageManagement = ({ showHeader = true }) => {
               </Descriptions.Item>
               <Descriptions.Item label="Số thiết bị">
                 <Badge
-                  count={viewingStage.equipment?.length || 0}
+                  count={equipmentByStage?.length || 0}
                   showZero
-                  style={{ backgroundColor: "#1890ff" }}
+                  style={{ backgroundColor: "#283652" }}
                 />
               </Descriptions.Item>
             </Descriptions>
@@ -824,23 +838,23 @@ const StageManagement = ({ showHeader = true }) => {
               title={
                 <span>
                   <ToolOutlined
-                    style={{ marginRight: "8px", color: "#1890ff" }}
+                    style={{ marginRight: "8px", color: "#283652" }}
                   />
-                  Danh sách thiết bị ({viewingStage.equipment?.length || 0})
+                  Danh sách thiết bị ({equipmentByStage?.length || 0})
                 </span>
               }
               size="small"
             >
-              {viewingStage.equipment && viewingStage.equipment.length > 0 ? (
+              {equipmentByStage && equipmentByStage.length > 0 ? (
                 <List
-                  dataSource={viewingStage.equipment}
+                  dataSource={equipmentByStage}
                   renderItem={(equipment) => (
                     <List.Item>
                       <List.Item.Meta
                         avatar={
                           <Avatar
                             style={{
-                              backgroundColor: "#1890ff",
+                              backgroundColor: "#283652",
                               color: "#fff",
                             }}
                             icon={<ToolOutlined />}

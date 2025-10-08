@@ -5,6 +5,7 @@ namespace FITSKIP.Domain.Interfaces;
 public interface IStageRepository
 {
     Task<IReadOnlyList<Stage>> GetAllAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Stage>> GetActiveAsync(CancellationToken cancellationToken = default);
     Task<Stage?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<Stage> CreateAsync(Stage stage, CancellationToken cancellationToken = default);
     Task<Stage?> UpdateAsync(Stage stage, CancellationToken cancellationToken = default);

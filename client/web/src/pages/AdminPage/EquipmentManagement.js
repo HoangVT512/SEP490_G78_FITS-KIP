@@ -56,6 +56,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
   const [editingEquipment, setEditingEquipment] = useState(null);
   const [viewingEquipment, setViewingEquipment] = useState(null);
   const [stages, setStages] = useState([]);
+  const [stageActive, setStageActive] = useState([]);
   const [form] = Form.useForm();
 
   const [showArchive, setShowArchive] = useState(() => {
@@ -66,6 +67,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
   useEffect(() => {
     loadEquipments();
     loadStages();
+    loadActiveStages();
   }, []);
 
   useEffect(() => {
@@ -90,13 +92,26 @@ const EquipmentManagement = ({ showHeader = true }) => {
 
   const loadStages = async () => {
     try {
-      const data = await stageService.getStages();
+      const response = await stageService.getActiveStages();
       // Đảm bảo data là array
+      const data = response.data || response;
       setStages(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error loading stages:", error);
       message.error("Không thể tải danh sách công đoạn");
       setStages([]); // Set về empty array nếu có lỗi
+    }
+  };
+
+  const loadActiveStages = async () => {
+    try {
+      const response = await stageService.getActiveStages();
+      const data = response.data || response;
+      setStageActive(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error("Error loading active stages:", error);
+      message.error("Không thể tải danh sách công đoạn đang hoạt động");
+      setStageActive([]); // Set về empty array nếu có lỗi
     }
   };
 
@@ -368,13 +383,6 @@ const EquipmentManagement = ({ showHeader = true }) => {
       key: "isActive",
       width: 120,
       align: "center",
-      filters: [
-        { text: "Hoạt động", value: true },
-        { text: "Không hoạt động", value: false },
-      ],
-      filteredValue:
-        statusFilter === "all" ? null : [statusFilter === "active"],
-      onFilter: (value, record) => record.isActive === value,
       render: (isActive) => (
         <Badge
           status={isActive ? "success" : "error"}
@@ -414,9 +422,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
           }}
           trigger={["click"]}
         >
-          <Button type="text" icon={<DownOutlined />}>
-            Thao tác
-          </Button>
+          <Button type="text" icon={<DownOutlined />}></Button>
         </Dropdown>
       ),
     },
@@ -621,16 +627,24 @@ const EquipmentManagement = ({ showHeader = true }) => {
               <Form.Item label="Công đoạn" name="stageId">
                 <Select
                   placeholder="Chọn công đoạn"
+                  loading={stageActive.length === 0}
+                  notFoundContent={
+                    stageActive.length === 0
+                      ? "Đang tải..."
+                      : "Không có công đoạn nào"
+                  }
                   allowClear
                   showSearch
                   optionFilterProp="children"
+                  filterOption={(input, option) =>
+                    option.children.toLowerCase().includes(input.toLowerCase())
+                  }
                 >
-                  {Array.isArray(stages) &&
-                    stages.map((stage) => (
-                      <Select.Option key={stage.stageId} value={stage.stageId}>
-                        {stage.stageName}
-                      </Select.Option>
-                    ))}
+                  {stageActive.map((stage) => (
+                    <Option key={stage.stageId} value={stage.stageId}>
+                      {stage.stageName}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>

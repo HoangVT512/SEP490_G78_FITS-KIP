@@ -21,6 +21,11 @@ public class StageService : IStageService
         return _stageRepository.GetAllAsync(cancellationToken);
     }
 
+    public Task<IReadOnlyList<Stage>> GetActiveStagesAsync(CancellationToken cancellationToken = default)
+    {
+        return _stageRepository.GetActiveAsync(cancellationToken);
+    }
+
     public async Task<Stage> CreateStageAsync(CreateStageRequest request, CancellationToken cancellationToken = default)
     {
         // Get line info for detailed error message
