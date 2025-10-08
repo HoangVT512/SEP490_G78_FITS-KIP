@@ -704,48 +704,48 @@ const RoleManagement = ({ showHeader = true }) => {
           </Row>
 
           {/* Statistics */}
-          <Row gutter={16} style={{ marginBottom: 24 }}>
-            <Col span={6}>
-              <Card size="small" style={{ textAlign: "center" }}>
-                <div
-                  style={{ fontSize: 24, fontWeight: 600, color: "#334766" }}
-                >
-                  {roles.length}
-                </div>
-                <div style={{ color: "#666" }}>Tổng vai trò</div>
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card size="small" style={{ textAlign: "center" }}>
-                <div
-                  style={{ fontSize: 24, fontWeight: 600, color: "#52c41a" }}
-                >
-                  {roles.filter((r) => r.status === "active").length}
-                </div>
-                <div style={{ color: "#666" }}>Đang hoạt động</div>
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card size="small" style={{ textAlign: "center" }}>
-                <div
-                  style={{ fontSize: 24, fontWeight: 600, color: "#faad14" }}
-                >
-                  {roles.filter((r) => r.isSystemRole).length}
-                </div>
-                <div style={{ color: "#666" }}>Vai trò hệ thống</div>
-              </Card>
-            </Col>
-            <Col span={6}>
-              <Card size="small" style={{ textAlign: "center" }}>
-                <div
-                  style={{ fontSize: 24, fontWeight: 600, color: "#722ed1" }}
-                >
-                  {totalUsers}
-                </div>
-                <div style={{ color: "#666" }}>Tổng người dùng</div>
-              </Card>
-            </Col>
-          </Row>
+          {(() => {
+            // Prepare dynamic stats cards
+            const activeCount = roles.filter(
+              (r) => r.status === "active"
+            ).length;
+            const systemCount = roles.filter((r) => r.isSystemRole).length;
+            const statsList = [
+              { title: "Tổng vai trò", value: roles.length, color: "#334766" },
+              activeCount > 0 && {
+                title: "Đang hoạt động",
+                value: activeCount,
+                color: "#52c41a",
+              },
+              {
+                title: "Vai trò hệ thống",
+                value: systemCount,
+                color: "#faad14",
+              },
+              { title: "Tổng người dùng", value: totalUsers, color: "#722ed1" },
+            ].filter(Boolean);
+            const colSpan = 24 / statsList.length;
+            return (
+              <Row gutter={16} style={{ marginBottom: 24 }}>
+                {statsList.map((stat) => (
+                  <Col span={colSpan} key={stat.title}>
+                    <Card size="small" style={{ textAlign: "center" }}>
+                      <div
+                        style={{
+                          fontSize: 24,
+                          fontWeight: 600,
+                          color: stat.color,
+                        }}
+                      >
+                        {stat.value}
+                      </div>
+                      <div style={{ color: "#666" }}>{stat.title}</div>
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            );
+          })()}
 
           {/* Table */}
           <div className="table-container" style={{ overflow: "auto" }}>
