@@ -319,7 +319,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     Origin = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
                     YOM = table.Column<int>(type: "int", nullable: true),
                     QRCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    IdCode = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
                     StageID = table.Column<int>(type: "int", nullable: true),
                     Issue = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)

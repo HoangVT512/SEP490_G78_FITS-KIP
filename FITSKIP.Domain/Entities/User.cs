@@ -5,9 +5,7 @@ namespace FITSKIP.Domain.Entities;
 public class User : IdentityUser
 {
     public string? FullName { get; set; }
-    public string? Gender { get; set; }
     public string? EmployeeCode { get; set; }
-    public string? Position { get; set; }
     public bool IsActive { get; set; } = true;
 
     // Foreign Key to Role (1-to-many relationship)

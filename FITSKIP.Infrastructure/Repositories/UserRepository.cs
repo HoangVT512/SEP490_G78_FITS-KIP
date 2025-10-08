@@ -161,9 +161,7 @@ public class UserRepository : IUserRepository
                 LockoutEnabled = user.LockoutEnabled,
                 AccessFailedCount = user.AccessFailedCount,
                 FullName = user.FullName,
-                Gender = user.Gender,
                 EmployeeCode = user.EmployeeCode,
-                Position = user.Position,
                 IsActive = user.IsActive,
                 Roles = roles.ToList(),
                 DepartmentId = department?.DepartmentId,
@@ -220,9 +218,7 @@ public class UserRepository : IUserRepository
         existingUser.NormalizedUserName = request.UserName.ToUpperInvariant();
         existingUser.NormalizedEmail = request.Email.ToUpperInvariant();
         existingUser.FullName = request.FullName;
-        existingUser.Gender = request.Gender;
         existingUser.EmployeeCode = request.EmployeeCode;
-        existingUser.Position = request.Position;
         existingUser.PhoneNumber = request.PhoneNumber;
         existingUser.IsActive = request.IsActive;
 
@@ -382,9 +378,7 @@ public class UserRepository : IUserRepository
             LockoutEnabled = existingUser.LockoutEnabled,
             AccessFailedCount = existingUser.AccessFailedCount,
             FullName = existingUser.FullName,
-            Gender = existingUser.Gender,
             EmployeeCode = existingUser.EmployeeCode,
-            Position = existingUser.Position,
             IsActive = existingUser.IsActive,
             Roles = roleName != null ? new List<string> { roleName } : new List<string>(),
             DepartmentId = department?.DepartmentId,
@@ -454,7 +448,6 @@ public class UserRepository : IUserRepository
             existingUser.Email = request.Email;
             existingUser.NormalizedEmail = request.Email.ToUpperInvariant();
             existingUser.PhoneNumber = request.PhoneNumber;
-            existingUser.Gender = request.Gender;
             // Note: ProfileImageUrl would be handled when we add image upload functionality
 
             await db.SaveChangesAsync(cancellationToken);
@@ -475,9 +468,7 @@ public class UserRepository : IUserRepository
             UserName = request.UserName,
             Email = request.Email,
             FullName = request.FullName,
-            Gender = request.Gender,
             EmployeeCode = request.EmployeeCode,
-            Position = request.Position,
             PhoneNumber = request.PhoneNumber
         };
 

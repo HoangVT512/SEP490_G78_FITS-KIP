@@ -40,11 +40,7 @@ namespace FITSKIP.Domain.DTO
 
         public string? FullName { get; set; }
 
-        public string? Gender { get; set; }
-
         public string? EmployeeCode { get; set; }
-
-        public string? Position { get; set; }
 
         public bool IsActive { get; set; }
 

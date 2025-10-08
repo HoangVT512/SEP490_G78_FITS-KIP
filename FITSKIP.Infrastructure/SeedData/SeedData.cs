@@ -137,9 +137,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     ConcurrencyStamp = Guid.NewGuid().ToString(),
                     FullName = "Nguyễn Văn Quản trị",
                     EmployeeCode = "QTV001",
-                    PhoneNumber = "0901234567",
-                    Position = "Quản trị viên hệ thống",
-                    Gender = "Nam"
+                    PhoneNumber = "0901234567"
                 };
                 admin.PasswordHash = _passwordHasher.HashPassword(admin, "Admin123@");
                 users.Add(admin);
@@ -157,9 +155,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     ConcurrencyStamp = Guid.NewGuid().ToString(),
                     FullName = "Trần Thị Mai Anh",
                     EmployeeCode = "QL001",
-                    PhoneNumber = "0987654321",
-                    Position = "Quản lý điều hành",
-                    Gender = "Nữ"
+                    PhoneNumber = "0987654321"
                 };
                 manager.PasswordHash = _passwordHasher.HashPassword(manager, "Manager123@");
                 users.Add(manager);
@@ -177,9 +173,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     ConcurrencyStamp = Guid.NewGuid().ToString(),
                     FullName = "Lê Văn Kỹ thuật",
                     EmployeeCode = "QLKT001",
-                    PhoneNumber = "0912345678",
-                    Position = "Quản lý phòng Kỹ thuật",
-                    Gender = "Nam"
+                    PhoneNumber = "0912345678"
                 };
                 techManager.PasswordHash = _passwordHasher.HashPassword(techManager, "TechMgr123@");
                 users.Add(techManager);
@@ -197,9 +191,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     ConcurrencyStamp = Guid.NewGuid().ToString(),
                     FullName = "Phạm Văn Sản xuất",
                     EmployeeCode = "TT001",
-                    PhoneNumber = "0923456789",
-                    Position = "Tổ trưởng ca sản xuất",
-                    Gender = "Nam"
+                    PhoneNumber = "0923456789"
                 };
                 teamLeader.PasswordHash = _passwordHasher.HashPassword(teamLeader, "TeamLead123@");
                 users.Add(teamLeader);
@@ -217,9 +209,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     ConcurrencyStamp = Guid.NewGuid().ToString(),
                     FullName = "Đặng Văn Kỹ thuật",
                     EmployeeCode = "KTV001",
-                    PhoneNumber = "0945678901",
-                    Position = "Kỹ thuật viên điện tử",
-                    Gender = "Nam"
+                    PhoneNumber = "0945678901"
                 };
                 technician.PasswordHash = _passwordHasher.HashPassword(technician, "Tech123@");
                 users.Add(technician);

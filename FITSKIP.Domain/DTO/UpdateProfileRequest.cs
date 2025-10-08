@@ -7,7 +7,7 @@ public class UpdateProfileRequest
 {
     [Required(ErrorMessage = "Họ và tên là bắt buộc")]
     public string FullName { get; set; } = string.Empty;
-    
+
     [Required(ErrorMessage = "Email là bắt buộc")]
     [EmailAddress(ErrorMessage = "Email không đúng định dạng")]
     [StringLength(256, ErrorMessage = "Email không được vượt quá 256 ký tự")]
@@ -16,9 +16,6 @@ public class UpdateProfileRequest
     [Required(ErrorMessage = "Số điện thoại là bắt buộc")]
     [RegularExpression(@"^0[0-9]{9}$", ErrorMessage = "Số điện thoại phải có đúng 10 số và bắt đầu bằng số 0")]
     public string PhoneNumber { get; set; } = string.Empty;
-
-    [StringLength(10, ErrorMessage = "Giới tính không được vượt quá 10 ký tự")]
-    public string? Gender { get; set; }
 
     public string? ProfileImageUrl { get; set; }
 }

@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251008075150_RemoveIdCodeFromEquipment")]
-    partial class RemoveIdCodeFromEquipment
+    [Migration("20251008141839_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

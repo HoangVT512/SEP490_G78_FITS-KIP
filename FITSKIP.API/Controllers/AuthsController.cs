@@ -94,8 +94,6 @@ public class AuthsController : ControllerBase
             var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
             var fullName = User.FindFirst("FullName")?.Value;
             var employeeCode = User.FindFirst("EmployeeCode")?.Value;
-            var position = User.FindFirst("Position")?.Value;
-            var gender = User.FindFirst("Gender")?.Value;
             var isActiveStr = User.FindFirst("IsActive")?.Value;
             var isActive = bool.Parse(isActiveStr ?? "true");
             var roles = User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToList();
@@ -118,8 +116,6 @@ public class AuthsController : ControllerBase
                 email = email,
                 fullName = fullName,
                 employeeCode = employeeCode,
-                position = position,
-                gender = gender,
                 isActive = isActive,
                 roles = roles
             });
@@ -254,9 +250,7 @@ public class AuthsController : ControllerBase
                         email = result.Email,
                         fullName = result.FullName,
                         phoneNumber = result.PhoneNumber,
-                        gender = result.Gender,
-                        employeeCode = result.EmployeeCode,
-                        position = result.Position
+                        employeeCode = result.EmployeeCode
                     }
                 });
             }

@@ -79,8 +79,6 @@ public class AuthService : IAuthService
                 Email = user.Email,
                 FullName = user.FullName,
                 EmployeeCode = user.EmployeeCode,
-                Position = user.Position,
-                Gender = user.Gender,
                 PhoneNumber = user.PhoneNumber,
                 EmailConfirmed = user.EmailConfirmed,
                 PhoneNumberConfirmed = user.PhoneNumberConfirmed,

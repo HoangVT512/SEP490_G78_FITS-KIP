@@ -67,9 +67,7 @@ public partial class FitskipDbContext : IdentityDbContext<User>
         modelBuilder.Entity<User>(entity =>
         {
             entity.Property(e => e.FullName).HasMaxLength(250);
-            entity.Property(e => e.Gender).HasMaxLength(10);
             entity.Property(e => e.EmployeeCode).HasMaxLength(50);
-            entity.Property(e => e.Position).HasMaxLength(250);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.RoleId).HasMaxLength(450);
 

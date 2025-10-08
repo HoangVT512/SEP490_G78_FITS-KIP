@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251004195812_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251008192326_RemoveGenderAndPositionColumns")]
+    partial class RemoveGenderAndPositionColumns
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -79,10 +79,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<string>("EquipmentName")
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("IdCode")
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -598,10 +594,6 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
 
-                    b.Property<string>("Gender")
-                        .HasMaxLength(10)
-                        .HasColumnType("nvarchar(10)");
-
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
@@ -629,10 +621,6 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
-
-                    b.Property<string>("Position")
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
 
                     b.Property<string>("RoleId")
                         .HasMaxLength(450)

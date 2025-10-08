@@ -55,9 +55,7 @@ public class UsersController : ControllerBase
             LockoutEnabled = user.LockoutEnabled,
             AccessFailedCount = user.AccessFailedCount,
             FullName = user.FullName,
-            Gender = user.Gender,
             EmployeeCode = user.EmployeeCode,
-            Position = user.Position,
         };
         return Ok(response);
     }
@@ -90,9 +88,7 @@ public class UsersController : ControllerBase
             LockoutEnabled = user.LockoutEnabled,
             AccessFailedCount = user.AccessFailedCount,
             FullName = user.FullName,
-            Gender = user.Gender,
             EmployeeCode = user.EmployeeCode,
-            Position = user.Position,
         };
         return Ok(response);
     }
@@ -123,9 +119,7 @@ public class UsersController : ControllerBase
             LockoutEnabled = user.LockoutEnabled,
             AccessFailedCount = user.AccessFailedCount,
             FullName = user.FullName,
-            Gender = user.Gender,
             EmployeeCode = user.EmployeeCode,
-            Position = user.Position,
         };
         return Ok(response);
     }
@@ -193,9 +187,7 @@ public class UsersController : ControllerBase
                 Email = request.Email,
                 NormalizedEmail = request.Email.ToUpperInvariant(),
                 FullName = request.FullName,
-                Gender = request.Gender,
                 EmployeeCode = request.EmployeeCode,
-                Position = request.Position,
                 PhoneNumber = request.PhoneNumber,
                 EmailConfirmed = true,
                 LockoutEnabled = true,
@@ -211,9 +203,7 @@ public class UsersController : ControllerBase
                 UserName = createdUser.UserName,
                 Email = createdUser.Email,
                 FullName = createdUser.FullName,
-                Gender = createdUser.Gender,
                 EmployeeCode = createdUser.EmployeeCode,
-                Position = createdUser.Position,
                 PhoneNumber = createdUser.PhoneNumber,
                 EmailConfirmed = createdUser.EmailConfirmed,
                 LockoutEnabled = createdUser.LockoutEnabled
@@ -367,9 +357,7 @@ public class UsersController : ControllerBase
                             Email = request.Email,
                             NormalizedEmail = request.Email.ToUpperInvariant(),
                             FullName = request.FullName,
-                            Gender = request.Gender,
                             EmployeeCode = request.EmployeeCode,
-                            Position = request.Position,
                             PhoneNumber = request.PhoneNumber,
                             EmailConfirmed = true,
                             LockoutEnabled = true,
@@ -503,15 +491,13 @@ public class UsersController : ControllerBase
                 worksheet.Cells[1, 1].Value = "Người dùng";
                 worksheet.Cells[1, 2].Value = "Email";
                 worksheet.Cells[1, 3].Value = "Họ và tên";
-                worksheet.Cells[1, 4].Value = "Giới tính";
-                worksheet.Cells[1, 5].Value = "Mã nhân viên";
-                worksheet.Cells[1, 6].Value = "Chức vụ";
-                worksheet.Cells[1, 7].Value = "Số điện thoại";
-                worksheet.Cells[1, 8].Value = "Trạng thái";
-                worksheet.Cells[1, 9].Value = "Vai trò";
+                worksheet.Cells[1, 4].Value = "Mã nhân viên";
+                worksheet.Cells[1, 5].Value = "Số điện thoại";
+                worksheet.Cells[1, 6].Value = "Trạng thái";
+                worksheet.Cells[1, 7].Value = "Vai trò";
 
                 // Style headers
-                using (var range = worksheet.Cells[1, 1, 1, 9])
+                using (var range = worksheet.Cells[1, 1, 1, 7])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
@@ -531,17 +517,15 @@ public class UsersController : ControllerBase
                     worksheet.Cells[row, 1].Value = user.UserName;
                     worksheet.Cells[row, 2].Value = user.Email;
                     worksheet.Cells[row, 3].Value = user.FullName;
-                    worksheet.Cells[row, 4].Value = user.Gender;
-                    worksheet.Cells[row, 5].Value = user.EmployeeCode;
-                    worksheet.Cells[row, 6].Value = user.Position;
-                    worksheet.Cells[row, 7].Value = user.PhoneNumber;
-                    worksheet.Cells[row, 8].Value = user.IsActive ? "Hoạt động" : "Ngừng hoạt động";
-                    worksheet.Cells[row, 9].Value = user.Roles != null && user.Roles.Any()
+                    worksheet.Cells[row, 4].Value = user.EmployeeCode;
+                    worksheet.Cells[row, 5].Value = user.PhoneNumber;
+                    worksheet.Cells[row, 6].Value = user.IsActive ? "Hoạt động" : "Ngừng hoạt động";
+                    worksheet.Cells[row, 7].Value = user.Roles != null && user.Roles.Any()
                         ? string.Join(", ", user.Roles)
                         : "Không có vai trò";
 
                     // Add borders to data rows
-                    using (var range = worksheet.Cells[row, 1, row, 9])
+                    using (var range = worksheet.Cells[row, 1, row, 7])
                     {
                         range.Style.Border.Top.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
                         range.Style.Border.Bottom.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
