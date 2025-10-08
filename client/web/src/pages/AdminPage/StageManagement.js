@@ -249,14 +249,16 @@ const StageManagement = ({ showHeader = true }) => {
               } else {
                 message.error(
                   response.message ||
-                  `${actionText.charAt(0).toUpperCase() + actionText.slice(1)
-                  } công đoạn thất bại`
+                    `${
+                      actionText.charAt(0).toUpperCase() + actionText.slice(1)
+                    } công đoạn thất bại`
                 );
               }
             } catch (error) {
               console.error("Toggle stage status error:", error);
               message.error(
-                `${actionText.charAt(0).toUpperCase() + actionText.slice(1)
+                `${
+                  actionText.charAt(0).toUpperCase() + actionText.slice(1)
                 } công đoạn thất bại`
               );
             }
@@ -508,8 +510,8 @@ const StageManagement = ({ showHeader = true }) => {
               value={
                 lines.length > 0
                   ? (
-                    stages.length / new Set(stages.map((s) => s.lineId)).size
-                  ).toFixed(1)
+                      stages.length / new Set(stages.map((s) => s.lineId)).size
+                    ).toFixed(1)
                   : 0
               }
               prefix={<LineChartOutlined style={{ color: "#722ed1" }} />}
@@ -577,6 +579,7 @@ const StageManagement = ({ showHeader = true }) => {
                   setEditingStage(null);
                   setSelectedDepartmentId(null);
                   form.resetFields();
+                  form.setFieldsValue({ isActive: true });
                   setIsModalVisible(true);
                 }}
                 style={{ backgroundColor: "#334766", borderColor: "#334766" }}
@@ -593,7 +596,9 @@ const StageManagement = ({ showHeader = true }) => {
                     : {}
                 }
               >
-                {showArchive ? "Hiển thị (Hoạt động)" : "Lưu trữ (Ngừng hoạt động)"}
+                {showArchive
+                  ? "Hiển thị (Hoạt động)"
+                  : "Lưu trữ (Ngừng hoạt động)"}
               </Button>
             </Space>
           </Col>
@@ -741,8 +746,8 @@ const StageManagement = ({ showHeader = true }) => {
                     !selectedDepartmentId
                       ? "Vui lòng chọn phòng ban trước"
                       : filteredActiveLines.length === 0
-                        ? "Không có dây chuyền nào"
-                        : "Đang tải..."
+                      ? "Không có dây chuyền nào"
+                      : "Đang tải..."
                   }
                   showSearch
                   optionFilterProp="children"
@@ -758,20 +763,27 @@ const StageManagement = ({ showHeader = true }) => {
                 </Select>
               </Form.Item>
             </Col>
-          </Row>
-          <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="isActive"
-                label="Trạng thái hoạt động"
-                valuePropName="checked"
-              >
-                <Switch
-                  checkedChildren="Hoạt động"
-                  unCheckedChildren="Dừng hoạt động"
-                  defaultChecked={true}
-                />
-              </Form.Item>
+              {editingStage ? (
+                <Form.Item
+                  name="isActive"
+                  label="Trạng thái hoạt động"
+                  rules={[
+                    { required: true, message: "Vui lòng chọn trạng thái" },
+                  ]}
+                >
+                  <Select placeholder="Chọn trạng thái">
+                    <Option value={true}>Hoạt động</Option>
+                    <Option value={false}>Dừng hoạt động</Option>
+                  </Select>
+                </Form.Item>
+              ) : (
+                <Form.Item label="Trạng thái hoạt động">
+                  <Select value={true} disabled showArrow={false}>
+                    <Option value={true}>Hoạt động (Mặc định)</Option>
+                  </Select>
+                </Form.Item>
+              )}
             </Col>
           </Row>
         </Form>
