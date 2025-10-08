@@ -70,31 +70,58 @@ const Profile = () => {
       try {
         setLoading(true);
 
-        const storedUser = authService.getStoredUser();
+        // Prefer fetching fresh user data from server so verification flags are up-to-date
+        const currentUser = await authService.getCurrentUser();
 
-        if (storedUser) {
+        if (currentUser) {
           setUserInfo({
-            id: storedUser.id,
-            fullName: storedUser.fullName || "Chưa cập nhật",
-            employeeCode: storedUser.employeeCode || "Chưa có",
-            email: storedUser.email || "Chưa cập nhật",
-            phoneNumber: storedUser.phoneNumber || null,
-            department: "Chưa phân phòng ban",
-            role: storedUser.roles
-              ? storedUser.roles.join(", ")
+            id: currentUser.id,
+            fullName:
+              currentUser.fullName || currentUser.fullName || "Chưa cập nhật",
+            employeeCode: currentUser.employeeCode || "Chưa có",
+            email: currentUser.email || "Chưa cập nhật",
+            phoneNumber: currentUser.phoneNumber || null,
+            department: currentUser.department || "Chưa phân phòng ban",
+            role: currentUser.roles
+              ? currentUser.roles.join(", ")
               : "Chưa có vai trò",
             isActive:
-              storedUser.isActive !== undefined ? storedUser.isActive : true,
-            emailConfirmed: storedUser.emailConfirmed || false,
-            phoneNumberConfirmed: storedUser.phoneNumberConfirmed || false,
-            twoFactorEnabled: storedUser.twoFactorEnabled || false,
-            lockoutEnabled: storedUser.lockoutEnabled || false,
-            accessFailedCount: storedUser.accessFailedCount || 0,
+              currentUser.isActive !== undefined ? currentUser.isActive : true,
+            emailConfirmed: currentUser.emailConfirmed || false,
+            phoneNumberConfirmed: currentUser.phoneNumberConfirmed || false,
+            twoFactorEnabled: currentUser.twoFactorEnabled || false,
+            lockoutEnabled: currentUser.lockoutEnabled || false,
+            accessFailedCount: currentUser.accessFailedCount || 0,
             lastLoginDate: new Date().toISOString(),
-            createdDate: "2024-01-15T09:00:00",
+            createdDate: currentUser.createdDate || "",
           });
         } else {
-          navigate("/login");
+          // If API didn't return user, fallback to stored user or redirect to login
+          const storedUser = authService.getStoredUser();
+          if (storedUser) {
+            setUserInfo({
+              id: storedUser.id,
+              fullName: storedUser.fullName || "Chưa cập nhật",
+              employeeCode: storedUser.employeeCode || "Chưa có",
+              email: storedUser.email || "Chưa cập nhật",
+              phoneNumber: storedUser.phoneNumber || null,
+              department: "Chưa phân phòng ban",
+              role: storedUser.roles
+                ? storedUser.roles.join(", ")
+                : "Chưa có vai trò",
+              isActive:
+                storedUser.isActive !== undefined ? storedUser.isActive : true,
+              emailConfirmed: storedUser.emailConfirmed || false,
+              phoneNumberConfirmed: storedUser.phoneNumberConfirmed || false,
+              twoFactorEnabled: storedUser.twoFactorEnabled || false,
+              lockoutEnabled: storedUser.lockoutEnabled || false,
+              accessFailedCount: storedUser.accessFailedCount || 0,
+              lastLoginDate: new Date().toISOString(),
+              createdDate: "",
+            });
+          } else {
+            navigate("/login");
+          }
         }
       } catch (error) {
         console.error("Error loading user data:", error);
@@ -285,11 +312,16 @@ const Profile = () => {
                         <Descriptions.Item label="Email">
                           <Space>
                             <MailOutlined className={styles.profileIconEmail} />
-                            {userInfo.email}
-                            {userInfo.emailConfirmed && (
+                            {userInfo.email || "Chưa cập nhật"}
+                            {userInfo.emailConfirmed ? (
                               <CheckCircleOutlined
                                 className={styles.profileIconVerified}
                               />
+                            ) : (
+                              // show explicit unverified indicator when emailConfirmed is false
+                              <Tag color="orange" style={{ marginLeft: 8 }}>
+                                Chưa xác thực
+                              </Tag>
                             )}
                           </Space>
                         </Descriptions.Item>
@@ -299,25 +331,20 @@ const Profile = () => {
                               className={styles.profileIconPhone}
                             />
                             {userInfo.phoneNumber || "Chưa cập nhật"}
-                            {userInfo.phoneNumberConfirmed &&
-                              userInfo.phoneNumber && (
+                            {userInfo.phoneNumber ? (
+                              userInfo.phoneNumberConfirmed ? (
                                 <CheckCircleOutlined
                                   className={styles.profileIconVerified}
                                 />
-                              )}
+                              ) : (
+                                <Tag color="orange" style={{ marginLeft: 8 }}>
+                                  Chưa xác thực
+                                </Tag>
+                              )
+                            ) : null}
                           </Space>
                         </Descriptions.Item>
-                        <Descriptions.Item label="Trạng thái tài khoản">
-                          <Badge
-                            status={userInfo.isActive ? "success" : "error"}
-                            text={
-                              userInfo.isActive
-                                ? "Hoạt động"
-                                : "Không hoạt động"
-                            }
-                          />
-                        </Descriptions.Item>
-                        <Descriptions.Item label="Phòng ban" span={2}>
+                        <Descriptions.Item label="Phòng ban">
                           <Space>
                             <TeamOutlined className={styles.profileIconTeam} />
                             {userInfo.department}

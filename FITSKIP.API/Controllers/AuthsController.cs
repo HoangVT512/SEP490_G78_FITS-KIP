@@ -77,7 +77,7 @@ public class AuthsController : ControllerBase
     /// <returns>Thông tin user</returns>
     [HttpGet("me")]
     [Authorize]
-    public IActionResult GetCurrentUser()
+    public async Task<IActionResult> GetCurrentUser()
     {
         try
         {
@@ -90,33 +90,36 @@ public class AuthsController : ControllerBase
             Console.WriteLine("=== END DEBUG ===");
 
             var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            var userName = User.FindFirst(System.Security.Claims.ClaimTypes.Name)?.Value;
-            var email = User.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
-            var fullName = User.FindFirst("FullName")?.Value;
-            var employeeCode = User.FindFirst("EmployeeCode")?.Value;
-            var isActiveStr = User.FindFirst("IsActive")?.Value;
-            var isActive = bool.Parse(isActiveStr ?? "true");
             var roles = User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).ToList();
 
             if (string.IsNullOrEmpty(userId))
             {
                 return Unauthorized(new { message = "Token không chứa thông tin user hợp lệ" });
             }
+            // Load full user from database to get current flags like EmailConfirmed/PhoneNumberConfirmed and IsActive
+            var user = await _userService.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                return Unauthorized(new { message = "Không thể tìm thấy người dùng từ token" });
+            }
 
             // Check if user account is still active
-            if (!isActive)
+            if (!user.IsActive)
             {
                 return Unauthorized(new { message = "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên." });
             }
 
             return Ok(new
             {
-                id = userId,
-                userName = userName,
-                email = email,
-                fullName = fullName,
-                employeeCode = employeeCode,
-                isActive = isActive,
+                id = user.Id,
+                userName = user.UserName,
+                email = user.Email,
+                fullName = user.FullName,
+                employeeCode = user.EmployeeCode,
+                isActive = user.IsActive,
+                emailConfirmed = user.EmailConfirmed,
+                phoneNumber = user.PhoneNumber,
+                phoneNumberConfirmed = user.PhoneNumberConfirmed,
                 roles = roles
             });
         }
@@ -248,8 +251,10 @@ public class AuthsController : ControllerBase
                         id = result.Id,
                         userName = result.UserName,
                         email = result.Email,
+                        emailConfirmed = result.EmailConfirmed,
                         fullName = result.FullName,
                         phoneNumber = result.PhoneNumber,
+                        phoneNumberConfirmed = result.PhoneNumberConfirmed,
                         employeeCode = result.EmployeeCode
                     }
                 });
