@@ -706,24 +706,16 @@ const RoleManagement = ({ showHeader = true }) => {
           {/* Statistics */}
           {(() => {
             // Prepare dynamic stats cards
-            const activeCount = roles.filter(
-              (r) => r.status === "active"
-            ).length;
             const systemCount = roles.filter((r) => r.isSystemRole).length;
             const statsList = [
               { title: "Tổng vai trò", value: roles.length, color: "#334766" },
-              activeCount > 0 && {
-                title: "Đang hoạt động",
-                value: activeCount,
-                color: "#52c41a",
-              },
               {
                 title: "Vai trò hệ thống",
                 value: systemCount,
                 color: "#faad14",
               },
               { title: "Tổng người dùng", value: totalUsers, color: "#722ed1" },
-            ].filter(Boolean);
+            ];
             const colSpan = 24 / statsList.length;
             return (
               <Row gutter={16} style={{ marginBottom: 24 }}>

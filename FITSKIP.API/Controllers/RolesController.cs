@@ -89,11 +89,13 @@ namespace FITSKIP.API.Controllers
         [Route("{id}")]
         public async Task<IActionResult> UpdateRole([FromRoute] string id, [FromBody] UpdateRoleRequest request)
         {
+            // Preserve or generate a new ConcurrencyStamp to avoid null on update
             var role = new IdentityRole
             {
                 Id = id,
                 Name = request.Name,
-                NormalizedName = request.Name.ToUpper().Replace(" ", "_")
+                NormalizedName = request.Name.ToUpper().Replace(" ", "_"),
+                ConcurrencyStamp = Guid.NewGuid().ToString()
             };
             var updatedRole = await roleService.UpdateRoleAsync(role);
             if (updatedRole == null)
