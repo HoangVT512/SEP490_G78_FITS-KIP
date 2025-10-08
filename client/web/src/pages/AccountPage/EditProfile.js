@@ -407,7 +407,7 @@ const EditProfile = () => {
                     </Form.Item>
                   </Col>
 
-                  <Col xs={24} md={8}>
+                  <Col xs={24} md={12}>
                     <Form.Item label="Chức vụ" name="position">
                       <Input
                         prefix={<IdcardOutlined />}

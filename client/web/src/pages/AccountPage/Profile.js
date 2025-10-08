@@ -83,6 +83,8 @@ const Profile = () => {
             role: storedUser.roles
               ? storedUser.roles.join(", ")
               : "Chưa có vai trò",
+            isActive:
+              storedUser.isActive !== undefined ? storedUser.isActive : true,
             emailConfirmed: storedUser.emailConfirmed || false,
             phoneNumberConfirmed: storedUser.phoneNumberConfirmed || false,
             twoFactorEnabled: storedUser.twoFactorEnabled || false,
@@ -238,14 +240,24 @@ const Profile = () => {
               }
               className={styles.profileInfoCard}
               extra={
-                <Button
-                  type="primary"
-                  icon={<EditOutlined />}
-                  onClick={handleEditProfile}
-                  className={styles.profileEditButton}
-                >
-                  Chỉnh sửa
-                </Button>
+                <Space>
+                  <Button
+                    type="primary"
+                    icon={<EditOutlined />}
+                    onClick={handleEditProfile}
+                    className={styles.profileEditButton}
+                  >
+                    Chỉnh sửa
+                  </Button>
+                  <Button
+                    type="default"
+                    icon={<SafetyOutlined />}
+                    onClick={handleChangePassword}
+                    className={styles.profileChangePasswordButton}
+                  >
+                    Đổi mật khẩu
+                  </Button>
+                </Space>
               }
             >
               <Tabs
@@ -295,8 +307,15 @@ const Profile = () => {
                               )}
                           </Space>
                         </Descriptions.Item>
-                        <Descriptions.Item label="Chức vụ" span={2}>
-                          <Text strong>{userInfo.position}</Text>
+                        <Descriptions.Item label="Trạng thái tài khoản">
+                          <Badge
+                            status={userInfo.isActive ? "success" : "error"}
+                            text={
+                              userInfo.isActive
+                                ? "Hoạt động"
+                                : "Không hoạt động"
+                            }
+                          />
                         </Descriptions.Item>
                         <Descriptions.Item label="Phòng ban" span={2}>
                           <Space>
@@ -304,88 +323,7 @@ const Profile = () => {
                             {userInfo.department}
                           </Space>
                         </Descriptions.Item>
-                        <Descriptions.Item label="Ngày tạo tài khoản" span={2}>
-                          {formatDateTime(userInfo.createdDate)}
-                        </Descriptions.Item>
                       </Descriptions>
-                    ),
-                  },
-                  {
-                    key: "2",
-                    label: (
-                      <span>
-                        <SecurityScanOutlined />
-                        Bảo mật
-                      </span>
-                    ),
-                    children: (
-                      <div>
-                        <Alert
-                          message="Tình trạng bảo mật tài khoản"
-                          description={`Tài khoản của bạn đang ở trạng thái ${getUserStatusText().toLowerCase()}. Đăng nhập lần cuối: ${formatDateTime(
-                            userInfo.lastLoginDate
-                          )}`}
-                          type={
-                            getUserStatusColor() === "success"
-                              ? "success"
-                              : "warning"
-                          }
-                          showIcon
-                          className={styles.profileSecurityAlert}
-                        />
-
-                        <Descriptions column={2} bordered>
-                          <Descriptions.Item label="Xác thực email">
-                            <Badge
-                              status={
-                                userInfo.emailConfirmed ? "success" : "error"
-                              }
-                              text={
-                                userInfo.emailConfirmed
-                                  ? "Đã xác thực"
-                                  : "Chưa xác thực"
-                              }
-                            />
-                          </Descriptions.Item>
-                          <Descriptions.Item label="Xác thực số điện thoại">
-                            <Badge
-                              status={
-                                userInfo.phoneNumberConfirmed
-                                  ? "success"
-                                  : "default"
-                              }
-                              text={
-                                userInfo.phoneNumberConfirmed
-                                  ? "Đã xác thực"
-                                  : "Chưa xác thực"
-                              }
-                            />
-                          </Descriptions.Item>
-                          <Descriptions.Item label="Khóa tài khoản" span={2}>
-                            <Badge
-                              status={
-                                userInfo.lockoutEnabled ? "warning" : "success"
-                              }
-                              text={
-                                userInfo.lockoutEnabled
-                                  ? "Có thể bị khóa"
-                                  : "Không khóa"
-                              }
-                            />
-                          </Descriptions.Item>
-                        </Descriptions>
-
-                        <Divider />
-
-                        <Button
-                          type="primary"
-                          icon={<SafetyOutlined />}
-                          onClick={handleChangePassword}
-                          className={styles.profileChangePasswordButton}
-                        >
-                          Đổi mật khẩu
-                        </Button>
-                      </div>
                     ),
                   },
                 ]}
