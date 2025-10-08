@@ -238,6 +238,39 @@ export const authService = {
       throw error;
     }
   },
+
+  // Send email verification
+  sendEmailVerification: async () => {
+    try {
+      const response = await apiRequest("/Auths/send-email-verification", {
+        method: "POST",
+      });
+
+      return response;
+    } catch (error) {
+      console.error("Send email verification error:", error);
+      throw error;
+    }
+  },
+
+  // Verify email with token
+  verifyEmail: async (userId, token) => {
+    try {
+      const response = await apiRequest(
+        `/Auths/verify-email?userId=${userId}&token=${encodeURIComponent(
+          token
+        )}`,
+        {
+          method: "GET",
+        }
+      );
+
+      return response;
+    } catch (error) {
+      console.error("Verify email error:", error);
+      throw error;
+    }
+  },
 };
 
 export default authService;

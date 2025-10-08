@@ -273,4 +273,68 @@ public class AuthsController : ControllerBase
             return BadRequest(new { success = false, message = "Đã có lỗi xảy ra trong quá trình cập nhật thông tin", details = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Gửi email xác thực cho người dùng
+    /// </summary>
+    [HttpPost("send-email-verification")]
+    [Authorize]
+    public async Task<IActionResult> SendEmailVerification()
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { success = false, message = "Không thể xác định user từ token" });
+            }
+
+            var result = await _authService.SendEmailVerificationAsync(userId);
+
+            if (result)
+            {
+                return Ok(new { success = true, message = "Email xác thực đã được gửi. Vui lòng kiểm tra hộp thư của bạn." });
+            }
+            else
+            {
+                return BadRequest(new { success = false, message = "Không thể gửi email xác thực. Email có thể đã được xác thực hoặc không tồn tại." });
+            }
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Đã có lỗi xảy ra khi gửi email xác thực", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Xác thực email từ link trong email
+    /// </summary>
+    [HttpGet("verify-email")]
+    [AllowAnonymous]
+    public async Task<IActionResult> VerifyEmail([FromQuery] string userId, [FromQuery] string token)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(userId) || string.IsNullOrEmpty(token))
+            {
+                return BadRequest(new { success = false, message = "Thông tin xác thực không hợp lệ" });
+            }
+
+            var result = await _authService.VerifyEmailAsync(userId, token);
+
+            if (result)
+            {
+                return Ok(new { success = true, message = "Email đã được xác thực thành công" });
+            }
+            else
+            {
+                return BadRequest(new { success = false, message = "Không thể xác thực email. Token có thể đã hết hạn hoặc không hợp lệ." });
+            }
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Đã có lỗi xảy ra khi xác thực email", details = ex.Message });
+        }
+    }
 }

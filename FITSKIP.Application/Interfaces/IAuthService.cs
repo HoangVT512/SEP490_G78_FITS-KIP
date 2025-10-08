@@ -11,4 +11,6 @@ public interface IAuthService
     Task<bool> VerifyOtpAsync(VerifyOtpRequest request);
     Task<bool> ResetPasswordWithOtpAsync(ResetPasswordWithOtpRequest request);
     Task<bool> ChangePasswordAsync(string userId, ChangePasswordRequest request);
+    Task<bool> SendEmailVerificationAsync(string userId);
+    Task<bool> VerifyEmailAsync(string userId, string token);
 }

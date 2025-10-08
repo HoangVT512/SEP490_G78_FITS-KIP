@@ -208,6 +208,77 @@ public class AuthService : IAuthService
         }
     }
 
+    public async Task<bool> SendEmailVerificationAsync(string userId)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null || string.IsNullOrWhiteSpace(user.Email))
+            {
+                return false;
+            }
+
+            // Check if already verified
+            if (user.EmailConfirmed)
+            {
+                return false;
+            }
+
+            // Generate email confirmation token
+            var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+
+            // Encode token for URL
+            var encodedToken = Uri.EscapeDataString(token);
+
+            // Get frontend URL from configuration
+            var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:3000";
+            var verificationLink = $"{frontendUrl}/verify-email?userId={userId}&token={encodedToken}";
+
+            // Send email
+            var subject = "Xác thực địa chỉ Email";
+            var html = $@"
+<html>
+<body>
+    <h2>Xác thực địa chỉ Email</h2>
+    <p>Xin chào {user.FullName ?? user.UserName},</p>
+    <p>Vui lòng click vào link bên dưới để xác thực địa chỉ email của bạn:</p>
+    <p><a href='{verificationLink}' style='display:inline-block;padding:10px 20px;background-color:#1890ff;color:white;text-decoration:none;border-radius:4px;'>Xác thực Email</a></p>
+    <p>Hoặc copy link sau vào trình duyệt:</p>
+    <p>{verificationLink}</p>
+    <p>Nếu bạn không yêu cầu xác thực này, vui lòng bỏ qua email này.</p>
+</body>
+</html>";
+
+            await _emailService.SendEmailAsync(user.Email, subject, html, "Xác thực Email");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"SendEmailVerification Error: {ex.Message}");
+            return false;
+        }
+    }
+
+    public async Task<bool> VerifyEmailAsync(string userId, string token)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            var result = await _userManager.ConfirmEmailAsync(user, token);
+            return result.Succeeded;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"VerifyEmail Error: {ex.Message}");
+            return false;
+        }
+    }
+
     private async Task<User?> FindUserByEmailOrEmployeeCodeAsync(string emailOrEmployeeCode)
     {
         // First try to find by email

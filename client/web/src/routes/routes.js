@@ -4,6 +4,7 @@ import ResetPasswordPage from "../pages/AccountPage/ResetPassword";
 import ProfilePage from "../pages/AccountPage/Profile";
 import EditProfilePage from "../pages/AccountPage/EditProfile";
 import ChangePasswordPage from "../pages/AccountPage/ChangePassword";
+import VerifyEmailPage from "../pages/VerifyEmail";
 import AdminLayout from "../pages/AdminPage/AdminLayout";
 // Keep individual imports for potential standalone use
 import UserManagement from "../pages/AdminPage/UserManagement";
@@ -42,6 +43,13 @@ export const routes = [
     path: "/reset-password",
     name: "Reset Password",
     page: ResetPasswordPage,
+    isShowHeader: true,
+    requiredPermissions: 0,
+  },
+  {
+    path: "/verify-email",
+    name: "Verify Email",
+    page: VerifyEmailPage,
     isShowHeader: true,
     requiredPermissions: 0,
   },

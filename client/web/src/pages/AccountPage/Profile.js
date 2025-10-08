@@ -15,6 +15,7 @@ import {
   Alert,
   Spin,
   message,
+  Modal,
 } from "antd";
 import {
   UserOutlined,
@@ -27,6 +28,7 @@ import {
   IdcardOutlined,
   SecurityScanOutlined,
   DashboardOutlined,
+  VerifiedOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Layout from "../../components/Layout";
@@ -142,6 +144,33 @@ const Profile = () => {
 
   const handleChangePassword = () => {
     navigate("/profile/change-password");
+  };
+
+  const handleSendEmailVerification = () => {
+    Modal.confirm({
+      title: "Xác thực Email",
+      content:
+        "Bạn có muốn gửi email xác thực đến địa chỉ email của bạn không?",
+      okText: "Gửi",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          const response = await authService.sendEmailVerification();
+          if (response.success) {
+            message.success(
+              response.message ||
+                "Email xác thực đã được gửi. Vui lòng kiểm tra hộp thư của bạn."
+            );
+          } else {
+            message.error(response.message || "Không thể gửi email xác thực");
+          }
+        } catch (error) {
+          message.error(
+            error.message || "Đã có lỗi xảy ra khi gửi email xác thực"
+          );
+        }
+      },
+    });
   };
 
   const getDashboardPath = () => {
@@ -309,19 +338,32 @@ const Profile = () => {
                             {userInfo.employeeCode}
                           </Tag>
                         </Descriptions.Item>
-                        <Descriptions.Item label="Email">
-                          <Space>
-                            <MailOutlined className={styles.profileIconEmail} />
-                            {userInfo.email || "Chưa cập nhật"}
-                            {userInfo.emailConfirmed ? (
-                              <CheckCircleOutlined
-                                className={styles.profileIconVerified}
+                        <Descriptions.Item label="Email" span={2}>
+                          <Space direction="vertical" style={{ width: "100%" }}>
+                            <Space>
+                              <MailOutlined
+                                className={styles.profileIconEmail}
                               />
-                            ) : (
-                              // show explicit unverified indicator when emailConfirmed is false
-                              <Tag color="orange" style={{ marginLeft: 8 }}>
-                                Chưa xác thực
-                              </Tag>
+                              {userInfo.email || "Chưa cập nhật"}
+                              {userInfo.emailConfirmed ? (
+                                <CheckCircleOutlined
+                                  className={styles.profileIconVerified}
+                                />
+                              ) : (
+                                <Tag color="orange" style={{ marginLeft: 8 }}>
+                                  Chưa xác thực
+                                </Tag>
+                              )}
+                            </Space>
+                            {!userInfo.emailConfirmed && userInfo.email && (
+                              <Button
+                                type="primary"
+                                size="small"
+                                icon={<VerifiedOutlined />}
+                                onClick={handleSendEmailVerification}
+                              >
+                                Gửi email xác thực
+                              </Button>
                             )}
                           </Space>
                         </Descriptions.Item>
