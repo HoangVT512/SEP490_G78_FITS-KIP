@@ -19,8 +19,6 @@ public partial class Equipment
 
     public string? Qrcode { get; set; }
 
-    public string? IdCode { get; set; }
-
     public int? StageId { get; set; }
 
     public string? Issue { get; set; }

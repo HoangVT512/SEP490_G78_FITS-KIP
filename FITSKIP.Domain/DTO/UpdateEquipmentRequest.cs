@@ -19,9 +19,6 @@ public class UpdateEquipmentRequest
 
     public int? Yom { get; set; }
 
-    [StringLength(100, ErrorMessage = "Mã định danh không được vượt quá 100 ký tự")]
-    public string? IdCode { get; set; }
-
     public int? StageId { get; set; }
 
     [StringLength(500, ErrorMessage = "Vấn đề không được vượt quá 500 ký tự")]

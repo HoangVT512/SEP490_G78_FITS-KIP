@@ -107,7 +107,6 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
             entity.Property(e => e.EquipmentCode).HasMaxLength(50);
             entity.Property(e => e.EquipmentName).HasMaxLength(255);
-            entity.Property(e => e.IdCode).HasMaxLength(250);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
             entity.Property(e => e.Origin).HasMaxLength(150);
             entity.Property(e => e.Qrcode).HasColumnName("QRCode");

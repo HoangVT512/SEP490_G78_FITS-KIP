@@ -2,6 +2,7 @@ using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using System.Text.Json;
 
 namespace FITSKIP.Application.Services;
 
@@ -16,12 +17,13 @@ public class EquipmentService : IEquipmentService
         _stageRepository = stageRepository;
     }
 
-    public Task<IReadOnlyList<Equipment>> GetEquipmentsAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<EquipmentDTO>> GetEquipmentsAsync(CancellationToken cancellationToken = default)
     {
-        return _equipmentRepository.GetAllAsync(cancellationToken);
+        var equipments = await _equipmentRepository.GetAllAsync(cancellationToken);
+        return equipments.Select(e => EquipmentDTO.FromEntity(e)).ToList();
     }
 
-    public async Task<Equipment> CreateEquipmentAsync(CreateEquipmentRequest request, CancellationToken cancellationToken = default)
+    public async Task<EquipmentDTO> CreateEquipmentAsync(CreateEquipmentRequest request, CancellationToken cancellationToken = default)
     {
         // Validate stage if provided
         if (request.StageId.HasValue)
@@ -30,6 +32,16 @@ public class EquipmentService : IEquipmentService
             if (stage == null)
             {
                 throw new InvalidOperationException($"Không tìm thấy công đoạn với ID: {request.StageId}");
+            }
+        }
+
+        // Validate year of manufacture
+        if (request.Yom.HasValue)
+        {
+            var currentYear = DateTime.Now.Year;
+            if (request.Yom.Value < 1900 || request.Yom.Value > currentYear + 1)
+            {
+                throw new InvalidOperationException($"Năm sản xuất phải nằm trong khoảng 1900 đến {currentYear + 1}");
             }
         }
 
@@ -50,21 +62,23 @@ public class EquipmentService : IEquipmentService
             DateUse = request.DateUse,
             Origin = request.Origin?.Trim(),
             Yom = request.Yom,
-            IdCode = request.IdCode?.Trim(),
             StageId = request.StageId,
+            Qrcode = await GenerateQRCodeAsync(normalizedCode, cancellationToken),
             Issue = request.Issue?.Trim(),
             IsActive = request.IsActive
         };
 
-        return await _equipmentRepository.CreateAsync(equipment, cancellationToken);
+        var createdEquipment = await _equipmentRepository.CreateAsync(equipment, cancellationToken);
+        return EquipmentDTO.FromEntity(createdEquipment);
     }
 
-    public Task<Equipment?> GetEquipmentByIdAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<EquipmentDTO?> GetEquipmentByIdAsync(int id, CancellationToken cancellationToken = default)
     {
-        return _equipmentRepository.GetByIdAsync(id, cancellationToken);
+        var equipment = await _equipmentRepository.GetByIdAsync(id, cancellationToken);
+        return equipment == null ? null : EquipmentDTO.FromEntity(equipment);
     }
 
-    public async Task<Equipment?> UpdateEquipmentAsync(int id, UpdateEquipmentRequest request, CancellationToken cancellationToken = default)
+    public async Task<EquipmentDTO?> UpdateEquipmentAsync(int id, UpdateEquipmentRequest request, CancellationToken cancellationToken = default)
     {
         var existingEquipment = await _equipmentRepository.GetByIdAsync(id, cancellationToken);
         if (existingEquipment == null)
@@ -79,6 +93,16 @@ public class EquipmentService : IEquipmentService
             if (stage == null)
             {
                 throw new InvalidOperationException($"Không tìm thấy công đoạn với ID: {request.StageId}");
+            }
+        }
+
+        // Validate year of manufacture
+        if (request.Yom.HasValue)
+        {
+            var currentYear = DateTime.Now.Year;
+            if (request.Yom.Value < 1900 || request.Yom.Value > currentYear + 1)
+            {
+                throw new InvalidOperationException($"Năm sản xuất phải nằm trong khoảng 1900 đến {currentYear + 1}");
             }
         }
 
@@ -97,12 +121,13 @@ public class EquipmentService : IEquipmentService
         existingEquipment.DateUse = request.DateUse;
         existingEquipment.Origin = request.Origin?.Trim();
         existingEquipment.Yom = request.Yom;
-        existingEquipment.IdCode = request.IdCode?.Trim();
+        existingEquipment.Qrcode = await GenerateQRCodeAsync(normalizedCode, cancellationToken);
         existingEquipment.StageId = request.StageId;
         existingEquipment.Issue = request.Issue?.Trim();
         existingEquipment.IsActive = request.IsActive;
 
-        return await _equipmentRepository.UpdateAsync(existingEquipment, cancellationToken);
+        var updatedEquipment = await _equipmentRepository.UpdateAsync(existingEquipment, cancellationToken);
+        return updatedEquipment == null ? null : EquipmentDTO.FromEntity(updatedEquipment);
     }
 
     public async Task<bool> DeleteEquipmentAsync(int id, CancellationToken cancellationToken = default)
@@ -116,7 +141,7 @@ public class EquipmentService : IEquipmentService
         return await _equipmentRepository.DeleteAsync(id, cancellationToken);
     }
 
-    public async Task<Equipment?> ToggleEquipmentStatusAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<EquipmentDTO?> ToggleEquipmentStatusAsync(int id, CancellationToken cancellationToken = default)
     {
         var equipment = await _equipmentRepository.GetByIdAsync(id, cancellationToken);
         if (equipment == null)
@@ -125,25 +150,25 @@ public class EquipmentService : IEquipmentService
         }
 
         equipment.IsActive = !equipment.IsActive;
-        return await _equipmentRepository.UpdateAsync(equipment, cancellationToken);
+        var updatedEquipment = await _equipmentRepository.UpdateAsync(equipment, cancellationToken);
+        return updatedEquipment == null ? null : EquipmentDTO.FromEntity(updatedEquipment);
     }
 
-    public Task<IReadOnlyList<Equipment>> GetEquipmentsByStageAsync(int stageId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<EquipmentDTO>> GetEquipmentsByStageAsync(int stageId, CancellationToken cancellationToken = default)
     {
-        return _equipmentRepository.GetByStageIdAsync(stageId, cancellationToken);
+        var equipments = await _equipmentRepository.GetByStageIdAsync(stageId, cancellationToken);
+        return equipments.Select(e => EquipmentDTO.FromEntity(e)).ToList();
     }
 
-    public async Task<Equipment?> GenerateQRCodeAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<string?> GenerateQRCodeAsync(string equipmentCode, CancellationToken cancellationToken = default)
     {
-        var equipment = await _equipmentRepository.GetByIdAsync(id, cancellationToken);
-        if (equipment == null)
+        // Generate QR code data in JSON format for easy parsing on frontend
+        var qrData = new
         {
-            return null;
-        }
+            equipmentCode = equipmentCode,
+        };
 
-        // Generate QR code (simple format: EQUIPMENT-{CODE}-{ID})
-        equipment.Qrcode = $"EQUIPMENT-{equipment.EquipmentCode}-{equipment.EquipmentId}";
+        return JsonSerializer.Serialize(qrData);
 
-        return await _equipmentRepository.UpdateAsync(equipment, cancellationToken);
     }
 }
