@@ -143,9 +143,14 @@ public class AuthsController : ControllerBase
             var ok = await _authService.SendForgotPasswordOtpAsync(request);
             return Ok(new { success = ok });
         }
+        catch (UnauthorizedAccessException ex)
+        {
+            // Email not verified
+            return BadRequest(new { success = false, message = ex.Message });
+        }
         catch (Exception ex)
         {
-            return BadRequest(new { message = "Không thể gửi OTP", details = ex.Message });
+            return BadRequest(new { success = false, message = "Không thể gửi OTP", details = ex.Message });
         }
     }
 

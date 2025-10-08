@@ -115,6 +115,12 @@ public class AuthService : IAuthService
             return true;
         }
 
+        // Check if email is verified
+        if (!user.EmailConfirmed)
+        {
+            throw new UnauthorizedAccessException("Email của bạn chưa được xác thực. Vui lòng liên hệ với ban quản lý để được hỗ trợ hoặc thử cách đăng nhập khác.");
+        }
+
         var otp = GenerateOtp();
         var ttlMinutes = int.TryParse(_configuration["Otp:ExpireMinutes"], out var m) ? m : 10;
         var cacheKey = GetOtpCacheKey(request.Email);
