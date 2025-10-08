@@ -29,10 +29,8 @@ namespace FITSKIP.Application.Services
                         var password = "123456";
                         var fullName = worksheet.Cells[row, 2].Value?.ToString()?.Trim();
                         var employeeCode = worksheet.Cells[row, 3].Value?.ToString()?.Trim();
-                        var department = worksheet.Cells[row, 4].Value?.ToString()?.Trim();
-                        var line = worksheet.Cells[row, 5].Value?.ToString()?.Trim();
-                        var role = worksheet.Cells[row, 6].Value?.ToString()?.Trim();
-                        var phoneNumber = worksheet.Cells[row, 7].Value?.ToString()?.Trim();
+                        var role = worksheet.Cells[row, 4].Value?.ToString()?.Trim();
+                        var phoneNumber = worksheet.Cells[row, 5].Value?.ToString()?.Trim();
 
                         // Xử lý số điện thoại: loại bỏ dấu nháy đơn nếu có (để tránh mất số 0 ở đầu)
                         if (!string.IsNullOrEmpty(phoneNumber) && phoneNumber.StartsWith("'"))

@@ -23,7 +23,6 @@ export const userService = {
         department: user.departmentName || null,
         departmentId: user.departmentId,
         lineIds: user.lineIds || [],
-        position: user.position || "N/A",
         // Store all roles as array
         roles: user.roles || [],
         // Keep single role for backward compatibility
@@ -34,7 +33,6 @@ export const userService = {
         lastLoginDate: new Date().toISOString(),
         createdDate: new Date().toISOString(),
         avatar: null,
-        gender: user.gender || "N/A",
       }));
     } catch (error) {
       console.error("Error fetching users:", error);

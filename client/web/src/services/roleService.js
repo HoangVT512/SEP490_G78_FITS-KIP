@@ -201,7 +201,6 @@ export const roleService = {
         email: user.email,
         employeeCode: user.employeeCode,
         department: user.department,
-        position: user.position,
         status: user.isActive ? "active" : "inactive",
       }));
     } catch (error) {

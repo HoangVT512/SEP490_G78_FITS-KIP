@@ -769,9 +769,7 @@ const UserManagement = ({ showHeader = true }) => {
           userName: values.email,
           email: values.email,
           fullName: values.fullName,
-          gender: values.gender || "Nam",
           employeeCode: values.employeeCode,
-          position: values.position,
           phoneNumber: values.phoneNumber,
           isActive: values.status === "true",
           roleIds: values.roleIds ? [values.roleIds] : [],
@@ -785,14 +783,12 @@ const UserManagement = ({ showHeader = true }) => {
         });
       } else {
         await userService.createUser({
-          userName: values.email,
+          userName: values.employeeCode,
           email: values.email,
           password: "123456",
           fullName: values.fullName,
           employeeCode: values.employeeCode,
           phoneNumber: values.phoneNumber,
-          position: values.position,
-          gender: values.gender || "Nam",
           isActive: true,
           roleIds: values.roleIds ? [values.roleIds] : [],
           departmentId: values.departmentId,
@@ -971,9 +967,6 @@ const UserManagement = ({ showHeader = true }) => {
                     <strong>FullName</strong> - Họ và tên đầy đủ
                   </li>
                   <li>
-                    <strong>Gender</strong> - Giới tính (Male/Female)
-                  </li>
-                  <li>
                     <strong>EmployeeCode</strong> - Mã nhân viên (phải duy nhất)
                   </li>
                   <li>
@@ -1052,25 +1045,46 @@ const UserManagement = ({ showHeader = true }) => {
       </Modal>
 
       <Modal
-        title={editingUser ? "Chỉnh sửa người dùng" : "Thêm người dùng mới"}
+        title={
+          <div
+            style={{ fontSize: "20px", fontWeight: "600", color: "#334766" }}
+          >
+            {editingUser ? "Chỉnh sửa người dùng" : "Thêm người dùng mới"}
+          </div>
+        }
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
-        width={1200}
+        width={1100}
+        centered
         okText={editingUser ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
         okButtonProps={{
           style: {
             backgroundColor: "#334766",
             borderColor: "#334766",
-            width: "150px",
+            height: "40px",
+            fontSize: "16px",
+            fontWeight: "500",
+            minWidth: "120px",
           },
+        }}
+        cancelButtonProps={{
+          style: {
+            height: "40px",
+            fontSize: "16px",
+            minWidth: "120px",
+          },
+        }}
+        bodyStyle={{
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          padding: "24px",
         }}
       >
         <Form
           form={form}
           layout="vertical"
-          style={{ marginTop: 16 }}
           onValuesChange={(changedValues) => {
             if (changedValues.departmentId !== undefined) {
               const deptId = changedValues.departmentId;
@@ -1086,20 +1100,69 @@ const UserManagement = ({ showHeader = true }) => {
             }
           }}
         >
+          <div style={{ marginBottom: "20px" }}>
+            <Alert
+              message={
+                <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                  Thông tin tùy chọn
+                </span>
+              }
+              description={
+                <span style={{ fontSize: "13px" }}>
+                  Email và số điện thoại có thể để trống khi tạo người dùng mới.
+                </span>
+              }
+              type="info"
+              style={{
+                backgroundColor: "#e6f4ff",
+                border: "1px solid #91caff",
+                marginBottom: "12px",
+              }}
+            />
+            {!editingUser && (
+              <Alert
+                message={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Mật khẩu mặc định
+                  </span>
+                }
+                description={
+                  <span style={{ fontSize: "13px" }}>
+                    Mật khẩu mặc định cho người dùng mới là '123456'. Người dùng
+                    có thể thay đổi mật khẩu sau khi đăng nhập.
+                  </span>
+                }
+                type="warning"
+                style={{
+                  backgroundColor: "#fffbe6",
+                  border: "1px solid #ffe58f",
+                }}
+              />
+            )}
+          </div>
+
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="fullName"
-                label="Họ và tên"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Họ và tên
+                  </span>
+                }
                 rules={[{ required: true, message: "Vui lòng nhập họ tên" }]}
               >
-                <Input placeholder="Nhập họ và tên" />
+                <Input placeholder="Nhập họ và tên" size="large" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="employeeCode"
-                label="Mã nhân viên"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Mã nhân viên
+                  </span>
+                }
                 rules={[
                   { required: true, message: "Vui lòng nhập mã nhân viên" },
                   {
@@ -1122,7 +1185,7 @@ const UserManagement = ({ showHeader = true }) => {
                   },
                 ]}
               >
-                <Input placeholder="Nhập mã nhân viên" />
+                <Input placeholder="Nhập mã nhân viên" size="large" />
               </Form.Item>
             </Col>
           </Row>
@@ -1130,9 +1193,12 @@ const UserManagement = ({ showHeader = true }) => {
             <Col span={12}>
               <Form.Item
                 name="email"
-                label="Email"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Email
+                  </span>
+                }
                 rules={[
-                  { required: true, message: "Vui lòng nhập email" },
                   { type: "email", message: "Email không hợp lệ" },
                   {
                     validator: (_, value) => {
@@ -1150,15 +1216,18 @@ const UserManagement = ({ showHeader = true }) => {
                   },
                 ]}
               >
-                <Input placeholder="Nhập địa chỉ email" />
+                <Input placeholder="Nhập địa chỉ email" size="large" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="phoneNumber"
-                label="Số điện thoại"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Số điện thoại
+                  </span>
+                }
                 rules={[
-                  { required: true, message: "Vui lòng nhập số điện thoại" },
                   {
                     type: "string",
                     min: 10,
@@ -1183,7 +1252,7 @@ const UserManagement = ({ showHeader = true }) => {
                   },
                 ]}
               >
-                <Input placeholder="Nhập số điện thoại" />
+                <Input placeholder="Nhập số điện thoại" size="large" />
               </Form.Item>
             </Col>
           </Row>
@@ -1191,11 +1260,16 @@ const UserManagement = ({ showHeader = true }) => {
             <Col span={12}>
               <Form.Item
                 name="departmentId"
-                label="Phòng ban"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Phòng ban
+                  </span>
+                }
                 // rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
               >
                 <Select
                   placeholder="Chọn phòng ban"
+                  size="large"
                   loading={
                     !Array.isArray(departments) || departments.length === 0
                   }
@@ -1217,12 +1291,17 @@ const UserManagement = ({ showHeader = true }) => {
             <Col span={12}>
               <Form.Item
                 name="lineIds"
-                label="Dây chuyền"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Dây chuyền
+                  </span>
+                }
                 // rules={[{ required: true, message: "Vui lòng chọn dây chuyền" }]}
               >
                 <Select
                   mode="multiple"
                   placeholder="Chọn dây chuyền"
+                  size="large"
                   loading={!lines || lines.length === 0}
                   disabled={!form.getFieldValue("departmentId")}
                   allowClear
@@ -1240,9 +1319,7 @@ const UserManagement = ({ showHeader = true }) => {
                           padding: "8px",
                         }}
                       >
-                        <EnvironmentOutlined style={{ marginRight: 8 }} />
-                        Bạn cần chọn phòng ban trước để chọn dây chuyền trong
-                        phòng ban đó
+                        Bạn cần chọn phòng ban trước
                       </div>
                     ) : (
                       "Không có dây chuyền nào"
@@ -1255,19 +1332,6 @@ const UserManagement = ({ showHeader = true }) => {
                     </Option>
                   ))}
                 </Select>
-                {!form.getFieldValue("departmentId") && (
-                  <Typography.Text
-                    type="danger"
-                    style={{
-                      fontSize: "12px",
-                      marginTop: "4px",
-                      display: "block",
-                    }}
-                  >
-                    <WarningOutlined style={{ marginRight: "4px" }} />
-                    Vui lòng chọn phòng ban trước để chọn dây chuyền
-                  </Typography.Text>
-                )}
               </Form.Item>
             </Col>
           </Row>
@@ -1276,7 +1340,11 @@ const UserManagement = ({ showHeader = true }) => {
             <Col span={12}>
               <Form.Item
                 name="roleIds"
-                label="Vai trò"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Vai trò
+                  </span>
+                }
                 rules={[
                   {
                     required: true,
@@ -1286,6 +1354,7 @@ const UserManagement = ({ showHeader = true }) => {
               >
                 <Select
                   placeholder="Chọn vai trò"
+                  size="large"
                   loading={roles.length === 0}
                   allowClear
                 >
@@ -1299,79 +1368,38 @@ const UserManagement = ({ showHeader = true }) => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                name="position"
-                label="Chức vụ"
-                // rules={[{ required: true, message: "Vui lòng nhập chức vụ" }]}
-              >
-                <Input placeholder="Nhập chức vụ" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="gender" label="Giới tính">
-                <Select placeholder="Chọn giới tính">
-                  <Option value="Nam">Nam</Option>
-                  <Option value="Nữ">Nữ</Option>
-                  <Option value="Khác">Khác</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
               {editingUser ? (
                 <Form.Item
                   name="status"
-                  label="Trạng thái"
+                  label={
+                    <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                      Trạng thái
+                    </span>
+                  }
                   rules={[
                     { required: true, message: "Vui lòng chọn trạng thái" },
                   ]}
                 >
-                  <Select placeholder="Chọn trạng thái">
+                  <Select placeholder="Chọn trạng thái" size="large">
                     <Option value="true">Hoạt động</Option>
                     <Option value="false">Ngừng hoạt động</Option>
                   </Select>
                 </Form.Item>
               ) : (
                 <Form.Item
-                  label="Trạng thái"
-                  tooltip="Trạng thái mặc định khi tạo người dùng mới"
+                  label={
+                    <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                      Trạng thái
+                    </span>
+                  }
                 >
-                  <div
-                    style={{
-                      padding: "4px 11px",
-                      border: "1px solid #d9d9d9",
-                      borderRadius: "6px",
-                      backgroundColor: "#f6ffed",
-                      borderColor: "#b7eb8f",
-                      display: "flex",
-                      alignItems: "center",
-                    }}
-                  >
-                    <CheckCircleOutlined
-                      style={{ color: "#52c41a", marginRight: "8px" }}
-                    />
-                    <Typography.Text
-                      style={{ color: "#52c41a", fontWeight: "500" }}
-                    >
-                      Hoạt động (Mặc định)
-                    </Typography.Text>
-                  </div>
+                  <Select size="large" value="true" disabled>
+                    <Option value="true">Hoạt động (Mặc định)</Option>
+                  </Select>
                 </Form.Item>
               )}
             </Col>
           </Row>
-
-          {!editingUser && (
-            <Alert
-              message="Mật khẩu mặc định"
-              description="Mật khẩu mặc định cho người dùng mới là '123456'. Người dùng có thể thay đổi mật khẩu sau khi đăng nhập."
-              type="info"
-              showIcon
-              style={{ marginBottom: 16 }}
-            />
-          )}
         </Form>
       </Modal>
 
@@ -1441,12 +1469,6 @@ const UserManagement = ({ showHeader = true }) => {
                 </Descriptions.Item>
                 <Descriptions.Item label="Số điện thoại">
                   {viewingUser.phoneNumber || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Giới tính">
-                  {viewingUser.gender || "-"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Chức vụ">
-                  {viewingUser.position || "-"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Vai trò">
                   {Array.isArray(viewingUser.roles)

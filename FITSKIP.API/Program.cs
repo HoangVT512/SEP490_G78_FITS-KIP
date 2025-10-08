@@ -10,6 +10,32 @@ using System.Threading.Channels;
 
 namespace FITSKIP.API
 {
+    // Custom user validator to allow empty/null emails
+    public class CustomUserValidator<TUser> : Microsoft.AspNetCore.Identity.UserValidator<TUser> where TUser : class
+    {
+        public override Task<IdentityResult> ValidateAsync(UserManager<TUser> manager, TUser user)
+        {
+            var errors = new List<IdentityError>();
+
+            // Skip email validation - allow empty/null emails
+            // Only validate username if it exists
+            var userName = manager.GetUserNameAsync(user).Result;
+            if (!string.IsNullOrEmpty(userName))
+            {
+                if (userName.Length < 1)
+                {
+                    errors.Add(new IdentityError
+                    {
+                        Code = "InvalidUserName",
+                        Description = "Username must be at least 1 character long."
+                    });
+                }
+            }
+
+            return Task.FromResult(errors.Count == 0 ? IdentityResult.Success : IdentityResult.Failed(errors.ToArray()));
+        }
+    }
+
     public class Program
     {
         public static async Task Main(string[] args)
@@ -53,10 +79,12 @@ namespace FITSKIP.API
                 options.Lockout.AllowedForNewUsers = true;
 
                 // User settings
-                options.User.RequireUniqueEmail = true;
+                options.User.RequireUniqueEmail = false; // Allow null/empty emails
+                options.User.AllowedUserNameCharacters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-._@+"; // Allow more characters in username
             })
             .AddEntityFrameworkStores<FITSKIP.Infrastructure.DbContexts.FitskipDbContext>()
-            .AddDefaultTokenProviders(); // Add this for password reset tokens, email confirmation, etc.
+            .AddDefaultTokenProviders()
+            .AddUserValidator<CustomUserValidator<FITSKIP.Domain.Entities.User>>();
 
             // DI registrations for repositories and services
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IUserRepository, FITSKIP.Infrastructure.Repositories.UserRepository>();

@@ -67,10 +67,8 @@ const EditProfile = () => {
             fullName: user.fullName || "",
             email: user.email || "",
             phoneNumber: user.phoneNumber || "",
-            gender: user.gender || "",
             employeeCode: user.employeeCode || "",
             department: user.department || "N/A",
-            position: user.position || "N/A",
           };
           form.setFieldsValue(initialData);
           setInitialValues(initialData);
@@ -94,10 +92,9 @@ const EditProfile = () => {
     try {
       // Prepare data to update (only editable fields)
       const updateData = {
-        fullName: values.fullName, 
+        fullName: values.fullName,
         email: values.email,
         phoneNumber: values.phoneNumber || "",
-        gender: values.gender,
         profileImageUrl: avatarUrl, // Include avatar if uploaded
       };
 
@@ -155,18 +152,17 @@ const EditProfile = () => {
     const initialAvatarUrl = currentUser?.profileImageUrl || null;
 
     // Check if any editable field has changed
-    const hasFullNameChanged = currentValues.fullName !== initialValues.fullName;
+    const hasFullNameChanged =
+      currentValues.fullName !== initialValues.fullName;
     const hasEmailChanged = currentValues.email !== initialValues.email;
     const hasPhoneChanged =
       currentValues.phoneNumber !== initialValues.phoneNumber;
-    const hasGenderChanged = currentValues.gender !== initialValues.gender;
     const hasAvatarChanged = currentAvatarUrl !== initialAvatarUrl;
 
     const changed =
       hasFullNameChanged ||
       hasEmailChanged ||
       hasPhoneChanged ||
-      hasGenderChanged ||
       hasAvatarChanged;
     setHasChanges(changed);
   };
@@ -399,38 +395,7 @@ const EditProfile = () => {
                 </Row>
 
                 <Row gutter={16}>
-                  <Col xs={24} md={8}>
-                    <Form.Item
-                      label="Giới tính"
-                      name="gender"
-                      rules={[
-                        { required: true, message: "Vui lòng chọn giới tính!" },
-                      ]}
-                    >
-                      <Select placeholder="Chọn giới tính" size="large">
-                        <Option value="Nam">
-                          <Space>
-                            <ManOutlined />
-                            Nam
-                          </Space>
-                        </Option>
-                        <Option value="Nữ">
-                          <Space>
-                            <WomanOutlined />
-                            Nữ
-                          </Space>
-                        </Option>
-                        <Option value="Khác">
-                          <Space>
-                            <UserOutlined />
-                            Khác
-                          </Space>
-                        </Option>
-                      </Select>
-                    </Form.Item>
-                  </Col>
-
-                  <Col xs={24} md={8}>
+                  <Col xs={24} md={12}>
                     <Form.Item label="Phòng ban" name="department">
                       <Input
                         prefix={<TeamOutlined />}

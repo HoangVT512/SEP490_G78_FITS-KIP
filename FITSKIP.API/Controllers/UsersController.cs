@@ -141,24 +141,28 @@ public class UsersController : ControllerBase
     {
         try
         {
-            // Basic validation
-            if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.UserName))
+            // Basic validation - UserName is now auto-generated from EmployeeCode
+            // No need to check UserName requirement here
+
+            // Validation 1: Check if username already exists (will be EmployeeCode)
+            var userName = string.IsNullOrEmpty(request.UserName) ? request.EmployeeCode : request.UserName;
+            if (!string.IsNullOrEmpty(userName))
             {
-                return BadRequest("Email and UserName are required fields.");
+                var existingUserByUsername = await userService.GetByUsernameAsync(userName, cancellationToken);
+                if (existingUserByUsername != null)
+                {
+                    return BadRequest($"Tên đăng nhập '{userName}' đã tồn tại trong hệ thống");
+                }
             }
 
-            // Validation 1: Check if username already exists
-            var existingUserByUsername = await userService.GetByUsernameAsync(request.UserName, cancellationToken);
-            if (existingUserByUsername != null)
+            // Validation 2: Check if email already exists (only if email is provided)
+            if (!string.IsNullOrEmpty(request.Email))
             {
-                return BadRequest($"Tên đăng nhập '{request.UserName}' đã tồn tại trong hệ thống");
-            }
-
-            // Validation 2: Check if email already exists
-            var existingUserByEmail = await userService.GetByEmailAsync(request.Email, cancellationToken);
-            if (existingUserByEmail != null)
-            {
-                return BadRequest($"Email '{request.Email}' đã tồn tại trong hệ thống");
+                var existingUserByEmail = await userService.GetByEmailAsync(request.Email, cancellationToken);
+                if (existingUserByEmail != null)
+                {
+                    return BadRequest($"Email '{request.Email}' đã tồn tại trong hệ thống");
+                }
             }
 
             // Validation 3: Check if employee code already exists
@@ -171,8 +175,8 @@ public class UsersController : ControllerBase
                 }
             }
 
-            // Validation 4: Check email format
-            if (!IsValidEmail(request.Email))
+            // Validation 4: Check email format (only if email is provided)
+            if (!string.IsNullOrEmpty(request.Email) && !IsValidEmail(request.Email))
             {
                 return BadRequest("Email không hợp lệ");
             }
@@ -182,14 +186,14 @@ public class UsersController : ControllerBase
             var user = new User
             {
                 Id = Guid.NewGuid().ToString(),
-                UserName = request.UserName,
-                NormalizedUserName = request.UserName.ToUpperInvariant(),
+                UserName = userName,
+                NormalizedUserName = userName?.ToUpperInvariant(),
                 Email = request.Email,
-                NormalizedEmail = request.Email.ToUpperInvariant(),
+                NormalizedEmail = !string.IsNullOrEmpty(request.Email) ? request.Email.ToUpperInvariant() : null,
                 FullName = request.FullName,
                 EmployeeCode = request.EmployeeCode,
                 PhoneNumber = request.PhoneNumber,
-                EmailConfirmed = true,
+                EmailConfirmed = !string.IsNullOrEmpty(request.Email), // Only confirm if email is provided
                 LockoutEnabled = true,
                 SecurityStamp = Guid.NewGuid().ToString(),
                 ConcurrencyStamp = Guid.NewGuid().ToString()
@@ -327,8 +331,8 @@ public class UsersController : ControllerBase
                             }
                         }
 
-                        // Validation 4: Check email format
-                        if (!IsValidEmail(request.Email))
+                        // Validation 4: Check email format (only if email is provided)
+                        if (!string.IsNullOrEmpty(request.Email) && !IsValidEmail(request.Email))
                         {
                             failedUsers.Add(new
                             {
@@ -338,7 +342,8 @@ public class UsersController : ControllerBase
                             });
                             continue;
                         }
-                        if (!IsValidVietnamPhoneNumber(request.PhoneNumber))
+                        // Validation 5: Check phone number format (only if phone number is provided)
+                        if (!string.IsNullOrEmpty(request.PhoneNumber) && !IsValidVietnamPhoneNumber(request.PhoneNumber))
                         {
                             failedUsers.Add(new
                             {
@@ -428,12 +433,11 @@ public class UsersController : ControllerBase
 
                 worksheet.Cells[1, 1].Value = "Email";
                 worksheet.Cells[1, 2].Value = "FullName";
-                worksheet.Cells[1, 3].Value = "Gender";
-                worksheet.Cells[1, 4].Value = "EmployeeCode";
-                worksheet.Cells[1, 5].Value = "Role";
-                worksheet.Cells[1, 6].Value = "PhoneNumber";
+                worksheet.Cells[1, 3].Value = "EmployeeCode";
+                worksheet.Cells[1, 4].Value = "Role";
+                worksheet.Cells[1, 5].Value = "PhoneNumber";
 
-                using (var range = worksheet.Cells[1, 1, 1, 6])
+                using (var range = worksheet.Cells[1, 1, 1, 5])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
@@ -441,9 +445,9 @@ public class UsersController : ControllerBase
                 }
 
                 // Định dạng cột PhoneNumber là Text để tránh mất số 0 ở đầu
-                worksheet.Column(6).Style.Numberformat.Format = "@";
+                worksheet.Column(5).Style.Numberformat.Format = "@";
 
-                // Tạo dropdown validation cho cột Role (cột 5)
+                // Tạo dropdown validation cho cột Role (cột 4)
                 var roleValidation = worksheet.DataValidations.AddListValidation("E2:E1000");
                 roleValidation.Formula.ExcelFormula = $"=RolesList!$A$1:$A${roles.Count}";
                 roleValidation.ShowErrorMessage = true;
@@ -452,10 +456,9 @@ public class UsersController : ControllerBase
 
                 worksheet.Cells[2, 1].Value = "Trungnd98@fpt.com";
                 worksheet.Cells[2, 2].Value = "Duc Trung";
-                worksheet.Cells[2, 3].Value = "Male";
-                worksheet.Cells[2, 4].Value = "EMP001";
-                worksheet.Cells[2, 5].Value = roles.FirstOrDefault()?.Name ?? "User";
-                worksheet.Cells[2, 6].Value = "0973771789";
+                worksheet.Cells[2, 3].Value = "EMP001";
+                worksheet.Cells[2, 4].Value = roles.FirstOrDefault()?.Name ?? "User";
+                worksheet.Cells[2, 5].Value = "0973771789";
 
                 worksheet.Cells.AutoFitColumns();
 

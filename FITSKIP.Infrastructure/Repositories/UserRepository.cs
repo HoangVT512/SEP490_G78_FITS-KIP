@@ -26,10 +26,19 @@ public class UserRepository : IUserRepository
             throw new ArgumentException("Người dùng với tên đăng nhập này đã tồn tại.");
         }
 
-        var existingEmail = await db.Users.FirstOrDefaultAsync(u => u.Email == user.Email, cancellationToken);
-        if (existingEmail != null)
+        // Only check for duplicate email when an email is provided (non-empty, non-whitespace)
+        if (!string.IsNullOrWhiteSpace(user.Email))
         {
-            throw new ArgumentException("Người dùng với email này đã tồn tại.");
+            var existingEmail = await db.Users.FirstOrDefaultAsync(u => u.Email == user.Email, cancellationToken);
+            if (existingEmail != null)
+            {
+                throw new ArgumentException("Người dùng với email này đã tồn tại.");
+            }
+        }
+        else
+        {
+            // Normalize blank emails to null so DB doesn't store empty string
+            user.Email = null;
         }
 
         if (!string.IsNullOrEmpty(user.EmployeeCode))
@@ -41,13 +50,18 @@ public class UserRepository : IUserRepository
             }
         }
 
-        if (!string.IsNullOrEmpty(user.PhoneNumber))
+        // Phone number: treat blank/whitespace as null and only check duplicates when provided
+        if (!string.IsNullOrWhiteSpace(user.PhoneNumber))
         {
             var existingPhone = await db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == user.PhoneNumber, cancellationToken);
             if (existingPhone != null)
             {
                 throw new ArgumentException("Người dùng với số điện thoại này đã tồn tại.");
             }
+        }
+        else
+        {
+            user.PhoneNumber = null;
         }
 
         // Create user with password using Identity
@@ -463,13 +477,20 @@ public class UserRepository : IUserRepository
     public async Task<User> CreateUserWithAssignmentsAsync(CreateUserRequest request, CancellationToken cancellationToken = default)
     {
         // Create the user entity from request
+        // Auto-set UserName from EmployeeCode if not provided
+        var userName = string.IsNullOrEmpty(request.UserName) ? request.EmployeeCode : request.UserName;
+
+        // Normalize input: convert empty or whitespace email/phone to null to avoid DB storing empty strings
+        var normalizedEmail = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
+        var normalizedPhone = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
+
         var user = new User
         {
-            UserName = request.UserName,
-            Email = request.Email,
+            UserName = userName,
+            Email = normalizedEmail,
             FullName = request.FullName,
             EmployeeCode = request.EmployeeCode,
-            PhoneNumber = request.PhoneNumber
+            PhoneNumber = normalizedPhone
         };
 
         // Create user using existing method with default password if not provided

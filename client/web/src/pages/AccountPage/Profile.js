@@ -79,8 +79,6 @@ const Profile = () => {
             employeeCode: storedUser.employeeCode || "Chưa có",
             email: storedUser.email || "Chưa cập nhật",
             phoneNumber: storedUser.phoneNumber || null,
-            position: storedUser.position || "Chưa có chức vụ",
-            gender: storedUser.gender || "Chưa cập nhật",
             department: "Chưa phân phòng ban",
             role: storedUser.roles
               ? storedUser.roles.join(", ")
@@ -201,7 +199,7 @@ const Profile = () => {
                 {userInfo.fullName}
               </Title>
               <Text className={styles.profileHeaderSubtitle}>
-                {userInfo.position} • {userInfo.department}
+                {userInfo.department}
               </Text>
               <Space className={styles.profileHeaderBadges}>
                 <Badge
@@ -271,9 +269,6 @@ const Profile = () => {
                           <Tag className={styles.profileTagEmployeeCode}>
                             {userInfo.employeeCode}
                           </Tag>
-                        </Descriptions.Item>
-                        <Descriptions.Item label="Giới tính">
-                          {userInfo.gender}
                         </Descriptions.Item>
                         <Descriptions.Item label="Email">
                           <Space>
