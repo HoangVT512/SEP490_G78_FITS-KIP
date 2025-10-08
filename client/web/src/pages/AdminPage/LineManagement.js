@@ -212,7 +212,8 @@ const LineManagement = ({ showHeader = true }) => {
               const response = await lineService.toggleLineStatus(line.lineId);
               if (response.success) {
                 message.success(
-                  `Đã ${line.isActive ? "khóa" : "mở khóa"
+                  `Đã ${
+                    line.isActive ? "khóa" : "mở khóa"
                   } dây chuyền thành công`
                 );
                 loadLines();
@@ -445,9 +446,9 @@ const LineManagement = ({ showHeader = true }) => {
               value={
                 lines.length > 0
                   ? Math.round(
-                    lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) /
-                    lines.length
-                  )
+                      lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) /
+                        lines.length
+                    )
                   : 0
               }
               suffix="%"
@@ -530,6 +531,7 @@ const LineManagement = ({ showHeader = true }) => {
                 onClick={() => {
                   setEditingLine(null);
                   form.resetFields();
+                  form.setFieldsValue({ isActive: true });
                   setIsModalVisible(true);
                 }}
                 style={{ backgroundColor: "#334766", borderColor: "#334766" }}
@@ -546,7 +548,9 @@ const LineManagement = ({ showHeader = true }) => {
                     : {}
                 }
               >
-                {showArchive ? "Hiển thị (Hoạt động)" : "Lưu trữ (Ngừng hoạt động)"}
+                {showArchive
+                  ? "Hiển thị (Hoạt động)"
+                  : "Lưu trữ (Ngừng hoạt động)"}
               </Button>
             </Space>
           </Col>
@@ -680,18 +684,26 @@ const LineManagement = ({ showHeader = true }) => {
           </Row>
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="isActive"
-                label="Trạng thái"
-                rules={[
-                  { required: true, message: "Vui lòng chọn trạng thái" },
-                ]}
-              >
-                <Select placeholder="Chọn trạng thái">
-                  <Option value={true}>Hoạt động</Option>
-                  <Option value={false}>Dừng hoạt động</Option>
-                </Select>
-              </Form.Item>
+              {editingLine ? (
+                <Form.Item
+                  name="isActive"
+                  label="Trạng thái"
+                  rules={[
+                    { required: true, message: "Vui lòng chọn trạng thái" },
+                  ]}
+                >
+                  <Select placeholder="Chọn trạng thái">
+                    <Option value={true}>Hoạt động</Option>
+                    <Option value={false}>Dừng hoạt động</Option>
+                  </Select>
+                </Form.Item>
+              ) : (
+                <Form.Item label="Trạng thái">
+                  <Select value={true} disabled showArrow={false}>
+                    <Option value={true}>Hoạt động (Mặc định)</Option>
+                  </Select>
+                </Form.Item>
+              )}
             </Col>
           </Row>
         </Form>
@@ -743,7 +755,7 @@ const LineManagement = ({ showHeader = true }) => {
                   {viewingLine.isActive ? "Hoạt động" : "Dừng hoạt động"}
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Số giai đoạn">
+              <Descriptions.Item label="Số công đoạn">
                 <Badge
                   count={viewingLine.stages?.length || 0}
                   showZero
