@@ -335,6 +335,17 @@ const UserManagement = ({ showHeader = true }) => {
 
         form.setFieldsValue({
           ...user,
+          // Make email/phone empty if they're null or contain placeholder like 'N/A'
+          email:
+            user.email && user.email !== "N/A" && user.email !== "-"
+              ? user.email
+              : "",
+          phoneNumber:
+            user.phoneNumber &&
+            user.phoneNumber !== "N/A" &&
+            user.phoneNumber !== "-"
+              ? user.phoneNumber
+              : "",
           roleIds: userRoleIds.length > 0 ? userRoleIds[0] : null,
           departmentId: user.departmentId,
           lineIds: user.lineIds || [],
@@ -531,25 +542,39 @@ const UserManagement = ({ showHeader = true }) => {
         );
       },
       width: 200,
-      render: (_, record) => (
-        <div>
-          <div style={{ marginBottom: 4 }}>
-            <MailOutlined style={{ color: "#334766", marginRight: 6 }} />
-            <Text style={{ fontSize: "13px" }}>{record.email}</Text>
-          </div>
+      render: (_, record) => {
+        // Treat placeholders or missing values as empty for display
+        const emailDisplay =
+          record.email && record.email !== "N/A" && record.email !== "-"
+            ? record.email
+            : "Chưa có";
+        const phoneDisplay =
+          record.phoneNumber &&
+          record.phoneNumber !== "N/A" &&
+          record.phoneNumber !== "-"
+            ? record.phoneNumber
+            : "Chưa có";
+
+        return (
           <div>
-            <PhoneOutlined style={{ color: "#334766", marginRight: 6 }} />
-            <Text style={{ fontSize: "13px" }}>{record.phoneNumber}</Text>
-            {record.phoneConfirmed && (
-              <Badge
-                status="success"
-                style={{ marginLeft: 6 }}
-                title="Số điện thoại đã xác thực"
-              />
-            )}
+            <div style={{ marginBottom: 4 }}>
+              <MailOutlined style={{ color: "#334766", marginRight: 6 }} />
+              <Text style={{ fontSize: "13px" }}>{emailDisplay}</Text>
+            </div>
+            <div>
+              <PhoneOutlined style={{ color: "#334766", marginRight: 6 }} />
+              <Text style={{ fontSize: "13px" }}>{phoneDisplay}</Text>
+              {phoneDisplay && record.phoneConfirmed && (
+                <Badge
+                  status="success"
+                  style={{ marginLeft: 6 }}
+                  title="Số điện thoại đã xác thực"
+                />
+              )}
+            </div>
           </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       title: "Phòng ban",
@@ -1465,10 +1490,10 @@ const UserManagement = ({ showHeader = true }) => {
                   {viewingUser.userName || "-"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Email">
-                  {viewingUser.email || "-"}
+                  {viewingUser.email || ""}
                 </Descriptions.Item>
                 <Descriptions.Item label="Số điện thoại">
-                  {viewingUser.phoneNumber || "-"}
+                  {viewingUser.phoneNumber || ""}
                 </Descriptions.Item>
                 <Descriptions.Item label="Vai trò">
                   {Array.isArray(viewingUser.roles)

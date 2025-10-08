@@ -226,14 +226,46 @@ public class UserRepository : IUserRepository
             return null;
         }
 
+        // Normalize incoming contact fields: convert empty/whitespace to null so DB stores NULL instead of empty string
+        var normalizedEmail = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
+        var normalizedPhone = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
+
+        // Determine desired UserName: priority -> explicit request.UserName, then request.EmployeeCode, then keep existing
+        string? desiredUserName = null;
+        if (!string.IsNullOrWhiteSpace(request.UserName))
+        {
+            desiredUserName = request.UserName.Trim();
+        }
+        else if (!string.IsNullOrWhiteSpace(request.EmployeeCode))
+        {
+            // If user didn't explicitly set UserName, prefer EmployeeCode as username when provided
+            desiredUserName = request.EmployeeCode.Trim();
+        }
+        else
+        {
+            desiredUserName = existingUser.UserName;
+        }
+
+        var normalizedUserName = desiredUserName?.ToUpperInvariant();
+
+        // Ensure the desired username is unique (by normalized username) before applying change
+        if (!string.IsNullOrWhiteSpace(desiredUserName) && normalizedUserName != existingUser.NormalizedUserName)
+        {
+            var usernameExists = await db.Users.AnyAsync(u => u.NormalizedUserName == normalizedUserName && u.Id != id, cancellationToken);
+            if (usernameExists)
+            {
+                throw new ArgumentException("Tên đăng nhập đã tồn tại.");
+            }
+        }
+
         // Update user properties using EF Core directly
-        existingUser.UserName = request.UserName;
-        existingUser.Email = request.Email;
-        existingUser.NormalizedUserName = request.UserName.ToUpperInvariant();
-        existingUser.NormalizedEmail = request.Email.ToUpperInvariant();
+        existingUser.UserName = desiredUserName;
+        existingUser.Email = normalizedEmail;
+        existingUser.NormalizedUserName = normalizedUserName;
+        existingUser.NormalizedEmail = normalizedEmail?.ToUpperInvariant();
         existingUser.FullName = request.FullName;
         existingUser.EmployeeCode = request.EmployeeCode;
-        existingUser.PhoneNumber = request.PhoneNumber;
+        existingUser.PhoneNumber = normalizedPhone;
         existingUser.IsActive = request.IsActive;
 
         // Update role if provided (Now using RoleId in User entity)
@@ -443,25 +475,33 @@ public class UserRepository : IUserRepository
                 throw new ArgumentException("Không tìm thấy người dùng với ID này.");
             }
 
-            // Check if email is already taken by another user
-            var emailExists = await db.Users.AnyAsync(u => u.Email == request.Email && u.Id != userId, cancellationToken);
-            if (emailExists)
+            // Check if email is already taken by another user (only when provided)
+            if (!string.IsNullOrWhiteSpace(request.Email))
             {
-                throw new ArgumentException("Đã có người dùng sử dụng email này, không được dùng.");
+                var emailExists = await db.Users.AnyAsync(u => u.Email == request.Email && u.Id != userId, cancellationToken);
+                if (emailExists)
+                {
+                    throw new ArgumentException("Đã có người dùng sử dụng email này, không được dùng.");
+                }
             }
 
-            // Check if phone number is already taken by another user
-            var phoneExists = await db.Users.AnyAsync(u => u.PhoneNumber == request.PhoneNumber && u.Id != userId, cancellationToken);
-            if (phoneExists)
+            // Check if phone number is already taken by another user (only when provided)
+            if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
             {
-                throw new ArgumentException("Đã có người dùng sử dụng số điện thoại này, không được dùng.");
+                var phoneExists = await db.Users.AnyAsync(u => u.PhoneNumber == request.PhoneNumber && u.Id != userId, cancellationToken);
+                if (phoneExists)
+                {
+                    throw new ArgumentException("Đã có người dùng sử dụng số điện thoại này, không được dùng.");
+                }
             }
 
-            // Update only editable fields 
+            // Update only editable fields - normalize empty values to null
             existingUser.FullName = request.FullName;
-            existingUser.Email = request.Email;
-            existingUser.NormalizedEmail = request.Email.ToUpperInvariant();
-            existingUser.PhoneNumber = request.PhoneNumber;
+            var normalizedEmailProfile = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
+            var normalizedPhoneProfile = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
+            existingUser.Email = normalizedEmailProfile;
+            existingUser.NormalizedEmail = normalizedEmailProfile?.ToUpperInvariant();
+            existingUser.PhoneNumber = normalizedPhoneProfile;
             // Note: ProfileImageUrl would be handled when we add image upload functionality
 
             await db.SaveChangesAsync(cancellationToken);
