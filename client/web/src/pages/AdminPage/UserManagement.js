@@ -86,6 +86,8 @@ const UserManagement = ({ showHeader = true }) => {
   const [roles, setRoles] = useState([]);
   const [lines, setLines] = useState([]);
   const [filteredLines, setFilteredLines] = useState([]);
+  const [isManagementRoleSelected, setIsManagementRoleSelected] =
+    useState(false);
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
   const [importing, setImporting] = useState(false);
   const [showArchive, setShowArchive] = useState(() => {
@@ -438,57 +440,59 @@ const UserManagement = ({ showHeader = true }) => {
     }
   };
 
-  const actionMenuItems = (user) => [
-    {
-      key: "view",
-      icon: <EyeOutlined />,
-      label: "Xem chi tiết",
-      onClick: () => handleUserAction("view", user),
-    },
-    {
-      key: "edit",
-      icon: <EditOutlined />,
-      label: "Chỉnh sửa",
-      onClick: () => handleUserAction("edit", user),
-    },
-    {
-      type: "divider",
-    },
-    {
-      key: user.status === "inactive" ? "unlock" : "lock",
-      icon: user.status === "inactive" ? <UnlockOutlined /> : <LockOutlined />,
-      label:
-        user.status === "inactive" ? "Mở khóa tài khoản" : "Khóa tài khoản",
-      danger: user.status === "active", // Make deactivate action red
-      onClick: () => {
-        const isActive = user.status === "active";
-        Modal.confirm({
-          title: isActive
-            ? "Xác nhận khóa tài khoản"
-            : "Xác nhận mở khóa tài khoản",
-          content: isActive
-            ? "Bạn có chắc chắn muốn ngừng hoạt động tài khoản này? Người dùng sẽ không thể đăng nhập."
-            : "Bạn có chắc chắn muốn kích hoạt lại tài khoản này?",
-          okText: isActive ? "Khóa tài khoản" : "Mở khóa tài khoản",
-          cancelText: "Hủy",
-          okButtonProps: {
-            danger: isActive,
-            style: isActive
-              ? {}
-              : { backgroundColor: "#52c41a", borderColor: "#52c41a" },
-          },
-          onOk: () => handleUserAction(isActive ? "lock" : "unlock", user),
-        });
+  const actionMenuItems = (user) =>
+    [
+      {
+        key: "view",
+        icon: <EyeOutlined />,
+        label: "Xem chi tiết",
+        onClick: () => handleUserAction("view", user),
       },
-    },
-    // {
-    //   key: "delete",
-    //   icon: <DeleteOutlined />,
-    //   label: "Xóa",
-    //   danger: true,
-    //   onClick: () => handleUserAction("delete", user),
-    // },
-  ];
+      {
+        key: "edit",
+        icon: <EditOutlined />,
+        label: "Chỉnh sửa",
+        onClick: () => handleUserAction("edit", user),
+      },
+      {
+        type: "divider",
+      },
+      {
+        key: user.status === "inactive" ? "unlock" : "lock",
+        icon:
+          user.status === "inactive" ? <UnlockOutlined /> : <LockOutlined />,
+        label:
+          user.status === "inactive" ? "Mở khóa tài khoản" : "Khóa tài khoản",
+        danger: user.status === "active", // Make deactivate action red
+        onClick: () => {
+          const isActive = user.status === "active";
+          Modal.confirm({
+            title: isActive
+              ? "Xác nhận khóa tài khoản"
+              : "Xác nhận mở khóa tài khoản",
+            content: isActive
+              ? "Bạn có chắc chắn muốn ngừng hoạt động tài khoản này? Người dùng sẽ không thể đăng nhập."
+              : "Bạn có chắc chắn muốn kích hoạt lại tài khoản này?",
+            okText: isActive ? "Khóa tài khoản" : "Mở khóa tài khoản",
+            cancelText: "Hủy",
+            okButtonProps: {
+              danger: isActive,
+              style: isActive
+                ? {}
+                : { backgroundColor: "#52c41a", borderColor: "#52c41a" },
+            },
+            onOk: () => handleUserAction(isActive ? "lock" : "unlock", user),
+          });
+        },
+      },
+      // {
+      //   key: "delete",
+      //   icon: <DeleteOutlined />,
+      //   label: "Xóa",
+      //   danger: true,
+      //   onClick: () => handleUserAction("delete", user),
+      // },
+    ].filter(Boolean);
 
   // Department filter dropdown for the table
   const departmentFilterOptions = (
@@ -845,6 +849,8 @@ const UserManagement = ({ showHeader = true }) => {
       setIsModalVisible(false);
       setEditingUser(null);
       form.resetFields();
+      // Ensure management-role flag is cleared after creating/updating
+      setIsManagementRoleSelected(false);
       // Reload users from API
       const userData = await userService.getUsers();
       setUsers(userData);
@@ -865,6 +871,8 @@ const UserManagement = ({ showHeader = true }) => {
     setIsModalVisible(false);
     setEditingUser(null);
     form.resetFields();
+    // Reset management-role flag to avoid stale state when reopening modal
+    setIsManagementRoleSelected(false);
   };
 
   const content = (
@@ -923,6 +931,8 @@ const UserManagement = ({ showHeader = true }) => {
                 onClick={() => {
                   setEditingUser(null);
                   form.resetFields();
+                  // Reset management-role flag when opening Add User modal
+                  setIsManagementRoleSelected(false);
                   setIsModalVisible(true);
                 }}
                 style={{ backgroundColor: "#334766", borderColor: "#334766" }}
@@ -1097,7 +1107,7 @@ const UserManagement = ({ showHeader = true }) => {
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
-        width={1100}
+        width={1400}
         centered
         okText={editingUser ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
@@ -1139,6 +1149,21 @@ const UserManagement = ({ showHeader = true }) => {
               }
               // Clear selected lines if department changes
               form.setFieldsValue({ lineIds: [] });
+            }
+            // When role selection changes, detect management roles and clear line selection
+            if (changedValues.roleIds !== undefined) {
+              const roleId = changedValues.roleIds;
+              const selectedRole = roles.find((r) => r.id === roleId);
+              const isManagement =
+                selectedRole &&
+                (selectedRole.name.includes("Quản lý") ||
+                  selectedRole.name.includes("Manager") ||
+                  selectedRole.name.toLowerCase().includes("manager"));
+              setIsManagementRoleSelected(!!isManagement);
+              if (isManagement) {
+                // Managers manage all lines in the department — don't allow choosing specific lines
+                form.setFieldsValue({ lineIds: [] });
+              }
             }
           }}
         >
@@ -1340,33 +1365,84 @@ const UserManagement = ({ showHeader = true }) => {
                 }
                 // rules={[{ required: true, message: "Vui lòng chọn dây chuyền" }]}
               >
+                {
+                  // Determine current role directly from form to avoid stale state
+                }
                 <Select
                   mode="multiple"
-                  placeholder="Chọn dây chuyền"
+                  placeholder={(() => {
+                    const roleId = form.getFieldValue("roleIds");
+                    const selectedRole = roles.find((r) => r.id === roleId);
+                    const currentIsManagement =
+                      selectedRole &&
+                      (selectedRole.name.includes("Quản lý") ||
+                        selectedRole.name.includes("Manager") ||
+                        selectedRole.name.toLowerCase().includes("manager"));
+
+                    if (currentIsManagement)
+                      return "Vai trò quản lý sẽ quản lý tất cả dây chuyền trong phòng ban.";
+                    if (!form.getFieldValue("departmentId"))
+                      return "Bạn cần chọn phòng ban trước";
+                    return "Chọn dây chuyền";
+                  })()}
                   size="large"
                   loading={!lines || lines.length === 0}
-                  disabled={!form.getFieldValue("departmentId")}
+                  disabled={(() => {
+                    const roleId = form.getFieldValue("roleIds");
+                    const selectedRole = roles.find((r) => r.id === roleId);
+                    const currentIsManagement =
+                      selectedRole &&
+                      (selectedRole.name.includes("Quản lý") ||
+                        selectedRole.name.includes("Manager") ||
+                        selectedRole.name.toLowerCase().includes("manager"));
+                    return (
+                      currentIsManagement || !form.getFieldValue("departmentId")
+                    );
+                  })()}
                   allowClear
                   showSearch
                   optionFilterProp="children"
                   filterOption={(input, option) =>
                     option.children.toLowerCase().includes(input.toLowerCase())
                   }
-                  notFoundContent={
-                    !form.getFieldValue("departmentId") ? (
-                      <div
-                        style={{
-                          textAlign: "center",
-                          color: "#ff4d4f",
-                          padding: "8px",
-                        }}
-                      >
-                        Bạn cần chọn phòng ban trước
-                      </div>
-                    ) : (
-                      "Không có dây chuyền nào"
-                    )
-                  }
+                  notFoundContent={(() => {
+                    const roleId = form.getFieldValue("roleIds");
+                    const selectedRole = roles.find((r) => r.id === roleId);
+                    const currentIsManagement =
+                      selectedRole &&
+                      (selectedRole.name.includes("Quản lý") ||
+                        selectedRole.name.includes("Manager") ||
+                        selectedRole.name.toLowerCase().includes("manager"));
+
+                    if (currentIsManagement) {
+                      return (
+                        <div
+                          style={{
+                            textAlign: "center",
+                            color: "#096dd9",
+                            padding: "8px",
+                          }}
+                        >
+                          Vai trò quản lý sẽ quản lý tất cả dây chuyền trong
+                          phòng ban.
+                        </div>
+                      );
+                    }
+                    if (!form.getFieldValue("departmentId")) {
+                      return (
+                        <div
+                          style={{
+                            textAlign: "center",
+                            color: "#ff4d4f",
+                            padding: "8px",
+                          }}
+                        >
+                          Bạn cần chọn phòng ban trước
+                        </div>
+                      );
+                    }
+                    return "Không có dây chuyền nào";
+                  })()}
                 >
                   {filteredLines.map((line) => (
                     <Option key={line.lineId} value={line.lineId}>
@@ -1473,7 +1549,7 @@ const UserManagement = ({ showHeader = true }) => {
         }
         open={isViewModalVisible}
         onCancel={() => setIsViewModalVisible(false)}
-        width={900}
+        width={1200}
         footer={[
           <Button
             key="edit"
