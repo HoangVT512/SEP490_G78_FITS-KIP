@@ -419,7 +419,7 @@ const LineManagement = ({ showHeader = true }) => {
     <div style={contentStyle}>
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
-        <Col xs={24} sm={6}>
+        <Col xs={24} sm={8}>
           <Card>
             <Statistic
               title="Tổng dây chuyền"
@@ -429,7 +429,7 @@ const LineManagement = ({ showHeader = true }) => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={6}>
+        <Col xs={24} sm={8}>
           <Card>
             <Statistic
               title="Đang hoạt động"
@@ -439,31 +439,13 @@ const LineManagement = ({ showHeader = true }) => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={6}>
+        <Col xs={24} sm={8}>
           <Card>
             <Statistic
-              title="Hiệu suất trung bình"
-              value={
-                lines.length > 0
-                  ? Math.round(
-                      lines.reduce((sum, g) => sum + (g.efficiency || 0), 0) /
-                        lines.length
-                    )
-                  : 0
-              }
-              suffix="%"
-              prefix={<ThunderboltOutlined style={{ color: "#faad14" }} />}
-              valueStyle={{ color: "#faad14" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={6}>
-          <Card>
-            <Statistic
-              title="Tổng thiết bị"
-              value={lines.reduce((sum, g) => sum + (g.equipmentCount || 0), 0)}
-              prefix={<LineChartOutlined style={{ color: "#722ed1" }} />}
-              valueStyle={{ color: "#722ed1" }}
+              title="Không hoạt động"
+              value={lines.filter((g) => !g.isActive).length}
+              prefix={<PauseCircleOutlined style={{ color: "#ff4d4f" }} />}
+              valueStyle={{ color: "#ff4d4f" }}
             />
           </Card>
         </Col>
