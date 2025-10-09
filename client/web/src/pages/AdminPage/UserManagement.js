@@ -375,6 +375,23 @@ const UserManagement = ({ showHeader = true }) => {
         }
         break;
       case "lock": {
+        // Prevent locking admin accounts. Roles may be strings (e.g. "Quản trị viên") or objects { name: 'Quản trị viên' }.
+        if (
+          user.roles &&
+          user.roles.some((r) => {
+            const roleName = typeof r === "string" ? r : r && r.name;
+            return (
+              roleName &&
+              ["quản trị viên", "admin", "administrator"].includes(
+                roleName.toLowerCase()
+              )
+            );
+          })
+        ) {
+          message.warning("Không thể khóa tài khoản của quản trị viên");
+          break;
+        }
+
         try {
           await userService.updateUser(user.id, {
             ...user,
