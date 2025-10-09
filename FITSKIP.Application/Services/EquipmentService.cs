@@ -171,4 +171,25 @@ public class EquipmentService : IEquipmentService
         return JsonSerializer.Serialize(qrData);
 
     }
+
+    public async Task<string?> GenerateQRCodeAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var equipment = await _equipmentRepository.GetByIdAsync(id, cancellationToken);
+        if (equipment == null || string.IsNullOrEmpty(equipment.EquipmentCode))
+        {
+            return null;
+        }
+
+        // If QR code already exists, return it
+        if (!string.IsNullOrEmpty(equipment.Qrcode))
+        {
+            return equipment.Qrcode;
+        }
+
+        // Otherwise, generate new QR code
+        var qrCode = await GenerateQRCodeAsync(equipment.EquipmentCode, cancellationToken);
+        equipment.Qrcode = qrCode;
+        await _equipmentRepository.UpdateAsync(equipment, cancellationToken);
+        return qrCode;
+    }
 }

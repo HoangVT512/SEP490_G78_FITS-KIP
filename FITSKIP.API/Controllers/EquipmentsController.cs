@@ -34,7 +34,7 @@ public class EquipmentsController : ControllerBase
         {
             var equipments = await _equipmentService.GetEquipmentsAsync();
             return Ok(ApiResponse<IReadOnlyList<EquipmentDTO>>.SuccessResponse(
-                equipments, 
+                equipments,
                 $"Lấy danh sách {equipments.Count} thiết bị thành công"
             ));
         }
@@ -42,7 +42,7 @@ public class EquipmentsController : ControllerBase
         {
             _logger.LogError(ex, "Lỗi khi lấy danh sách thiết bị");
             return StatusCode(500, ApiResponse.ErrorResponse(
-                "Có lỗi xảy ra khi lấy danh sách thiết bị", 
+                "Có lỗi xảy ra khi lấy danh sách thiết bị",
                 new List<string> { ex.Message }
             ));
         }
@@ -79,7 +79,7 @@ public class EquipmentsController : ControllerBase
             }
 
             return Ok(ApiResponse<EquipmentDTO>.SuccessResponse(
-                equipment, 
+                equipment,
                 "Lấy thông tin thiết bị thành công"
             ));
         }
@@ -123,12 +123,12 @@ public class EquipmentsController : ControllerBase
             }
 
             var equipment = await _equipmentService.CreateEquipmentAsync(request);
-            
+
             return CreatedAtAction(
-                nameof(GetEquipment), 
-                new { id = equipment.EquipmentId }, 
+                nameof(GetEquipment),
+                new { id = equipment.EquipmentId },
                 ApiResponse<EquipmentDTO>.SuccessResponse(
-                    equipment, 
+                    equipment,
                     $"Tạo thiết bị '{equipment.EquipmentName}' thành công"
                 )
             );
@@ -198,7 +198,7 @@ public class EquipmentsController : ControllerBase
             }
 
             return Ok(ApiResponse<EquipmentDTO>.SuccessResponse(
-                equipment, 
+                equipment,
                 $"Cập nhật thiết bị '{equipment.EquipmentName}' thành công"
             ));
         }
@@ -298,7 +298,7 @@ public class EquipmentsController : ControllerBase
 
             var statusText = equipment.IsActive ? "kích hoạt" : "vô hiệu hóa";
             return Ok(ApiResponse<EquipmentDTO>.SuccessResponse(
-                equipment, 
+                equipment,
                 $"Đã {statusText} thiết bị '{equipment.EquipmentName}' thành công"
             ));
         }
@@ -338,7 +338,7 @@ public class EquipmentsController : ControllerBase
 
             var equipments = await _equipmentService.GetEquipmentsByStageAsync(stageId);
             return Ok(ApiResponse<IReadOnlyList<EquipmentDTO>>.SuccessResponse(
-                equipments, 
+                equipments,
                 $"Lấy danh sách {equipments.Count} thiết bị của công đoạn thành công"
             ));
         }
@@ -347,6 +347,52 @@ public class EquipmentsController : ControllerBase
             _logger.LogError(ex, "Lỗi khi lấy danh sách thiết bị theo công đoạn với ID: {StageId}", stageId);
             return StatusCode(500, ApiResponse.ErrorResponse(
                 "Có lỗi xảy ra khi lấy danh sách thiết bị theo công đoạn",
+                new List<string> { ex.Message }
+            ));
+        }
+    }
+
+
+    /// <summary>
+    /// Tạo mã QR cho thiết bị
+    /// </summary>
+    /// <param name="id">ID của thiết bị</param>
+    /// <returns>Mã QR của thiết bị</returns>
+    /// <response code="200">Tạo mã QR thành công</response>
+    /// <response code="404">Không tìm thấy thiết bị</response>
+    /// <response code="500">Lỗi server nội bộ</response>
+    [HttpGet("{id}/generate-qr")]
+    [ProducesResponseType(typeof(ApiResponse<string>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GenerateQRCode(int id)
+    {
+        try
+        {
+            if (id <= 0)
+            {
+                return BadRequest(ApiResponse.ErrorResponse(
+                    "ID thiết bị không hợp lệ",
+                    new List<string> { "ID phải lớn hơn 0" }
+                ));
+            }
+
+            var qrCode = await _equipmentService.GenerateQRCodeAsync(id);
+            if (qrCode == null)
+            {
+                return NotFound(ApiResponse.ErrorResponse($"Không tìm thấy thiết bị với ID: {id}"));
+            }
+
+            return Ok(ApiResponse<string>.SuccessResponse(
+                qrCode,
+                "Tạo mã QR thành công"
+            ));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi tạo mã QR cho thiết bị với ID: {EquipmentId}", id);
+            return StatusCode(500, ApiResponse.ErrorResponse(
+                "Có lỗi xảy ra khi tạo mã QR",
                 new List<string> { ex.Message }
             ));
         }

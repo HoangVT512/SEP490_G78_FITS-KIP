@@ -35,12 +35,14 @@ import {
   CloseCircleOutlined,
   LockOutlined,
   UnlockOutlined,
+  PrinterOutlined,
 } from "@ant-design/icons";
 import { ArchiveIcon } from "../../assets/icons";
 import Layout from "../../components/Layout/Layout";
 import { equipmentService } from "../../services/equipmentService";
 import { stageService } from "../../services/stageService";
 import dayjs from "dayjs";
+import QRCode from "qrcode";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
@@ -57,6 +59,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
   const [viewingEquipment, setViewingEquipment] = useState(null);
   const [stages, setStages] = useState([]);
   const [stageActive, setStageActive] = useState([]);
+  const [qrImageUrl, setQrImageUrl] = useState(null);
   const [form] = Form.useForm();
 
   const [showArchive, setShowArchive] = useState(() => {
@@ -76,6 +79,19 @@ const EquipmentManagement = ({ showHeader = true }) => {
       showArchive ? "true" : "false"
     );
   }, [showArchive]);
+
+  useEffect(() => {
+    if (viewingEquipment?.qrcode) {
+      QRCode.toDataURL(viewingEquipment.qrcode)
+        .then((url) => setQrImageUrl(url))
+        .catch((err) => {
+          console.error("Error generating QR code:", err);
+          setQrImageUrl(null);
+        });
+    } else {
+      setQrImageUrl(null);
+    }
+  }, [viewingEquipment]);
 
   const loadEquipments = async () => {
     setLoading(true);
@@ -157,7 +173,6 @@ const EquipmentManagement = ({ showHeader = true }) => {
           yom: equipment.yom,
           dateUse: equipment.dateUse ? dayjs(equipment.dateUse) : null,
           stageId: equipment.stageId,
-          idCode: equipment.idCode,
           issue: equipment.issue,
         });
         setIsModalVisible(true);
@@ -324,8 +339,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
         return (
           record.equipmentCode?.toLowerCase().includes(value.toLowerCase()) ||
           record.equipmentName?.toLowerCase().includes(value.toLowerCase()) ||
-          record.origin?.toLowerCase().includes(value.toLowerCase()) ||
-          record.idCode?.toLowerCase().includes(value.toLowerCase())
+          record.origin?.toLowerCase().includes(value.toLowerCase())
         );
       },
       render: (text) => <Text strong>{text || "N/A"}</Text>,
@@ -650,10 +664,6 @@ const EquipmentManagement = ({ showHeader = true }) => {
             </Col>
           </Row>
 
-          <Form.Item label="Mã định danh" name="idCode">
-            <Input placeholder="Nhập mã định danh" />
-          </Form.Item>
-
           <Form.Item label="Vấn đề/Ghi chú" name="issue">
             <TextArea
               rows={4}
@@ -690,26 +700,154 @@ const EquipmentManagement = ({ showHeader = true }) => {
         open={isViewModalVisible}
         onCancel={handleViewCancel}
         footer={[
+          <Button
+            key="print-qr"
+            type="primary"
+            icon={<PrinterOutlined />}
+            onClick={() => {
+              if (viewingEquipment) {
+                const printWindow = window.open("", "_blank");
+                printWindow.document.write(`
+                  <html>
+                    <head>
+                      <title>Chi tiết thiết bị - ${
+                        viewingEquipment.equipmentName
+                      }</title>
+                      <style>
+                        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+                        .header { text-align: center; border-bottom: 2px solid #1890ff; padding-bottom: 10px; margin-bottom: 20px; }
+                        .info-section { margin-bottom: 15px; }
+                        .label { font-weight: bold; color: #1890ff; display: inline-block; min-width: 150px; }
+                        .qr-section { text-align: center; margin-top: 30px; }
+                        .qr-section img { max-width: 200px; max-height: 200px; }
+                        .footer { margin-top: 30px; text-align: center; color: #666; font-size: 12px; }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="header">
+                        <h1>CHI TIẾT THIẾT BỊ</h1>
+                        <h2>${viewingEquipment.equipmentName}</h2>
+                      </div>
+
+                      <div class="info-section">
+                        <span class="label">Mã thiết bị:</span> ${
+                          viewingEquipment.equipmentCode || "N/A"
+                        }
+                      </div>
+
+                      <div class="info-section">
+                        <span class="label">Tên thiết bị:</span> ${
+                          viewingEquipment.equipmentName || "N/A"
+                        }
+                      </div>
+
+                      <div class="info-section">
+                        <span class="label">Công đoạn:</span> ${
+                          viewingEquipment.stageId
+                            ? Array.isArray(stages)
+                              ? stages.find(
+                                  (s) => s.stageId === viewingEquipment.stageId
+                                )?.stageName || "N/A"
+                              : "N/A"
+                            : "Chưa phân công"
+                        }
+                      </div>
+
+                      <div class="info-section">
+                        <span class="label">Xuất xứ:</span> ${
+                          viewingEquipment.origin || "N/A"
+                        }
+                      </div>
+
+                      <div class="info-section">
+                        <span class="label">Năm sản xuất:</span> ${
+                          viewingEquipment.yom || "N/A"
+                        }
+                      </div>
+
+                      <div class="info-section">
+                        <span class="label">Ngày đưa vào sử dụng:</span> ${
+                          viewingEquipment.dateUse
+                            ? new Date(
+                                viewingEquipment.dateUse
+                              ).toLocaleDateString("vi-VN")
+                            : "N/A"
+                        }
+                      </div>
+
+                      <div class="info-section">
+                        <span class="label">Trạng thái:</span> ${
+                          viewingEquipment.isActive
+                            ? "Hoạt động"
+                            : "Không hoạt động"
+                        }
+                      </div>
+
+                      <div class="info-section">
+                        <span class="label">Vấn đề/Ghi chú:</span> ${
+                          viewingEquipment.issue || "Không có vấn đề"
+                        }
+                      </div>
+
+                      ${
+                        qrImageUrl
+                          ? `
+                        <div class="qr-section">
+                          <h3>Mã QR nhận diện thiết bị</h3>
+                          <img src="${qrImageUrl}" alt="QR Code" />
+                          <p>Quét mã QR này để nhận diện thiết bị khi có sự cố</p>
+                        </div>
+                      `
+                          : ""
+                      }
+
+                      <div class="footer">
+                        <p>Ngày in: ${new Date().toLocaleDateString(
+                          "vi-VN"
+                        )} ${new Date().toLocaleTimeString("vi-VN")}</p>
+                      </div>
+                    </body>
+                  </html>
+                `);
+                printWindow.document.close();
+                printWindow.print();
+              }
+            }}
+          >
+            In chi tiết
+          </Button>,
           <Button key="close" onClick={handleViewCancel}>
             Đóng
           </Button>,
         ]}
-        width={700}
+        width={900}
       >
         {viewingEquipment && (
-          <Descriptions bordered column={2}>
+          <Descriptions
+            bordered
+            column={2}
+            size="middle"
+            labelStyle={{
+              fontWeight: "bold",
+              fontSize: "14px",
+              backgroundColor: "#fafafa",
+              borderRight: "1px solid #d9d9d9",
+              padding: "12px 16px",
+              minWidth: "160px",
+            }}
+          >
             <Descriptions.Item label="Mã thiết bị" span={1}>
-              <Text strong>{viewingEquipment.equipmentCode || "N/A"}</Text>
+              <Text>{viewingEquipment.equipmentCode || "N/A"}</Text>
             </Descriptions.Item>
             <Descriptions.Item label="Tên thiết bị" span={1}>
-              <Text strong>{viewingEquipment.equipmentName || "N/A"}</Text>
+              <Text>{viewingEquipment.equipmentName || "N/A"}</Text>
             </Descriptions.Item>
             <Descriptions.Item label="Công đoạn" span={2}>
               {viewingEquipment.stageId ? (
                 <Tag color="blue">
                   {Array.isArray(stages)
                     ? stages.find((s) => s.stageId === viewingEquipment.stageId)
-                      ?.stageName || "N/A"
+                        ?.stageName || "N/A"
                     : "N/A"}
                 </Tag>
               ) : (
@@ -717,23 +855,28 @@ const EquipmentManagement = ({ showHeader = true }) => {
               )}
             </Descriptions.Item>
             <Descriptions.Item label="Xuất xứ" span={1}>
-              {viewingEquipment.origin || "N/A"}
+              <Text>{viewingEquipment.origin || "N/A"}</Text>
             </Descriptions.Item>
             <Descriptions.Item label="Năm sản xuất" span={1}>
-              {viewingEquipment.yom || "N/A"}
+              <Text>{viewingEquipment.yom || "N/A"}</Text>
             </Descriptions.Item>
             <Descriptions.Item label="Ngày đưa vào sử dụng" span={1}>
-              {viewingEquipment.dateUse
-                ? dayjs(viewingEquipment.dateUse).format("DD/MM/YYYY")
-                : "N/A"}
-            </Descriptions.Item>
-            <Descriptions.Item label="Mã định danh" span={1}>
-              {viewingEquipment.idCode || "N/A"}
+              <Text>
+                {viewingEquipment.dateUse
+                  ? dayjs(viewingEquipment.dateUse).format("DD/MM/YYYY")
+                  : "N/A"}
+              </Text>
             </Descriptions.Item>
             <Descriptions.Item label="Mã QR" span={2}>
               {viewingEquipment.qrcode ? (
-                <Space>
-                  <QrcodeOutlined />
+                <Space direction="vertical">
+                  {qrImageUrl && (
+                    <img
+                      src={qrImageUrl}
+                      alt="QR Code"
+                      style={{ width: 128, height: 128 }}
+                    />
+                  )}
                   <Text copyable>{viewingEquipment.qrcode}</Text>
                 </Space>
               ) : (
