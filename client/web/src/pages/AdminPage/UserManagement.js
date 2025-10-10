@@ -774,9 +774,8 @@ const UserManagement = ({ showHeader = true }) => {
       const selectedRole = roles.find((r) => r.id === values.roleIds);
       const isManagementRole =
         selectedRole &&
-        (selectedRole.name.includes("Quản lý") ||
-          selectedRole.name.includes("Manager") ||
-          selectedRole.name.toLowerCase().includes("manager"));
+        ((selectedRole.name || "").trim().toLowerCase() === "quản lý" ||
+          (selectedRole.name || "").trim().toLowerCase() === "manager");
 
       if (isManagementRole && values.departmentId) {
         try {
@@ -1156,9 +1155,8 @@ const UserManagement = ({ showHeader = true }) => {
               const selectedRole = roles.find((r) => r.id === roleId);
               const isManagement =
                 selectedRole &&
-                (selectedRole.name.includes("Quản lý") ||
-                  selectedRole.name.includes("Manager") ||
-                  selectedRole.name.toLowerCase().includes("manager"));
+                ((selectedRole.name || "").trim().toLowerCase() === "quản lý" ||
+                  (selectedRole.name || "").trim().toLowerCase() === "manager");
               setIsManagementRoleSelected(!!isManagement);
               if (isManagement) {
                 // Managers manage all lines in the department — don't allow choosing specific lines
@@ -1375,9 +1373,10 @@ const UserManagement = ({ showHeader = true }) => {
                     const selectedRole = roles.find((r) => r.id === roleId);
                     const currentIsManagement =
                       selectedRole &&
-                      (selectedRole.name.includes("Quản lý") ||
-                        selectedRole.name.includes("Manager") ||
-                        selectedRole.name.toLowerCase().includes("manager"));
+                      ((selectedRole.name || "").trim().toLowerCase() ===
+                        "quản lý" ||
+                        (selectedRole.name || "").trim().toLowerCase() ===
+                          "manager");
 
                     if (currentIsManagement)
                       return "Vai trò quản lý sẽ quản lý tất cả dây chuyền trong phòng ban.";
@@ -1392,9 +1391,10 @@ const UserManagement = ({ showHeader = true }) => {
                     const selectedRole = roles.find((r) => r.id === roleId);
                     const currentIsManagement =
                       selectedRole &&
-                      (selectedRole.name.includes("Quản lý") ||
-                        selectedRole.name.includes("Manager") ||
-                        selectedRole.name.toLowerCase().includes("manager"));
+                      ((selectedRole.name || "").trim().toLowerCase() ===
+                        "quản lý" ||
+                        (selectedRole.name || "").trim().toLowerCase() ===
+                          "manager");
                     return (
                       currentIsManagement || !form.getFieldValue("departmentId")
                     );
@@ -1410,9 +1410,10 @@ const UserManagement = ({ showHeader = true }) => {
                     const selectedRole = roles.find((r) => r.id === roleId);
                     const currentIsManagement =
                       selectedRole &&
-                      (selectedRole.name.includes("Quản lý") ||
-                        selectedRole.name.includes("Manager") ||
-                        selectedRole.name.toLowerCase().includes("manager"));
+                      ((selectedRole.name || "").trim().toLowerCase() ===
+                        "quản lý" ||
+                        (selectedRole.name || "").trim().toLowerCase() ===
+                          "manager");
 
                     if (currentIsManagement) {
                       return (
@@ -1474,7 +1475,6 @@ const UserManagement = ({ showHeader = true }) => {
                   placeholder="Chọn vai trò"
                   size="large"
                   loading={roles.length === 0}
-                  allowClear
                 >
                   {roles &&
                     roles.map((role) => (
