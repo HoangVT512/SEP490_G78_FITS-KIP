@@ -710,102 +710,56 @@ const EquipmentManagement = ({ showHeader = true }) => {
                 printWindow.document.write(`
                   <html>
                     <head>
-                      <title>Chi tiết thiết bị - ${
-                        viewingEquipment.equipmentName
-                      }</title>
+                      <title></title>
                       <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-                        .header { text-align: center; border-bottom: 2px solid #1890ff; padding-bottom: 10px; margin-bottom: 20px; }
-                        .info-section { margin-bottom: 15px; }
-                        .label { font-weight: bold; color: #1890ff; display: inline-block; min-width: 150px; }
-                        .qr-section { text-align: center; margin-top: 30px; }
-                        .qr-section img { max-width: 200px; max-height: 200px; }
-                        .footer { margin-top: 30px; text-align: center; color: #666; font-size: 12px; }
+                        body { font-family: Arial, sans-serif; margin: 20px; }
+                        .card { width: 520px; border: 1px solid #ddd; padding: 12px; display: flex; gap: 12px; align-items: flex-start; }
+                        .qr { flex: 0 0 160px; text-align: center; }
+                        .qr img { width: 140px; height: 140px; object-fit: contain; }
+                        .details { flex: 1; font-size: 13px; }
+                        .title { font-weight: 700; color: #334766; margin-bottom: 6px; }
+                        .row { margin-bottom: 6px; }
+                        .label { font-weight: 600; color: #1890ff; display: inline-block; width: 140px; }
+                        .value { color: #333; }
+                        .footer { margin-top: 10px; font-size: 12px; color: #666; text-align: right; }
+                        @media print { body { margin: 0; } .card { border: none; } }
                       </style>
                     </head>
                     <body>
-                      <div class="header">
-                        <h1>CHI TIẾT THIẾT BỊ</h1>
-                        <h2>${viewingEquipment.equipmentName}</h2>
+                      <div style="text-align:center;margin-bottom:16px;font-size:16px;font-weight:700;color:#334766;">
+                        CÔNG TY CỔ PHẦN K.I.P VIỆT NAM
                       </div>
-
-                      <div class="info-section">
-                        <span class="label">Mã thiết bị:</span> ${
-                          viewingEquipment.equipmentCode || "N/A"
-                        }
-                      </div>
-
-                      <div class="info-section">
-                        <span class="label">Tên thiết bị:</span> ${
-                          viewingEquipment.equipmentName || "N/A"
-                        }
-                      </div>
-
-                      <div class="info-section">
-                        <span class="label">Công đoạn:</span> ${
-                          viewingEquipment.stageId
-                            ? Array.isArray(stages)
-                              ? stages.find(
-                                  (s) => s.stageId === viewingEquipment.stageId
-                                )?.stageName || "N/A"
-                              : "N/A"
-                            : "Chưa phân công"
-                        }
-                      </div>
-
-                      <div class="info-section">
-                        <span class="label">Xuất xứ:</span> ${
-                          viewingEquipment.origin || "N/A"
-                        }
-                      </div>
-
-                      <div class="info-section">
-                        <span class="label">Năm sản xuất:</span> ${
-                          viewingEquipment.yom || "N/A"
-                        }
-                      </div>
-
-                      <div class="info-section">
-                        <span class="label">Ngày đưa vào sử dụng:</span> ${
-                          viewingEquipment.dateUse
-                            ? new Date(
-                                viewingEquipment.dateUse
-                              ).toLocaleDateString("vi-VN")
-                            : "N/A"
-                        }
-                      </div>
-
-                      <div class="info-section">
-                        <span class="label">Trạng thái:</span> ${
-                          viewingEquipment.isActive
-                            ? "Hoạt động"
-                            : "Không hoạt động"
-                        }
-                      </div>
-
-                      <div class="info-section">
-                        <span class="label">Vấn đề/Ghi chú:</span> ${
-                          viewingEquipment.issue || "Không có vấn đề"
-                        }
-                      </div>
-
-                      ${
-                        qrImageUrl
-                          ? `
-                        <div class="qr-section">
-                          <h3>Mã QR nhận diện thiết bị</h3>
-                          <img src="${qrImageUrl}" alt="QR Code" />
-                          <p>Quét mã QR này để nhận diện thiết bị khi có sự cố</p>
+                      <div class="card">
+                        <div class="qr">
+                          ${
+                            qrImageUrl
+                              ? `<img src="${qrImageUrl}" alt="QR Code" />`
+                              : `<div style="width:140px;height:140px;display:flex;align-items:center;justify-content:center;color:#999;border:1px dashed #ccc">Chưa có QR</div>`
+                          }
+                          <div style="margin-top:8px;font-size:12px;color:#444">Mã QR</div>
                         </div>
-                      `
-                          : ""
-                      }
-
-                      <div class="footer">
-                        <p>Ngày in: ${new Date().toLocaleDateString(
-                          "vi-VN"
-                        )} ${new Date().toLocaleTimeString("vi-VN")}</p>
+                        <div class="details">
+                          <div class="title">${viewingEquipment.equipmentName || 'N/A'}</div>
+                          <div class="row"><span class="label">Mã thiết bị:</span><span class="value">${viewingEquipment.equipmentCode || 'N/A'}</span></div>
+                          <div class="row"><span class="label">Công đoạn:</span><span class="value">${
+                            viewingEquipment.stageId
+                              ? Array.isArray(stages)
+                                ? stages.find((s) => s.stageId === viewingEquipment.stageId)?.stageName || 'N/A'
+                                : 'N/A'
+                              : 'Chưa phân công'
+                          }</span></div>
+                          <div class="row"><span class="label">Xuất xứ:</span><span class="value">${viewingEquipment.origin || 'N/A'}</span></div>
+                          <div class="row"><span class="label">Năm Sx:</span><span class="value">${viewingEquipment.yom || 'N/A'}</span></div>
+                          <div class="row"><span class="label">Ngày sử dụng:</span><span class="value">${
+                            viewingEquipment.dateUse
+                              ? new Date(viewingEquipment.dateUse).toLocaleDateString('vi-VN')
+                              : 'N/A'
+                          }</span></div>
+                          <div class="row"><span class="label">Trạng thái:</span><span class="value">${viewingEquipment.isActive ? 'Hoạt động' : 'Không hoạt động'}</span></div>
+                          <div class="row"><span class="label">Vấn đề:</span><span class="value">${viewingEquipment.issue || 'Không có vấn đề'}</span></div>
+                        </div>
                       </div>
+
                     </body>
                   </html>
                 `);
