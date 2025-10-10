@@ -420,7 +420,9 @@ const DepartmentManagement = ({ showHeader = true }) => {
         // Create new department
         await departmentService.createDepartment({
           departmentName: values.departmentName,
-          description: values.description || "",
+          description: values.description?.trim()
+            ? values.description.trim()
+            : null,
         });
         message.success("Tạo phòng ban mới thành công!");
       }
@@ -432,9 +434,10 @@ const DepartmentManagement = ({ showHeader = true }) => {
     } catch (error) {
       console.error("Operation failed:", error);
       message.error(
-        editingDepartment
-          ? "Cập nhật phòng ban thất bại!"
-          : "Tạo phòng ban thất bại!"
+        error.message ||
+          (editingDepartment
+            ? "Cập nhật phòng ban thất bại!"
+            : "Tạo phòng ban thất bại!")
       );
     }
   };
@@ -580,11 +583,7 @@ const DepartmentManagement = ({ showHeader = true }) => {
           </Row>
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item
-                name="description"
-                label="Mô tả"
-                rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
-              >
+              <Form.Item name="description" label="Mô tả">
                 <Input.TextArea rows={3} placeholder="Nhập mô tả phòng ban" />
               </Form.Item>
             </Col>
