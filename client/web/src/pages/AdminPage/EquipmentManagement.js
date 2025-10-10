@@ -131,22 +131,6 @@ const EquipmentManagement = ({ showHeader = true }) => {
     }
   };
 
-  const handleDelete = async (equipmentId) => {
-    try {
-      setLoading(true);
-      await equipmentService.deleteEquipment(equipmentId);
-      message.success("Đã xóa thiết bị thành công");
-      loadEquipments();
-    } catch (error) {
-      console.error("Error deleting equipment:", error);
-      message.error(
-        error.message || "Không thể xóa thiết bị. Vui lòng thử lại."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleAction = async (action, equipment) => {
     switch (action) {
       case "view":
@@ -176,23 +160,6 @@ const EquipmentManagement = ({ showHeader = true }) => {
           issue: equipment.issue,
         });
         setIsModalVisible(true);
-        break;
-      case "delete":
-        Modal.confirm({
-          title: "Xác nhận xóa thiết bị",
-          content: `Bạn có chắc chắn muốn xóa thiết bị "${equipment.equipmentName}"?`,
-          okText: "Xóa",
-          cancelText: "Hủy",
-          okType: "danger",
-          okButtonProps: {
-            style: {
-              backgroundColor: "#334766",
-              borderColor: "#334766",
-              color: "#fff",
-            },
-          },
-          onOk: () => handleDelete(equipment.equipmentId),
-        });
         break;
       case "activate":
         try {
@@ -313,17 +280,6 @@ const EquipmentManagement = ({ showHeader = true }) => {
         label: "Kích hoạt",
       });
     }
-
-    items.push({
-      type: "divider",
-    });
-
-    items.push({
-      key: "delete",
-      icon: <DeleteOutlined />,
-      label: "Xóa",
-      danger: true,
-    });
 
     return items;
   };
@@ -739,24 +695,43 @@ const EquipmentManagement = ({ showHeader = true }) => {
                           <div style="margin-top:8px;font-size:12px;color:#444">Mã QR</div>
                         </div>
                         <div class="details">
-                          <div class="title">${viewingEquipment.equipmentName || 'N/A'}</div>
-                          <div class="row"><span class="label">Mã thiết bị:</span><span class="value">${viewingEquipment.equipmentCode || 'N/A'}</span></div>
+                          <div class="title">${
+                            viewingEquipment.equipmentName || "N/A"
+                          }</div>
+                          <div class="row"><span class="label">Mã thiết bị:</span><span class="value">${
+                            viewingEquipment.equipmentCode || "N/A"
+                          }</span></div>
                           <div class="row"><span class="label">Công đoạn:</span><span class="value">${
                             viewingEquipment.stageId
                               ? Array.isArray(stages)
-                                ? stages.find((s) => s.stageId === viewingEquipment.stageId)?.stageName || 'N/A'
-                                : 'N/A'
-                              : 'Chưa phân công'
+                                ? stages.find(
+                                    (s) =>
+                                      s.stageId === viewingEquipment.stageId
+                                  )?.stageName || "N/A"
+                                : "N/A"
+                              : "Chưa phân công"
                           }</span></div>
-                          <div class="row"><span class="label">Xuất xứ:</span><span class="value">${viewingEquipment.origin || 'N/A'}</span></div>
-                          <div class="row"><span class="label">Năm Sx:</span><span class="value">${viewingEquipment.yom || 'N/A'}</span></div>
+                          <div class="row"><span class="label">Xuất xứ:</span><span class="value">${
+                            viewingEquipment.origin || "N/A"
+                          }</span></div>
+                          <div class="row"><span class="label">Năm Sx:</span><span class="value">${
+                            viewingEquipment.yom || "N/A"
+                          }</span></div>
                           <div class="row"><span class="label">Ngày sử dụng:</span><span class="value">${
                             viewingEquipment.dateUse
-                              ? new Date(viewingEquipment.dateUse).toLocaleDateString('vi-VN')
-                              : 'N/A'
+                              ? new Date(
+                                  viewingEquipment.dateUse
+                                ).toLocaleDateString("vi-VN")
+                              : "N/A"
                           }</span></div>
-                          <div class="row"><span class="label">Trạng thái:</span><span class="value">${viewingEquipment.isActive ? 'Hoạt động' : 'Không hoạt động'}</span></div>
-                          <div class="row"><span class="label">Vấn đề:</span><span class="value">${viewingEquipment.issue || 'Không có vấn đề'}</span></div>
+                          <div class="row"><span class="label">Trạng thái:</span><span class="value">${
+                            viewingEquipment.isActive
+                              ? "Hoạt động"
+                              : "Không hoạt động"
+                          }</span></div>
+                          <div class="row"><span class="label">Vấn đề:</span><span class="value">${
+                            viewingEquipment.issue || "Không có vấn đề"
+                          }</span></div>
                         </div>
                       </div>
 
