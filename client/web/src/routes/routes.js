@@ -10,6 +10,7 @@ import AdminLayout from "../pages/AdminPage/AdminLayout";
 import UserManagement from "../pages/AdminPage/UserManagement";
 import RoleManagement from "../pages/AdminPage/RoleManagement";
 import AdminDashboard from "../pages/AdminPage/AdminDashboard";
+import EquipmentManagement from "../pages/AdminPage/EquipmentManagement";
 import SystemSettings from "../pages/AdminPage/SystemSettings";
 import AdminReports from "../pages/AdminPage/AdminReports";
 // TeamLeader imports
@@ -109,6 +110,13 @@ export const routes = [
     page: SystemSettings,
     isShowHeader: true,
     requiredPermissions: 2, // Admin only
+  },
+  {
+    path: "/admin/equipment",
+    name: "Equipment Management",
+    page: EquipmentManagement,
+    isShowHeader: true,
+    requiredPermissions: 2,
   },
   {
     path: "/admin/reports",

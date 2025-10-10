@@ -13,19 +13,22 @@ public class AdminDashboardController : ControllerBase
     private readonly ILineService lineService;
     private readonly IStageService stageService;
     private readonly IRoleService roleService;
+    private readonly IEquipmentService equipmentService;
 
     public AdminDashboardController(
         IUserService userService,
         IDepartmentService departmentService,
         ILineService lineService,
         IStageService stageService,
-        IRoleService roleService)
+        IRoleService roleService,
+        IEquipmentService equipmentService)
     {
         this.userService = userService;
         this.departmentService = departmentService;
         this.lineService = lineService;
         this.stageService = stageService;
         this.roleService = roleService;
+        this.equipmentService = equipmentService;
     }
 
     [HttpGet("statistics")]
@@ -39,6 +42,7 @@ public class AdminDashboardController : ControllerBase
             var lines = await lineService.GetLinesAsync(cancellationToken);
             var stages = await stageService.GetStagesAsync(cancellationToken);
             var roles = await roleService.GetRolesWithUserCountAsync();
+            var equipments = await equipmentService.GetEquipmentsAsync(cancellationToken);
 
             // Tính toán thống kê
             var totalUsers = users.Count;
@@ -48,6 +52,8 @@ public class AdminDashboardController : ControllerBase
             var totalLines = lines.Count;
             var totalStages = stages.Count;
             var totalRoles = roles.Count;
+            var totalEquipments = equipments.Count;
+            var activeEquipments = equipments.Count(e => e.IsActive);
 
             // Thống kê người dùng theo vai trò
             var usersByRole = roles.Select(role => new
@@ -86,7 +92,8 @@ public class AdminDashboardController : ControllerBase
                     TotalDepartments = totalDepartments,
                     TotalLines = totalLines,
                     TotalStages = totalStages,
-                    TotalRoles = totalRoles
+                    TotalRoles = totalRoles,
+                    TotalEquipments = totalEquipments
                 },
                 // Phân bố người dùng theo vai trò
                 UsersByRole = usersByRole,
@@ -100,7 +107,9 @@ public class AdminDashboardController : ControllerBase
                     ActiveDepartments = departments.Count(d => d.IsActive),
                     InactiveDepartments = departments.Count(d => !d.IsActive),
                     ActiveLines = lines.Count(l => l.IsActive),
-                    InactiveLines = lines.Count(l => !l.IsActive)
+                    InactiveLines = lines.Count(l => !l.IsActive),
+                    ActiveEquipments = activeEquipments,
+                    InactiveEquipments = totalEquipments - activeEquipments
                 }
             };
 

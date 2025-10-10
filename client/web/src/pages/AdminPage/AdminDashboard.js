@@ -12,6 +12,7 @@ import {
   Spin,
   Alert,
   Empty,
+  Button,
 } from "antd";
 import {
   UserOutlined,
@@ -23,6 +24,8 @@ import {
   CheckCircleOutlined,
   LockOutlined,
   DashboardOutlined,
+  PlusOutlined,
+  ToolOutlined,
 } from "@ant-design/icons";
 import styles from "../../styles/pages/AdminDashboard.module.css";
 import { dashboardService } from "../../services/dashboardService";
@@ -182,7 +185,7 @@ const AdminDashboard = ({ showHeader = true }) => {
       </div>
 
       <Row gutter={[16, 16]} className={styles.statsRow}>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} md={8} lg={8} xl={4.8}>
           <Card className={styles.card} hoverable>
             <Statistic
               title="Tổng người dùng"
@@ -202,7 +205,7 @@ const AdminDashboard = ({ showHeader = true }) => {
             </Text>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} md={8} lg={8} xl={4.8}>
           <Card className={styles.card} hoverable>
             <Statistic
               title="Phòng ban"
@@ -224,10 +227,10 @@ const AdminDashboard = ({ showHeader = true }) => {
             </Text>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} md={8} lg={8} xl={4.8}>
           <Card className={styles.card} hoverable>
             <Statistic
-              title="Chuyền sản xuất"
+              title="Dây chuyền sản xuất"
               value={statistics.summary.totalLines}
               prefix={<ClusterOutlined style={{ color: "#16a34a" }} />}
               valueStyle={{
@@ -244,7 +247,7 @@ const AdminDashboard = ({ showHeader = true }) => {
             </Text>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} md={12} lg={8} xl={4.8}>
           <Card className={styles.card} hoverable>
             <Statistic
               title="Công đoạn"
@@ -258,6 +261,26 @@ const AdminDashboard = ({ showHeader = true }) => {
             />
             <Text type="secondary" className={styles.statDescription}>
               Trên {statistics.summary.totalLines} chuyền
+            </Text>
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={12} lg={8} xl={4.8}>
+          <Card className={styles.card} hoverable>
+            <Statistic
+              title="Thiết bị"
+              value={statistics.summary.totalEquipments || 0}
+              prefix={<ToolOutlined style={{ color: "#0891b2" }} />}
+              valueStyle={{
+                color: "#0891b2",
+                fontSize: "28px",
+                fontWeight: "bold",
+              }}
+            />
+            <Text type="secondary" className={styles.statDescription}>
+              <CheckCircleOutlined
+                style={{ color: "#52c41a", marginRight: 4 }}
+              />
+              {statistics.statusStats?.activeEquipments || 0} hoạt động
             </Text>
           </Card>
         </Col>
