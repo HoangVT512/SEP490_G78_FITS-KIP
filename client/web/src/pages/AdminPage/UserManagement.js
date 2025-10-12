@@ -1405,6 +1405,8 @@ const UserManagement = ({ showHeader = true }) => {
                       return "Vai trò quản lý sẽ quản lý tất cả dây chuyền trong phòng ban.";
                     if (!form.getFieldValue("departmentId"))
                       return "Bạn cần chọn phòng ban trước";
+                    if (filteredLines.length === 0)
+                      return "Phòng ban này chưa có dây chuyền nào";
                     return "Chọn dây chuyền";
                   })()}
                   size="large"
@@ -1419,7 +1421,9 @@ const UserManagement = ({ showHeader = true }) => {
                         (selectedRole.name || "").trim().toLowerCase() ===
                           "manager");
                     return (
-                      currentIsManagement || !form.getFieldValue("departmentId")
+                      currentIsManagement || 
+                      !form.getFieldValue("departmentId") ||
+                      filteredLines.length === 0
                     );
                   })()}
                   allowClear
@@ -1462,6 +1466,19 @@ const UserManagement = ({ showHeader = true }) => {
                           }}
                         >
                           Bạn cần chọn phòng ban trước
+                        </div>
+                      );
+                    }
+                    if (filteredLines.length === 0) {
+                      return (
+                        <div
+                          style={{
+                            textAlign: "center",
+                            color: "#faad14",
+                            padding: "8px",
+                          }}
+                        >
+                          Phòng ban này chưa có dây chuyền nào. Vui lòng tạo dây chuyền trước.
                         </div>
                       );
                     }

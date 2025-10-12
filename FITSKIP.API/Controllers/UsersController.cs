@@ -128,49 +128,11 @@ public class UsersController : ControllerBase
     [Route("{id}")]
     public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserRequest request, CancellationToken cancellationToken)
     {
-        // Basic validation
-        if (string.IsNullOrEmpty(request.Email) || string.IsNullOrEmpty(request.UserName))
-        {
-            return BadRequest("Email and UserName are required fields.");
-        }
-
-        // Validation 1: Check if username already exists
-        var existingUserByUsername = await userService.GetByUsernameAsync(request.UserName, cancellationToken);
-        if (existingUserByUsername != null)
-        {
-            return BadRequest($"Tên đăng nhập '{request.UserName}' đã tồn tại trong hệ thống");
-        }
-
-        // Validation 2: Check if email already exists
-        var existingUserByEmail = await userService.GetByEmailAsync(request.Email, cancellationToken);
-        if (existingUserByEmail != null)
-        {
-            return BadRequest($"Email '{request.Email}' đã tồn tại trong hệ thống");
-        }
-
-        // Validation 3: Check if employee code already exists
-        if (!string.IsNullOrEmpty(request.EmployeeCode))
-        {
-            var existingUserByEmployeeCode = await userService.GetByEmployeeCodeAsync(request.EmployeeCode, cancellationToken);
-            if (existingUserByEmployeeCode != null)
-            {
-                return BadRequest($"Mã nhân viên '{request.EmployeeCode}' đã tồn tại trong hệ thống");
-            }
-        }
-        if (!IsValidEmail(request.Email))
-        {
-            return BadRequest("Email không hợp lệ");
-        }
-        if (!IsValidVietnamPhoneNumber(request.PhoneNumber))
-        {
-            return BadRequest("Số điện thoại không hợp lệ");
-        }
         var updatedUser = await userService.UpdateUserAsync(id, request, cancellationToken);
         if (updatedUser == null)
         {
             return NotFound();
         }
-        
         return Ok(updatedUser);
     }
 
@@ -217,10 +179,6 @@ public class UsersController : ControllerBase
             if (!string.IsNullOrEmpty(request.Email) && !IsValidEmail(request.Email))
             {
                 return BadRequest("Email không hợp lệ");
-            }
-            if (!IsValidVietnamPhoneNumber(request.PhoneNumber))
-            {
-                return BadRequest("Số điện thoại không hợp lệ");
             }
 
             // Password will be handled by Identity in the service layer
@@ -623,6 +581,5 @@ public class UsersController : ControllerBase
         }
     }
 }
-
 
 
