@@ -249,16 +249,14 @@ const StageManagement = ({ showHeader = true }) => {
               } else {
                 message.error(
                   response.message ||
-                    `${
-                      actionText.charAt(0).toUpperCase() + actionText.slice(1)
-                    } công đoạn thất bại`
+                  `${actionText.charAt(0).toUpperCase() + actionText.slice(1)
+                  } công đoạn thất bại`
                 );
               }
             } catch (error) {
               console.error("Toggle stage status error:", error);
               message.error(
-                `${
-                  actionText.charAt(0).toUpperCase() + actionText.slice(1)
+                `${actionText.charAt(0).toUpperCase() + actionText.slice(1)
                 } công đoạn thất bại`
               );
             }
@@ -510,8 +508,8 @@ const StageManagement = ({ showHeader = true }) => {
               value={
                 lines.length > 0
                   ? (
-                      stages.length / new Set(stages.map((s) => s.lineId)).size
-                    ).toFixed(1)
+                    stages.length / new Set(stages.map((s) => s.lineId)).size
+                  ).toFixed(1)
                   : 0
               }
               prefix={<LineChartOutlined style={{ color: "#722ed1" }} />}
@@ -572,20 +570,7 @@ const StageManagement = ({ showHeader = true }) => {
           </Col>
           <Col xs={24} sm={6} md={12}>
             <Space style={{ float: "right" }}>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  setEditingStage(null);
-                  setSelectedDepartmentId(null);
-                  form.resetFields();
-                  form.setFieldsValue({ isActive: true });
-                  setIsModalVisible(true);
-                }}
-                style={{ backgroundColor: "#334766", borderColor: "#334766" }}
-              >
-                Thêm công đoạn
-              </Button>
+
               <Button
                 type={showArchive ? "primary" : "dashed"}
                 icon={showArchive ? <EyeOutlined /> : <ArchiveIcon />}
@@ -599,6 +584,20 @@ const StageManagement = ({ showHeader = true }) => {
                 {showArchive
                   ? "Hiển thị (Hoạt động)"
                   : "Lưu trữ (Ngừng hoạt động)"}
+              </Button>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  setEditingStage(null);
+                  setSelectedDepartmentId(null);
+                  form.resetFields();
+                  form.setFieldsValue({ isActive: true });
+                  setIsModalVisible(true);
+                }}
+                style={{ backgroundColor: "#334766", borderColor: "#334766" }}
+              >
+                Thêm công đoạn
               </Button>
             </Space>
           </Col>
@@ -779,8 +778,8 @@ const StageManagement = ({ showHeader = true }) => {
                     !selectedDepartmentId
                       ? "Vui lòng chọn phòng ban trước"
                       : filteredActiveLines.length === 0
-                      ? "Không có dây chuyền nào"
-                      : "Đang tải..."
+                        ? "Không có dây chuyền nào"
+                        : "Đang tải..."
                   }
                   showSearch
                   optionFilterProp="children"

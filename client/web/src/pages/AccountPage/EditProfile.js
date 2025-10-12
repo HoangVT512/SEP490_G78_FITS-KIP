@@ -283,8 +283,6 @@ const EditProfile = () => {
                       <li>Họ và tên</li>
                       <li>Email</li>
                       <li>Số điện thoại (10 số bắt đầu bằng 0)</li>
-                      <li>Giới tính</li>
-                      <li>Ảnh đại diện</li>
                     </ul>
                     <p className={styles.editProfileAlertTitle}>
                       Chỉ xem (do Admin quản lý):

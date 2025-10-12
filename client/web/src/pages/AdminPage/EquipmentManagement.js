@@ -475,6 +475,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
               onChange={(e) => setSearchText(e.target.value)}
             />
           </Col>
+          <Col xs={24} sm={6} md={4}></Col>
           <Col xs={24} sm={6} md={12}>
             <Space style={{ float: "right" }}>
               <Button
@@ -749,82 +750,82 @@ const EquipmentManagement = ({ showHeader = true }) => {
         {viewingEquipment && (
           <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
             <Descriptions
-            bordered
-            column={2}
-            size="middle"
-            labelStyle={{
-              fontWeight: "bold",
-              fontSize: "14px",
-              backgroundColor: "#fafafa",
-              borderRight: "1px solid #d9d9d9",
-              padding: "12px 16px",
-              minWidth: "160px",
-            }}
-          >
-            <Descriptions.Item label="Mã thiết bị" span={1}>
-              <Text>{viewingEquipment.equipmentCode || "N/A"}</Text>
-            </Descriptions.Item>
-            <Descriptions.Item label="Tên thiết bị" span={1}>
-              <Text>{viewingEquipment.equipmentName || "N/A"}</Text>
-            </Descriptions.Item>
-            <Descriptions.Item label="Công đoạn" span={2}>
-              {viewingEquipment.stageId ? (
-                <Tag color="blue">
-                  {Array.isArray(stages)
-                    ? stages.find((s) => s.stageId === viewingEquipment.stageId)
+              bordered
+              column={2}
+              size="middle"
+              labelStyle={{
+                fontWeight: "bold",
+                fontSize: "14px",
+                backgroundColor: "#fafafa",
+                borderRight: "1px solid #d9d9d9",
+                padding: "12px 16px",
+                minWidth: "160px",
+              }}
+            >
+              <Descriptions.Item label="Mã thiết bị" span={1}>
+                <Text>{viewingEquipment.equipmentCode || "N/A"}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Tên thiết bị" span={1}>
+                <Text>{viewingEquipment.equipmentName || "N/A"}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Công đoạn" span={2}>
+                {viewingEquipment.stageId ? (
+                  <Tag color="blue">
+                    {Array.isArray(stages)
+                      ? stages.find((s) => s.stageId === viewingEquipment.stageId)
                         ?.stageName || "N/A"
+                      : "N/A"}
+                  </Tag>
+                ) : (
+                  <Text type="secondary">Chưa phân công</Text>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Xuất xứ" span={1}>
+                <Text>{viewingEquipment.origin || "N/A"}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Năm sản xuất" span={1}>
+                <Text>{viewingEquipment.yom || "N/A"}</Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Ngày đưa vào sử dụng" span={1}>
+                <Text>
+                  {viewingEquipment.dateUse
+                    ? dayjs(viewingEquipment.dateUse).format("DD/MM/YYYY")
                     : "N/A"}
-                </Tag>
-              ) : (
-                <Text type="secondary">Chưa phân công</Text>
-              )}
-            </Descriptions.Item>
-            <Descriptions.Item label="Xuất xứ" span={1}>
-              <Text>{viewingEquipment.origin || "N/A"}</Text>
-            </Descriptions.Item>
-            <Descriptions.Item label="Năm sản xuất" span={1}>
-              <Text>{viewingEquipment.yom || "N/A"}</Text>
-            </Descriptions.Item>
-            <Descriptions.Item label="Ngày đưa vào sử dụng" span={1}>
-              <Text>
-                {viewingEquipment.dateUse
-                  ? dayjs(viewingEquipment.dateUse).format("DD/MM/YYYY")
-                  : "N/A"}
-              </Text>
-            </Descriptions.Item>
-            <Descriptions.Item label="Mã QR" span={2}>
-              {viewingEquipment.qrcode ? (
-                <Space direction="vertical">
-                  {qrImageUrl && (
-                    <img
-                      src={qrImageUrl}
-                      alt="QR Code"
-                      style={{ width: 128, height: 128 }}
-                    />
-                  )}
-                  <Text copyable>{viewingEquipment.qrcode}</Text>
-                </Space>
-              ) : (
-                <Text type="secondary">Chưa tạo</Text>
-              )}
-            </Descriptions.Item>
-            <Descriptions.Item label="Trạng thái" span={2}>
-              <Badge
-                status={viewingEquipment.isActive ? "success" : "error"}
-                text={
-                  viewingEquipment.isActive ? "Hoạt động" : "Không hoạt động"
-                }
-              />
-            </Descriptions.Item>
-            <Descriptions.Item label="Vấn đề/Ghi chú" span={2}>
-              {viewingEquipment.issue ? (
-                <Text>{viewingEquipment.issue}</Text>
-              ) : (
-                <Tag icon={<CheckCircleOutlined />} color="success">
-                  Không có vấn đề
-                </Tag>
-              )}
-            </Descriptions.Item>
+                </Text>
+              </Descriptions.Item>
+              <Descriptions.Item label="Mã QR" span={2}>
+                {viewingEquipment.qrcode ? (
+                  <Space direction="vertical">
+                    {qrImageUrl && (
+                      <img
+                        src={qrImageUrl}
+                        alt="QR Code"
+                        style={{ width: 128, height: 128 }}
+                      />
+                    )}
+                    <Text copyable>{viewingEquipment.qrcode}</Text>
+                  </Space>
+                ) : (
+                  <Text type="secondary">Chưa tạo</Text>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái" span={2}>
+                <Badge
+                  status={viewingEquipment.isActive ? "success" : "error"}
+                  text={
+                    viewingEquipment.isActive ? "Hoạt động" : "Không hoạt động"
+                  }
+                />
+              </Descriptions.Item>
+              <Descriptions.Item label="Vấn đề/Ghi chú" span={2}>
+                {viewingEquipment.issue ? (
+                  <Text>{viewingEquipment.issue}</Text>
+                ) : (
+                  <Tag icon={<CheckCircleOutlined />} color="success">
+                    Không có vấn đề
+                  </Tag>
+                )}
+              </Descriptions.Item>
             </Descriptions>
           </div>
         )}

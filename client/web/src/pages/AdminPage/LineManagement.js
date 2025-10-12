@@ -212,8 +212,7 @@ const LineManagement = ({ showHeader = true }) => {
               const response = await lineService.toggleLineStatus(line.lineId);
               if (response.success) {
                 message.success(
-                  `Đã ${
-                    line.isActive ? "khóa" : "mở khóa"
+                  `Đã ${line.isActive ? "khóa" : "mở khóa"
                   } dây chuyền thành công`
                 );
                 loadLines();
@@ -507,19 +506,7 @@ const LineManagement = ({ showHeader = true }) => {
           </Col>
           <Col xs={24} sm={6} md={12}>
             <Space style={{ float: "right" }}>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={() => {
-                  setEditingLine(null);
-                  form.resetFields();
-                  form.setFieldsValue({ isActive: true });
-                  setIsModalVisible(true);
-                }}
-                style={{ backgroundColor: "#334766", borderColor: "#334766" }}
-              >
-                Thêm dây chuyền
-              </Button>
+
               <Button
                 type={showArchive ? "primary" : "dashed"}
                 icon={showArchive ? <EyeOutlined /> : <ArchiveIcon />}
@@ -533,6 +520,19 @@ const LineManagement = ({ showHeader = true }) => {
                 {showArchive
                   ? "Hiển thị (Hoạt động)"
                   : "Lưu trữ (Ngừng hoạt động)"}
+              </Button>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  setEditingLine(null);
+                  form.resetFields();
+                  form.setFieldsValue({ isActive: true });
+                  setIsModalVisible(true);
+                }}
+                style={{ backgroundColor: "#334766", borderColor: "#334766" }}
+              >
+                Thêm dây chuyền
               </Button>
             </Space>
           </Col>

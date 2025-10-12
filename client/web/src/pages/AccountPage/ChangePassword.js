@@ -124,7 +124,7 @@ const ChangePassword = () => {
   return (
     <Layout>
       <div className={styles.changePasswordContainer}>
-        <Row gutter={[24, 24]}>
+        <Row gutter={[24, 24]} justify="center">
           <Col span={24}>
             {/* Header */}
             <div className={styles.changePasswordHeader}>
@@ -140,7 +140,7 @@ const ChangePassword = () => {
             </div>
           </Col>
 
-          <Col xs={24} lg={14} push={5}>
+          <Col sx={24} md={24} lg={18} xl={20} xxl={6}>
             <Card
               title={
                 <Space>
