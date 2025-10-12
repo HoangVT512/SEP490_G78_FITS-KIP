@@ -761,7 +761,13 @@ const RoleManagement = ({ showHeader = true }) => {
 
         {/* Create/Edit Modal */}
         <Modal
-          title={editingRole ? "Chỉnh sửa vai trò" : "Tạo vai trò mới"}
+          title={
+            <div
+              style={{ fontSize: "20px", fontWeight: "600", color: "#334766" }}
+            >
+              {editingRole ? "Chỉnh sửa vai trò" : "Tạo vai trò mới"}
+            </div>
+          }
           open={isModalVisible}
           onCancel={() => {
             setIsModalVisible(false);
@@ -769,7 +775,8 @@ const RoleManagement = ({ showHeader = true }) => {
             form.resetFields();
           }}
           onOk={() => form.submit()}
-          width={1000}
+          width={1200}
+          centered
           destroyOnClose
           okText={editingRole ? "Cập nhật" : "Tạo mới"}
           cancelText="Hủy"
@@ -777,22 +784,40 @@ const RoleManagement = ({ showHeader = true }) => {
             style: {
               backgroundColor: "#334766",
               borderColor: "#334766",
-              width: 100,
-              marginTop: 60,
+              height: "40px",
+              fontSize: "16px",
+              fontWeight: "500",
+              minWidth: "120px",
             },
+          }}
+          cancelButtonProps={{
+            style: {
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            },
+          }}
+          bodyStyle={{
+            maxHeight: "calc(100vh - 200px)",
+            overflowY: "auto",
+            padding: "24px",
           }}
         >
           <Form form={form} layout="vertical" onFinish={handleModalSubmit}>
             <Form.Item
               name="name"
-              label="Tên vai trò"
+              label={
+                <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                  Tên vai trò
+                </span>
+              }
               rules={[
                 { required: true, message: "Vui lòng nhập tên vai trò!" },
                 { min: 2, message: "Tên vai trò phải có ít nhất 2 ký tự!" },
                 { max: 50, message: "Tên vai trò không được quá 50 ký tự!" },
               ]}
             >
-              <Input placeholder="Nhập tên vai trò" />
+              <Input placeholder="Nhập tên vai trò" size="large" />
             </Form.Item>
           </Form>
         </Modal>
@@ -808,14 +833,45 @@ const RoleManagement = ({ showHeader = true }) => {
           open={isViewModalVisible}
           onCancel={() => setIsViewModalVisible(false)}
           footer={[
-            <Button key="close" onClick={() => setIsViewModalVisible(false)}>
+            <Button
+              key="edit"
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={() => {
+                setIsViewModalVisible(false);
+                handleAction("edit", viewingRole);
+              }}
+              style={{
+                backgroundColor: "#334766",
+                borderColor: "#334766",
+                height: "40px",
+                fontSize: "16px",
+                minWidth: "120px",
+              }}
+            >
+              Chỉnh sửa
+            </Button>,
+            <Button
+              key="close"
+              onClick={() => setIsViewModalVisible(false)}
+              style={{
+                height: "40px",
+                fontSize: "16px",
+                minWidth: "120px",
+              }}
+            >
               Đóng
             </Button>,
           ]}
-          width={1000}
+          bodyStyle={{
+            maxHeight: "calc(100vh - 200px)",
+            overflowY: "auto",
+            padding: "24px",
+          }}
+          width={1200}
         >
           {viewingRole && (
-            <div>
+            <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
               <Descriptions column={2} bordered>
                 <Descriptions.Item label="Tên vai trò">
                   {viewingRole.name}
@@ -927,10 +983,14 @@ const RoleManagement = ({ showHeader = true }) => {
         {/* Permissions Management Modal */}
         <Modal
           title={
-            <Space>
-              <KeyOutlined />
-              Quản lý quyền: {viewingRole?.name}
-            </Space>
+            <div
+              style={{ fontSize: "20px", fontWeight: "600", color: "#334766" }}
+            >
+              <Space>
+                <KeyOutlined />
+                Quản lý quyền: {viewingRole?.name}
+              </Space>
+            </div>
           }
           open={isPermissionModalVisible}
           onCancel={() => {
@@ -939,7 +999,8 @@ const RoleManagement = ({ showHeader = true }) => {
             permissionForm.resetFields();
           }}
           onOk={() => permissionForm.submit()}
-          width={1000}
+          width={1200}
+          centered
           destroyOnClose
           okText="Lưu thay đổi"
           cancelText="Hủy"
@@ -947,8 +1008,23 @@ const RoleManagement = ({ showHeader = true }) => {
             style: {
               backgroundColor: "#334766",
               borderColor: "#334766",
-              width: 100,
+              height: "40px",
+              fontSize: "16px",
+              fontWeight: "500",
+              minWidth: "120px",
             },
+          }}
+          cancelButtonProps={{
+            style: {
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            },
+          }}
+          bodyStyle={{
+            maxHeight: "calc(100vh - 200px)",
+            overflowY: "auto",
+            padding: "24px",
           }}
         >
           {viewingRole?.isSystemRole && (
@@ -968,7 +1044,11 @@ const RoleManagement = ({ showHeader = true }) => {
           >
             <Form.Item
               name="permissions"
-              label={`Chọn quyền cho vai trò "${viewingRole?.name}"`}
+              label={
+                <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                  Chọn quyền cho vai trò "{viewingRole?.name}"
+                </span>
+              }
             >
               <div
                 style={{

@@ -605,15 +605,31 @@ const LineManagement = ({ showHeader = true }) => {
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
-        width={1000}
+        width={1400}
+        centered
         okText={editingLine ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
         okButtonProps={{
           style: {
             backgroundColor: "#334766",
             borderColor: "#334766",
-            width: 100,
+            height: "40px",
+            fontSize: "16px",
+            fontWeight: "500",
+            minWidth: "120px",
           },
+        }}
+        cancelButtonProps={{
+          style: {
+            height: "40px",
+            fontSize: "16px",
+            minWidth: "120px",
+          },
+        }}
+        bodyStyle={{
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          padding: "24px",
         }}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
@@ -621,7 +637,11 @@ const LineManagement = ({ showHeader = true }) => {
             <Col span={12}>
               <Form.Item
                 name="lineName"
-                label="Tên dây chuyền"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Tên dây chuyền
+                  </span>
+                }
                 rules={[
                   {
                     required: true,
@@ -629,13 +649,17 @@ const LineManagement = ({ showHeader = true }) => {
                   },
                 ]}
               >
-                <Input placeholder="Nhập tên dây chuyền" />
+                <Input placeholder="Nhập tên dây chuyền" size="large" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="departmentId"
-                label="Phòng ban"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Phòng ban
+                  </span>
+                }
                 rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
               >
                 <Select
@@ -651,6 +675,7 @@ const LineManagement = ({ showHeader = true }) => {
                   filterOption={(input, option) =>
                     option.children.toLowerCase().includes(input.toLowerCase())
                   }
+                  size="large"
                 >
                   {departmentActive.map((department) => (
                     <Option
@@ -669,19 +694,29 @@ const LineManagement = ({ showHeader = true }) => {
               {editingLine ? (
                 <Form.Item
                   name="isActive"
-                  label="Trạng thái"
+                  label={
+                    <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                      Trạng thái
+                    </span>
+                  }
                   rules={[
                     { required: true, message: "Vui lòng chọn trạng thái" },
                   ]}
                 >
-                  <Select placeholder="Chọn trạng thái">
+                  <Select placeholder="Chọn trạng thái" size="large">
                     <Option value={true}>Hoạt động</Option>
                     <Option value={false}>Dừng hoạt động</Option>
                   </Select>
                 </Form.Item>
               ) : (
-                <Form.Item label="Trạng thái">
-                  <Select value={true} disabled showArrow={false}>
+                <Form.Item
+                  label={
+                    <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                      Trạng thái
+                    </span>
+                  }
+                >
+                  <Select value={true} disabled showArrow={false} size="large">
                     <Option value={true}>Hoạt động (Mặc định)</Option>
                   </Select>
                 </Form.Item>
@@ -701,6 +736,7 @@ const LineManagement = ({ showHeader = true }) => {
         }
         open={isViewModalVisible}
         onCancel={() => setIsViewModalVisible(false)}
+        width={1200}
         footer={[
           <Button
             key="edit"
@@ -710,15 +746,28 @@ const LineManagement = ({ showHeader = true }) => {
               setIsViewModalVisible(false);
               handleAction("edit", viewingLine);
             }}
-            style={{ backgroundColor: "#334766", borderColor: "#334766" }}
+            style={{
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
           >
             Chỉnh sửa
           </Button>,
-          <Button key="close" onClick={() => setIsViewModalVisible(false)}>
+          <Button
+            key="close"
+            onClick={() => setIsViewModalVisible(false)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
             Đóng
           </Button>,
         ]}
-        width={1000}
       >
         {viewingLine && (
           <div>

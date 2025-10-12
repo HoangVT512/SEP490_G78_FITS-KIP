@@ -552,38 +552,71 @@ const DepartmentManagement = ({ showHeader = true }) => {
 
       {/* Create/Edit Modal */}
       <Modal
-        title={editingDepartment ? "Chỉnh sửa phòng ban" : "Thêm phòng ban mới"}
+        title={
+          <div
+            style={{ fontSize: "20px", fontWeight: "600", color: "#334766" }}
+          >
+            {editingDepartment ? "Chỉnh sửa phòng ban" : "Thêm phòng ban mới"}
+          </div>
+        }
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
-        width={800}
+        width={1400}
+        centered
         okText={editingDepartment ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
         okButtonProps={{
           style: {
             backgroundColor: "#334766",
             borderColor: "#334766",
-            width: 100,
+            height: "40px",
+            fontSize: "16px",
+            fontWeight: "500",
+            minWidth: "120px",
           },
         }}
+        cancelButtonProps={{
+          style: {
+            height: "40px",
+            fontSize: "16px",
+            minWidth: "120px",
+          },
+        }}
+        bodyStyle={{
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          padding: "24px",
+        }}
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form form={form} layout="vertical">
           <Row gutter={16}>
             <Col span={24}>
               <Form.Item
                 name="departmentName"
-                label="Tên phòng ban"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Tên phòng ban
+                  </span>
+                }
                 rules={[
                   { required: true, message: "Vui lòng nhập tên phòng ban" },
                 ]}
               >
-                <Input placeholder="Nhập tên phòng ban" />
+                <Input placeholder="Nhập tên phòng ban" size="large" />
               </Form.Item>
             </Col>
           </Row>
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item name="description" label="Mô tả">
+              <Form.Item
+                name="description"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Mô tả
+                  </span>
+                }
+              >
                 <Input.TextArea rows={3} placeholder="Nhập mô tả phòng ban" />
               </Form.Item>
             </Col>
@@ -593,7 +626,7 @@ const DepartmentManagement = ({ showHeader = true }) => {
               <Form.Item
                 name="managerId"
                 label={
-                  <span>
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
                     Người quản lý
                     {editingDepartment && (
                       <Text
@@ -734,18 +767,37 @@ const DepartmentManagement = ({ showHeader = true }) => {
               setIsViewModalVisible(false);
               handleAction("edit", viewingDepartment);
             }}
-            style={{ backgroundColor: "#334766", borderColor: "#334766" }}
+            style={{
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
           >
             Chỉnh sửa
           </Button>,
-          <Button key="close" onClick={() => setIsViewModalVisible(false)}>
+          <Button
+            key="close"
+            onClick={() => setIsViewModalVisible(false)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
             Đóng
           </Button>,
         ]}
-        width={900}
+        bodyStyle={{
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          padding: "24px",
+        }}
+        width={1200}
       >
         {viewingDepartment && (
-          <div>
+          <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
             <Descriptions column={2} bordered>
               <Descriptions.Item label="ID phòng ban">
                 {viewingDepartment.departmentId}

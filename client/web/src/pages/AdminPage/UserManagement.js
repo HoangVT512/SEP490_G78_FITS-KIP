@@ -105,8 +105,17 @@ const UserManagement = ({ showHeader = true }) => {
       lineService.getActiveLines(),
     ])
       .then(([usersData, departmentsData, rolesData, linesData]) => {
-        setUsers(usersData);
-        setDepartments(Array.isArray(departmentsData) ? departmentsData : []);
+        // Map department names to users
+        const departments = Array.isArray(departmentsData) ? departmentsData : [];
+        const mappedUsers = usersData.map(user => ({
+          ...user,
+          department: user.departmentId
+            ? departments.find(dept => dept.departmentId === user.departmentId)?.departmentName || user.department
+            : user.department,
+        }));
+
+        setUsers(mappedUsers);
+        setDepartments(departments);
         setRoles(rolesData || []);
         setLines(linesData || []);
       })
@@ -290,7 +299,14 @@ const UserManagement = ({ showHeader = true }) => {
       setIsImportModalVisible(false);
       // Reload users from API
       const userData = await userService.getUsers();
-      setUsers(userData);
+      // Map department names to users
+      const mappedUsers = userData.map(user => ({
+        ...user,
+        department: user.departmentId
+          ? departments.find(dept => dept.departmentId === user.departmentId)?.departmentName || user.department
+          : user.department,
+      }));
+      setUsers(mappedUsers);
     } catch (error) {
       message.error(error.message || "Lỗi khi import file Excel");
     } finally {
@@ -852,7 +868,14 @@ const UserManagement = ({ showHeader = true }) => {
       setIsManagementRoleSelected(false);
       // Reload users from API
       const userData = await userService.getUsers();
-      setUsers(userData);
+      // Map department names to users
+      const mappedUsers = userData.map(user => ({
+        ...user,
+        department: user.departmentId
+          ? departments.find(dept => dept.departmentId === user.departmentId)?.departmentName || user.department
+          : user.department,
+      }));
+      setUsers(mappedUsers);
     } catch (error) {
       message.error({
         content: editingUser
@@ -1559,11 +1582,25 @@ const UserManagement = ({ showHeader = true }) => {
               setIsViewModalVisible(false);
               handleUserAction("edit", viewingUser);
             }}
-            style={{ backgroundColor: "#334766", borderColor: "#334766" }}
+            style={{
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
           >
             Chỉnh sửa
           </Button>,
-          <Button key="close" onClick={() => setIsViewModalVisible(false)}>
+          <Button
+            key="close"
+            onClick={() => setIsViewModalVisible(false)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
             Đóng
           </Button>,
         ]}

@@ -97,9 +97,7 @@ namespace FITSKIP.Infrastructure.Migrations
                 {
                     Id = table.Column<string>(type: "nvarchar(450)", nullable: false),
                     FullName = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
-                    Gender = table.Column<string>(type: "nvarchar(10)", maxLength: 10, nullable: true),
                     EmployeeCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    Position = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
                     RoleId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),

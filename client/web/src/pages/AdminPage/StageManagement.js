@@ -671,11 +671,31 @@ const StageManagement = ({ showHeader = true }) => {
         open={isModalVisible}
         onOk={handleModalOk}
         onCancel={handleModalCancel}
-        width={800}
+        width={1400}
+        centered
         okText={editingStage ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
         okButtonProps={{
-          style: { backgroundColor: "#334766", borderColor: "#334766" },
+          style: {
+            backgroundColor: "#334766",
+            borderColor: "#334766",
+            height: "40px",
+            fontSize: "16px",
+            fontWeight: "500",
+            minWidth: "120px",
+          },
+        }}
+        cancelButtonProps={{
+          style: {
+            height: "40px",
+            fontSize: "16px",
+            minWidth: "120px",
+          },
+        }}
+        bodyStyle={{
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          padding: "24px",
         }}
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
@@ -683,7 +703,11 @@ const StageManagement = ({ showHeader = true }) => {
             <Col span={12}>
               <Form.Item
                 name="stageName"
-                label="Tên công đoạn"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Tên công đoạn
+                  </span>
+                }
                 rules={[
                   {
                     required: true,
@@ -691,13 +715,17 @@ const StageManagement = ({ showHeader = true }) => {
                   },
                 ]}
               >
-                <Input placeholder="Nhập tên công đoạn" />
+                <Input placeholder="Nhập tên công đoạn" size="large" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="departmentId"
-                label="Phòng ban"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Phòng ban
+                  </span>
+                }
                 rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
               >
                 <Select
@@ -718,6 +746,7 @@ const StageManagement = ({ showHeader = true }) => {
                     // Clear line selection when department changes
                     form.setFieldsValue({ lineId: undefined });
                   }}
+                  size="large"
                 >
                   {departmentActive.map((department) => (
                     <Option
@@ -733,7 +762,11 @@ const StageManagement = ({ showHeader = true }) => {
             <Col span={12}>
               <Form.Item
                 name="lineId"
-                label="Dây chuyền"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Dây chuyền
+                  </span>
+                }
                 rules={[
                   { required: true, message: "Vui lòng chọn dây chuyền" },
                 ]}
@@ -754,6 +787,7 @@ const StageManagement = ({ showHeader = true }) => {
                   filterOption={(input, option) =>
                     option.children.toLowerCase().includes(input.toLowerCase())
                   }
+                  size="large"
                 >
                   {filteredActiveLines.map((line) => (
                     <Option key={line.lineId} value={line.lineId}>
@@ -767,19 +801,29 @@ const StageManagement = ({ showHeader = true }) => {
               {editingStage ? (
                 <Form.Item
                   name="isActive"
-                  label="Trạng thái hoạt động"
+                  label={
+                    <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                      Trạng thái hoạt động
+                    </span>
+                  }
                   rules={[
                     { required: true, message: "Vui lòng chọn trạng thái" },
                   ]}
                 >
-                  <Select placeholder="Chọn trạng thái">
+                  <Select placeholder="Chọn trạng thái" size="large">
                     <Option value={true}>Hoạt động</Option>
                     <Option value={false}>Dừng hoạt động</Option>
                   </Select>
                 </Form.Item>
               ) : (
-                <Form.Item label="Trạng thái hoạt động">
-                  <Select value={true} disabled showArrow={false}>
+                <Form.Item
+                  label={
+                    <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                      Trạng thái hoạt động
+                    </span>
+                  }
+                >
+                  <Select value={true} disabled showArrow={false} size="large">
                     <Option value={true}>Hoạt động (Mặc định)</Option>
                   </Select>
                 </Form.Item>
@@ -799,6 +843,7 @@ const StageManagement = ({ showHeader = true }) => {
         }
         open={isViewModalVisible}
         onCancel={() => setIsViewModalVisible(false)}
+        width={1200}
         footer={[
           <Button
             key="edit"
@@ -808,15 +853,28 @@ const StageManagement = ({ showHeader = true }) => {
               setIsViewModalVisible(false);
               handleAction("edit", viewingStage);
             }}
-            style={{ backgroundColor: "#394660ff", borderColor: "#283652" }}
+            style={{
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
           >
             Chỉnh sửa
           </Button>,
-          <Button key="close" onClick={() => setIsViewModalVisible(false)}>
+          <Button
+            key="close"
+            onClick={() => setIsViewModalVisible(false)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
             Đóng
           </Button>,
         ]}
-        width={800}
       >
         {viewingStage && (
           <div>

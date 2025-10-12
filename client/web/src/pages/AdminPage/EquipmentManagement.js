@@ -536,8 +536,33 @@ const EquipmentManagement = ({ showHeader = true }) => {
         }
         open={isModalVisible}
         onCancel={handleCancel}
-        footer={null}
-        width={700}
+        width={1400}
+        centered
+        okText={editingEquipment ? "Cập nhật" : "Tạo mới"}
+        cancelText="Hủy"
+        onOk={() => form.submit()}
+        okButtonProps={{
+          style: {
+            backgroundColor: "#334766",
+            borderColor: "#334766",
+            height: "40px",
+            fontSize: "16px",
+            fontWeight: "500",
+            minWidth: "120px",
+          },
+        }}
+        cancelButtonProps={{
+          style: {
+            height: "40px",
+            fontSize: "16px",
+            minWidth: "120px",
+          },
+        }}
+        bodyStyle={{
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          padding: "24px",
+        }}
       >
         <Form
           form={form}
@@ -548,53 +573,90 @@ const EquipmentManagement = ({ showHeader = true }) => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                label="Mã thiết bị"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Mã thiết bị
+                  </span>
+                }
                 name="equipmentCode"
                 rules={[
                   { required: true, message: "Vui lòng nhập mã thiết bị" },
                 ]}
               >
-                <Input placeholder="Nhập mã thiết bị" />
+                <Input placeholder="Nhập mã thiết bị" size="large" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                label="Tên thiết bị"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Tên thiết bị
+                  </span>
+                }
                 name="equipmentName"
                 rules={[
                   { required: true, message: "Vui lòng nhập tên thiết bị" },
                 ]}
               >
-                <Input placeholder="Nhập tên thiết bị" />
+                <Input placeholder="Nhập tên thiết bị" size="large" />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="Xuất xứ" name="origin">
-                <Input placeholder="Nhập xuất xứ" />
+              <Form.Item
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Xuất xứ
+                  </span>
+                }
+                name="origin"
+              >
+                <Input placeholder="Nhập xuất xứ" size="large" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="Năm sản xuất" name="yom">
-                <Input type="number" placeholder="Nhập năm sản xuất" />
+              <Form.Item
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Năm sản xuất
+                  </span>
+                }
+                name="yom"
+              >
+                <Input type="number" placeholder="Nhập năm sản xuất" size="large" />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item label="Ngày đưa vào sử dụng" name="dateUse">
+              <Form.Item
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Ngày đưa vào sử dụng
+                  </span>
+                }
+                name="dateUse"
+              >
                 <DatePicker
                   style={{ width: "100%" }}
                   format="DD/MM/YYYY"
                   placeholder="Chọn ngày"
+                  size="large"
                 />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="Công đoạn" name="stageId">
+              <Form.Item
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Công đoạn
+                  </span>
+                }
+                name="stageId"
+              >
                 <Select
                   placeholder="Chọn công đoạn"
                   loading={stageActive.length === 0}
@@ -609,6 +671,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
                   filterOption={(input, option) =>
                     option.children.toLowerCase().includes(input.toLowerCase())
                   }
+                  size="large"
                 >
                   {stageActive.map((stage) => (
                     <Option key={stage.stageId} value={stage.stageId}>
@@ -620,28 +683,18 @@ const EquipmentManagement = ({ showHeader = true }) => {
             </Col>
           </Row>
 
-          <Form.Item label="Vấn đề/Ghi chú" name="issue">
+          <Form.Item
+            label={
+              <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                Vấn đề/Ghi chú
+              </span>
+            }
+            name="issue"
+          >
             <TextArea
               rows={4}
               placeholder="Nhập vấn đề hoặc ghi chú về thiết bị"
             />
-          </Form.Item>
-
-          <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>
-            <Space>
-              <Button onClick={handleCancel}>Hủy</Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={loading}
-                style={{
-                  backgroundColor: "#334766",
-                  borderColor: "#334766",
-                }}
-              >
-                {editingEquipment ? "Cập nhật" : "Thêm mới"}
-              </Button>
-            </Space>
           </Form.Item>
         </Form>
       </Modal>
@@ -657,102 +710,45 @@ const EquipmentManagement = ({ showHeader = true }) => {
         onCancel={handleViewCancel}
         footer={[
           <Button
-            key="print-qr"
+            key="edit"
             type="primary"
-            icon={<PrinterOutlined />}
+            icon={<EditOutlined />}
             onClick={() => {
-              if (viewingEquipment) {
-                const printWindow = window.open("", "_blank");
-                printWindow.document.write(`
-                  <html>
-                    <head>
-                      <title></title>
-                      <style>
-                        body { font-family: Arial, sans-serif; margin: 20px; }
-                        .card { width: 520px; border: 1px solid #ddd; padding: 12px; display: flex; gap: 12px; align-items: flex-start; }
-                        .qr { flex: 0 0 160px; text-align: center; }
-                        .qr img { width: 140px; height: 140px; object-fit: contain; }
-                        .details { flex: 1; font-size: 13px; }
-                        .title { font-weight: 700; color: #334766; margin-bottom: 6px; }
-                        .row { margin-bottom: 6px; }
-                        .label { font-weight: 600; color: #1890ff; display: inline-block; width: 140px; }
-                        .value { color: #333; }
-                        .footer { margin-top: 10px; font-size: 12px; color: #666; text-align: right; }
-                        @media print { body { margin: 0; } .card { border: none; } }
-                      </style>
-                    </head>
-                    <body>
-                      <div style="text-align:center;margin-bottom:16px;font-size:16px;font-weight:700;color:#334766;">
-                        CÔNG TY CỔ PHẦN K.I.P VIỆT NAM
-                      </div>
-                      <div class="card">
-                        <div class="qr">
-                          ${
-                            qrImageUrl
-                              ? `<img src="${qrImageUrl}" alt="QR Code" />`
-                              : `<div style="width:140px;height:140px;display:flex;align-items:center;justify-content:center;color:#999;border:1px dashed #ccc">Chưa có QR</div>`
-                          }
-                          <div style="margin-top:8px;font-size:12px;color:#444">Mã QR</div>
-                        </div>
-                        <div class="details">
-                          <div class="title">${
-                            viewingEquipment.equipmentName || "N/A"
-                          }</div>
-                          <div class="row"><span class="label">Mã thiết bị:</span><span class="value">${
-                            viewingEquipment.equipmentCode || "N/A"
-                          }</span></div>
-                          <div class="row"><span class="label">Công đoạn:</span><span class="value">${
-                            viewingEquipment.stageId
-                              ? Array.isArray(stages)
-                                ? stages.find(
-                                    (s) =>
-                                      s.stageId === viewingEquipment.stageId
-                                  )?.stageName || "N/A"
-                                : "N/A"
-                              : "Chưa phân công"
-                          }</span></div>
-                          <div class="row"><span class="label">Xuất xứ:</span><span class="value">${
-                            viewingEquipment.origin || "N/A"
-                          }</span></div>
-                          <div class="row"><span class="label">Năm Sx:</span><span class="value">${
-                            viewingEquipment.yom || "N/A"
-                          }</span></div>
-                          <div class="row"><span class="label">Ngày sử dụng:</span><span class="value">${
-                            viewingEquipment.dateUse
-                              ? new Date(
-                                  viewingEquipment.dateUse
-                                ).toLocaleDateString("vi-VN")
-                              : "N/A"
-                          }</span></div>
-                          <div class="row"><span class="label">Trạng thái:</span><span class="value">${
-                            viewingEquipment.isActive
-                              ? "Hoạt động"
-                              : "Không hoạt động"
-                          }</span></div>
-                          <div class="row"><span class="label">Vấn đề:</span><span class="value">${
-                            viewingEquipment.issue || "Không có vấn đề"
-                          }</span></div>
-                        </div>
-                      </div>
-
-                    </body>
-                  </html>
-                `);
-                printWindow.document.close();
-                printWindow.print();
-              }
+              setIsViewModalVisible(false);
+              handleEdit(viewingEquipment);
+            }}
+            style={{
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
             }}
           >
-            In chi tiết
+            Chỉnh sửa
           </Button>,
-          <Button key="close" onClick={handleViewCancel}>
+          <Button
+            key="close"
+            onClick={handleViewCancel}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
             Đóng
           </Button>,
         ]}
-        width={900}
+        bodyStyle={{
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          padding: "24px",
+        }}
+        width={1200}
       >
         {viewingEquipment && (
-          <Descriptions
+          <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
+            <Descriptions
             bordered
             column={2}
             size="middle"
@@ -829,7 +825,8 @@ const EquipmentManagement = ({ showHeader = true }) => {
                 </Tag>
               )}
             </Descriptions.Item>
-          </Descriptions>
+            </Descriptions>
+          </div>
         )}
       </Modal>
     </Layout>
