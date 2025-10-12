@@ -38,6 +38,23 @@ const AdminDashboard = ({ showHeader = true }) => {
   const [recentUsers, setRecentUsers] = useState([]);
   const [error, setError] = useState(null);
 
+  const getStatusColor = (status) => {
+    const statusColors = {
+      active: "success",
+      inactive: "warning",
+      locked: "error",
+    };
+    return statusColors[status] || "default";
+  };
+
+  const getStatusText = (status) => {
+    const statusTexts = {
+      active: "Hoạt động",
+      inactive: "Ngừng hoạt động",
+    };
+    return statusTexts[status] || "Không xác định";
+  };
+
   // Fetch data from API
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -92,9 +109,7 @@ const AdminDashboard = ({ showHeader = true }) => {
       key: "status",
       align: "center",
       render: (status) => (
-        <Tag color={status === "active" ? "green" : "red"}>
-          {status === "active" ? "Hoạt động" : "Không hoạt động"}
-        </Tag>
+        <Badge status={getStatusColor(status)} text={getStatusText(status)} />
       ),
     },
   ];
@@ -138,12 +153,13 @@ const AdminDashboard = ({ showHeader = true }) => {
       key: "isLocked",
       align: "center",
       render: (isLocked) => (
-        <Tag
-          color={isLocked ? "red" : "green"}
-          icon={isLocked ? <LockOutlined /> : <CheckCircleOutlined />}
-        >
-          {isLocked ? "Bị khóa" : "Hoạt động"}
-        </Tag>
+        // <Tag
+        //   color={isLocked ? "red" : "green"}
+        //   icon={isLocked ? <LockOutlined /> : <CheckCircleOutlined />}
+        // >
+        //   {isLocked ? "Bị khóa" : "Hoạt động"}
+        // </Tag>
+        <Badge status={getStatusColor(isLocked ? "locked" : "active")} text={getStatusText(isLocked ? "locked" : "active")} />
       ),
     },
   ];
@@ -307,15 +323,14 @@ const AdminDashboard = ({ showHeader = true }) => {
                           "#f6ffed",
                           "#fff1f0",
                         ][index % 5],
-                        border: `1px solid ${
-                          [
+                        border: `1px solid ${[
                             "#91d5ff",
                             "#d3adf7",
                             "#ffd591",
                             "#b7eb8f",
                             "#ffa39e",
                           ][index % 5]
-                        }`,
+                          }`,
                       }}
                     >
                       <div

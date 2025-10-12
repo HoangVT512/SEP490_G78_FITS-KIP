@@ -323,17 +323,17 @@ const UserManagement = ({ showHeader = true }) => {
           ...user,
           departments: user.departmentId
             ? [
-                {
-                  departmentId: user.departmentId,
-                  departmentName: user.department,
-                },
-              ]
+              {
+                departmentId: user.departmentId,
+                departmentName: user.department,
+              },
+            ]
             : [],
           roles: Array.isArray(user.roles)
             ? user.roles
             : user.role
-            ? [user.role]
-            : [],
+              ? [user.role]
+              : [],
           isActive: user.status === "active",
         };
         setViewingUser(normalizedUser);
@@ -344,11 +344,11 @@ const UserManagement = ({ showHeader = true }) => {
         // Convert role names to role IDs for form
         const userRoleIds = user.roles
           ? user.roles
-              .map((roleName) => {
-                const role = roles.find((r) => r.name === roleName);
-                return role ? role.id : null;
-              })
-              .filter((id) => id !== null)
+            .map((roleName) => {
+              const role = roles.find((r) => r.name === roleName);
+              return role ? role.id : null;
+            })
+            .filter((id) => id !== null)
           : [];
 
         form.setFieldsValue({
@@ -360,8 +360,8 @@ const UserManagement = ({ showHeader = true }) => {
               : "",
           phoneNumber:
             user.phoneNumber &&
-            user.phoneNumber !== "N/A" &&
-            user.phoneNumber !== "-"
+              user.phoneNumber !== "N/A" &&
+              user.phoneNumber !== "-"
               ? user.phoneNumber
               : "",
           roleIds: userRoleIds.length > 0 ? userRoleIds[0] : null,
@@ -587,8 +587,8 @@ const UserManagement = ({ showHeader = true }) => {
             : "Chưa có";
         const phoneDisplay =
           record.phoneNumber &&
-          record.phoneNumber !== "N/A" &&
-          record.phoneNumber !== "-"
+            record.phoneNumber !== "N/A" &&
+            record.phoneNumber !== "-"
             ? record.phoneNumber
             : "Chưa có";
 
@@ -620,16 +620,16 @@ const UserManagement = ({ showHeader = true }) => {
       width: 150,
       filters: Array.isArray(departments)
         ? departments
-            .filter(
-              (dept, idx, arr) =>
-                arr.findIndex(
-                  (d) => d.departmentName === dept.departmentName
-                ) === idx
-            )
-            .map((dept) => ({
-              text: dept.departmentName,
-              value: dept.departmentName,
-            }))
+          .filter(
+            (dept, idx, arr) =>
+              arr.findIndex(
+                (d) => d.departmentName === dept.departmentName
+              ) === idx
+          )
+          .map((dept) => ({
+            text: dept.departmentName,
+            value: dept.departmentName,
+          }))
         : [],
       onFilter: (value, record) => record.department === value,
       render: (department) => (
@@ -646,11 +646,11 @@ const UserManagement = ({ showHeader = true }) => {
       width: 180,
       filters: Array.isArray(lines)
         ? lines
-            .filter((line) => line.lineName)
-            .map((line) => ({
-              text: line.lineName,
-              value: line.lineId,
-            }))
+          .filter((line) => line.lineName)
+          .map((line) => ({
+            text: line.lineName,
+            value: line.lineId,
+          }))
         : [],
       onFilter: (value, record) =>
         record.lineIds && record.lineIds.includes(value),
@@ -1000,8 +1000,8 @@ const UserManagement = ({ showHeader = true }) => {
           locale={{
             emptyText:
               searchText ||
-              filters.role !== "all" ||
-              filters.department !== "all"
+                filters.role !== "all" ||
+                filters.department !== "all"
                 ? "Không có người dùng nào phù hợp với tìm kiếm hoặc bộ lọc."
                 : "Không có dữ liệu người dùng.",
           }}
@@ -1189,24 +1189,26 @@ const UserManagement = ({ showHeader = true }) => {
           }}
         >
           <div style={{ marginBottom: "20px" }}>
-            <Alert
-              message={
-                <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                  Thông tin tùy chọn
-                </span>
-              }
-              description={
-                <span style={{ fontSize: "13px" }}>
-                  Email và số điện thoại có thể để trống khi tạo người dùng mới.
-                </span>
-              }
-              type="info"
-              style={{
-                backgroundColor: "#e6f4ff",
-                border: "1px solid #91caff",
-                marginBottom: "12px",
-              }}
-            />
+            {!editingUser && (
+              <Alert
+                message={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Thông tin tùy chọn
+                  </span>
+                }
+                description={
+                  <span style={{ fontSize: "13px" }}>
+                    Email và số điện thoại có thể để trống khi tạo người dùng mới.
+                  </span>
+                }
+                type="info"
+                style={{
+                  backgroundColor: "#e6f4ff",
+                  border: "1px solid #91caff",
+                  marginBottom: "12px",
+                }}
+              />
+            )}
             {!editingUser && (
               <Alert
                 message={
@@ -1260,7 +1262,7 @@ const UserManagement = ({ showHeader = true }) => {
                         (u) =>
                           u.employeeCode &&
                           u.employeeCode.toLowerCase() ===
-                            value.toLowerCase() &&
+                          value.toLowerCase() &&
                           u.id !== (editingUser?.id || "")
                       );
                       if (existing) {
@@ -1353,7 +1355,7 @@ const UserManagement = ({ showHeader = true }) => {
                     Phòng ban
                   </span>
                 }
-                // rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
+              // rules={[{ required: true, message: "Vui lòng chọn phòng ban" }]}
               >
                 <Select
                   placeholder="Chọn phòng ban"
@@ -1384,7 +1386,7 @@ const UserManagement = ({ showHeader = true }) => {
                     Dây chuyền
                   </span>
                 }
-                // rules={[{ required: true, message: "Vui lòng chọn dây chuyền" }]}
+              // rules={[{ required: true, message: "Vui lòng chọn dây chuyền" }]}
               >
                 {
                   // Determine current role directly from form to avoid stale state
@@ -1399,7 +1401,7 @@ const UserManagement = ({ showHeader = true }) => {
                       ((selectedRole.name || "").trim().toLowerCase() ===
                         "quản lý" ||
                         (selectedRole.name || "").trim().toLowerCase() ===
-                          "manager");
+                        "manager");
 
                     if (currentIsManagement)
                       return "Vai trò quản lý sẽ quản lý tất cả dây chuyền trong phòng ban.";
@@ -1419,9 +1421,9 @@ const UserManagement = ({ showHeader = true }) => {
                       ((selectedRole.name || "").trim().toLowerCase() ===
                         "quản lý" ||
                         (selectedRole.name || "").trim().toLowerCase() ===
-                          "manager");
+                        "manager");
                     return (
-                      currentIsManagement || 
+                      currentIsManagement ||
                       !form.getFieldValue("departmentId") ||
                       filteredLines.length === 0
                     );
@@ -1440,7 +1442,7 @@ const UserManagement = ({ showHeader = true }) => {
                       ((selectedRole.name || "").trim().toLowerCase() ===
                         "quản lý" ||
                         (selectedRole.name || "").trim().toLowerCase() ===
-                          "manager");
+                        "manager");
 
                     if (currentIsManagement) {
                       return (
@@ -1650,8 +1652,8 @@ const UserManagement = ({ showHeader = true }) => {
                 <Descriptions.Item label="Phòng ban">
                   {viewingUser.departments && viewingUser.departments.length > 0
                     ? viewingUser.departments
-                        .map((d) => d.departmentName)
-                        .join(", ")
+                      .map((d) => d.departmentName)
+                      .join(", ")
                     : "-"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Trạng thái">
