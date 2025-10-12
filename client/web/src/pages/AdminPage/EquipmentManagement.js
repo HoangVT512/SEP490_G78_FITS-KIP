@@ -131,6 +131,65 @@ const EquipmentManagement = ({ showHeader = true }) => {
     }
   };
 
+  const getColumnSearchProps = (dataIndex, placeholderText) => ({
+    filterDropdown: ({
+      setSelectedKeys,
+      selectedKeys,
+      confirm,
+      clearFilters,
+      close,
+    }) => (
+      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
+        <Input
+          placeholder={`${placeholderText}`}
+          value={selectedKeys[0]}
+          onChange={(e) =>
+            setSelectedKeys(e.target.value ? [e.target.value] : [])
+          }
+          onPressEnter={() => confirm()}
+          style={{ marginBottom: 8, display: "block" }}
+        />
+        <Space>
+          <Button
+            type="primary"
+            onClick={() => confirm()}
+            icon={<SearchOutlined />}
+            size="small"
+            style={{ width: 90 }}
+          >
+            Tìm kiếm
+          </Button>
+          <Button
+            onClick={() => clearFilters && clearFilters()}
+            size="small"
+            style={{ width: 90 }}
+          >
+            Đặt lại
+          </Button>
+          <Button type="link" size="small" onClick={() => close()}>
+            Đóng
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: (filtered) => (
+      <SearchOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
+    ),
+    onFilter: (value, record) => {
+      const recordValue = record[dataIndex];
+      return recordValue
+        ? recordValue.toString().toLowerCase().includes(value.toLowerCase())
+        : false;
+    },
+    filterDropdownProps: {
+      onOpenChange(open) {
+        if (open) {
+          setTimeout(() => {}, 100);
+        }
+      },
+    },
+  });
+
   const handleAction = async (action, equipment) => {
     switch (action) {
       case "view":
@@ -290,14 +349,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
       dataIndex: "equipmentCode",
       key: "equipmentCode",
       width: 120,
-      filteredValue: [searchText],
-      onFilter: (value, record) => {
-        return (
-          record.equipmentCode?.toLowerCase().includes(value.toLowerCase()) ||
-          record.equipmentName?.toLowerCase().includes(value.toLowerCase()) ||
-          record.origin?.toLowerCase().includes(value.toLowerCase())
-        );
-      },
+      ...getColumnSearchProps("equipmentCode", "Tìm kiếm mã thiết bị"),
       render: (text) => <Text strong>{text || "N/A"}</Text>,
     },
     {
@@ -305,6 +357,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
       dataIndex: "equipmentName",
       key: "equipmentName",
       width: 200,
+      ...getColumnSearchProps("equipmentName", "Tìm kiếm tên thiết bị"),
       render: (text) => <Text>{text || "N/A"}</Text>,
     },
     {
@@ -312,6 +365,13 @@ const EquipmentManagement = ({ showHeader = true }) => {
       dataIndex: "stageId",
       key: "stageId",
       width: 150,
+      filters: Array.isArray(stages)
+        ? stages.map((stage) => ({
+            text: stage.stageName,
+            value: stage.stageId,
+          }))
+        : [],
+      onFilter: (value, record) => record.stageId === value,
       render: (stageId) => {
         const stage = Array.isArray(stages)
           ? stages.find((s) => s.stageId === stageId)
@@ -328,6 +388,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
       dataIndex: "origin",
       key: "origin",
       width: 120,
+      ...getColumnSearchProps("origin", "Tìm kiếm xuất xứ"),
       render: (text) => <Text>{text || "N/A"}</Text>,
     },
     {
@@ -336,6 +397,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
       key: "yom",
       width: 120,
       align: "center",
+      ...getColumnSearchProps("yom", "Tìm kiếm năm sản xuất"),
       render: (yom) => <Text>{yom || "N/A"}</Text>,
     },
     {
@@ -365,6 +427,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
       dataIndex: "issue",
       key: "issue",
       width: 200,
+      ...getColumnSearchProps("issue", "Tìm kiếm vấn đề"),
       render: (issue) =>
         issue ? (
           <Tooltip title={issue}>
@@ -402,7 +465,14 @@ const EquipmentManagement = ({ showHeader = true }) => {
     const matchesArchive = showArchive
       ? !equipment.isActive
       : equipment.isActive;
-    return matchesArchive;
+    const matchesSearch =
+      !searchText ||
+      equipment.equipmentCode?.toLowerCase().includes(searchText.toLowerCase()) ||
+      equipment.equipmentName?.toLowerCase().includes(searchText.toLowerCase()) ||
+      equipment.origin?.toLowerCase().includes(searchText.toLowerCase()) ||
+      (equipment.yom && equipment.yom.toString().includes(searchText)) ||
+      (equipment.issue && equipment.issue.toLowerCase().includes(searchText.toLowerCase()));
+    return matchesArchive && matchesSearch;
   });
 
   const stats = {

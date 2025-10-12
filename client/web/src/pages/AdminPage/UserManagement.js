@@ -85,6 +85,7 @@ const UserManagement = ({ showHeader = true }) => {
   const [departments, setDepartments] = useState([]);
   const [roles, setRoles] = useState([]);
   const [lines, setLines] = useState([]);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
   const [filteredLines, setFilteredLines] = useState([]);
   const [isManagementRoleSelected, setIsManagementRoleSelected] =
     useState(false);
@@ -370,11 +371,24 @@ const UserManagement = ({ showHeader = true }) => {
           status: user.status === "active" ? "true" : "false",
         });
 
-        // Update filtered lines when editing user
+        // Set selected department and update filtered lines
+        setSelectedDepartmentId(user.departmentId);
         if (user.departmentId && lines && Array.isArray(lines)) {
-          setFilteredLines(
-            lines.filter((line) => line.departmentId === user.departmentId)
-          );
+          const deptLines = lines.filter((line) => line.departmentId === user.departmentId);
+          setFilteredLines(deptLines);
+
+          // Check if user is management and auto-select all lines
+          const selectedRole = roles.find((r) => r.id === userRoleIds[0]);
+          const isManagement = selectedRole &&
+            ((selectedRole.name || "").trim().toLowerCase() === "quản lý" ||
+              (selectedRole.name || "").trim().toLowerCase() === "manager");
+
+          if (isManagement) {
+            const allLineIds = deptLines.map(line => line.lineId);
+            form.setFieldsValue({ ...form.getFieldsValue(), lineIds: allLineIds });
+          }
+        } else {
+          setFilteredLines([]);
         }
 
         setIsModalVisible(true);
@@ -654,22 +668,33 @@ const UserManagement = ({ showHeader = true }) => {
         : [],
       onFilter: (value, record) =>
         record.lineIds && record.lineIds.includes(value),
-      render: (lineIds) => (
-        <div>
-          {lineIds && lineIds.length > 0 ? (
-            lineIds.map((lineId) => {
-              const line = lines.find((l) => l.lineId === lineId);
-              return line ? (
-                <Tag key={lineId} color="blue" style={{ marginBottom: 2 }}>
-                  {line.lineName}
+      render: (lineIds) => {
+        if (!lineIds || lineIds.length === 0) {
+          return <Tag color="default">Chưa có dây chuyền</Tag>;
+        }
+        const lineNames = lineIds
+          .map((lineId) => {
+            const line = lines.find((l) => l.lineId === lineId);
+            return line ? line.lineName : lineId;
+          })
+          .filter(Boolean);
+        return (
+          <Tooltip title={lineNames.join(", ")}>
+            <div style={{ cursor: "pointer" }}>
+              {lineNames.slice(0, 2).map((name, index) => (
+                <Tag key={index} color="blue" style={{ marginRight: 4, marginBottom: 2 }}>
+                  {name}
                 </Tag>
-              ) : null;
-            })
-          ) : (
-            <Tag color="default">Chưa có dây chuyền</Tag>
-          )}
-        </div>
-      ),
+              ))}
+              {lineNames.length > 2 && (
+                <Text style={{ color: "#1890ff" }}>
+                  +{lineNames.length - 2}...
+                </Text>
+              )}
+            </div>
+          </Tooltip>
+        );
+      },
     },
     {
       title: "Vai trò",
@@ -895,6 +920,8 @@ const UserManagement = ({ showHeader = true }) => {
     form.resetFields();
     // Reset management-role flag to avoid stale state when reopening modal
     setIsManagementRoleSelected(false);
+    setSelectedDepartmentId(null);
+    setFilteredLines([]);
   };
 
   const content = (
@@ -955,6 +982,8 @@ const UserManagement = ({ showHeader = true }) => {
                   form.resetFields();
                   // Reset management-role flag when opening Add User modal
                   setIsManagementRoleSelected(false);
+                  setSelectedDepartmentId(null);
+                  setFilteredLines([]);
                   setIsModalVisible(true);
                 }}
                 style={{ backgroundColor: "#334766", borderColor: "#334766" }}
@@ -1160,19 +1189,7 @@ const UserManagement = ({ showHeader = true }) => {
           form={form}
           layout="vertical"
           onValuesChange={(changedValues) => {
-            if (changedValues.departmentId !== undefined) {
-              const deptId = changedValues.departmentId;
-              if (deptId && lines && Array.isArray(lines)) {
-                setFilteredLines(
-                  lines.filter((line) => line.departmentId === deptId)
-                );
-              } else {
-                setFilteredLines(lines || []);
-              }
-              // Clear selected lines if department changes
-              form.setFieldsValue({ lineIds: [] });
-            }
-            // When role selection changes, detect management roles and clear line selection
+            // When role selection changes, detect management roles and handle line selection
             if (changedValues.roleIds !== undefined) {
               const roleId = changedValues.roleIds;
               const selectedRole = roles.find((r) => r.id === roleId);
@@ -1181,8 +1198,13 @@ const UserManagement = ({ showHeader = true }) => {
                 ((selectedRole.name || "").trim().toLowerCase() === "quản lý" ||
                   (selectedRole.name || "").trim().toLowerCase() === "manager");
               setIsManagementRoleSelected(!!isManagement);
-              if (isManagement) {
-                // Managers manage all lines in the department — don't allow choosing specific lines
+              if (isManagement && selectedDepartmentId) {
+                // Auto-select all lines for management role in selected department
+                const deptLines = lines.filter((line) => line.departmentId === selectedDepartmentId);
+                const allLineIds = deptLines.map(line => line.lineId);
+                form.setFieldsValue({ lineIds: allLineIds });
+              } else if (!isManagement) {
+                // Clear line selection when no longer management
                 form.setFieldsValue({ lineIds: [] });
               }
             }
@@ -1363,11 +1385,39 @@ const UserManagement = ({ showHeader = true }) => {
                   loading={
                     !Array.isArray(departments) || departments.length === 0
                   }
+                  allowClear
                   showSearch
                   optionFilterProp="children"
                   filterOption={(input, option) =>
                     option.children.toLowerCase().includes(input.toLowerCase())
                   }
+                  onChange={(value) => {
+                    setSelectedDepartmentId(value);
+                    // Update filtered lines based on selected department
+                    if (value && lines && Array.isArray(lines)) {
+                      const deptLines = lines.filter((line) => line.departmentId === value);
+                      setFilteredLines(deptLines);
+
+                      // Check if current role is management
+                      const roleId = form.getFieldValue("roleIds");
+                      const selectedRole = roles.find((r) => r.id === roleId);
+                      const currentIsManagement = selectedRole &&
+                        ((selectedRole.name || "").trim().toLowerCase() === "quản lý" ||
+                          (selectedRole.name || "").trim().toLowerCase() === "manager");
+
+                      if (currentIsManagement) {
+                        // Auto-select all lines for management role
+                        const allLineIds = deptLines.map(line => line.lineId);
+                        form.setFieldsValue({ lineIds: allLineIds });
+                      } else {
+                        // Clear line selection for non-management
+                        form.setFieldsValue({ lineIds: [] });
+                      }
+                    } else {
+                      setFilteredLines([]);
+                      form.setFieldsValue({ lineIds: [] });
+                    }
+                  }}
                 >
                   {Array.isArray(departments) &&
                     departments.map((dept) => (
@@ -1394,18 +1444,7 @@ const UserManagement = ({ showHeader = true }) => {
                 <Select
                   mode="multiple"
                   placeholder={(() => {
-                    const roleId = form.getFieldValue("roleIds");
-                    const selectedRole = roles.find((r) => r.id === roleId);
-                    const currentIsManagement =
-                      selectedRole &&
-                      ((selectedRole.name || "").trim().toLowerCase() ===
-                        "quản lý" ||
-                        (selectedRole.name || "").trim().toLowerCase() ===
-                        "manager");
-
-                    if (currentIsManagement)
-                      return "Vai trò quản lý sẽ quản lý tất cả dây chuyền trong phòng ban.";
-                    if (!form.getFieldValue("departmentId"))
+                    if (!selectedDepartmentId)
                       return "Bạn cần chọn phòng ban trước";
                     if (filteredLines.length === 0)
                       return "Phòng ban này chưa có dây chuyền nào";
@@ -1414,51 +1453,21 @@ const UserManagement = ({ showHeader = true }) => {
                   size="large"
                   loading={!lines || lines.length === 0}
                   disabled={(() => {
-                    const roleId = form.getFieldValue("roleIds");
-                    const selectedRole = roles.find((r) => r.id === roleId);
-                    const currentIsManagement =
-                      selectedRole &&
-                      ((selectedRole.name || "").trim().toLowerCase() ===
-                        "quản lý" ||
-                        (selectedRole.name || "").trim().toLowerCase() ===
-                        "manager");
                     return (
-                      currentIsManagement ||
-                      !form.getFieldValue("departmentId") ||
+                      !selectedDepartmentId ||
                       filteredLines.length === 0
                     );
                   })()}
                   allowClear
+                  maxTagCount={2}
+                  maxTagPlaceholder={(omittedValues) => `+ ${omittedValues.length} ...`}
                   showSearch
                   optionFilterProp="children"
                   filterOption={(input, option) =>
                     option.children.toLowerCase().includes(input.toLowerCase())
                   }
                   notFoundContent={(() => {
-                    const roleId = form.getFieldValue("roleIds");
-                    const selectedRole = roles.find((r) => r.id === roleId);
-                    const currentIsManagement =
-                      selectedRole &&
-                      ((selectedRole.name || "").trim().toLowerCase() ===
-                        "quản lý" ||
-                        (selectedRole.name || "").trim().toLowerCase() ===
-                        "manager");
-
-                    if (currentIsManagement) {
-                      return (
-                        <div
-                          style={{
-                            textAlign: "center",
-                            color: "#096dd9",
-                            padding: "8px",
-                          }}
-                        >
-                          Vai trò quản lý sẽ quản lý tất cả dây chuyền trong
-                          phòng ban.
-                        </div>
-                      );
-                    }
-                    if (!form.getFieldValue("departmentId")) {
+                    if (!selectedDepartmentId) {
                       return (
                         <div
                           style={{
@@ -1517,6 +1526,7 @@ const UserManagement = ({ showHeader = true }) => {
                   placeholder="Chọn vai trò"
                   size="large"
                   loading={roles.length === 0}
+                  allowClear
                 >
                   {roles &&
                     roles.map((role) => (
@@ -1540,7 +1550,7 @@ const UserManagement = ({ showHeader = true }) => {
                     { required: true, message: "Vui lòng chọn trạng thái" },
                   ]}
                 >
-                  <Select placeholder="Chọn trạng thái" size="large">
+                  <Select placeholder="Chọn trạng thái" size="large" allowClear>
                     <Option value="true">Hoạt động</Option>
                     <Option value="false">Ngừng hoạt động</Option>
                   </Select>
@@ -1628,7 +1638,18 @@ const UserManagement = ({ showHeader = true }) => {
           <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
             {/* Simplified user details — only fields present in DB */}
             <Card size="small" style={{ marginBottom: 16 }}>
-              <Descriptions column={2} bordered>
+              <Descriptions
+                column={2}
+                bordered
+                labelStyle={{
+                  fontWeight: "bold",
+                  fontSize: "14px",
+                  backgroundColor: "#fafafa",
+                  borderRight: "1px solid #d9d9d9",
+                  padding: "12px 16px",
+                  minWidth: "160px",
+                }}
+              >
                 <Descriptions.Item label="Họ và tên">
                   {viewingUser.fullName || "-"}
                 </Descriptions.Item>
@@ -1644,6 +1665,9 @@ const UserManagement = ({ showHeader = true }) => {
                 <Descriptions.Item label="Số điện thoại">
                   {viewingUser.phoneNumber || ""}
                 </Descriptions.Item>
+                <Descriptions.Item label="Trạng thái">
+                  <Badge status={getStatusColor(viewingUser.status)} text={getStatusText(viewingUser.status)} />
+                </Descriptions.Item>
                 <Descriptions.Item label="Vai trò">
                   {Array.isArray(viewingUser.roles)
                     ? viewingUser.roles.join(", ")
@@ -1656,8 +1680,40 @@ const UserManagement = ({ showHeader = true }) => {
                       .join(", ")
                     : "-"}
                 </Descriptions.Item>
-                <Descriptions.Item label="Trạng thái">
-                  {viewingUser.isActive ? "Hoạt động" : "Không hoạt động"}
+                <Descriptions.Item label="Dây chuyền">
+                  {viewingUser.lineIds && viewingUser.lineIds.length > 0
+                    ? (() => {
+                        const userLines = viewingUser.lineIds
+                          .map((lineId) => {
+                            const line = lines.find((l) => l.lineId === lineId);
+                            return line;
+                          })
+                          .filter(Boolean);
+                        return (
+                          <div>
+                            <Text
+                              strong
+                              style={{ marginBottom: 8, display: "block" }}
+                            >
+                              Tổng cộng: {userLines.length} dây chuyền
+                            </Text>
+                            <div
+                              style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: "8px",
+                              }}
+                            >
+                              {userLines.map((line) => (
+                                <Tag key={line.lineId} color="blue">
+                                  {line.lineName}
+                                </Tag>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()
+                    : "-"}
                 </Descriptions.Item>
               </Descriptions>
             </Card>

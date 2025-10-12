@@ -670,6 +670,7 @@ const LineManagement = ({ showHeader = true }) => {
                       ? "Đang tải..."
                       : "Không có phòng ban nào"
                   }
+                  allowClear
                   showSearch
                   optionFilterProp="children"
                   filterOption={(input, option) =>
@@ -703,7 +704,7 @@ const LineManagement = ({ showHeader = true }) => {
                     { required: true, message: "Vui lòng chọn trạng thái" },
                   ]}
                 >
-                  <Select placeholder="Chọn trạng thái" size="large">
+                  <Select placeholder="Chọn trạng thái" size="large" allowClear>
                     <Option value={true}>Hoạt động</Option>
                     <Option value={false}>Dừng hoạt động</Option>
                   </Select>
@@ -771,7 +772,19 @@ const LineManagement = ({ showHeader = true }) => {
       >
         {viewingLine && (
           <div>
-            <Descriptions column={2} bordered style={{ marginBottom: "24px" }}>
+            <Descriptions
+              column={2}
+              bordered
+              style={{ marginBottom: "24px" }}
+              labelStyle={{
+                fontWeight: "bold",
+                fontSize: "14px",
+                backgroundColor: "#fafafa",
+                borderRight: "1px solid #d9d9d9",
+                padding: "12px 16px",
+                minWidth: "160px",
+              }}
+            >
               <Descriptions.Item label="Tên dây chuyền">
                 {viewingLine.lineName}
               </Descriptions.Item>

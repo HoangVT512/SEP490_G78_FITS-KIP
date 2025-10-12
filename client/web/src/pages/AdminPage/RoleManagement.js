@@ -872,7 +872,18 @@ const RoleManagement = ({ showHeader = true }) => {
         >
           {viewingRole && (
             <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
-              <Descriptions column={2} bordered>
+              <Descriptions
+                column={2}
+                bordered
+                labelStyle={{
+                  fontWeight: "bold",
+                  fontSize: "14px",
+                  backgroundColor: "#fafafa",
+                  borderRight: "1px solid #d9d9d9",
+                  padding: "12px 16px",
+                  minWidth: "160px",
+                }}
+              >
                 <Descriptions.Item label="Tên vai trò">
                   {viewingRole.name}
                 </Descriptions.Item>

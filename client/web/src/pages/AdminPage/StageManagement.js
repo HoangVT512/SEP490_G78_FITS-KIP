@@ -38,6 +38,7 @@ import {
   LineChartOutlined,
   LockOutlined,
   UnlockOutlined,
+  TeamOutlined
 } from "@ant-design/icons";
 import { ArchiveIcon } from "../../assets/icons";
 import Layout from "../../components/Layout/Layout";
@@ -418,9 +419,12 @@ const StageManagement = ({ showHeader = true }) => {
       key: "department",
       width: 150,
       render: (_, record) => (
-        <Tag color="blue">
-          {record.line?.department?.departmentName || "Không xác định"}
-        </Tag>
+        <div>
+          <div style={{ fontWeight: "500" }}>
+            <TeamOutlined style={{ marginRight: "4px", color: "#334766" }} />
+            {record.line.department?.departmentName || "Chưa phân phòng"}
+          </div>
+        </div>
       ),
     },
     {
@@ -735,6 +739,7 @@ const StageManagement = ({ showHeader = true }) => {
                       ? "Đang tải..."
                       : "Không có phòng ban nào"
                   }
+                  allowClear
                   showSearch
                   optionFilterProp="children"
                   filterOption={(input, option) =>
@@ -781,6 +786,7 @@ const StageManagement = ({ showHeader = true }) => {
                         ? "Không có dây chuyền nào"
                         : "Đang tải..."
                   }
+                  allowClear
                   showSearch
                   optionFilterProp="children"
                   filterOption={(input, option) =>
@@ -809,7 +815,7 @@ const StageManagement = ({ showHeader = true }) => {
                     { required: true, message: "Vui lòng chọn trạng thái" },
                   ]}
                 >
-                  <Select placeholder="Chọn trạng thái" size="large">
+                  <Select placeholder="Chọn trạng thái" size="large" allowClear>
                     <Option value={true}>Hoạt động</Option>
                     <Option value={false}>Dừng hoạt động</Option>
                   </Select>
@@ -877,7 +883,19 @@ const StageManagement = ({ showHeader = true }) => {
       >
         {viewingStage && (
           <div>
-            <Descriptions column={2} bordered style={{ marginBottom: "24px" }}>
+            <Descriptions
+              column={2}
+              bordered
+              style={{ marginBottom: "24px" }}
+              labelStyle={{
+                fontWeight: "bold",
+                fontSize: "14px",
+                backgroundColor: "#fafafa",
+                borderRight: "1px solid #d9d9d9",
+                padding: "12px 16px",
+                minWidth: "160px",
+              }}
+            >
               <Descriptions.Item label="Tên công đoạn">
                 {viewingStage.stageName}
               </Descriptions.Item>

@@ -435,9 +435,9 @@ const DepartmentManagement = ({ showHeader = true }) => {
       console.error("Operation failed:", error);
       message.error(
         error.message ||
-          (editingDepartment
-            ? "Cập nhật phòng ban thất bại!"
-            : "Tạo phòng ban thất bại!")
+        (editingDepartment
+          ? "Cập nhật phòng ban thất bại!"
+          : "Tạo phòng ban thất bại!")
       );
     }
   };
@@ -497,6 +497,7 @@ const DepartmentManagement = ({ showHeader = true }) => {
               />
             </Input.Group>
           </Col>
+          <Col xs={24} sm={6} md={4}></Col>
           <Col xs={24} sm={6} md={12}>
             <Space style={{ float: "right" }}>
               <Button
@@ -798,7 +799,18 @@ const DepartmentManagement = ({ showHeader = true }) => {
       >
         {viewingDepartment && (
           <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
-            <Descriptions column={2} bordered>
+            <Descriptions
+              column={2}
+              bordered
+              labelStyle={{
+                fontWeight: "bold",
+                fontSize: "14px",
+                backgroundColor: "#fafafa",
+                borderRight: "1px solid #d9d9d9",
+                padding: "12px 16px",
+                minWidth: "160px",
+              }}
+            >
               <Descriptions.Item label="ID phòng ban">
                 {viewingDepartment.departmentId}
               </Descriptions.Item>
