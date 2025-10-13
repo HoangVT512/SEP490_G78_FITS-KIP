@@ -271,6 +271,54 @@ export const authService = {
       throw error;
     }
   },
+
+  // Forgot Password - Send SMS OTP
+  sendForgotPasswordSmsOtp: async (phoneNumber) => {
+    try {
+      const response = await apiRequest("/Auths/forgot-password/send-sms-otp", {
+        method: "POST",
+        body: JSON.stringify({ phoneNumber }),
+      });
+
+      return response;
+    } catch (error) {
+      console.error("Send SMS OTP error:", error);
+      throw error;
+    }
+  },
+
+  // Forgot Password - Verify SMS OTP
+  verifySmsOtp: async (phoneNumber, otp) => {
+    try {
+      // Trim OTP code to remove any whitespace
+      const trimmedOtp = otp.trim();
+
+      const response = await apiRequest("/Auths/forgot-password/verify-sms-otp", {
+        method: "POST",
+        body: JSON.stringify({ phoneNumber, code: trimmedOtp }),
+      });
+
+      return response;
+    } catch (error) {
+      console.error("Verify SMS OTP error:", error);
+      throw error;
+    }
+  },
+
+  // Forgot Password - Reset Password with SMS OTP
+  resetPasswordWithSmsOtp: async (phoneNumber, otp, newPassword) => {
+    try {
+      const response = await apiRequest("/Auths/forgot-password/reset-sms", {
+        method: "POST",
+        body: JSON.stringify({ phoneNumber, otp, newPassword }),
+      });
+
+      return response;
+    } catch (error) {
+      console.error("Reset password with SMS error:", error);
+      throw error;
+    }
+  },
 };
 
 export default authService;

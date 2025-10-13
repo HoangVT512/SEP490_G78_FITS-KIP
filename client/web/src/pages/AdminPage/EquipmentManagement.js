@@ -184,7 +184,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
     filterDropdownProps: {
       onOpenChange(open) {
         if (open) {
-          setTimeout(() => {}, 100);
+          setTimeout(() => { }, 100);
         }
       },
     },
@@ -306,7 +306,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
         const errorMessage = error.message || "Không thể lưu thông tin thiết bị";
         const messages = errorMessage.split(/[.\n]/).filter(msg => msg.trim());
         const fieldErrors = [];
-        
+
         messages.forEach(msg => {
           const trimmedMsg = msg.trim();
           if (trimmedMsg.toLowerCase().includes("mã thiết bị") || trimmedMsg.toLowerCase().includes("equipment code")) {
@@ -322,7 +322,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
             fieldErrors.push({ name: 'issue', errors: [trimmedMsg] });
           }
         });
-        
+
         if (fieldErrors.length > 0) {
           form.setFields(fieldErrors);
         } else {
@@ -401,9 +401,9 @@ const EquipmentManagement = ({ showHeader = true }) => {
       width: 150,
       filters: Array.isArray(stages)
         ? stages.map((stage) => ({
-            text: stage.stageName,
-            value: stage.stageId,
-          }))
+          text: stage.stageName,
+          value: stage.stageId,
+        }))
         : [],
       onFilter: (value, record) => record.stageId === value,
       render: (stageId) => {
@@ -456,25 +456,25 @@ const EquipmentManagement = ({ showHeader = true }) => {
         />
       ),
     },
-    {
-      title: "Vấn đề",
-      dataIndex: "issue",
-      key: "issue",
-      width: 200,
-      ...getColumnSearchProps("issue", "Tìm kiếm vấn đề"),
-      render: (issue) =>
-        issue ? (
-          <Tooltip title={issue}>
-            <Tag icon={<WarningOutlined />} color="warning">
-              Có vấn đề
-            </Tag>
-          </Tooltip>
-        ) : (
-          <Tag icon={<CheckCircleOutlined />} color="success">
-            Bình thường
-          </Tag>
-        ),
-    },
+    // {
+    //   title: "Vấn đề",
+    //   dataIndex: "issue",
+    //   key: "issue",
+    //   width: 200,
+    //   ...getColumnSearchProps("issue", "Tìm kiếm vấn đề"),
+    //   render: (issue) =>
+    //     issue ? (
+    //       <Tooltip title={issue}>
+    //         <Tag icon={<WarningOutlined />} color="warning">
+    //           Có vấn đề
+    //         </Tag>
+    //       </Tooltip>
+    //     ) : (
+    //       <Tag icon={<CheckCircleOutlined />} color="success">
+    //         Bình thường
+    //       </Tag>
+    //     ),
+    // },
     {
       title: "Thao tác",
       key: "actions",
@@ -686,6 +686,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
                 name="equipmentCode"
                 rules={[
                   {
+                    required: true,
                     validator: (_, value) => {
                       if (!value || value.trim() === '') {
                         return Promise.reject(new Error("Vui lòng nhập mã thiết bị"));
@@ -723,6 +724,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
                 name="equipmentName"
                 rules={[
                   {
+                    required: true,
                     validator: (_, value) => {
                       if (!value || value.trim() === '') {
                         return Promise.reject(new Error("Vui lòng nhập tên thiết bị"));
@@ -851,7 +853,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
             </Col>
           </Row>
 
-          <Form.Item
+          {/* <Form.Item
             label={
               <span style={{ fontWeight: "600", fontSize: "14px" }}>
                 Vấn đề/Ghi chú
@@ -869,7 +871,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
               rows={4}
               placeholder="Nhập vấn đề hoặc ghi chú về thiết bị"
             />
-          </Form.Item>
+          </Form.Item> */}
         </Form>
       </Modal>
 

@@ -5,8 +5,8 @@ const API_BASE_URL =
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
 
-  // Get token from sessionStorage
-  const token = sessionStorage.getItem("token");
+  // Get token from localStorage
+  const token = localStorage.getItem("token");
 
   const defaultOptions = {
     headers: {

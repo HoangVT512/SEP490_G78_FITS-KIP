@@ -404,24 +404,24 @@ public class AuthsController : ControllerBase
     /// <summary>
     /// Gửi SMS thông thường
     /// </summary>
-    [HttpPost("send-sms")]
-    [AllowAnonymous]
-    public async Task<IActionResult> SendSms([FromBody] SendSmsRequest request)
-    {
-        try
-        {
-            var result = await _smsService.SendSmsAsync(request.PhoneNumber, request.Message);
+    // [HttpPost("send-sms")]
+    // [AllowAnonymous]
+    // public async Task<IActionResult> SendSms([FromBody] SendSmsRequest request)
+    // {
+    //     try
+    //     {
+    //         var result = await _smsService.SendSmsAsync(request.PhoneNumber, request.Message);
 
-            if (result)
-                return Ok(new { success = true, message = "SMS đã được gửi thành công" });
+    //         if (result)
+    //             return Ok(new { success = true, message = "SMS đã được gửi thành công" });
 
-            return BadRequest(new { success = false, message = "Không thể gửi SMS" });
-        }
-        catch (Exception ex)
-        {
-            return BadRequest(new { success = false, message = "Lỗi khi gửi SMS", details = ex.Message });
-        }
-    }
+    //         return BadRequest(new { success = false, message = "Không thể gửi SMS" });
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         return BadRequest(new { success = false, message = "Lỗi khi gửi SMS", details = ex.Message });
+    //     }
+    // }
 
     private bool IsValidVietnamesePhoneNumber(string phoneNumber)
     {
