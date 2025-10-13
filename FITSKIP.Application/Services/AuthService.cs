@@ -118,7 +118,7 @@ public class AuthService : IAuthService
         // Check if email is verified
         if (!user.EmailConfirmed)
         {
-            throw new UnauthorizedAccessException("Email của bạn chưa được xác thực. Vui lòng liên hệ với ban quản lý để được hỗ trợ hoặc thử cách đăng nhập khác.");
+            throw new UnauthorizedAccessException("Email của bạn chưa được xác thực. Vui lòng xác thực email trước khi đặt lại mật khẩu.");
         }
 
         var otp = GenerateOtp();

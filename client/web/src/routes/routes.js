@@ -4,7 +4,7 @@ import ResetPasswordPage from "../pages/AccountPage/ResetPassword";
 import ProfilePage from "../pages/AccountPage/Profile";
 import EditProfilePage from "../pages/AccountPage/EditProfile";
 import ChangePasswordPage from "../pages/AccountPage/ChangePassword";
-import VerifyEmailPage from "../pages/VerifyEmail";
+import VerifyEmailPage from "../utils/VerifyEmail";
 import AdminLayout from "../pages/AdminPage/AdminLayout";
 // Keep individual imports for potential standalone use
 import UserManagement from "../pages/AdminPage/UserManagement";

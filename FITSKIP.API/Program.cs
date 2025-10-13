@@ -104,11 +104,18 @@ namespace FITSKIP.API
 
             // Import Excel service
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IExcelImportService,
-    FITSKIP.Application.Services.ExcelImportService>();
+            FITSKIP.Application.Services.ExcelImportService>();
             // JWT Authentication services
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IJwtTokenService, FITSKIP.Application.Services.JwtTokenService>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IAuthService, FITSKIP.Application.Services.AuthService>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IEmailService, FITSKIP.Application.Services.AcsEmailService>();
+            // Add HttpClient for SMS service
+            builder.Services.AddHttpClient();
+
+            // SMS Service - Use Mock for testing to avoid Twilio rate limits
+            // Change back to TwilioSmsService when ready for production
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.ISmsService, FITSKIP.Application.Services.TwilioSmsService>();
+
             // JWT Authentication configuration
             var jwtSettings = builder.Configuration.GetSection("JwtSettings");
             var key = Encoding.UTF8.GetBytes(jwtSettings["Key"] ?? "your-secret-key-here-at-least-32-characters-long");

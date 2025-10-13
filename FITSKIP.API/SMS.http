@@ -1,0 +1,52 @@
+### Test SMS functionality in Auth Controller - Updated with working Vietnam prefixes
+
+### 1. Test with Vinaphone prefix (+8491)
+POST https://localhost:5201/api/auths/forgot-password/send-sms-otp
+Content-Type: application/json
+
+{
+  "phoneNumber": "+84912345678"
+}
+
+###
+
+### 2. Test with Mobifone prefix (+8490)
+POST https://localhost:5201/api/auths/forgot-password/send-sms-otp
+Content-Type: application/json
+
+{
+  "phoneNumber": "+84903456789"
+}
+
+###
+
+### 3. Test with Viettel different prefix (+8497)
+POST https://localhost:5201/api/auths/forgot-password/send-sms-otp
+Content-Type: application/json
+
+{
+  "phoneNumber": "+84976543210"
+}
+
+###
+
+### 4. Test with your real number (replace with actual)
+POST https://localhost:5201/api/auths/forgot-password/send-sms-otp
+Content-Type: application/json
+
+{
+  "phoneNumber": "+84[your-real-number]"
+}
+
+###
+
+### 5. Verify SMS OTP
+POST https://localhost:5201/api/auths/forgot-password/verify-sms-otp
+Content-Type: application/json
+
+{
+  "phoneNumber": "+84912345678",
+  "code": "123456"
+}
+
+###

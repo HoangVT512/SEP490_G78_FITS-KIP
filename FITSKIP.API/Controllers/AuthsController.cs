@@ -11,11 +11,13 @@ public class AuthsController : ControllerBase
 {
     private readonly IAuthService _authService;
     private readonly IUserService _userService;
+    private readonly ISmsService _smsService;
 
-    public AuthsController(IAuthService authService, IUserService userService)
+    public AuthsController(IAuthService authService, IUserService userService, ISmsService smsService)
     {
         _authService = authService;
         _userService = userService;
+        _smsService = smsService;
     }
 
     /// <summary>
@@ -342,4 +344,116 @@ public class AuthsController : ControllerBase
             return BadRequest(new { success = false, message = "Đã có lỗi xảy ra khi xác thực email", details = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Gửi OTP qua SMS để đặt lại mật khẩu
+    /// </summary>
+    [HttpPost("forgot-password/send-sms-otp")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SendSmsOtp([FromBody] SendSmsOtpRequest request)
+    {
+        try
+        {
+            // Validate phone number format
+            if (!IsValidVietnamesePhoneNumber(request.PhoneNumber))
+            {
+                return BadRequest(new { success = false, message = "Số điện thoại không hợp lệ. Vui lòng sử dụng format +84xxxxxxxxx" });
+            }
+
+            var result = await _smsService.SendVerificationCodeAsync(request.PhoneNumber);
+
+            if (result)
+                return Ok(new { success = true, message = "Mã OTP đã được gửi qua SMS" });
+
+            return BadRequest(new { success = false, message = "Không thể gửi SMS OTP" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Lỗi khi gửi SMS OTP", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Xác thực OTP từ SMS
+    /// </summary>
+    [HttpPost("forgot-password/verify-sms-otp")]
+    [AllowAnonymous]
+    public async Task<IActionResult> VerifySmsOtp([FromBody] VerifySmsOtpRequest request)
+    {
+        try
+        {
+            // Validate phone number format
+            if (!IsValidVietnamesePhoneNumber(request.PhoneNumber))
+            {
+                return BadRequest(new { success = false, message = "Số điện thoại không hợp lệ. Vui lòng sử dụng format +84xxxxxxxxx" });
+            }
+
+            var result = await _smsService.VerifyCodeAsync(request.PhoneNumber, request.Code);
+
+            if (result)
+                return Ok(new { success = true, message = "Xác thực SMS OTP thành công" });
+
+            return BadRequest(new { success = false, message = "Mã OTP không hợp lệ hoặc đã hết hạn" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Lỗi khi xác thực SMS OTP", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Gửi SMS thông thường
+    /// </summary>
+    [HttpPost("send-sms")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SendSms([FromBody] SendSmsRequest request)
+    {
+        try
+        {
+            var result = await _smsService.SendSmsAsync(request.PhoneNumber, request.Message);
+
+            if (result)
+                return Ok(new { success = true, message = "SMS đã được gửi thành công" });
+
+            return BadRequest(new { success = false, message = "Không thể gửi SMS" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Lỗi khi gửi SMS", details = ex.Message });
+        }
+    }
+
+    private bool IsValidVietnamesePhoneNumber(string phoneNumber)
+    {
+        if (string.IsNullOrEmpty(phoneNumber))
+            return false;
+
+        // Check if starts with +84 and has correct length
+        if (phoneNumber.StartsWith("+84") && phoneNumber.Length >= 12 && phoneNumber.Length <= 13)
+        {
+            // Check if all characters after +84 are digits
+            var numberPart = phoneNumber.Substring(3);
+            return numberPart.All(char.IsDigit);
+        }
+
+        return false;
+    }
+}
+
+// Request DTOs for SMS functionality
+public class SendSmsOtpRequest
+{
+    public string PhoneNumber { get; set; } = string.Empty;
+}
+
+public class VerifySmsOtpRequest
+{
+    public string PhoneNumber { get; set; } = string.Empty;
+    public string Code { get; set; } = string.Empty;
+}
+
+public class SendSmsRequest
+{
+    public string PhoneNumber { get; set; } = string.Empty;
+    public string Message { get; set; } = string.Empty;
 }

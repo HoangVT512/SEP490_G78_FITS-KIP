@@ -293,8 +293,42 @@ const EquipmentManagement = ({ showHeader = true }) => {
       form.resetFields();
       loadEquipments();
     } catch (error) {
-      console.error("Error saving equipment:", error);
-      message.error(error.message || "Không thể lưu thông tin thiết bị");
+      console.error("Lỗi đang lưu thiết bị:", error);
+      if (error.response && error.response.data && error.response.data.errors) {
+        // Set inline validation errors
+        const fieldErrors = Object.keys(error.response.data.errors).map(key => ({
+          name: key,
+          errors: [error.response.data.errors[key]]
+        }));
+        form.setFields(fieldErrors);
+      } else {
+        // Parse error message to set inline for specific fields
+        const errorMessage = error.message || "Không thể lưu thông tin thiết bị";
+        const messages = errorMessage.split(/[.\n]/).filter(msg => msg.trim());
+        const fieldErrors = [];
+        
+        messages.forEach(msg => {
+          const trimmedMsg = msg.trim();
+          if (trimmedMsg.toLowerCase().includes("mã thiết bị") || trimmedMsg.toLowerCase().includes("equipment code")) {
+            fieldErrors.push({ name: 'equipmentCode', errors: [trimmedMsg] });
+          }
+          if (trimmedMsg.toLowerCase().includes("tên thiết bị") || trimmedMsg.toLowerCase().includes("equipment name")) {
+            fieldErrors.push({ name: 'equipmentName', errors: [trimmedMsg] });
+          }
+          if (trimmedMsg.toLowerCase().includes("năm sản xuất") || trimmedMsg.toLowerCase().includes("year")) {
+            fieldErrors.push({ name: 'yom', errors: [trimmedMsg] });
+          }
+          if (trimmedMsg.toLowerCase().includes("ghi chú") || trimmedMsg.toLowerCase().includes("issue")) {
+            fieldErrors.push({ name: 'issue', errors: [trimmedMsg] });
+          }
+        });
+        
+        if (fieldErrors.length > 0) {
+          form.setFields(fieldErrors);
+        } else {
+          message.error(errorMessage);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -651,8 +685,30 @@ const EquipmentManagement = ({ showHeader = true }) => {
                 }
                 name="equipmentCode"
                 rules={[
-                  { required: true, message: "Vui lòng nhập mã thiết bị" },
+                  {
+                    validator: (_, value) => {
+                      if (!value || value.trim() === '') {
+                        return Promise.reject(new Error("Vui lòng nhập mã thiết bị"));
+                      }
+                      if (value.length > 50) {
+                        return Promise.reject(new Error("Mã thiết bị không được vượt quá 50 ký tự"));
+                      }
+                      if (value && value !== value.trim()) {
+                        return Promise.reject(new Error("Mã thiết bị không được có khoảng trắng đầu hoặc cuối"));
+                      }
+                      const exists = equipments.some(
+                        (e) =>
+                          e.equipmentCode.toLowerCase() === value.toLowerCase() &&
+                          e.equipmentId !== editingEquipment?.equipmentId
+                      );
+                      if (exists) {
+                        return Promise.reject(new Error("Mã thiết bị đã tồn tại"));
+                      }
+                      return Promise.resolve();
+                    },
+                  },
                 ]}
+                normalize={(value) => value?.trim()}
               >
                 <Input placeholder="Nhập mã thiết bị" size="large" />
               </Form.Item>
@@ -666,8 +722,30 @@ const EquipmentManagement = ({ showHeader = true }) => {
                 }
                 name="equipmentName"
                 rules={[
-                  { required: true, message: "Vui lòng nhập tên thiết bị" },
+                  {
+                    validator: (_, value) => {
+                      if (!value || value.trim() === '') {
+                        return Promise.reject(new Error("Vui lòng nhập tên thiết bị"));
+                      }
+                      if (value.length > 200) {
+                        return Promise.reject(new Error("Tên thiết bị không được vượt quá 200 ký tự"));
+                      }
+                      if (value && value !== value.trim()) {
+                        return Promise.reject(new Error("Tên thiết bị không được có khoảng trắng đầu hoặc cuối"));
+                      }
+                      const exists = equipments.some(
+                        (e) =>
+                          e.equipmentName.toLowerCase() === value.toLowerCase() &&
+                          e.equipmentId !== editingEquipment?.equipmentId
+                      );
+                      if (exists) {
+                        return Promise.reject(new Error("Tên thiết bị đã tồn tại"));
+                      }
+                      return Promise.resolve();
+                    },
+                  },
                 ]}
+                normalize={(value) => value?.trim()}
               >
                 <Input placeholder="Nhập tên thiết bị" size="large" />
               </Form.Item>
@@ -683,6 +761,16 @@ const EquipmentManagement = ({ showHeader = true }) => {
                   </span>
                 }
                 name="origin"
+                rules={[
+                  {
+                    validator: (_, value) => {
+                      if (value && value.length > 100) {
+                        return Promise.reject(new Error("Xuất xứ không được vượt quá 100 ký tự"));
+                      }
+                      return Promise.resolve();
+                    },
+                  },
+                ]}
               >
                 <Input placeholder="Nhập xuất xứ" size="large" />
               </Form.Item>
@@ -695,6 +783,15 @@ const EquipmentManagement = ({ showHeader = true }) => {
                   </span>
                 }
                 name="yom"
+                rules={[
+                  {
+                    type: 'number',
+                    min: 1900,
+                    max: dayjs().year(),
+                    message: 'Năm sản xuất phải từ 1900 đến năm hiện tại',
+                    transform: (value) => value ? Number(value) : value,
+                  },
+                ]}
               >
                 <Input type="number" placeholder="Nhập năm sản xuất" size="large" />
               </Form.Item>
@@ -761,6 +858,12 @@ const EquipmentManagement = ({ showHeader = true }) => {
               </span>
             }
             name="issue"
+            rules={[
+              {
+                max: 500,
+                message: 'Ghi chú không được vượt quá 500 ký tự',
+              },
+            ]}
           >
             <TextArea
               rows={4}
