@@ -56,6 +56,32 @@ function App() {
                   }
                 />
               );
+            } else if (route.requiredPermissions === 3) {
+              // TeamLeader-only routes
+              return (
+                <Route
+                  key={idx}
+                  path={route.path}
+                  element={
+                    <ProtectedRoute requireTeamLeader={true}>
+                      {element}
+                    </ProtectedRoute>
+                  }
+                />
+              );
+            } else if (route.requiredPermissions === 4) {
+              // Technician-only routes
+              return (
+                <Route
+                  key={idx}
+                  path={route.path}
+                  element={
+                    <ProtectedRoute requireTechnician={true}>
+                      {element}
+                    </ProtectedRoute>
+                  }
+                />
+              );
             }
             return null;
           })}

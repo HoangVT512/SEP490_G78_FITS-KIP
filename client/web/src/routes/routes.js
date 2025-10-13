@@ -17,6 +17,13 @@ import AdminReports from "../pages/AdminPage/AdminReports";
 import TeamLeaderLayout from "../pages/TeamLeaderPage/TeamLeaderLayout";
 import TeamLeaderDashboard from "../pages/TeamLeaderPage/TeamLeaderDashboard";
 import TeamLeaderEquipment from "../pages/TeamLeaderPage/TeamLeaderEquipment";
+// Technician imports
+import TechnicianLayout from "../pages/TechnicianPage/TechnicianLayout";
+import TechnicianDashboard from "../pages/TechnicianPage/TechnicianDashboard";
+import IncidentAssignList from "../pages/TechnicianPage/IncidentAssignList";
+import MaintenanceTasks from "../pages/TechnicianPage/MaintenanceTasks";
+import MaintenanceSchedule from "../pages/TechnicianPage/MaintenanceSchedule";
+import MaintenanceChecklist from "../pages/TechnicianPage/MaintenanceChecklist";
 
 export const routes = [
   {
@@ -146,5 +153,13 @@ export const routes = [
     page: TeamLeaderEquipment,
     isShowHeader: true,
     requiredPermissions: 3, // TeamLeader only
+  },
+  // Technician routes - All routes render through TechnicianLayout
+  {
+    path: "/technician/*",
+    name: "Technician Panel",
+    page: TechnicianLayout,
+    isShowHeader: false, // TechnicianLayout has its own header
+    requiredPermissions: 4, // Technician only
   },
 ];

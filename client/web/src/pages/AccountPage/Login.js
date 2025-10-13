@@ -63,8 +63,15 @@ const Login = () => {
         user.roles &&
         (user.roles.includes("Tổ trưởng") || user.roles.includes("TOTRUONG"));
 
+      const isUserTechnician =
+        user.roles &&
+        (user.roles.includes("Kỹ thuật viên") ||
+          user.roles.includes("KỸ THUẬT VIÊN") ||
+          user.roles.includes("KYTHUATVIEN"));
+
       console.log("Is admin:", isUserAdmin);
       console.log("Is team leader:", isUserTeamLeader);
+      console.log("Is technician:", isUserTechnician);
 
       if (isUserAdmin) {
         console.log("Redirecting to admin page");
@@ -72,9 +79,12 @@ const Login = () => {
       } else if (isUserTeamLeader) {
         console.log("Redirecting to team leader page");
         navigate("/team-leader");
+      } else if (isUserTechnician) {
+        console.log("Redirecting to technician page");
+        navigate("/technician");
       } else {
         console.log("Redirecting to default page");
-        navigate("/team-leader");
+        navigate("/technician");
       }
     }
   }, [isAuthenticated, user, navigate, isLoggingOut]);
@@ -110,15 +120,24 @@ const Login = () => {
         (response.user.roles.includes("Tổ trưởng") ||
           response.user.roles.includes("TOTRUONG"));
 
+      const isUserTechnician =
+        response.user?.roles &&
+        (response.user.roles.includes("Kỹ thuật viên") ||
+          response.user.roles.includes("KỸ THUẬT VIÊN") ||
+          response.user.roles.includes("KYTHUATVIEN"));
+
       if (isUserAdmin) {
         console.log("Redirecting to admin page");
         navigate("/admin");
       } else if (isUserTeamLeader) {
         console.log("Redirecting to team leader page");
         navigate("/team-leader");
+      } else if (isUserTechnician) {
+        console.log("Redirecting to technician page");
+        navigate("/technician");
       } else {
         console.log("Redirecting to default page");
-        navigate("/team-leader");
+        navigate("/technician");
       }
     } catch (error) {
       // Check if error is due to inactive account

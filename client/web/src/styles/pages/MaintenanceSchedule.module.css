@@ -1,0 +1,22 @@
+.scheduleContainer {
+  padding: 0;
+}
+
+.calendar {
+  border-radius: 8px;
+}
+
+.dateCell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  padding: 2px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .dateCell {
+    gap: 2px;
+  }
+}

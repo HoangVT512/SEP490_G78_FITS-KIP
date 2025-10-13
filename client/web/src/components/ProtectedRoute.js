@@ -7,9 +7,17 @@ const ProtectedRoute = ({
   children,
   requireAdmin = false,
   requireTeamLeader = false,
+  requireTechnician = false,
   redirectTo = "/login",
 }) => {
-  const { isAuthenticated, loading, isAdmin, isTeamLeader, user } = useAuth();
+  const {
+    isAuthenticated,
+    loading,
+    isAdmin,
+    isTeamLeader,
+    isTechnician,
+    user,
+  } = useAuth();
 
   if (loading) {
     return (
@@ -41,6 +49,10 @@ const ProtectedRoute = ({
 
   if (requireTeamLeader && !isTeamLeader()) {
     return <Navigate to="/admin" replace />;
+  }
+
+  if (requireTechnician && !isTechnician()) {
+    return <Navigate to="/login" replace />;
   }
 
   return children;
