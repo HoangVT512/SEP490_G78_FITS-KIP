@@ -1,0 +1,27 @@
+/* ReplacementComponents.module.css */
+
+.replacementComponents {
+  padding: 0;
+}
+
+.tabContent {
+  min-height: 400px;
+}
+
+.filterSection {
+  margin-bottom: 16px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .filterSection :global(.ant-space) {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .filterSection :global(.ant-input),
+  .filterSection :global(.ant-select),
+  .filterSection :global(.ant-btn) {
+    width: 100% !important;
+  }
+}

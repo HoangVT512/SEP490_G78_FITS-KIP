@@ -1,0 +1,72 @@
+/* ProductionManagement.module.css */
+
+.productionManagement {
+  padding: 0;
+}
+
+.statsRow {
+  margin-bottom: 24px;
+}
+
+.statsRow :global(.ant-card) {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s;
+}
+
+.statsRow :global(.ant-card:hover) {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.tableCard {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.filterSection {
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.detailContent {
+  padding: 8px 0;
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detailItem label {
+  font-weight: 500;
+  color: #8c8c8c;
+  font-size: 13px;
+}
+
+.detailItem span {
+  font-size: 14px;
+  color: #262626;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .statsRow {
+    margin-bottom: 16px;
+  }
+
+  .filterSection {
+    padding-bottom: 12px;
+  }
+
+  .filterSection :global(.ant-space) {
+    width: 100%;
+  }
+
+  .filterSection :global(.ant-input),
+  .filterSection :global(.ant-select) {
+    width: 100% !important;
+  }
+}

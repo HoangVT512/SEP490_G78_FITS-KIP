@@ -132,26 +132,12 @@ export const routes = [
     isShowHeader: true,
     requiredPermissions: 2, // Admin only
   },
-  // TeamLeader routes
+  // TeamLeader routes - All routes render through TeamLeaderLayout
   {
-    path: "/team-leader",
+    path: "/team-leader/*",
     name: "Team Leader Panel",
     page: TeamLeaderLayout,
     isShowHeader: false, // TeamLeaderLayout has its own header
-    requiredPermissions: 3, // TeamLeader only
-  },
-  {
-    path: "/team-leader/dashboard",
-    name: "Team Leader Dashboard",
-    page: TeamLeaderDashboard,
-    isShowHeader: true,
-    requiredPermissions: 3, // TeamLeader only
-  },
-  {
-    path: "/team-leader/equipment",
-    name: "Team Leader Equipment",
-    page: TeamLeaderEquipment,
-    isShowHeader: true,
     requiredPermissions: 3, // TeamLeader only
   },
   // Technician routes - All routes render through TechnicianLayout
