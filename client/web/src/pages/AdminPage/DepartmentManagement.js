@@ -433,12 +433,18 @@ const DepartmentManagement = ({ showHeader = true }) => {
       loadDepartments();
     } catch (error) {
       console.error("Operation failed:", error);
-      message.error(
-        error.message ||
-        (editingDepartment
-          ? "Cập nhật phòng ban thất bại!"
-          : "Tạo phòng ban thất bại!")
-      );
+
+      let errorMessage = editingDepartment
+        ? "Cập nhật phòng ban thất bại!"
+        : "Tạo phòng ban thất bại!";
+
+      if (error.message && error.message.includes("Đã tồn tại phòng ban có tên")) {
+        errorMessage = "Phòng ban này đã tồn tại";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      message.error(errorMessage);
     }
   };
 

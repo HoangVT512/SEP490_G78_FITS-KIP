@@ -41,7 +41,7 @@ const ChangePassword = () => {
       );
 
       if (response.success) {
-        message.success("Đổi mật khẩu thành công!");
+        //message.success("Đổi mật khẩu thành công!");
 
         // Show success modal and auto logout
         // Reset form and touched state before showing success modal
@@ -92,7 +92,7 @@ const ChangePassword = () => {
         ]);
       }
 
-      message.error(errorMessage);
+      //message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -208,7 +208,7 @@ const ChangePassword = () => {
                         if (currentPassword && value === currentPassword) {
                           return Promise.reject(
                             new Error(
-                              "Bạn đang sử dụng mật khẩu cũ! Vui lòng thay đổi mật khẩu mới khác với mật khẩu hiện tại."
+                              "Mật khẩu mới khác với mật khẩu hiện tại."
                             )
                           );
                         }

@@ -290,7 +290,6 @@ const EditProfile = () => {
                     <ul className={styles.editProfileAlertList}>
                       <li>Mã nhân viên</li>
                       <li>Phòng ban</li>
-                      <li>Chức vụ</li>
                     </ul>
                     <p className={styles.editProfileAlertNote}>
                       Liên hệ phòng Nhân sự nếu cần thay đổi thông tin do Admin
