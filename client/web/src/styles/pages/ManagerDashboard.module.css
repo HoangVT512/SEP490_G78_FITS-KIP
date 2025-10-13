@@ -1,0 +1,24 @@
+/* Manager Dashboard Styles */
+.container {
+  min-height: 100%;
+}
+
+.dashboardCard {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.statCard {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 8px;
+  padding: 24px;
+  color: white;
+}
+
+.tableCard {
+  margin-top: 24px;
+}
+
+.actionButton {
+  margin-top: 16px;
+}

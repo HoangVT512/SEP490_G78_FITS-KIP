@@ -95,6 +95,19 @@ function App() {
                   }
                 />
               );
+            } else if (route.requiredPermissions === 6) {
+              // Manager-only routes
+              return (
+                <Route
+                  key={idx}
+                  path={route.path}
+                  element={
+                    <ProtectedRoute requireManager={true}>
+                      {element}
+                    </ProtectedRoute>
+                  }
+                />
+              );
             }
             return null;
           })}

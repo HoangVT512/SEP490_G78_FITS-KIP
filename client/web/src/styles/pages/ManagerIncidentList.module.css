@@ -1,0 +1,19 @@
+/* Manager Incident List Styles */
+.container {
+  min-height: 100%;
+}
+
+.filterBar {
+  margin-bottom: 16px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.incidentTable {
+  margin-top: 16px;
+}
+
+.timelineCard {
+  margin-top: 24px;
+}

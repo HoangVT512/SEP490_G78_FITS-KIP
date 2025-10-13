@@ -26,6 +26,8 @@ import MaintenanceSchedule from "../pages/TechnicianPage/MaintenanceSchedule";
 import MaintenanceChecklist from "../pages/TechnicianPage/MaintenanceChecklist";
 // TechnicianManager imports
 import TechnicianManagerLayout from "../pages/TechnicianManagerPage/TechnicianManagerLayout";
+// Manager imports
+import ManagerLayout from "../pages/ManagerPage/ManagerLayout";
 
 export const routes = [
   {
@@ -157,5 +159,13 @@ export const routes = [
     page: TechnicianManagerLayout,
     isShowHeader: false, // TechnicianManagerLayout has its own header
     requiredPermissions: 5, // TechnicianManager only
+  },
+  // Manager routes - All routes render through ManagerLayout
+  {
+    path: "/manager/*",
+    name: "Manager Panel",
+    page: ManagerLayout,
+    isShowHeader: false, // ManagerLayout has its own header
+    requiredPermissions: 6, // Manager only
   },
 ];

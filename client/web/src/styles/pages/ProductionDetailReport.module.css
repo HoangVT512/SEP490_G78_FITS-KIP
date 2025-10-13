@@ -1,0 +1,16 @@
+/* Production Detail Report Styles */
+.container {
+  min-height: 100%;
+}
+
+.keyMetrics {
+  margin-bottom: 24px;
+}
+
+.chartsSection {
+  margin-bottom: 24px;
+}
+
+.performanceCard {
+  margin-top: 24px;
+}

@@ -1,0 +1,16 @@
+/* Inventory Dashboard Styles */
+.container {
+  min-height: 100%;
+}
+
+.statsOverview {
+  margin-bottom: 24px;
+}
+
+.chartsRow {
+  margin-bottom: 24px;
+}
+
+.alertsCard {
+  background: #fff2e8;
+}

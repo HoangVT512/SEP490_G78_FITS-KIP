@@ -1,0 +1,16 @@
+/* Maintenance Reports Styles */
+.container {
+  min-height: 100%;
+}
+
+.statsRow {
+  margin-bottom: 24px;
+}
+
+.overdueCard {
+  background: #fff2e8;
+}
+
+.performanceTable {
+  margin-top: 24px;
+}
