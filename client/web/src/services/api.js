@@ -5,8 +5,8 @@ const API_BASE_URL =
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
 
-  // Get token from sessionStorage
-  const token = sessionStorage.getItem("token");
+  // Get token from localStorage
+  const token = localStorage.getItem("token");
 
   const defaultOptions = {
     headers: {
@@ -25,7 +25,23 @@ const apiRequest = async (endpoint, options = {}) => {
     const response = await fetch(url, config);
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      // Try to parse error response as JSON
+      let errorMessage = `HTTP error! status: ${response.status}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
+      } catch (parseError) {
+        // If can't parse JSON, try to get text
+        try {
+          const errorText = await response.text();
+          if (errorText) {
+            errorMessage = errorText;
+          }
+        } catch (textError) {
+          // Keep default error message
+        }
+      }
+      throw new Error(errorMessage);
     }
 
     const contentType = response.headers.get("content-type");

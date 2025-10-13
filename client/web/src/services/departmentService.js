@@ -8,9 +8,7 @@ export const departmentService = {
       return response;
     } catch (error) {
       console.error("Error fetching departments:", error);
-      throw new Error(
-        "Không thể tải danh sách phòng ban. Vui lòng thử lại sau."
-      );
+      throw new Error(error.message || "Không thể tải danh sách phòng ban. Vui lòng thử lại sau.");
     }
   },
 
@@ -21,9 +19,7 @@ export const departmentService = {
       return response.data || response;
     } catch (error) {
       console.error("Error fetching active departments:", error);
-      throw new Error(
-        "Không thể tải danh sách phòng ban hoạt động. Vui lòng thử lại sau."
-      );
+      throw new Error(error.message || "Không thể tải danh sách phòng ban hoạt động. Vui lòng thử lại sau.");
     }
   },
 
@@ -34,7 +30,7 @@ export const departmentService = {
       return response;
     } catch (error) {
       console.error("Error fetching department:", error);
-      throw new Error("Không thể tải thông tin phòng ban.");
+      throw new Error(error.message || "Không thể tải thông tin phòng ban.");
     }
   },
 
@@ -47,7 +43,6 @@ export const departmentService = {
       });
     } catch (error) {
       console.error("Error creating department:", error);
-      // Throw lại error message từ API để UI có thể hiển thị
       throw new Error(error.message || "Không thể tạo phòng ban mới.");
     }
   },
@@ -61,7 +56,6 @@ export const departmentService = {
       });
     } catch (error) {
       console.error("Error updating department:", error);
-      // Throw lại error message từ API để UI có thể hiển thị
       throw new Error(error.message || "Không thể cập nhật thông tin phòng ban.");
     }
   },
@@ -74,7 +68,7 @@ export const departmentService = {
       });
     } catch (error) {
       console.error("Error deleting department:", error);
-      throw new Error("Không thể xóa phòng ban.");
+      throw new Error(error.message || "Không thể xóa phòng ban.");
     }
   },
 
@@ -85,7 +79,7 @@ export const departmentService = {
       return response;
     } catch (error) {
       console.error("Error fetching department statistics:", error);
-      throw new Error("Không thể tải thống kê phòng ban.");
+      throw new Error(error.message || "Không thể tải thống kê phòng ban.");
     }
   },
 };

@@ -59,6 +59,7 @@ const StageManagement = ({ showHeader = true }) => {
   const [departmentActive, setDepartmentActive] = useState([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
   const [equipmentByStage, setEquipmentByStage] = useState([]);
+  const [equipments, setEquipments] = useState([]); // Added for equipment count calculation
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -81,6 +82,7 @@ const StageManagement = ({ showHeader = true }) => {
     loadLines();
     loadLineActive();
     loadDepartmentActive();
+    loadEquipments(); // Added to load equipments for count calculation
   }, []);
 
   // Persist archive view state on change
@@ -173,6 +175,22 @@ const StageManagement = ({ showHeader = true }) => {
       console.error("Error loading active departments:", error);
       message.error("Không thể tải danh sách phòng ban hoạt động");
       setDepartmentActive([]);
+    }
+  };
+
+  const loadEquipments = async () => {
+    try {
+      const response = await equipmentService.getEquipments();
+      if (Array.isArray(response)) {
+        setEquipments(response);
+      } else if (response.success && Array.isArray(response.data)) {
+        setEquipments(response.data);
+      } else {
+        setEquipments([]);
+      }
+    } catch (error) {
+      console.error("Error loading equipments:", error);
+      setEquipments([]);
     }
   };
 
@@ -414,18 +432,34 @@ const StageManagement = ({ showHeader = true }) => {
         </div>
       ),
     },
+    // {
+    //   title: "Phòng ban",
+    //   key: "department",
+    //   width: 150,
+    //   render: (_, record) => (
+    //     <div>
+    //       <div style={{ fontWeight: "500" }}>
+    //         <TeamOutlined style={{ marginRight: "4px", color: "#334766" }} />
+    //         {record.line.department?.departmentName || "Chưa phân phòng"}
+    //       </div>
+    //     </div>
+    //   ),
+    // },
     {
-      title: "Phòng ban",
-      key: "department",
-      width: 150,
-      render: (_, record) => (
-        <div>
-          <div style={{ fontWeight: "500" }}>
-            <TeamOutlined style={{ marginRight: "4px", color: "#334766" }} />
-            {record.line.department?.departmentName || "Chưa phân phòng"}
-          </div>
-        </div>
-      ),
+      title: "Số thiết bị",
+      key: "equipmentCount",
+      width: 120,
+      align: "center",
+      render: (_, record) => {
+        const equipmentCount = equipments.filter(equipment => equipment.stageId === record.stageId).length;
+        return (
+          <Badge
+            count={equipmentCount}
+            showZero
+            style={{ backgroundColor: "#52c41a" }}
+          />
+        );
+      },
     },
     {
       title: "Trạng thái",
@@ -475,7 +509,7 @@ const StageManagement = ({ showHeader = true }) => {
     <div style={contentStyle}>
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: "24px" }}>
-        <Col xs={24} sm={6}>
+        <Col xs={24} sm={8}>
           <Card>
             <Statistic
               title="Tổng công đoạn"
@@ -485,7 +519,7 @@ const StageManagement = ({ showHeader = true }) => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={6}>
+        <Col xs={24} sm={8}>
           <Card>
             <Statistic
               title="Dây chuyền có công đoạn"
@@ -495,7 +529,7 @@ const StageManagement = ({ showHeader = true }) => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={6}>
+        <Col xs={24} sm={8}>
           <Card>
             <Statistic
               title="Thiết bị"
@@ -505,7 +539,7 @@ const StageManagement = ({ showHeader = true }) => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={6}>
+        {/* <Col xs={24} sm={6}>
           <Card>
             <Statistic
               title="Trung bình công đoạn/dây chuyền"
@@ -520,7 +554,7 @@ const StageManagement = ({ showHeader = true }) => {
               valueStyle={{ color: "#722ed1" }}
             />
           </Card>
-        </Col>
+        </Col> */}
       </Row>
 
       <Card style={cardStyle}>

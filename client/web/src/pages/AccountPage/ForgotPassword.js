@@ -73,9 +73,13 @@ const ForgotPassword = () => {
         setEmail(values.email);
         message.success("Mã OTP đã được gửi đến email của bạn!");
       } else {
-        // TODO: Implement phone OTP service
-        // await authService.sendForgotPasswordOtpByPhone(values.phoneNumber);
-        setPhoneNumber(values.phoneNumber);
+        // Chuẩn hóa số điện thoại về định dạng +84xxxxxxxxx
+        const normalizedPhone = values.phoneNumber.startsWith('0')
+          ? '+84' + values.phoneNumber.substring(1)
+          : values.phoneNumber;
+
+        await authService.sendForgotPasswordSmsOtp(normalizedPhone);
+        setPhoneNumber(normalizedPhone);
         message.success("Mã OTP đã được gửi đến số điện thoại của bạn!");
       }
       setOtpTimer(300); // Reset timer to 5 minutes
@@ -99,7 +103,11 @@ const ForgotPassword = () => {
     setLoading(true);
     try {
       const contactInfo = otpMethod === "email" ? email : phoneNumber;
-      await authService.verifyOtp(contactInfo, values.otp);
+      if (otpMethod === "email") {
+        await authService.verifyOtp(contactInfo, values.otp);
+      } else {
+        await authService.verifySmsOtp(contactInfo, values.otp);
+      }
       setOtp(values.otp);
       message.success("Xác thực OTP thành công!");
       setCurrentStep(2);
@@ -116,11 +124,19 @@ const ForgotPassword = () => {
     setLoading(true);
     try {
       const contactInfo = otpMethod === "email" ? email : phoneNumber;
-      await authService.resetPasswordWithOtp(
-        contactInfo,
-        otp,
-        values.newPassword
-      );
+      if (otpMethod === "email") {
+        await authService.resetPasswordWithOtp(
+          contactInfo,
+          otp,
+          values.newPassword
+        );
+      } else {
+        await authService.resetPasswordWithSmsOtp(
+          contactInfo,
+          otp,
+          values.newPassword
+        );
+      }
 
       Modal.success({
         title: "Đặt lại mật khẩu thành công!",
@@ -199,7 +215,7 @@ const ForgotPassword = () => {
         await authService.sendForgotPasswordOtp(email);
         message.success("Mã OTP mới đã được gửi đến email của bạn!");
       } else {
-        // await authService.sendForgotPasswordOtpByPhone(phoneNumber);
+        await authService.sendForgotPasswordSmsOtp(phoneNumber);
         message.success("Mã OTP mới đã được gửi đến số điện thoại của bạn!");
       }
       setOtpTimer(300); // Reset timer to 5 minutes
@@ -318,8 +334,8 @@ const ForgotPassword = () => {
                 rules={[
                   { required: true, message: "Vui lòng nhập số điện thoại!" },
                   {
-                    pattern: /^[0-9]{10,11}$/,
-                    message: "Số điện thoại phải có 10-11 chữ số!",
+                    pattern: /^(0[0-9]{9}|\+84[0-9]{9})$/,
+                    message: "Số điện thoại phải có định dạng: 0xxxxxxxxx hoặc +84xxxxxxxxx!",
                   },
                 ]}
                 className={styles.forgotPasswordInputItem}
@@ -328,7 +344,7 @@ const ForgotPassword = () => {
                   prefix={<PhoneOutlined />}
                   placeholder="Nhập số điện thoại đã đăng ký"
                   size="large"
-                  maxLength={11}
+                  maxLength={12}
                 />
               </Form.Item>
             )}
@@ -380,7 +396,7 @@ const ForgotPassword = () => {
               rules={[
                 { required: true, message: "Vui lòng nhập đủ 6 chữ số OTP!" },
                 {
-                  len: 6,
+                  pattern: /^[0-9]{6}$/,
                   message: "Mã OTP phải có đúng 6 chữ số!",
                 },
               ]}

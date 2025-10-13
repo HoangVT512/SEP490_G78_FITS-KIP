@@ -62,6 +62,10 @@ namespace FITSKIP.API
             builder.Services.AddDbContext<FITSKIP.Infrastructure.DbContexts.FitskipDbContext>(options =>
                 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+            // Configure TwilioSettings
+            builder.Services.Configure<FITSKIP.Application.Settings.TwilioSettings>(
+                builder.Configuration.GetSection("Twilio"));
+
             // Add Identity with custom password requirements
             builder.Services.AddIdentity<FITSKIP.Domain.Entities.User, Microsoft.AspNetCore.Identity.IdentityRole>(options =>
             {

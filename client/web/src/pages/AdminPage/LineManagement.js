@@ -54,6 +54,7 @@ import { ArchiveIcon } from "../../assets/icons";
 import Layout from "../../components/Layout/Layout";
 import { lineService } from "../../services/lineService";
 import { departmentService } from "../../services/departmentService";
+import { stageService } from "../../services/stageService";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/vi";
@@ -70,6 +71,7 @@ const LineManagement = ({ showHeader = true }) => {
   const [lines, setLines] = useState([]);
   const [departments, setDepartments] = useState([]); // Changed from rooms to departments
   const [departmentActive, setDepartmentActive] = useState([]);
+  const [stages, setStages] = useState([]); // Added for stage count calculation
   const [loading, setLoading] = useState(false);
   const [searchText, setSearchText] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -92,6 +94,7 @@ const LineManagement = ({ showHeader = true }) => {
     loadLines();
     loadDepartments();
     loadDepartmentActive();
+    loadStages(); // Added to load stages for count calculation
   }, []);
 
   // Persist archive view state on change
@@ -152,6 +155,22 @@ const LineManagement = ({ showHeader = true }) => {
       console.error("Error loading active departments:", error);
       message.error("Không thể tải danh sách phòng ban hoạt động");
       setDepartmentActive([]);
+    }
+  };
+
+  const loadStages = async () => {
+    try {
+      const response = await stageService.getStages();
+      if (Array.isArray(response)) {
+        setStages(response);
+      } else if (response.success && Array.isArray(response.data)) {
+        setStages(response.data);
+      } else {
+        setStages([]);
+      }
+    } catch (error) {
+      console.error("Error loading stages:", error);
+      setStages([]);
     }
   };
 
@@ -302,7 +321,7 @@ const LineManagement = ({ showHeader = true }) => {
       }
     } catch (error) {
       console.error("Form validation error:", error);
-      message.error("Vui lòng kiểm tra lại thông tin nhập vào");
+      //message.error("Vui lòng kiểm tra lại thông tin nhập vào");
     }
   };
 
@@ -359,17 +378,6 @@ const LineManagement = ({ showHeader = true }) => {
       ),
     },
     {
-      title: "Trạng thái",
-      key: "isActive",
-      width: 150,
-      render: (_, record) => (
-        <Badge
-          status={record.isActive ? "success" : "error"}
-          text={record.isActive ? "Hoạt động" : "Ngừng hoạt động"}
-        />
-      ),
-    },
-    {
       title: "Phòng ban",
       key: "department",
       width: 200,
@@ -380,6 +388,33 @@ const LineManagement = ({ showHeader = true }) => {
             {record.department?.departmentName || "Chưa phân phòng"}
           </div>
         </div>
+      ),
+    },
+    {
+      title: "Số công đoạn",
+      key: "stageCount",
+      width: 120,
+      align: "center",
+      render: (_, record) => {
+        const stageCount = stages.filter(stage => stage.lineId === record.lineId).length;
+        return (
+          <Badge
+            count={stageCount}
+            showZero
+            style={{ backgroundColor: "#4c566aff" }}
+          />
+        );
+      },
+    },
+    {
+      title: "Trạng thái",
+      key: "isActive",
+      width: 150,
+      render: (_, record) => (
+        <Badge
+          status={record.isActive ? "success" : "error"}
+          text={record.isActive ? "Hoạt động" : "Ngừng hoạt động"}
+        />
       ),
     },
     {
