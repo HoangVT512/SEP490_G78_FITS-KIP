@@ -136,19 +136,28 @@ public class UserRepository : IUserRepository
                 : null;
             var roles = roleName != null ? new List<string> { roleName } : new List<string>();
 
-            // Get department from user's lines (User → UserLine → Line → Department)
-            // If user is assigned to a line, get department from that line
+            // Resolve department using priority:
+            // 1) If user has UserLines -> department of the first line
+            // 2) Else if user.DepartmentId is set -> that department
+            // 3) Else if user is set as Manager (Department.ManagerId) -> that department
             var userLine = user.UserLines.FirstOrDefault();
             Department? department = null;
+
             if (userLine?.Line != null)
             {
                 department = await db.Departments
                     .AsNoTracking()
                     .FirstOrDefaultAsync(d => d.DepartmentId == userLine.Line.DepartmentId, cancellationToken);
             }
-            // If user is a manager (has ManagerId set), also check that
+            else if (user.DepartmentId.HasValue)
+            {
+                department = await db.Departments
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(d => d.DepartmentId == user.DepartmentId.Value, cancellationToken);
+            }
             else
             {
+                // If user is a manager (has ManagerId set), also check that
                 department = await db.Departments
                     .AsNoTracking()
                     .FirstOrDefaultAsync(d => d.ManagerId == user.Id, cancellationToken);
@@ -314,6 +323,9 @@ public class UserRepository : IUserRepository
 
                 // Set user as manager of the new department
                 deptToManage.ManagerId = id;
+
+                // Clear DepartmentId since manager relationship is separate
+                existingUser.DepartmentId = null;
             }
             else
             {
@@ -338,22 +350,37 @@ public class UserRepository : IUserRepository
             }
         }
 
-        // Update lines if provided
-        if (request.LineIds != null)
-        {
-            // Remove all existing user lines
-            var existingUserLines = await db.UserLines
-                .Where(ul => ul.UserId == id)
-                .ToListAsync(cancellationToken);
+        // TH1 & TH2: Update department assignment
+        // Remove existing UserLines first
+        var existingUserLines = await db.UserLines
+            .Where(ul => ul.UserId == id)
+            .ToListAsync(cancellationToken);
 
-            if (existingUserLines.Any())
+        if (existingUserLines.Any())
+        {
+            db.UserLines.RemoveRange(existingUserLines);
+        }
+
+        // Handle department assignment based on whether LineIds are provided
+        if (request.DepartmentId.HasValue)
+        {
+            // Verify department exists
+            var dept = await db.Departments.FirstOrDefaultAsync(d => d.DepartmentId == request.DepartmentId.Value, cancellationToken);
+            if (dept == null)
             {
-                db.UserLines.RemoveRange(existingUserLines);
+                throw new Exception($"Department với ID '{request.DepartmentId.Value}' không tồn tại trong hệ thống");
             }
 
-            // Add new lines
-            if (request.LineIds.Count > 0)
+            // TH1: Không có LineIds -> assign user vào department trực tiếp
+            if (request.LineIds == null || request.LineIds.Count == 0)
             {
+                existingUser.DepartmentId = request.DepartmentId.Value;
+            }
+            // TH2: Có LineIds -> assign qua UserLine, clear DepartmentId
+            else
+            {
+                existingUser.DepartmentId = null;
+
                 foreach (var lineId in request.LineIds)
                 {
                     // Verify line exists
@@ -363,14 +390,26 @@ public class UserRepository : IUserRepository
                         throw new Exception($"Line với ID '{lineId}' không tồn tại trong hệ thống");
                     }
 
+                    // Verify line belongs to the specified department
+                    if (line.DepartmentId != request.DepartmentId.Value)
+                    {
+                        throw new Exception($"Line với ID '{lineId}' không thuộc Department '{request.DepartmentId}'.");
+                    }
+
                     var newUserLine = new UserLine
                     {
                         UserId = id,
-                        LineId = lineId
+                        LineId = lineId,
+                        CreatedAt = DateTime.UtcNow
                     };
                     await db.UserLines.AddAsync(newUserLine, cancellationToken);
                 }
             }
+        }
+        else
+        {
+            // No department specified, clear DepartmentId
+            existingUser.DepartmentId = null;
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -537,43 +576,52 @@ public class UserRepository : IUserRepository
         var password = string.IsNullOrEmpty(request.Password) ? "123456" : request.Password;
         var createdUser = await CreateUserAsync(user, password, request.RoleIds, cancellationToken);
 
-        // Assign as manager of department if specified
+        // TH1: Nếu có DepartmentId nhưng KHÔNG có LineIds -> set user.DepartmentId trực tiếp
+        // TH2: Nếu có LineIds -> tạo UserLine (không set DepartmentId trực tiếp)
         if (request.DepartmentId.HasValue)
         {
+            // Verify department exists
             var department = await db.Departments.FirstOrDefaultAsync(d => d.DepartmentId == request.DepartmentId.Value, cancellationToken);
-            if (department != null)
+            if (department == null)
             {
-                department.ManagerId = createdUser.Id;
+                throw new ArgumentException($"Department với ID '{request.DepartmentId}' không tồn tại.");
+            }
+
+            // TH1: Không có LineIds -> assign user vào department trực tiếp
+            if (request.LineIds == null || request.LineIds.Length == 0)
+            {
+                createdUser.DepartmentId = request.DepartmentId.Value;
                 await db.SaveChangesAsync(cancellationToken);
             }
+            // TH2: Có LineIds -> assign qua UserLine (DepartmentId sẽ được suy ra từ Line)
             else
             {
-                throw new ArgumentException($"Department with ID '{request.DepartmentId}' does not exist.");
-            }
-        }
-
-        // Assign to lines if specified
-        if (request.LineIds != null && request.LineIds.Length > 0)
-        {
-            foreach (var lineId in request.LineIds)
-            {
-                var line = await db.Lines.FirstOrDefaultAsync(l => l.LineId == lineId, cancellationToken);
-                if (line != null)
+                foreach (var lineId in request.LineIds)
                 {
-                    var userLine = new UserLine
+                    var line = await db.Lines.FirstOrDefaultAsync(l => l.LineId == lineId, cancellationToken);
+                    if (line != null)
                     {
-                        UserId = createdUser.Id,
-                        LineId = lineId,
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    await db.UserLines.AddAsync(userLine, cancellationToken);
+                        // Verify line belongs to the specified department
+                        if (line.DepartmentId != request.DepartmentId.Value)
+                        {
+                            throw new ArgumentException($"Line với ID '{lineId}' không thuộc Department '{request.DepartmentId}'.");
+                        }
+
+                        var userLine = new UserLine
+                        {
+                            UserId = createdUser.Id,
+                            LineId = lineId,
+                            CreatedAt = DateTime.UtcNow
+                        };
+                        await db.UserLines.AddAsync(userLine, cancellationToken);
+                    }
+                    else
+                    {
+                        throw new ArgumentException($"Line với ID '{lineId}' không tồn tại.");
+                    }
                 }
-                else
-                {
-                    throw new ArgumentException($"Line with ID '{lineId}' does not exist.");
-                }
+                await db.SaveChangesAsync(cancellationToken);
             }
-            await db.SaveChangesAsync(cancellationToken);
         }
 
         return createdUser;

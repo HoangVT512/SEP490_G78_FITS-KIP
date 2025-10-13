@@ -92,6 +92,27 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ShiftSlots",
+                columns: table => new
+                {
+                    SlotID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    ShiftID = table.Column<int>(type: "int", nullable: false),
+                    SlotStartTime = table.Column<TimeOnly>(type: "time", nullable: false),
+                    SlotEndTime = table.Column<TimeOnly>(type: "time", nullable: false),
+                    Duration = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__ShiftSlo__0A124A4FF4CC8D65", x => x.SlotID);
+                    table.ForeignKey(
+                        name: "FK__ShiftSlot__Shift__76969D2E",
+                        column: x => x.ShiftID,
+                        principalTable: "Shifts",
+                        principalColumn: "ShiftID");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "AspNetUsers",
                 columns: table => new
                 {
@@ -100,6 +121,7 @@ namespace FITSKIP.Infrastructure.Migrations
                     EmployeeCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
                     RoleId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    DepartmentId = table.Column<int>(type: "int", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     NormalizedUserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
                     Email = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -127,27 +149,6 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ShiftSlots",
-                columns: table => new
-                {
-                    SlotID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ShiftID = table.Column<int>(type: "int", nullable: false),
-                    SlotStartTime = table.Column<TimeOnly>(type: "time", nullable: false),
-                    SlotEndTime = table.Column<TimeOnly>(type: "time", nullable: false),
-                    Duration = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK__ShiftSlo__0A124A4FF4CC8D65", x => x.SlotID);
-                    table.ForeignKey(
-                        name: "FK__ShiftSlot__Shift__76969D2E",
-                        column: x => x.ShiftID,
-                        principalTable: "Shifts",
-                        principalColumn: "ShiftID");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "Departments",
                 columns: table => new
                 {
@@ -165,7 +166,33 @@ namespace FITSKIP.Infrastructure.Migrations
                         name: "FK__Departmen__Manag__619B8048",
                         column: x => x.ManagerId,
                         principalTable: "AspNetUsers",
-                        principalColumn: "Id");
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Notifications",
+                columns: table => new
+                {
+                    NotificationID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    UserId = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    Message = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    Title = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    Type = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    IsRead = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    CreatedDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
+                    ReadDate = table.Column<DateTime>(type: "datetime", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Notification__NotificationID", x => x.NotificationID);
+                    table.ForeignKey(
+                        name: "FK_Notifications_Users_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -318,7 +345,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     YOM = table.Column<int>(type: "int", nullable: true),
                     QRCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     StageID = table.Column<int>(type: "int", nullable: true),
-                    Issue = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
                 },
                 constraints: table =>
@@ -343,7 +369,9 @@ namespace FITSKIP.Infrastructure.Migrations
                     Duration = table.Column<decimal>(type: "decimal(10,2)", nullable: true),
                     TypeID = table.Column<int>(type: "int", nullable: true),
                     Reason = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    Solution = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    Solution = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Issue = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CreatedDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()")
                 },
                 constraints: table =>
                 {
@@ -463,6 +491,11 @@ namespace FITSKIP.Infrastructure.Migrations
                 column: "NormalizedEmail");
 
             migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_DepartmentId",
+                table: "AspNetUsers",
+                column: "DepartmentId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_AspNetUsers_RoleId",
                 table: "AspNetUsers",
                 column: "RoleId");
@@ -513,6 +546,11 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "IX_MaintenancePlans_EquipmentID",
                 table: "MaintenancePlans",
                 column: "EquipmentID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Notifications_UserId",
+                table: "Notifications",
+                column: "UserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_ProductionOutputs_LineID",
@@ -578,11 +616,27 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "IX_UserLines_UserId",
                 table: "UserLines",
                 column: "UserId");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_AspNetUsers_Departments_DepartmentId",
+                table: "AspNetUsers",
+                column: "DepartmentId",
+                principalTable: "Departments",
+                principalColumn: "DepartmentID",
+                onDelete: ReferentialAction.SetNull);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropForeignKey(
+                name: "FK_AspNetUsers_AspNetRoles_RoleId",
+                table: "AspNetUsers");
+
+            migrationBuilder.DropForeignKey(
+                name: "FK_AspNetUsers_Departments_DepartmentId",
+                table: "AspNetUsers");
+
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
 
@@ -591,6 +645,9 @@ namespace FITSKIP.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "MaintenanceChecklistItems");
+
+            migrationBuilder.DropTable(
+                name: "Notifications");
 
             migrationBuilder.DropTable(
                 name: "ProductionOutputs");
@@ -629,13 +686,13 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "Lines");
 
             migrationBuilder.DropTable(
+                name: "AspNetRoles");
+
+            migrationBuilder.DropTable(
                 name: "Departments");
 
             migrationBuilder.DropTable(
                 name: "AspNetUsers");
-
-            migrationBuilder.DropTable(
-                name: "AspNetRoles");
         }
     }
 }

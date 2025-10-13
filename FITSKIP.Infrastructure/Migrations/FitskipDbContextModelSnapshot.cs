@@ -82,9 +82,6 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
-                    b.Property<string>("Issue")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("Origin")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
@@ -118,6 +115,11 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IncidentId"));
 
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("GETDATE()");
+
                     b.Property<decimal?>("Duration")
                         .HasColumnType("decimal(10, 2)");
 
@@ -127,6 +129,10 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<int?>("EquipmentId")
                         .HasColumnType("int")
                         .HasColumnName("EquipmentID");
+
+                    b.Property<string>("Issue")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Reason")
                         .HasColumnType("nvarchar(max)");
@@ -262,6 +268,53 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.HasIndex("EquipmentId");
 
                     b.ToTable("MaintenancePlans");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.Notification", b =>
+                {
+                    b.Property<int>("NotificationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("NotificationID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("NotificationId"));
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<bool>("IsRead")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("ReadDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Type")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.HasKey("NotificationId")
+                        .HasName("PK__Notification__NotificationID");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.ProductionOutput", b =>
@@ -741,8 +794,9 @@ namespace FITSKIP.Infrastructure.Migrations
             modelBuilder.Entity("FITSKIP.Domain.Entities.Department", b =>
                 {
                     b.HasOne("FITSKIP.Domain.Entities.User", "Manager")
-                        .WithMany("Departments")
+                        .WithMany()
                         .HasForeignKey("ManagerId")
+                        .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("FK__Departmen__Manag__619B8048");
 
                     b.Navigation("Manager");
@@ -811,6 +865,17 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("AssignedToUser");
 
                     b.Navigation("Equipment");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.Notification", b =>
+                {
+                    b.HasOne("FITSKIP.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("FK_Notifications_Users_UserId");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.ProductionOutput", b =>
@@ -915,8 +980,10 @@ namespace FITSKIP.Infrastructure.Migrations
             modelBuilder.Entity("FITSKIP.Domain.Entities.User", b =>
                 {
                     b.HasOne("FITSKIP.Domain.Entities.Department", "Department")
-                        .WithMany()
-                        .HasForeignKey("DepartmentId");
+                        .WithMany("Users")
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_AspNetUsers_Departments_DepartmentId");
 
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", "Role")
                         .WithMany()
@@ -960,6 +1027,8 @@ namespace FITSKIP.Infrastructure.Migrations
             modelBuilder.Entity("FITSKIP.Domain.Entities.Department", b =>
                 {
                     b.Navigation("Lines");
+
+                    b.Navigation("Users");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Line", b =>
@@ -995,8 +1064,6 @@ namespace FITSKIP.Infrastructure.Migrations
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.User", b =>
                 {
-                    b.Navigation("Departments");
-
                     b.Navigation("PurchaseRequestApprovedByNavigations");
 
                     b.Navigation("PurchaseRequestRejectedByNavigations");

@@ -64,7 +64,6 @@ public class EquipmentService : IEquipmentService
             Yom = request.Yom,
             StageId = request.StageId,
             Qrcode = await GenerateQRCodeAsync(normalizedCode, cancellationToken),
-            Issue = request.Issue?.Trim(),
             IsActive = request.IsActive
         };
 
@@ -123,7 +122,6 @@ public class EquipmentService : IEquipmentService
         existingEquipment.Yom = request.Yom;
         existingEquipment.Qrcode = await GenerateQRCodeAsync(normalizedCode, cancellationToken);
         existingEquipment.StageId = request.StageId;
-        existingEquipment.Issue = request.Issue?.Trim();
         existingEquipment.IsActive = request.IsActive;
 
         var updatedEquipment = await _equipmentRepository.UpdateAsync(existingEquipment, cancellationToken);

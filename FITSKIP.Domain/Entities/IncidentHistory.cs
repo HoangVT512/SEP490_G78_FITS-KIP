@@ -21,6 +21,10 @@ public partial class IncidentHistory
 
     public string? Solution { get; set; }
 
+    public string? Issue { get; set; }
+
+    public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
+
     public virtual Equipment? Equipment { get; set; }
 
     public virtual StopType? Type { get; set; }

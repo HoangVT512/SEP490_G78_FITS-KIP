@@ -4,7 +4,7 @@ export const authService = {
   // Login with email or employee code
   login: async (emailOrEmployeeCode, password, rememberMe = false) => {
     try {
-      const response = await apiRequest("/Auth/login", {
+      const response = await apiRequest("/Auths/login", {
         method: "POST",
         body: JSON.stringify({
           emailOrEmployeeCode,
@@ -35,7 +35,7 @@ export const authService = {
       const token = localStorage.getItem("token");
 
       if (token) {
-        await apiRequest("/Auth/logout", {
+        await apiRequest("/Auths/logout", {
           method: "POST",
         });
       }
@@ -52,7 +52,7 @@ export const authService = {
   // Get current user info
   getCurrentUser: async () => {
     try {
-      return await apiRequest("/Auth/me");
+      return await apiRequest("/Auths/me");
     } catch (error) {
       console.error("Get current user error:", error);
       // If token is invalid, clear storage

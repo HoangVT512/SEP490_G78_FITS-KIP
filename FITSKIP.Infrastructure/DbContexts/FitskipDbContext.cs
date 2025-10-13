@@ -25,6 +25,8 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
     public virtual DbSet<Line> Lines { get; set; }
 
+    public virtual DbSet<Notification> Notifications { get; set; }
+
     public virtual DbSet<MaintenancePlan> MaintenancePlans { get; set; }
 
     public virtual DbSet<MaintenanceChecklistItem> MaintenanceChecklistItems { get; set; }
@@ -78,6 +80,13 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_AspNetUsers_AspNetRoles_RoleId");
 
+            // Configure many-to-one relationship with Department
+            entity.HasOne(e => e.Department)
+                .WithMany(d => d.Users)
+                .HasForeignKey(e => e.DepartmentId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_AspNetUsers_Departments_DepartmentId");
+
             // Ignore MaintenancePlans collection to prevent shadow UserId in MaintenancePlan
             entity.Ignore(e => e.MaintenancePlans);
         });
@@ -93,8 +102,11 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.ManagerId).HasMaxLength(450);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
-            entity.HasOne(d => d.Manager).WithMany(p => p.Departments)
+            // Configure Manager relationship (ManagerId points to a User, but not part of Users collection)
+            entity.HasOne(d => d.Manager)
+                .WithMany()
                 .HasForeignKey(d => d.ManagerId)
+                .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK__Departmen__Manag__619B8048");
         });
 
@@ -129,6 +141,8 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
             entity.Property(e => e.StartTime).HasColumnType("datetime");
             entity.Property(e => e.TypeId).HasColumnName("TypeID");
+            entity.Property(e => e.Issue).HasMaxLength(500);
+            entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
 
             // Equipment and Type relationships - no reverse collections
             entity.HasOne(d => d.Equipment).WithMany()
@@ -368,6 +382,25 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__UserLines__UserI__02FC7413");
+        });
+
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(e => e.NotificationId).HasName("PK__Notification__NotificationID");
+
+            entity.Property(e => e.NotificationId).HasColumnName("NotificationID");
+            entity.Property(e => e.UserId).HasMaxLength(450);
+            entity.Property(e => e.Message).HasMaxLength(1000).IsRequired();
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.Type).HasMaxLength(50);
+            entity.Property(e => e.IsRead).HasDefaultValue(false);
+            entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.ReadDate).HasColumnType("datetime");
+
+            entity.HasOne(d => d.User).WithMany()
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Notifications_Users_UserId");
         });
 
         OnModelCreatingPartial(modelBuilder);

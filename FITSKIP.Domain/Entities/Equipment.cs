@@ -21,8 +21,6 @@ public partial class Equipment
 
     public int? StageId { get; set; }
 
-    public string? Issue { get; set; }
-
     public bool IsActive { get; set; } = true;
 
     public virtual Stage? Stage { get; set; }

@@ -11,9 +11,12 @@ public class User : IdentityUser
     // Foreign Key to Role (1-to-many relationship)
     public string? RoleId { get; set; }
 
+    // Foreign Key to Department (many-to-one relationship)
+    public int? DepartmentId { get; set; }
+
     // Navigation properties
     public virtual IdentityRole? Role { get; set; }
-    public virtual ICollection<Department> Departments { get; set; } = new List<Department>();
+    public virtual Department? Department { get; set; }
     public virtual ICollection<PurchaseRequest> PurchaseRequestApprovedByNavigations { get; set; } = new List<PurchaseRequest>();
     public virtual ICollection<PurchaseRequest> PurchaseRequestRejectedByNavigations { get; set; } = new List<PurchaseRequest>();
     public virtual ICollection<PurchaseRequest> PurchaseRequestRequestedByNavigations { get; set; } = new List<PurchaseRequest>();
