@@ -63,6 +63,12 @@ const Login = () => {
         user.roles &&
         (user.roles.includes("Tổ trưởng") || user.roles.includes("TOTRUONG"));
 
+      const isUserTechnicianManager =
+        user.roles &&
+        (user.roles.includes("Quản lý kỹ thuật") ||
+          user.roles.includes("QUẢN LÝ KỸ THUẬT") ||
+          user.roles.includes("QUANLYKYTHUAT"));
+
       const isUserTechnician =
         user.roles &&
         (user.roles.includes("Kỹ thuật viên") ||
@@ -71,6 +77,7 @@ const Login = () => {
 
       console.log("Is admin:", isUserAdmin);
       console.log("Is team leader:", isUserTeamLeader);
+      console.log("Is technician manager:", isUserTechnicianManager);
       console.log("Is technician:", isUserTechnician);
 
       if (isUserAdmin) {
@@ -79,6 +86,9 @@ const Login = () => {
       } else if (isUserTeamLeader) {
         console.log("Redirecting to team leader page");
         navigate("/team-leader");
+      } else if (isUserTechnicianManager) {
+        console.log("Redirecting to technician manager page");
+        navigate("/technician-manager");
       } else if (isUserTechnician) {
         console.log("Redirecting to technician page");
         navigate("/technician");
@@ -120,6 +130,12 @@ const Login = () => {
         (response.user.roles.includes("Tổ trưởng") ||
           response.user.roles.includes("TOTRUONG"));
 
+      const isUserTechnicianManager =
+        response.user?.roles &&
+        (response.user.roles.includes("Quản lý kỹ thuật") ||
+          response.user.roles.includes("QUẢN LÝ KỸ THUẬT") ||
+          response.user.roles.includes("QUANLYKYTHUAT"));
+
       const isUserTechnician =
         response.user?.roles &&
         (response.user.roles.includes("Kỹ thuật viên") ||
@@ -132,6 +148,9 @@ const Login = () => {
       } else if (isUserTeamLeader) {
         console.log("Redirecting to team leader page");
         navigate("/team-leader");
+      } else if (isUserTechnicianManager) {
+        console.log("Redirecting to technician manager page");
+        navigate("/technician-manager");
       } else if (isUserTechnician) {
         console.log("Redirecting to technician page");
         navigate("/technician");

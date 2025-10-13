@@ -82,6 +82,19 @@ function App() {
                   }
                 />
               );
+            } else if (route.requiredPermissions === 5) {
+              // TechnicianManager-only routes
+              return (
+                <Route
+                  key={idx}
+                  path={route.path}
+                  element={
+                    <ProtectedRoute requireTechnicianManager={true}>
+                      {element}
+                    </ProtectedRoute>
+                  }
+                />
+              );
             }
             return null;
           })}

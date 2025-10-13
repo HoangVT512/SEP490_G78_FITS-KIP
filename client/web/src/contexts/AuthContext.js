@@ -142,6 +142,16 @@ export const AuthProvider = ({ children }) => {
     );
   };
 
+  const isTechnicianManager = () => {
+    return (
+      user &&
+      user.roles &&
+      (user.roles.includes("Quản lý kỹ thuật") ||
+        user.roles.includes("QUẢN LÝ KỸ THUẬT") ||
+        user.roles.includes("QUANLYKYTHUAT"))
+    );
+  };
+
   const hasRole = (role) => {
     return user && user.roles && user.roles.includes(role);
   };
@@ -156,6 +166,7 @@ export const AuthProvider = ({ children }) => {
     isAdmin,
     isTeamLeader,
     isTechnician,
+    isTechnicianManager,
     hasRole,
     checkAuthStatus,
   };

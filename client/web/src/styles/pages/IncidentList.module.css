@@ -1,0 +1,14 @@
+.container {
+  padding: 24px;
+}
+
+.detailContent {
+  padding: 16px 0;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
+  }
+}

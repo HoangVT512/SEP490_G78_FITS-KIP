@@ -24,6 +24,8 @@ import IncidentAssignList from "../pages/TechnicianPage/IncidentAssignList";
 import MaintenanceTasks from "../pages/TechnicianPage/MaintenanceTasks";
 import MaintenanceSchedule from "../pages/TechnicianPage/MaintenanceSchedule";
 import MaintenanceChecklist from "../pages/TechnicianPage/MaintenanceChecklist";
+// TechnicianManager imports
+import TechnicianManagerLayout from "../pages/TechnicianManagerPage/TechnicianManagerLayout";
 
 export const routes = [
   {
@@ -147,5 +149,13 @@ export const routes = [
     page: TechnicianLayout,
     isShowHeader: false, // TechnicianLayout has its own header
     requiredPermissions: 4, // Technician only
+  },
+  // TechnicianManager routes - All routes render through TechnicianManagerLayout
+  {
+    path: "/technician-manager/*",
+    name: "Technician Manager Panel",
+    page: TechnicianManagerLayout,
+    isShowHeader: false, // TechnicianManagerLayout has its own header
+    requiredPermissions: 5, // TechnicianManager only
   },
 ];
