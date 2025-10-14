@@ -105,6 +105,9 @@ namespace FITSKIP.API
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IStageService, FITSKIP.Application.Services.StageService>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IEquipmentRepository, FITSKIP.Infrastructure.Repositories.EquipmentRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IEquipmentService, FITSKIP.Application.Services.EquipmentService>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.INotificationRepository, FITSKIP.Infrastructure.Repositories.NotificationRepository>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.INotificationHubService, FITSKIP.API.Services.NotificationHubService>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.INotificationService, FITSKIP.Application.Services.NotificationService>();
 
             // Import Excel service
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IExcelImportService,
@@ -148,7 +151,17 @@ namespace FITSKIP.API
                         }
                         else
                         {
-                            Console.WriteLine("JWT Token not found in Authorization header");
+                            // Check if this is a SignalR request with access_token query parameter
+                            var accessToken = context.Request.Query["access_token"];
+                            if (!string.IsNullOrEmpty(accessToken))
+                            {
+                                context.Token = accessToken;
+                                Console.WriteLine("JWT Token received from query parameter for SignalR");
+                            }
+                            else
+                            {
+                                Console.WriteLine("JWT Token not found in Authorization header");
+                            }
                         }
                         return Task.CompletedTask;
                     },
@@ -194,8 +207,12 @@ namespace FITSKIP.API
                     policy => policy
                         .WithOrigins("http://localhost:3000") // React web
                         .AllowAnyHeader()
-                        .AllowAnyMethod());
+                        .AllowAnyMethod()
+                        .AllowCredentials()); // Required for SignalR
             });
+
+            // Add SignalR
+            builder.Services.AddSignalR();
             // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(options =>
@@ -264,6 +281,9 @@ namespace FITSKIP.API
             app.UseAuthorization();
 
             app.MapControllers();
+
+            // Map SignalR Hub
+            app.MapHub<FITSKIP.API.Hubs.NotificationHub>("/hubs/notifications");
 
             // Seed data before starting the app
             using (var scope = app.Services.CreateScope())
