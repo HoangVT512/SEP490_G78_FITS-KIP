@@ -485,6 +485,47 @@ const RoleManagement = ({ showHeader = true }) => {
     setIsPermissionModalVisible(true);
   };
 
+  const handleAction = async (action, role) => {
+    switch (action) {
+      case "view":
+        setViewingRole(role);
+        setIsViewModalVisible(true);
+        break;
+      case "permissions":
+        handleManagePermissions(role);
+        break;
+      case "edit":
+        setEditingRole(role);
+        form.setFieldsValue({
+          name: role.name,
+          description: role.description,
+          status: role.status,
+        });
+        setIsModalVisible(true);
+        break;
+      case "delete":
+        if (role.isSystemRole) {
+          message.warning("Không thể xóa vai trò hệ thống");
+          return;
+        }
+        if (role.userCount > 0) {
+          message.warning("Không thể xóa vai trò đang có người dùng");
+          return;
+        }
+        Modal.confirm({
+          title: "Xác nhận xóa vai trò",
+          content: `Bạn có chắc chắn muốn xóa vai trò "${role.name}" không? Hành động này không thể hoàn tác.`,
+          okText: "Xóa",
+          okType: "danger",
+          cancelText: "Hủy",
+          onOk: () => handleDelete(role.id),
+        });
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleModalSubmit = async (values) => {
     try {
       if (editingRole) {
@@ -575,6 +616,7 @@ const RoleManagement = ({ showHeader = true }) => {
         <Dropdown
           menu={{
             items: getActionMenuItems(record),
+            onClick: ({ key }) => handleAction(key, record),
           }}
           trigger={["click"]}
           placement="bottomRight"

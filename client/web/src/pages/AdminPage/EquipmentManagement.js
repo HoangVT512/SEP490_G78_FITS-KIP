@@ -93,6 +93,659 @@ const EquipmentManagement = ({ showHeader = true }) => {
     }
   }, [viewingEquipment]);
 
+  const handleAction = async (action, equipment) => {
+    switch (action) {
+      case "view":
+        try {
+          setLoading(true);
+          const equipmentDetail = await equipmentService.getEquipment(
+            equipment.equipmentId
+          );
+          setViewingEquipment(equipmentDetail);
+          setIsViewModalVisible(true);
+        } catch (error) {
+          console.error("Error loading equipment detail:", error);
+          message.error("Không thể tải thông tin chi tiết thiết bị");
+        } finally {
+          setLoading(false);
+        }
+        break;
+      case "edit":
+        setEditingEquipment(equipment);
+        form.setFieldsValue({
+          equipmentCode: equipment.equipmentCode,
+          equipmentName: equipment.equipmentName,
+          origin: equipment.origin,
+          yom: equipment.yom,
+          dateUse: equipment.dateUse ? dayjs(equipment.dateUse) : null,
+          stageId: equipment.stageId,
+          issue: equipment.issue,
+        });
+        setIsModalVisible(true);
+        break;
+      case "activate":
+        try {
+          setLoading(true);
+          await equipmentService.toggleEquipmentStatus(equipment.equipmentId);
+          message.success("Đã kích hoạt thiết bị thành công");
+          loadEquipments();
+        } catch (error) {
+          console.error("Error activating equipment:", error);
+          message.error("Không thể kích hoạt thiết bị");
+        } finally {
+          setLoading(false);
+        }
+        break;
+      case "deactivate":
+        Modal.confirm({
+          title: "Xác nhận vô hiệu hóa thiết bị",
+          content: `Bạn có chắc chắn muốn vô hiệu hóa thiết bị "${equipment.equipmentName}"?`,
+          okText: "Vô hiệu hóa",
+          cancelText: "Hủy",
+          okType: "danger",
+          okButtonProps: {
+            style: {
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              color: "#fff",
+            },
+          },
+          onOk: async () => {
+            try {
+              setLoading(true);
+              await equipmentService.toggleEquipmentStatus(
+                equipment.equipmentId
+              );
+              message.success("Đã vô hiệu hóa thiết bị thành công");
+              loadEquipments();
+            } catch (error) {
+              console.error("Error deactivating equipment:", error);
+              message.error("Không thể vô hiệu hóa thiết bị");
+            } finally {
+              setLoading(false);
+            }
+          },
+        });
+        break;
+      default:
+        break;
+    }
+  };
+
+  // const handlePrintEquipmentCard = (equipment) => {
+  //   // Create a new window for printing
+  //   const printWindow = window.open('', '_blank');
+
+  //   // Generate QR code data URL
+  //   QRCode.toDataURL(equipment.qrcode || equipment.equipmentCode)
+  //     .then((qrCodeUrl) => {
+  //       const printContent = `
+  //         <!DOCTYPE html>
+  //         <html>
+  //         <head>
+  //           <title>Thẻ thiết bị - ${equipment.equipmentName}</title>
+  //           <style>
+  //             body {
+  //               font-family: Arial, sans-serif;
+  //               margin: 0;
+  //               padding: 20px;
+  //               display: flex;
+  //               justify-content: center;
+  //               align-items: center;
+  //               min-height: 100vh;
+  //               background-color: #f5f5f5;
+  //             }
+  //             .card {
+  //               width: 400px;
+  //               background: white;
+  //               border-radius: 10px;
+  //               box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  //               padding: 30px;
+  //               text-align: center;
+  //               border: 2px solid #334766;
+  //             }
+  //             .header {
+  //               border-bottom: 2px solid #334766;
+  //               padding-bottom: 15px;
+  //               margin-bottom: 20px;
+  //             }
+  //             .title {
+  //               font-size: 24px;
+  //               font-weight: bold;
+  //               color: #334766;
+  //               margin: 0;
+  //             }
+  //             .code {
+  //               font-size: 18px;
+  //               color: #666;
+  //               margin: 5px 0;
+  //             }
+  //             .qr-code {
+  //               margin: 20px 0;
+  //             }
+  //             .qr-code img {
+  //               width: 150px;
+  //               height: 150px;
+  //             }
+  //             .info {
+  //               text-align: left;
+  //               margin-top: 20px;
+  //             }
+  //             .info-row {
+  //               display: flex;
+  //               justify-content: space-between;
+  //               margin-bottom: 8px;
+  //               padding: 5px 0;
+  //               border-bottom: 1px solid #eee;
+  //             }
+  //             .label {
+  //               font-weight: bold;
+  //               color: #334766;
+  //             }
+  //             .value {
+  //               color: #333;
+  //             }
+  //             .status {
+  //               margin-top: 15px;
+  //               padding: 8px;
+  //               border-radius: 5px;
+  //               font-weight: bold;
+  //             }
+  //             .status.active {
+  //               background-color: #f6ffed;
+  //               border: 1px solid #b7eb8f;
+  //               color: #52c41a;
+  //             }
+  //             .status.inactive {
+  //               background-color: #fff2f0;
+  //               border: 1px solid #ffccc7;
+  //               color: #ff4d4f;
+  //             }
+  //             @media print {
+  //               body {
+  //                 background: white;
+  //               }
+  //               .card {
+  //                 box-shadow: none;
+  //                 border: 1px solid #ddd;
+  //               }
+  //             }
+  //           </style>
+  //         </head>
+  //         <body>
+  //           <div class="card">
+  //             <div class="header">
+  //               <h1 class="title">THẺ THIẾT BỊ</h1>
+  //               <div class="code">Mã: ${equipment.equipmentCode}</div>
+  //             </div>
+
+  //             <div class="qr-code">
+  //               <img src="${qrCodeUrl}" alt="QR Code" />
+  //             </div>
+
+  //             <div class="info">
+  //               <div class="info-row">
+  //                 <span class="label">Tên thiết bị:</span>
+  //                 <span class="value">${equipment.equipmentName}</span>
+  //               </div>
+  //               <div class="info-row">
+  //                 <span class="label">Xuất xứ:</span>
+  //                 <span class="value">${equipment.origin || 'N/A'}</span>
+  //               </div>
+  //               <div class="info-row">
+  //                 <span class="label">Năm sản xuất:</span>
+  //                 <span class="value">${equipment.yom || 'N/A'}</span>
+  //               </div>
+  //               <div class="info-row">
+  //                 <span class="label">Ngày sử dụng:</span>
+  //                 <span class="value">${equipment.dateUse ? dayjs(equipment.dateUse).format('DD/MM/YYYY') : 'N/A'}</span>
+  //               </div>
+  //             </div>
+  //           </div>
+
+  //           <script>
+  //             window.onload = function() {
+  //               window.print();
+  //               setTimeout(function() {
+  //                 window.close();
+  //               }, 1000);
+  //             };
+  //           </script>
+  //         </body>
+  //         </html>
+  //       `;
+
+  //       printWindow.document.write(printContent);
+  //       printWindow.document.close();
+  //     })
+  //     .catch((error) => {
+  //       console.error('Error generating QR code for print:', error);
+  //       message.error('Không thể tạo mã QR cho in ấn');
+  //     });
+  // };
+
+  const handlePrintEquipmentCard = (equipment) => {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+
+    // Calculate minimum width based on equipment name length
+    const nameLength = equipment.equipmentName?.length || 0;
+    let cardWidth = 180; // Base width in mm
+
+    // Adjust width based on name length
+    if (nameLength > 30) {
+      cardWidth = Math.min(280, 180 + (nameLength - 30) * 2);
+    }
+
+    // Generate QR code data URL
+    QRCode.toDataURL(equipment.qrcode || equipment.equipmentCode)
+      .then((qrCodeUrl) => {
+        const printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Thẻ thiết bị - ${equipment.equipmentName}</title>
+          <meta charset="UTF-8">
+          <style>
+            @page {
+              margin: 0;
+            }
+            
+            * {
+              margin: 0;
+              padding: 0;
+              box-sizing: border-box;
+            }
+            
+            body {
+              font-family: Arial, sans-serif;
+              background: white;
+              margin: 0;
+              padding: 0;
+              display: flex;
+              justify-content: center;
+              align-items: center;
+              min-height: 100vh;
+            }
+            
+            .card {
+              width: ${cardWidth}mm;
+              height: 75mm;
+              border: 2px solid #000;
+              display: flex;
+              background: white;
+              box-sizing: border-box;
+            }
+            
+            .left-section {
+              width: 50mm;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              padding: 4mm 2mm;
+              justify-content: flex-start;
+            }
+            
+            .logo-container {
+              width: 100%;
+              text-align: center;
+              margin-bottom: 0mm;
+            }
+            
+            .logo {
+              width: 30mm;
+              height: auto;
+              display: block;
+              margin: 0 auto;
+            }
+            
+            .qr-container {
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              margin-top: 0mm;
+            }
+            
+            .qr-code {
+              width: 46mm;
+              height: 46mm;
+              padding: 2mm;
+              background: white;
+            }
+            
+            .qr-code img {
+              width: 100%;
+              height: 100%;
+              display: block;
+            }
+            
+            .qr-label {
+              font-size: 16pt;
+              font-weight: bold;
+              color: #000;
+              text-align: center;
+              margin-top: -6mm;
+            }
+            
+            .right-section {
+              flex: 1;
+              padding: 6mm 2mm;
+              display: flex;
+              flex-direction: column;
+              justify-content: center;
+            }
+            
+            .info-row {
+              display: flex;
+              align-items: baseline;
+              margin-bottom: 3mm;
+              font-size: 16pt;
+              line-height: 1.5;
+            }
+            
+            .label {
+              font-weight: normal;
+              color: #000;
+              min-width: 40mm;
+              flex-shrink: 0;
+            }
+            
+            .value {
+              font-weight: bold;
+              color: #000;
+              flex: 1;
+              word-wrap: break-word;
+              overflow-wrap: break-word;
+            }
+            
+            @media print {
+              body {
+                margin: 0;
+                padding: 0;
+                background: white;
+              }
+              
+              .card {
+                page-break-after: avoid;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="card">
+            <div class="left-section">
+              <div class="logo-container">
+                <img src="/assets/images/logo_kip.jpg" alt="KIP Logo" class="logo" onerror="this.style.display='none'">
+              </div>
+              
+              <div class="qr-container">
+                <div class="qr-code">
+                  <img src="${qrCodeUrl}" alt="QR Code" />
+                </div>
+                <div class="qr-label">QR-Code</div>
+              </div>
+            </div>
+            
+            <div class="right-section">
+              <div class="info-row">
+                <span class="label">Mã thiết bị:</span>
+                <span class="value">${equipment.equipmentCode}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Tên thiết bị:</span>
+                <span class="value">${equipment.equipmentName}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Xuất xứ:</span>
+                <span class="value">${equipment.origin || 'N/A'}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Năm SX:</span>
+                <span class="value">${equipment.yom || 'N/A'}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Ngày SD:</span>
+                <span class="value">${equipment.dateUse ? dayjs(equipment.dateUse).format('DD/MM/YYYY') : 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+          
+          <script>
+            window.onload = function() {
+              window.print();
+              setTimeout(function() {
+                window.close();
+              }, 1000);
+            };
+          </script>
+        </body>
+        </html>
+      `;
+
+        printWindow.document.write(printContent);
+        printWindow.document.close();
+      })
+      .catch((error) => {
+        console.error('Error generating QR code for print:', error);
+        message.error('Không thể tạo mã QR cho in ấn');
+      });
+  };
+
+  const handlePrintAllEquipmentCards = async () => {
+    const printWindow = window.open('', '_blank');
+    const equipmentsToPrint = filteredEquipments; // Sử dụng danh sách đã lọc và sắp xếp
+
+    let cardsHtml = '';
+
+    for (const equipment of equipmentsToPrint) {
+      try {
+        const qrCodeUrl = await QRCode.toDataURL(equipment.qrcode || equipment.equipmentCode);
+
+        // Tính toán độ rộng dựa trên tên thiết bị
+        const nameLength = equipment.equipmentName?.length || 0;
+        let cardWidth = 180; // Base width in mm
+
+        if (nameLength > 30) {
+          cardWidth = Math.min(280, 180 + (nameLength - 30) * 2);
+        }
+
+        cardsHtml += `
+          <div class="card">
+            <div class="left-section">
+              <div class="logo-container">
+                <img src="/assets/images/logo_kip.jpg" alt="KIP Logo" class="logo" onerror="this.style.display='none'">
+              </div>
+              
+              <div class="qr-container">
+                <div class="qr-code">
+                  <img src="${qrCodeUrl}" alt="QR Code" />
+                </div>
+                <div class="qr-label">QR-Code</div>
+              </div>
+            </div>
+            
+            <div class="right-section">
+              <div class="info-row">
+                <span class="label">Mã thiết bị:</span>
+                <span class="value">${equipment.equipmentCode}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Tên thiết bị:</span>
+                <span class="value">${equipment.equipmentName}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Xuất xứ:</span>
+                <span class="value">${equipment.origin || 'N/A'}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Năm SX:</span>
+                <span class="value">${equipment.yom || 'N/A'}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">Ngày SD:</span>
+                <span class="value">${equipment.dateUse ? dayjs(equipment.dateUse).format('DD/MM/YYYY') : 'N/A'}</span>
+              </div>
+            </div>
+          </div>
+        `;
+      } catch (error) {
+        console.error('Error generating QR for equipment:', equipment.equipmentCode, error);
+      }
+    }
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Danh sách card thiết bị</title>
+        <meta charset="UTF-8">
+        <style>
+          @page {
+            margin: 10mm;
+            size: A4 landscape;
+          }
+          
+          * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+          }
+          
+          body {
+            font-family: Arial, sans-serif;
+            background: white;
+            margin: 0;
+            padding: 10mm;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-content: flex-start;
+            gap: 5mm;
+          }
+          
+          .card {
+            width: calc(50% - 3.5mm);
+            height: 50mm;
+            border: 2px solid #000;
+            display: flex;
+            background: white;
+            box-sizing: border-box;
+            page-break-inside: avoid;
+            transform-origin: top left;
+          }
+          
+          .left-section {
+            width: 32mm;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 3mm 1mm;
+            justify-content: flex-start;
+          }
+          
+          .logo-container {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 0mm;
+          }
+          
+          .logo {
+            width: 20mm;
+            height: auto;
+            display: block;
+            margin: 0 auto;
+          }
+          
+          .qr-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 0mm;
+          }
+          
+          .qr-code {
+            width: 31mm;
+            height: 31mm;
+            padding: 1mm;
+            background: white;
+          }
+          
+          .qr-code img {
+            width: 100%;
+            height: 100%;
+            display: block;
+          }
+          
+          .qr-label {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #000;
+            text-align: center;
+            margin-top: -3mm;
+          }
+          
+          .right-section {
+            flex: 1;
+            padding: 6mm 4mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+          }
+          
+          .info-row {
+            display: flex;
+            margin-bottom: 2mm;
+            font-size: 11pt;
+            line-height: 1.5;
+          }
+          
+          .label {
+            font-weight: normal;
+            color: #000;
+            width: 25mm;
+            flex-shrink: 0;
+          }
+          
+          .value {
+            font-weight: bold;
+            color: #000;
+            flex: 1;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+          }
+          
+          @media print {
+            body {
+              margin: 0;
+              padding: 10mm;
+              background: white;
+            }
+            
+            .card {
+              page-break-inside: avoid;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        ${cardsHtml}
+        
+        <script>
+          window.onload = function() {
+            window.print();
+            setTimeout(function() {
+              window.close();
+            }, 1000);
+          };
+        </script>
+      </body>
+      </html>
+    `;
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+  };
+
   const loadEquipments = async () => {
     setLoading(true);
     try {
@@ -189,85 +842,6 @@ const EquipmentManagement = ({ showHeader = true }) => {
       },
     },
   });
-
-  const handleAction = async (action, equipment) => {
-    switch (action) {
-      case "view":
-        try {
-          setLoading(true);
-          const equipmentDetail = await equipmentService.getEquipment(
-            equipment.equipmentId
-          );
-          setViewingEquipment(equipmentDetail);
-          setIsViewModalVisible(true);
-        } catch (error) {
-          console.error("Error loading equipment detail:", error);
-          message.error("Không thể tải thông tin chi tiết thiết bị");
-        } finally {
-          setLoading(false);
-        }
-        break;
-      case "edit":
-        setEditingEquipment(equipment);
-        form.setFieldsValue({
-          equipmentCode: equipment.equipmentCode,
-          equipmentName: equipment.equipmentName,
-          origin: equipment.origin,
-          yom: equipment.yom,
-          dateUse: equipment.dateUse ? dayjs(equipment.dateUse) : null,
-          stageId: equipment.stageId,
-          issue: equipment.issue,
-        });
-        setIsModalVisible(true);
-        break;
-      case "activate":
-        try {
-          setLoading(true);
-          await equipmentService.toggleEquipmentStatus(equipment.equipmentId);
-          message.success("Đã kích hoạt thiết bị thành công");
-          loadEquipments();
-        } catch (error) {
-          console.error("Error activating equipment:", error);
-          message.error("Không thể kích hoạt thiết bị");
-        } finally {
-          setLoading(false);
-        }
-        break;
-      case "deactivate":
-        Modal.confirm({
-          title: "Xác nhận vô hiệu hóa thiết bị",
-          content: `Bạn có chắc chắn muốn vô hiệu hóa thiết bị "${equipment.equipmentName}"?`,
-          okText: "Vô hiệu hóa",
-          cancelText: "Hủy",
-          okType: "danger",
-          okButtonProps: {
-            style: {
-              backgroundColor: "#334766",
-              borderColor: "#334766",
-              color: "#fff",
-            },
-          },
-          onOk: async () => {
-            try {
-              setLoading(true);
-              await equipmentService.toggleEquipmentStatus(
-                equipment.equipmentId
-              );
-              message.success("Đã vô hiệu hóa thiết bị thành công");
-              loadEquipments();
-            } catch (error) {
-              console.error("Error deactivating equipment:", error);
-              message.error("Không thể vô hiệu hóa thiết bị");
-            } finally {
-              setLoading(false);
-            }
-          },
-        });
-        break;
-      default:
-        break;
-    }
-  };
 
   const handleSubmit = async (values) => {
     try {
@@ -391,6 +965,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
       dataIndex: "equipmentName",
       key: "equipmentName",
       width: 200,
+      align: "left",
       ...getColumnSearchProps("equipmentName", "Tìm kiếm tên thiết bị"),
       render: (text) => <Text>{text || "N/A"}</Text>,
     },
@@ -422,6 +997,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
       dataIndex: "origin",
       key: "origin",
       width: 120,
+      align: "left",
       ...getColumnSearchProps("origin", "Tìm kiếm xuất xứ"),
       render: (text) => <Text>{text || "N/A"}</Text>,
     },
@@ -430,7 +1006,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
       dataIndex: "yom",
       key: "yom",
       width: 120,
-      align: "center",
+      align: "left",
       ...getColumnSearchProps("yom", "Tìm kiếm năm sản xuất"),
       render: (yom) => <Text>{yom || "N/A"}</Text>,
     },
@@ -439,6 +1015,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
       dataIndex: "dateUse",
       key: "dateUse",
       width: 150,
+      align: "left",
       render: (date) => (
         <Text>{date ? dayjs(date).format("DD/MM/YYYY") : "N/A"}</Text>
       ),
@@ -595,6 +1172,17 @@ const EquipmentManagement = ({ showHeader = true }) => {
                 {showArchive
                   ? "Hiển thị (Hoạt động)"
                   : "Lưu trữ (Ngừng hoạt động)"}
+              </Button>
+              <Button
+                type="default"
+                icon={<PrinterOutlined />}
+                onClick={handlePrintAllEquipmentCards}
+                style={{
+                  borderColor: "#334766",
+                  color: "#334766",
+                }}
+              >
+                In mã tất cả
               </Button>
               <Button
                 type="primary"
@@ -809,6 +1397,33 @@ const EquipmentManagement = ({ showHeader = true }) => {
                   </span>
                 }
                 name="dateUse"
+                rules={[
+                  {
+                    validator: (_, value) => {
+                      if (!value) {
+                        return Promise.resolve(); // Không bắt buộc
+                      }
+                      
+                      const selectedYear = value.year();
+                      const currentYear = dayjs().year();
+                      
+                      // Lấy giá trị năm sản xuất từ form
+                      const yomValue = form.getFieldValue('yom');
+                      
+                      if (yomValue) {
+                        if (selectedYear < yomValue) {
+                          return Promise.reject(new Error("Ngày đưa vào sử dụng phải sau năm sản xuất"));
+                        }
+                      }
+                      
+                      if (selectedYear > currentYear) {
+                        return Promise.reject(new Error("Ngày đưa vào sử dụng phải trước năm hiện tại"));
+                      }
+                      
+                      return Promise.resolve();
+                    },
+                  },
+                ]}
               >
                 <DatePicker
                   style={{ width: "100%" }}
@@ -891,7 +1506,17 @@ const EquipmentManagement = ({ showHeader = true }) => {
             icon={<EditOutlined />}
             onClick={() => {
               setIsViewModalVisible(false);
-              handleEdit(viewingEquipment);
+              setEditingEquipment(viewingEquipment);
+              form.setFieldsValue({
+                equipmentCode: viewingEquipment.equipmentCode,
+                equipmentName: viewingEquipment.equipmentName,
+                origin: viewingEquipment.origin,
+                yom: viewingEquipment.yom,
+                dateUse: viewingEquipment.dateUse ? dayjs(viewingEquipment.dateUse) : null,
+                stageId: viewingEquipment.stageId,
+                issue: viewingEquipment.issue,
+              });
+              setIsModalVisible(true);
             }}
             style={{
               backgroundColor: "#334766",
@@ -902,6 +1527,18 @@ const EquipmentManagement = ({ showHeader = true }) => {
             }}
           >
             Chỉnh sửa
+          </Button>,
+          <Button
+            key="print"
+            icon={<PrinterOutlined />}
+            onClick={() => handlePrintEquipmentCard(viewingEquipment)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
+            In thẻ thiết bị
           </Button>,
           <Button
             key="close"
