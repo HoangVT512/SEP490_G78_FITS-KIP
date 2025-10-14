@@ -1,0 +1,82 @@
+.notificationsContainer {
+  width: 100%;
+  max-width: 600px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.header {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 8px 8px 0 0;
+}
+
+.filterContainer {
+  padding: 12px 20px;
+  background: #fafafa;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.listContainer {
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.listContainer::-webkit-scrollbar {
+  width: 6px;
+}
+
+.listContainer::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.listContainer::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.listContainer::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.notificationItem {
+  padding: 16px 20px !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.notificationItem:hover {
+  background: #fafafa;
+}
+
+.notificationItem.unread {
+  background: #e6f7ff;
+  border-left: 3px solid #1890ff;
+}
+
+.notificationItem.unread:hover {
+  background: #d4edff;
+}
+
+.iconContainer {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f0f5ff;
+  border-radius: 50%;
+}
+
+.notificationItem.unread .iconContainer {
+  background: #1890ff;
+}
+
+.notificationItem.unread .iconContainer svg {
+  color: #fff !important;
+}

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Layout as AntLayout,
   Menu,
@@ -6,8 +6,11 @@ import {
   Dropdown,
   Badge,
   Button,
-  message,
   Typography,
+  Drawer,
+  App,
+  message as antdMessage,
+  notification as antdNotification,
 } from "antd";
 import {
   DashboardOutlined,
@@ -29,6 +32,7 @@ import {
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import signalRService from "../../services/signalRService";
 import styles from "../../styles/pages/ManagerLayout.module.css";
 
 // Import manager pages
@@ -40,6 +44,7 @@ import InventoryDashboard from "./InventoryDashboard";
 import ProductionManagement from "./ProductionManagement";
 import ProductionDetailReport from "./ProductionDetailReport";
 import ManagerIncidentList from "./ManagerIncidentList";
+import NotificationsList from "./NotificationsList";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -48,6 +53,8 @@ const ManagerLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [selectedKey, setSelectedKey] = useState("dashboard");
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -60,8 +67,112 @@ const ManagerLayout = () => {
     role: user?.roles?.[0] || "Quản lý",
   };
 
+  // Initialize SignalR connection
+  useEffect(() => {
+    const initializeSignalR = async () => {
+      try {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          console.warn("No token found, skipping SignalR connection");
+          return;
+        }
+
+        // Start SignalR connection
+        await signalRService.startConnection(token);
+
+        // Lắng nghe thông báo cá nhân
+        signalRService.onReceiveNotification((notificationData) => {
+          console.log("📩 Received notification:", notificationData);
+
+          // Tăng số lượng notification badge
+          setNotificationCount((prev) => prev + 1);
+
+          // Hiển thị message toast (LUÔN LUÔN hiển thị)
+          antdMessage.success({
+            content: `🔔 ${
+              notificationData.title ||
+              notificationData.message ||
+              "Bạn có thông báo mới"
+            }`,
+            duration: 5,
+          });
+
+          // Hiển thị notification popup
+          antdNotification.info({
+            message: notificationData.title || "Thông báo mới",
+            description: notificationData.message,
+            placement: "topRight",
+            duration: 5,
+          });
+
+          // Play notification sound
+          try {
+            const audio = new Audio(
+              "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBBQp4OPztmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+Dyvmwh"
+            );
+            audio.volume = 0.5;
+            audio.play().catch((e) => console.log("Cannot play sound:", e));
+          } catch (e) {
+            console.log("Sound error:", e);
+          }
+        });
+
+        // Lắng nghe broadcast (thông báo cho tất cả)
+        signalRService.onReceiveBroadcast((broadcastData) => {
+          console.log("📢 Received broadcast:", broadcastData);
+
+          // Tăng số lượng notification badge
+          setNotificationCount((prev) => prev + 1);
+
+          // Hiển thị message toast
+          antdMessage.info({
+            content: `📢 ${
+              broadcastData.title ||
+              broadcastData.message ||
+              "Thông báo hệ thống mới"
+            }`,
+            duration: 5,
+          });
+
+          // Hiển thị notification popup
+          antdNotification.warning({
+            message: broadcastData.title || "Thông báo hệ thống",
+            description: broadcastData.message,
+            placement: "topRight",
+            duration: 5,
+          });
+
+          // Play notification sound
+          try {
+            const audio = new Audio(
+              "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBBQp4OPztmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+Dyvmwh"
+            );
+            audio.volume = 0.5;
+            audio.play().catch((e) => console.log("Cannot play sound:", e));
+          } catch (e) {
+            console.log("Sound error:", e);
+          }
+        });
+
+        console.log("✅ SignalR initialized successfully!");
+      } catch (error) {
+        console.error("❌ Failed to initialize SignalR:", error);
+        // Không hiển thị error message để tránh spam user
+        // antMessage.error("Không thể kết nối đến server thông báo");
+      }
+    };
+
+    initializeSignalR();
+
+    // Cleanup khi unmount
+    return () => {
+      signalRService.stopConnection();
+    };
+  }, []); // Empty dependency - chỉ chạy 1 lần
+
   // Update selected key based on current route
-  React.useEffect(() => {
+  useEffect(() => {
     const path = location.pathname;
     if (path.includes("/purchase-approval")) {
       setSelectedKey("purchase-approval");
@@ -271,112 +382,141 @@ const ManagerLayout = () => {
   };
 
   return (
-    <AntLayout className={styles.managerLayout} style={{ minHeight: "100vh" }}>
-      {/* Sidebar */}
-      <Sider
-        collapsible
-        collapsed={collapsed && !hovered}
-        onCollapse={setCollapsed}
-        onMouseEnter={() => {
-          // Only enable temporary hover-expand when the sider is not in collapsed state.
-          // This prevents a collapsed sider from auto-expanding on hover; user must click to expand.
-          if (!collapsed) setHovered(true);
-        }}
-        onMouseLeave={() => setHovered(false)}
-        width={SIDER_EXPANDED_WIDTH}
-        collapsedWidth={SIDER_COLLAPSED_WIDTH}
-        style={siderStyle}
-        trigger={null}
+    <App>
+      <AntLayout
+        className={styles.managerLayout}
+        style={{ minHeight: "100vh" }}
       >
-        {/* Logo */}
-        <div className={styles.managerLogo}>
-          {!collapsed && (
-            <Title
-              level={4}
-              style={{ color: "#fff", margin: 0, fontSize: "16px" }}
-            >
-              📊 FITS-KIP Manager
-            </Title>
-          )}
-          {collapsed && (
-            <Text style={{ color: "#fff", fontSize: "20px" }}>📊</Text>
-          )}
-        </div>
-
-        {/* Menu */}
-        <Menu
-          theme="dark"
-          mode="inline"
-          inlineCollapsed={collapsed && !hovered}
-          selectedKeys={[selectedKey]}
-          onClick={handleMenuClick}
-          style={menuStyle}
-          items={menuItems}
-        />
-
-        {/* Collapse button */}
-        <Button
-          type="text"
-          icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-          onClick={() =>
-            setCollapsed((prev) => {
-              const next = !prev;
-              if (next) setHovered(false);
-              return next;
-            })
-          }
-          className={styles.collapseButton}
-        />
-      </Sider>
-
-      <AntLayout>
-        {/* Header */}
-        <Header style={headerStyle}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Title level={4} style={{ margin: 0, color: "#1f2937" }}>
-              {menuItems.find((item) => item.key === selectedKey)?.label ||
-                "Tổng quan"}
-            </Title>
+        {/* Sidebar */}
+        <Sider
+          collapsible
+          collapsed={collapsed && !hovered}
+          onCollapse={setCollapsed}
+          onMouseEnter={() => {
+            // Only enable temporary hover-expand when the sider is not in collapsed state.
+            // This prevents a collapsed sider from auto-expanding on hover; user must click to expand.
+            if (!collapsed) setHovered(true);
+          }}
+          onMouseLeave={() => setHovered(false)}
+          width={SIDER_EXPANDED_WIDTH}
+          collapsedWidth={SIDER_COLLAPSED_WIDTH}
+          style={siderStyle}
+          trigger={null}
+        >
+          {/* Logo */}
+          <div className={styles.managerLogo}>
+            {!collapsed && (
+              <Title
+                level={4}
+                style={{ color: "#fff", margin: 0, fontSize: "16px" }}
+              >
+                📊 FITS-KIP Manager
+              </Title>
+            )}
+            {collapsed && (
+              <Text style={{ color: "#fff", fontSize: "20px" }}>📊</Text>
+            )}
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            {/* Notifications */}
-            <Badge count={8} size="small" className={styles.notificationBadge}>
-              <Button
-                type="text"
-                icon={<BellOutlined />}
-                style={{ color: "#6b7280" }}
-              />
-            </Badge>
+          {/* Menu */}
+          <Menu
+            theme="dark"
+            mode="inline"
+            inlineCollapsed={collapsed && !hovered}
+            selectedKeys={[selectedKey]}
+            onClick={handleMenuClick}
+            style={menuStyle}
+            items={menuItems}
+          />
 
-            {/* User dropdown */}
-            <Dropdown
-              menu={{ items: userMenuItems }}
-              placement="bottomRight"
-              arrow
+          {/* Collapse button */}
+          <Button
+            type="text"
+            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+            onClick={() =>
+              setCollapsed((prev) => {
+                const next = !prev;
+                if (next) setHovered(false);
+                return next;
+              })
+            }
+            className={styles.collapseButton}
+          />
+        </Sider>
+
+        <AntLayout>
+          {/* Header */}
+          <Header style={headerStyle}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "4px" }}
             >
-              <div className={styles.userDropdown}>
-                <Avatar
-                  size="small"
-                  icon={<UserOutlined />}
-                  src={managerUser.avatar}
-                  style={{ backgroundColor: "#334766" }}
+              <Title level={4} style={{ margin: 0, color: "#1f2937" }}>
+                {menuItems.find((item) => item.key === selectedKey)?.label ||
+                  "Tổng quan"}
+              </Title>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+              {/* Notifications */}
+              <Badge
+                count={notificationCount}
+                size="small"
+                className={styles.notificationBadge}
+              >
+                <Button
+                  type="text"
+                  icon={<BellOutlined />}
+                  style={{ color: "#6b7280" }}
+                  onClick={() => {
+                    // Mở drawer notifications
+                    setNotificationDrawerOpen(true);
+                    // Reset notification count khi click
+                    setNotificationCount(0);
+                  }}
                 />
-                <div className={styles.userInfo}>
-                  <div className={styles.userName}>{managerUser.name}</div>
-                  <div className={styles.userRole}>{managerUser.role}</div>
-                </div>
-              </div>
-            </Dropdown>
-          </div>
-        </Header>
+              </Badge>
 
-        {/* Content */}
-        <Content style={contentStyle}>
-          <div className={styles.managerContent}>{renderContent()}</div>
-        </Content>
+              {/* User dropdown */}
+              <Dropdown
+                menu={{ items: userMenuItems }}
+                placement="bottomRight"
+                arrow
+              >
+                <div className={styles.userDropdown}>
+                  <Avatar
+                    size="small"
+                    icon={<UserOutlined />}
+                    src={managerUser.avatar}
+                    style={{ backgroundColor: "#334766" }}
+                  />
+                  <div className={styles.userInfo}>
+                    <div className={styles.userName}>{managerUser.name}</div>
+                    <div className={styles.userRole}>{managerUser.role}</div>
+                  </div>
+                </div>
+              </Dropdown>
+            </div>
+          </Header>
+
+          {/* Content */}
+          <Content style={contentStyle}>
+            <div className={styles.managerContent}>{renderContent()}</div>
+          </Content>
+        </AntLayout>
+
+        {/* Notifications Drawer */}
+        <Drawer
+          title="Thông báo"
+          placement="right"
+          width={600}
+          onClose={() => setNotificationDrawerOpen(false)}
+          open={notificationDrawerOpen}
+          styles={{ body: { padding: 0 } }}
+        >
+          <NotificationsList onClose={() => setNotificationDrawerOpen(false)} />
+        </Drawer>
       </AntLayout>
-    </AntLayout>
+    </App>
   );
 };
 

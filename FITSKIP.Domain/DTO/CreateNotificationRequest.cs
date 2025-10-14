@@ -13,9 +13,6 @@ namespace FITSKIP.Domain.DTO
 
         [MaxLength(200)]
         public string? Title { get; set; }
-
-        [MaxLength(50)]
-        public string? Type { get; set; } // e.g., "info", "warning", "error", "success"
     }
 }
 

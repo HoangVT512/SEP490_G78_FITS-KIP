@@ -37,7 +37,7 @@ namespace FITSKIP.API.Controllers
                 }
 
                 var notifications = await _notificationService.GetUserNotificationsAsync(userId, unreadOnly);
-                
+
                 return Ok(new ApiResponse<IEnumerable<NotificationDTO>>
                 {
                     Success = true,
@@ -74,7 +74,7 @@ namespace FITSKIP.API.Controllers
                 }
 
                 var summary = await _notificationService.GetUserNotificationSummaryAsync(userId);
-                
+
                 return Ok(new ApiResponse<NotificationSummaryDTO>
                 {
                     Success = true,
@@ -101,7 +101,7 @@ namespace FITSKIP.API.Controllers
             try
             {
                 var notification = await _notificationService.GetNotificationByIdAsync(id);
-                
+
                 if (notification == null)
                 {
                     return NotFound(new ApiResponse<NotificationDTO>
@@ -136,10 +136,10 @@ namespace FITSKIP.API.Controllers
         }
 
         /// <summary>
-        /// Create a new notification (Admin only)
+        /// Create a new notification (Admin or Manager only)
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Quản lý,Manager")]
         public async Task<ActionResult<ApiResponse<NotificationDTO>>> CreateNotification([FromBody] CreateNotificationRequest request)
         {
             try
@@ -154,7 +154,7 @@ namespace FITSKIP.API.Controllers
                 }
 
                 var notification = await _notificationService.CreateNotificationAsync(request);
-                
+
                 return CreatedAtAction(nameof(GetNotification), new { id = notification.NotificationId },
                     new ApiResponse<NotificationDTO>
                     {
@@ -192,7 +192,7 @@ namespace FITSKIP.API.Controllers
                 }
 
                 var result = await _notificationService.MarkAsReadAsync(id, userId);
-                
+
                 if (!result)
                 {
                     return NotFound(new ApiResponse<bool>
@@ -238,7 +238,7 @@ namespace FITSKIP.API.Controllers
                 }
 
                 var result = await _notificationService.MarkAllAsReadAsync(userId);
-                
+
                 return Ok(new ApiResponse<bool>
                 {
                     Success = true,
@@ -265,7 +265,7 @@ namespace FITSKIP.API.Controllers
             try
             {
                 var result = await _notificationService.DeleteNotificationAsync(id);
-                
+
                 if (!result)
                 {
                     return NotFound(new ApiResponse<bool>
@@ -293,10 +293,10 @@ namespace FITSKIP.API.Controllers
         }
 
         /// <summary>
-        /// Send a real-time notification to a specific user (Admin only)
+        /// Send a real-time notification to a specific user (Admin or Manager only)
         /// </summary>
         [HttpPost("send")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Quản lý,Manager")]
         public async Task<ActionResult<ApiResponse<bool>>> SendNotification([FromBody] CreateNotificationRequest request)
         {
             try
@@ -311,12 +311,12 @@ namespace FITSKIP.API.Controllers
                 }
 
                 await _notificationService.SendNotificationToUserAsync(
-                    request.UserId, 
-                    request.Title ?? "", 
-                    request.Message, 
-                    request.Type ?? "info"
+                    request.UserId,
+                    request.Title ?? "",
+                    request.Message,
+                    "info"
                 );
-                
+
                 return Ok(new ApiResponse<bool>
                 {
                     Success = true,
@@ -335,10 +335,10 @@ namespace FITSKIP.API.Controllers
         }
 
         /// <summary>
-        /// Send a real-time notification to all users (Admin only)
+        /// Send a real-time notification to all users (Admin or Manager only)
         /// </summary>
         [HttpPost("broadcast")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,Quản lý,Manager")]
         public async Task<ActionResult<ApiResponse<bool>>> BroadcastNotification([FromBody] CreateNotificationRequest request)
         {
             try
@@ -353,11 +353,11 @@ namespace FITSKIP.API.Controllers
                 }
 
                 await _notificationService.SendNotificationToAllAsync(
-                    request.Title ?? "", 
-                    request.Message, 
-                    request.Type ?? "info"
+                    request.Title ?? "",
+                    request.Message,
+                    "info"
                 );
-                
+
                 return Ok(new ApiResponse<bool>
                 {
                     Success = true,

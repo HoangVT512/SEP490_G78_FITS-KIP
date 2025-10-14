@@ -25,17 +25,16 @@ namespace FITSKIP.Application.Services
                 UserId = request.UserId,
                 Message = request.Message,
                 Title = request.Title,
-                Type = request.Type,
                 IsRead = false,
                 CreatedDate = DateTime.UtcNow
             };
 
             var createdNotification = await _notificationRepository.CreateAsync(notification);
-            
+
             // Send real-time notification
             if (!string.IsNullOrEmpty(request.UserId))
             {
-                await SendNotificationToUserAsync(request.UserId, request.Title ?? "", request.Message, request.Type ?? "info");
+                await SendNotificationToUserAsync(request.UserId, request.Title ?? "", request.Message, "info");
             }
 
             return MapToDTO(createdNotification);
@@ -130,10 +129,8 @@ namespace FITSKIP.Application.Services
                 UserId = notification.UserId,
                 Message = notification.Message,
                 Title = notification.Title,
-                Type = notification.Type,
                 IsRead = notification.IsRead,
                 CreatedDate = notification.CreatedDate,
-                ReadDate = notification.ReadDate,
                 UserName = notification.User?.UserName,
                 UserEmail = notification.User?.Email
             };

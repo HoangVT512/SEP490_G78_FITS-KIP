@@ -392,10 +392,8 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.UserId).HasMaxLength(450);
             entity.Property(e => e.Message).HasMaxLength(1000).IsRequired();
             entity.Property(e => e.Title).HasMaxLength(200);
-            entity.Property(e => e.Type).HasMaxLength(50);
             entity.Property(e => e.IsRead).HasDefaultValue(false);
             entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
-            entity.Property(e => e.ReadDate).HasColumnType("datetime");
 
             entity.HasOne(d => d.User).WithMany()
                 .HasForeignKey(d => d.UserId)

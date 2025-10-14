@@ -12,13 +12,9 @@ public partial class Notification
 
     public string? Title { get; set; }
 
-    public string? Type { get; set; }
-
     public bool IsRead { get; set; } = false;
 
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
-
-    public DateTime? ReadDate { get; set; }
 
     public virtual User? User { get; set; }
 }

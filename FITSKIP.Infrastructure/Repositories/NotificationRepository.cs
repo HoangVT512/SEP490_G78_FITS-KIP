@@ -75,7 +75,6 @@ namespace FITSKIP.Infrastructure.Repositories
                 return false;
 
             notification.IsRead = true;
-            notification.ReadDate = DateTime.UtcNow;
             await _context.SaveChangesAsync();
             return true;
         }
@@ -89,7 +88,6 @@ namespace FITSKIP.Infrastructure.Repositories
             foreach (var notification in notifications)
             {
                 notification.IsRead = true;
-                notification.ReadDate = DateTime.UtcNow;
             }
 
             await _context.SaveChangesAsync();
