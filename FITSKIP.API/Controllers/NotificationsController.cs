@@ -8,7 +8,6 @@ namespace FITSKIP.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
     public class NotificationsController : ControllerBase
     {
         private readonly INotificationService _notificationService;
@@ -139,7 +138,6 @@ namespace FITSKIP.API.Controllers
         /// Create a new notification (Admin only)
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<ApiResponse<NotificationDTO>>> CreateNotification([FromBody] CreateNotificationRequest request)
         {
             try
