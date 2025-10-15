@@ -11,4 +11,5 @@ public interface IEquipmentRepository
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Equipment>> GetByStageIdAsync(int stageId, CancellationToken cancellationToken = default);
     Task<Equipment?> GetByCodeAsync(string equipmentCode, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Equipment>> GetEquipmentsByTeamLeaderAsync(string userId, CancellationToken cancellationToken = default);
 }

@@ -104,4 +104,17 @@ public class EquipmentRepository : IEquipmentRepository
         return await _context.Equipment
             .FirstOrDefaultAsync(e => e.EquipmentCode != null && e.EquipmentCode.ToUpper() == normalizedCode, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Equipment>> GetEquipmentsByTeamLeaderAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Equipment
+            .Include(e => e.Stage!)
+            .ThenInclude(s => s.Line!)
+            .ThenInclude(l => l.UserLines)
+            .Where(e => e.Stage != null && 
+                        e.Stage.Line != null && 
+                        e.Stage.Line.UserLines.Any(ul => ul.UserId == userId))
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
 }

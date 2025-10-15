@@ -398,5 +398,41 @@ public class EquipmentsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Lấy danh sách thiết bị mà tổ trưởng quản lý
+    /// </summary>
+    /// <returns>Danh sách thiết bị của tổ trưởng</returns>
+    /// <response code="200">Trả về danh sách thiết bị thành công</response>
+    /// <response code="401">Không xác thực được người dùng</response>
+    /// <response code="500">Lỗi server nội bộ</response>
+    [HttpGet("my-equipments")]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<EquipmentDTO>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetMyEquipments()
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(ApiResponse.ErrorResponse("Không thể xác thực người dùng"));
+            }
+
+            var equipments = await _equipmentService.GetEquipmentsByTeamLeaderAsync(userId);
+            return Ok(ApiResponse<IReadOnlyList<EquipmentDTO>>.SuccessResponse(
+                equipments,
+                $"Lấy danh sách {equipments.Count} thiết bị quản lý thành công"
+            ));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi lấy danh sách thiết bị của tổ trưởng");
+            return StatusCode(500, ApiResponse.ErrorResponse(
+                "Có lỗi xảy ra khi lấy danh sách thiết bị",
+                new List<string> { ex.Message }
+            ));
+        }
+    }
 
 }

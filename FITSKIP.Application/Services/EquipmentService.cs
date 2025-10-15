@@ -190,4 +190,10 @@ public class EquipmentService : IEquipmentService
         await _equipmentRepository.UpdateAsync(equipment, cancellationToken);
         return qrCode;
     }
+
+    public async Task<IReadOnlyList<EquipmentDTO>> GetEquipmentsByTeamLeaderAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var equipments = await _equipmentRepository.GetEquipmentsByTeamLeaderAsync(userId, cancellationToken);
+        return equipments.Select(e => EquipmentDTO.FromEntity(e)).ToList();
+    }
 }
