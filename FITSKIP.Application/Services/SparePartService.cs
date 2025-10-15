@@ -42,7 +42,7 @@ namespace FITSKIP.Application.Services
 
             // Set default status if not provided
             if (string.IsNullOrWhiteSpace(sparePart.Status))
-                sparePart.Status = "Available";
+                sparePart.Status = "Đủ hàng";
 
             return await _repository.AddAsync(sparePart);
         }
@@ -58,6 +58,10 @@ namespace FITSKIP.Application.Services
 
             if (sparePart.Quantity < 0)
                 throw new ArgumentException("Quantity cannot be negative");
+
+            // Set default status if not provided
+            if (string.IsNullOrWhiteSpace(sparePart.Status))
+                sparePart.Status = "Đủ hàng";
 
             var exists = await _repository.ExistsAsync(partId);
             if (!exists)

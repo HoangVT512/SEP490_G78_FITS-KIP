@@ -14,6 +14,7 @@ import {
   Row,
   Col,
   Statistic,
+  Dropdown,
 } from "antd";
 import {
   PlusOutlined,
@@ -23,6 +24,7 @@ import {
   WarningOutlined,
   InboxOutlined,
   CheckCircleOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import styles from "../../styles/pages/InventoryManagement.module.css";
 import { sparePartService } from "../../services/sparePartService";
@@ -43,9 +45,15 @@ const InventoryManagement = () => {
 
   const stats = {
     total: spareParts.length,
-    inStock: spareParts.filter((p) => p.status === "Đủ hàng").length,
-    lowStock: spareParts.filter((p) => p.status === "Sắp hết").length,
-    outOfStock: spareParts.filter((p) => p.status === "Hết hàng").length,
+    inStock: spareParts.filter(
+      (p) => p.status === "Đủ hàng" || p.status === "Available"
+    ).length,
+    lowStock: spareParts.filter(
+      (p) => p.status === "Sắp hết" || p.status === "Low Stock"
+    ).length,
+    outOfStock: spareParts.filter(
+      (p) => p.status === "Hết hàng" || p.status === "Out of Stock"
+    ).length,
   };
 
   const columns = [
@@ -57,17 +65,23 @@ const InventoryManagement = () => {
       fixed: "left",
     },
     {
+      title: "Tên phụ tùng",
+      dataIndex: "partName",
+      key: "partName",
+      width: 200,
+    },
+    {
+      title: "Số lượng",
+      dataIndex: "quantity",
+      key: "quantity",
+      width: 100,
+      render: (quantity) => quantity ?? 0,
+    },
+    {
       title: "Vị trí",
       dataIndex: "location",
       key: "location",
       width: 150,
-    },
-    {
-      title: "Đơn giá",
-      dataIndex: "unitPrice",
-      key: "unitPrice",
-      width: 130,
-      render: (price) => (price ? `${price.toLocaleString()} đ` : "-"),
     },
     {
       title: "Trạng thái",
@@ -76,47 +90,82 @@ const InventoryManagement = () => {
       width: 120,
       render: (status, record) => {
         let color = "success";
-        if (status === "Sắp hết") color = "warning";
-        if (status === "Hết hàng") color = "error";
-        // Fallback: if no explicit status, infer from quantity and minQuantity
-        if (!status) {
+        let displayStatus = status;
+
+        // Determine color and display status based on explicit status or quantity
+        if (status) {
+          // Use explicit status from backend
+          switch (status) {
+            case "Đủ hàng":
+            case "Available":
+              color = "success";
+              displayStatus = "Đủ hàng";
+              break;
+            case "Sắp hết":
+            case "Low Stock":
+              color = "warning";
+              displayStatus = "Sắp hết";
+              break;
+            case "Hết hàng":
+            case "Out of Stock":
+              color = "error";
+              displayStatus = "Hết hàng";
+              break;
+            default:
+              color = "default";
+              displayStatus = status;
+          }
+        } else {
+          // Fallback: infer from quantity and minQuantity
           const q = record.quantity ?? 0;
           const minQ = record.minQuantity ?? 5;
-          if (q === 0) color = "error";
-          else if (q <= minQ) color = "warning";
-          else color = "success";
+          if (q === 0) {
+            color = "error";
+            displayStatus = "Hết hàng";
+          } else if (q <= minQ) {
+            color = "warning";
+            displayStatus = "Sắp hết";
+          } else {
+            color = "success";
+            displayStatus = "Đủ hàng";
+          }
         }
-        return (
-          <Tag color={color}>
-            {status || (record.quantity === 0 ? "Hết hàng" : "Đủ hàng")}
-          </Tag>
-        );
+
+        return <Tag color={color}>{displayStatus}</Tag>;
       },
     },
     {
       title: "Thao tác",
       key: "action",
       fixed: "right",
-      width: 150,
-      render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="link"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
+      width: 100,
+      render: (_, record) => {
+        const menuItems = [
+          {
+            key: "edit",
+            icon: <EditOutlined />,
+            label: "Sửa",
+            onClick: () => handleEdit(record),
+          },
+          {
+            key: "delete",
+            icon: <DeleteOutlined />,
+            label: "Xóa",
+            danger: true,
+            onClick: () => handleDelete(record),
+          },
+        ];
+
+        return (
+          <Dropdown
+            menu={{ items: menuItems }}
+            trigger={["click"]}
+            destroyOnHidden={true}
           >
-            Sửa
-          </Button>
-          <Button
-            type="link"
-            danger
-            icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record)}
-          >
-            Xóa
-          </Button>
-        </Space>
-      ),
+            <Button type="link" icon={<DownOutlined />} />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -149,7 +198,7 @@ const InventoryManagement = () => {
             await loadParts();
           } catch (error) {
             console.error("Delete error", error);
-            message.error("Không thể xóa phụ tùng");
+            message.error(error.message || "Không thể xóa phụ tùng");
           } finally {
             setLoading(false);
           }
@@ -230,7 +279,7 @@ const InventoryManagement = () => {
       {/* Statistics */}
       <Row gutter={[16, 16]} className={styles.statsRow}>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Statistic
               title="Tổng phụ tùng"
               value={stats.total}
@@ -240,7 +289,7 @@ const InventoryManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Statistic
               title="Đủ hàng"
               value={stats.inStock}
@@ -250,7 +299,7 @@ const InventoryManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Statistic
               title="Sắp hết"
               value={stats.lowStock}
@@ -260,7 +309,7 @@ const InventoryManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Statistic
               title="Hết hàng"
               value={stats.outOfStock}
@@ -274,7 +323,7 @@ const InventoryManagement = () => {
       {/* Main Table */}
       <Card
         title="Danh sách phụ tùng"
-        bordered={false}
+        variant="borderless"
         className={styles.tableCard}
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
@@ -341,6 +390,34 @@ const InventoryManagement = () => {
                 label="Mã phụ tùng"
                 rules={[
                   { required: true, message: "Vui lòng nhập mã phụ tùng" },
+                  {
+                    validator: async (_, value) => {
+                      if (!value) return;
+                      try {
+                        // Check if partNumber already exists (only when adding new or changing)
+                        const existingParts = spareParts.filter(
+                          (p) =>
+                            p.partNumber.toLowerCase() === value.toLowerCase()
+                        );
+                        if (editingRecord) {
+                          // When editing, exclude current record
+                          const conflicts = existingParts.filter(
+                            (p) => p.partId !== editingRecord.partId
+                          );
+                          if (conflicts.length > 0) {
+                            throw new Error("Mã phụ tùng đã tồn tại");
+                          }
+                        } else {
+                          // When adding new
+                          if (existingParts.length > 0) {
+                            throw new Error("Mã phụ tùng đã tồn tại");
+                          }
+                        }
+                      } catch (error) {
+                        throw new Error(error.message);
+                      }
+                    },
+                  },
                 ]}
               >
                 <Input placeholder="VD: PT001" />
@@ -352,6 +429,11 @@ const InventoryManagement = () => {
                 label="Tên phụ tùng"
                 rules={[
                   { required: true, message: "Vui lòng nhập tên phụ tùng" },
+                  { min: 2, message: "Tên phụ tùng phải có ít nhất 2 ký tự" },
+                  {
+                    max: 100,
+                    message: "Tên phụ tùng không được vượt quá 100 ký tự",
+                  },
                 ]}
               >
                 <Input placeholder="VD: Motor điện 5HP" />
@@ -364,7 +446,10 @@ const InventoryManagement = () => {
               <Form.Item
                 name="quantity"
                 label="Số lượng"
-                rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập số lượng" },
+                  { type: "number", min: 0, message: "Số lượng không được âm" },
+                ]}
               >
                 <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
@@ -373,7 +458,11 @@ const InventoryManagement = () => {
               <Form.Item
                 name="location"
                 label="Vị trí"
-                rules={[{ required: true, message: "Vui lòng nhập vị trí" }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập vị trí" },
+                  { min: 2, message: "Vị trí phải có ít nhất 2 ký tự" },
+                  { max: 200, message: "Vị trí không được vượt quá 200 ký tự" },
+                ]}
               >
                 <Input placeholder="VD: Kho A - Kệ 1" />
               </Form.Item>

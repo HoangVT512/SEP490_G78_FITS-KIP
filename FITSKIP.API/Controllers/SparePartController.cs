@@ -167,9 +167,13 @@ namespace FITSKIP.API.Controllers
                 var result = await _service.DeleteSparePartAsync(id);
 
                 if (!result)
-                    return NotFound(new { message = $"Spare part with ID {id} not found" });
+                    return NotFound(new { message = $"Không tìm thấy phụ tùng với ID {id}" });
 
                 return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -335,7 +339,11 @@ namespace FITSKIP.API.Controllers
                     .ToList()
                 };
 
-                return Ok(response);
+                return NoContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {

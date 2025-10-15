@@ -44,11 +44,11 @@ namespace FITSKIP.Infrastructure.Repositories
 
             if (existingPartName != null)
             {
-                throw new InvalidOperationException("Part name already exists");
+                throw new ArgumentException("Tên phụ tùng đã tồn tại");
             }
             if (existingPartNumber != null)
             {
-                throw new InvalidOperationException("Part number already exists");
+                throw new ArgumentException("Mã phụ tùng đã tồn tại");
             }
             _context.SpareParts.Add(sparePart);
             await _context.SaveChangesAsync();
@@ -62,17 +62,17 @@ namespace FITSKIP.Infrastructure.Repositories
             try
             {
                 var existingPartNumber = await _context.SpareParts
-                    .FirstOrDefaultAsync(sp => sp.PartNumber == sparePart.PartNumber);
+                    .FirstOrDefaultAsync(sp => sp.PartNumber == sparePart.PartNumber && sp.PartId != sparePart.PartId);
                 var existingPartName = await _context.SpareParts
-                    .FirstOrDefaultAsync(sp => sp.PartName == sparePart.PartName);
+                    .FirstOrDefaultAsync(sp => sp.PartName == sparePart.PartName && sp.PartId != sparePart.PartId);
 
                 if (existingPartName != null)
                 {
-                    throw new InvalidOperationException("Part name already exists");
+                    throw new ArgumentException("Tên phụ tùng đã tồn tại");
                 }
                 if (existingPartNumber != null)
                 {
-                    throw new InvalidOperationException("Part number already exists");
+                    throw new ArgumentException("Mã phụ tùng đã tồn tại");
                 }
                 await _context.SaveChangesAsync();
                 return true;
@@ -87,9 +87,25 @@ namespace FITSKIP.Infrastructure.Repositories
 
         public async Task<bool> DeleteAsync(int partId)
         {
-            var sparePart = await _context.SpareParts.FindAsync(partId);
+            var sparePart = await _context.SpareParts
+                .Include(sp => sp.PurchaseRequests)
+                .Include(sp => sp.ReplacementHistories)
+                .FirstOrDefaultAsync(sp => sp.PartId == partId);
+
             if (sparePart == null)
                 return false;
+
+            // Check if spare part is referenced in any purchase requests
+            if (sparePart.PurchaseRequests.Any())
+            {
+                throw new InvalidOperationException("Không thể xóa phụ tùng đang nằm trong yêu cầu mua hàng");
+            }
+
+            // Check if spare part is referenced in any replacement histories
+            if (sparePart.ReplacementHistories.Any())
+            {
+                throw new InvalidOperationException("Không thể xóa phụ tùng đã được sử dụng trong lịch sử thay thế");
+            }
 
             _context.SpareParts.Remove(sparePart);
             await _context.SaveChangesAsync();
