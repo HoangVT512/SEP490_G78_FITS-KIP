@@ -326,7 +326,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
 
   const handlePrintEquipmentCard = (equipment) => {
     // Create a new window for printing
-    const printWindow = window.open("", "_blank");
+    const printWindow = window.open('', '_blank');
 
     // Calculate minimum width based on equipment name length
     const nameLength = equipment.equipmentName?.length || 0;
@@ -497,19 +497,15 @@ const EquipmentManagement = ({ showHeader = true }) => {
               </div>
               <div class="info-row">
                 <span class="label">Xuất xứ:</span>
-                <span class="value">${equipment.origin || "N/A"}</span>
+                <span class="value">${equipment.origin || 'N/A'}</span>
               </div>
               <div class="info-row">
                 <span class="label">Năm SX:</span>
-                <span class="value">${equipment.yom || "N/A"}</span>
+                <span class="value">${equipment.yom || 'N/A'}</span>
               </div>
               <div class="info-row">
                 <span class="label">Ngày SD:</span>
-                <span class="value">${
-                  equipment.dateUse
-                    ? dayjs(equipment.dateUse).format("DD/MM/YYYY")
-                    : "N/A"
-                }</span>
+                <span class="value">${equipment.dateUse ? dayjs(equipment.dateUse).format('DD/MM/YYYY') : 'N/A'}</span>
               </div>
             </div>
           </div>
@@ -521,7 +517,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
                 window.close();
               }, 1000);
             };
-          </div>
+          </script>
         </body>
         </html>
       `;
@@ -530,22 +526,20 @@ const EquipmentManagement = ({ showHeader = true }) => {
         printWindow.document.close();
       })
       .catch((error) => {
-        console.error("Error generating QR code for print:", error);
-        message.error("Không thể tạo mã QR cho in ấn");
+        console.error('Error generating QR code for print:', error);
+        message.error('Không thể tạo mã QR cho in ấn');
       });
   };
 
   const handlePrintAllEquipmentCards = async () => {
-    const printWindow = window.open("", "_blank");
+    const printWindow = window.open('', '_blank');
     const equipmentsToPrint = filteredEquipments; // Sử dụng danh sách đã lọc và sắp xếp
 
-    let cardsHtml = "";
+    let cardsHtml = '';
 
     for (const equipment of equipmentsToPrint) {
       try {
-        const qrCodeUrl = await QRCode.toDataURL(
-          equipment.qrcode || equipment.equipmentCode
-        );
+        const qrCodeUrl = await QRCode.toDataURL(equipment.qrcode || equipment.equipmentCode);
 
         // Tính toán độ rộng dựa trên tên thiết bị
         const nameLength = equipment.equipmentName?.length || 0;
@@ -581,29 +575,21 @@ const EquipmentManagement = ({ showHeader = true }) => {
               </div>
               <div class="info-row">
                 <span class="label">Xuất xứ:</span>
-                <span class="value">${equipment.origin || "N/A"}</span>
+                <span class="value">${equipment.origin || 'N/A'}</span>
               </div>
               <div class="info-row">
                 <span class="label">Năm SX:</span>
-                <span class="value">${equipment.yom || "N/A"}</span>
+                <span class="value">${equipment.yom || 'N/A'}</span>
               </div>
               <div class="info-row">
                 <span class="label">Ngày SD:</span>
-                <span class="value">${
-                  equipment.dateUse
-                    ? dayjs(equipment.dateUse).format("DD/MM/YYYY")
-                    : "N/A"
-                }</span>
+                <span class="value">${equipment.dateUse ? dayjs(equipment.dateUse).format('DD/MM/YYYY') : 'N/A'}</span>
               </div>
             </div>
           </div>
         `;
       } catch (error) {
-        console.error(
-          "Error generating QR for equipment:",
-          equipment.equipmentCode,
-          error
-        );
+        console.error('Error generating QR for equipment:', equipment.equipmentCode, error);
       }
     }
 
@@ -851,7 +837,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
     filterDropdownProps: {
       onOpenChange(open) {
         if (open) {
-          setTimeout(() => {}, 100);
+          setTimeout(() => { }, 100);
         }
       },
     },
@@ -884,47 +870,30 @@ const EquipmentManagement = ({ showHeader = true }) => {
       console.error("Lỗi đang lưu thiết bị:", error);
       if (error.response && error.response.data && error.response.data.errors) {
         // Set inline validation errors
-        const fieldErrors = Object.keys(error.response.data.errors).map(
-          (key) => ({
-            name: key,
-            errors: [error.response.data.errors[key]],
-          })
-        );
+        const fieldErrors = Object.keys(error.response.data.errors).map(key => ({
+          name: key,
+          errors: [error.response.data.errors[key]]
+        }));
         form.setFields(fieldErrors);
       } else {
         // Parse error message to set inline for specific fields
-        const errorMessage =
-          error.message || "Không thể lưu thông tin thiết bị";
-        const messages = errorMessage
-          .split(/[.\n]/)
-          .filter((msg) => msg.trim());
+        const errorMessage = error.message || "Không thể lưu thông tin thiết bị";
+        const messages = errorMessage.split(/[.\n]/).filter(msg => msg.trim());
         const fieldErrors = [];
 
-        messages.forEach((msg) => {
+        messages.forEach(msg => {
           const trimmedMsg = msg.trim();
-          if (
-            trimmedMsg.toLowerCase().includes("mã thiết bị") ||
-            trimmedMsg.toLowerCase().includes("equipment code")
-          ) {
-            fieldErrors.push({ name: "equipmentCode", errors: [trimmedMsg] });
+          if (trimmedMsg.toLowerCase().includes("mã thiết bị") || trimmedMsg.toLowerCase().includes("equipment code")) {
+            fieldErrors.push({ name: 'equipmentCode', errors: [trimmedMsg] });
           }
-          if (
-            trimmedMsg.toLowerCase().includes("tên thiết bị") ||
-            trimmedMsg.toLowerCase().includes("equipment name")
-          ) {
-            fieldErrors.push({ name: "equipmentName", errors: [trimmedMsg] });
+          if (trimmedMsg.toLowerCase().includes("tên thiết bị") || trimmedMsg.toLowerCase().includes("equipment name")) {
+            fieldErrors.push({ name: 'equipmentName', errors: [trimmedMsg] });
           }
-          if (
-            trimmedMsg.toLowerCase().includes("năm sản xuất") ||
-            trimmedMsg.toLowerCase().includes("year")
-          ) {
-            fieldErrors.push({ name: "yom", errors: [trimmedMsg] });
+          if (trimmedMsg.toLowerCase().includes("năm sản xuất") || trimmedMsg.toLowerCase().includes("year")) {
+            fieldErrors.push({ name: 'yom', errors: [trimmedMsg] });
           }
-          if (
-            trimmedMsg.toLowerCase().includes("ghi chú") ||
-            trimmedMsg.toLowerCase().includes("issue")
-          ) {
-            fieldErrors.push({ name: "issue", errors: [trimmedMsg] });
+          if (trimmedMsg.toLowerCase().includes("ghi chú") || trimmedMsg.toLowerCase().includes("issue")) {
+            fieldErrors.push({ name: 'issue', errors: [trimmedMsg] });
           }
         });
 
@@ -1007,9 +976,9 @@ const EquipmentManagement = ({ showHeader = true }) => {
       width: 150,
       filters: Array.isArray(stages)
         ? stages.map((stage) => ({
-            text: stage.stageName,
-            value: stage.stageId,
-          }))
+          text: stage.stageName,
+          value: stage.stageId,
+        }))
         : [],
       onFilter: (value, record) => record.stageId === value,
       render: (stageId) => {
@@ -1109,16 +1078,11 @@ const EquipmentManagement = ({ showHeader = true }) => {
       : equipment.isActive;
     const matchesSearch =
       !searchText ||
-      equipment.equipmentCode
-        ?.toLowerCase()
-        .includes(searchText.toLowerCase()) ||
-      equipment.equipmentName
-        ?.toLowerCase()
-        .includes(searchText.toLowerCase()) ||
+      equipment.equipmentCode?.toLowerCase().includes(searchText.toLowerCase()) ||
+      equipment.equipmentName?.toLowerCase().includes(searchText.toLowerCase()) ||
       equipment.origin?.toLowerCase().includes(searchText.toLowerCase()) ||
       (equipment.yom && equipment.yom.toString().includes(searchText)) ||
-      (equipment.issue &&
-        equipment.issue.toLowerCase().includes(searchText.toLowerCase()));
+      (equipment.issue && equipment.issue.toLowerCase().includes(searchText.toLowerCase()));
     return matchesArchive && matchesSearch;
   });
 
@@ -1312,39 +1276,24 @@ const EquipmentManagement = ({ showHeader = true }) => {
                   {
                     required: true,
                     validator: (_, value) => {
-                      if (!value || value.trim() === "") {
-                        return Promise.reject(
-                          new Error("Vui lòng nhập mã thiết bị")
-                        );
+                      if (!value || value.trim() === '') {
+                        return Promise.reject(new Error("Vui lòng nhập mã thiết bị"));
                       }
                       if (value.length > 50) {
-                        return Promise.reject(
-                          new Error("Mã thiết bị không được vượt quá 50 ký tự")
-                        );
-                      }
-                      if (value && value !== value.trim()) {
-                        return Promise.reject(
-                          new Error(
-                            "Mã thiết bị không được có khoảng trắng đầu hoặc cuối"
-                          )
-                        );
+                        return Promise.reject(new Error("Mã thiết bị không được vượt quá 50 ký tự"));
                       }
                       const exists = equipments.some(
                         (e) =>
-                          e.equipmentCode.toLowerCase() ===
-                            value.toLowerCase() &&
+                          e.equipmentCode.toLowerCase() === value.toLowerCase() &&
                           e.equipmentId !== editingEquipment?.equipmentId
                       );
                       if (exists) {
-                        return Promise.reject(
-                          new Error("Mã thiết bị đã tồn tại")
-                        );
+                        return Promise.reject(new Error("Mã thiết bị đã tồn tại"));
                       }
                       return Promise.resolve();
                     },
                   },
                 ]}
-                normalize={(value) => value?.trim()}
               >
                 <Input placeholder="Nhập mã thiết bị" size="large" />
               </Form.Item>
@@ -1361,41 +1310,24 @@ const EquipmentManagement = ({ showHeader = true }) => {
                   {
                     required: true,
                     validator: (_, value) => {
-                      if (!value || value.trim() === "") {
-                        return Promise.reject(
-                          new Error("Vui lòng nhập tên thiết bị")
-                        );
+                      if (!value || value.trim() === '') {
+                        return Promise.reject(new Error("Vui lòng nhập tên thiết bị"));
                       }
                       if (value.length > 200) {
-                        return Promise.reject(
-                          new Error(
-                            "Tên thiết bị không được vượt quá 200 ký tự"
-                          )
-                        );
-                      }
-                      if (value && value !== value.trim()) {
-                        return Promise.reject(
-                          new Error(
-                            "Tên thiết bị không được có khoảng trắng đầu hoặc cuối"
-                          )
-                        );
+                        return Promise.reject(new Error("Tên thiết bị không được vượt quá 200 ký tự"));
                       }
                       const exists = equipments.some(
                         (e) =>
-                          e.equipmentName.toLowerCase() ===
-                            value.toLowerCase() &&
+                          e.equipmentName.toLowerCase() === value.toLowerCase() &&
                           e.equipmentId !== editingEquipment?.equipmentId
                       );
                       if (exists) {
-                        return Promise.reject(
-                          new Error("Tên thiết bị đã tồn tại")
-                        );
+                        return Promise.reject(new Error("Tên thiết bị đã tồn tại"));
                       }
                       return Promise.resolve();
                     },
                   },
                 ]}
-                normalize={(value) => value?.trim()}
               >
                 <Input placeholder="Nhập tên thiết bị" size="large" />
               </Form.Item>
@@ -1415,9 +1347,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
                   {
                     validator: (_, value) => {
                       if (value && value.length > 100) {
-                        return Promise.reject(
-                          new Error("Xuất xứ không được vượt quá 100 ký tự")
-                        );
+                        return Promise.reject(new Error("Xuất xứ không được vượt quá 100 ký tự"));
                       }
                       return Promise.resolve();
                     },
@@ -1437,19 +1367,15 @@ const EquipmentManagement = ({ showHeader = true }) => {
                 name="yom"
                 rules={[
                   {
-                    type: "number",
+                    type: 'number',
                     min: 1900,
                     max: dayjs().year(),
-                    message: "Năm sản xuất phải từ 1900 đến năm hiện tại",
-                    transform: (value) => (value ? Number(value) : value),
+                    message: 'Năm sản xuất phải từ 1900 đến năm hiện tại',
+                    transform: (value) => value ? Number(value) : value,
                   },
                 ]}
               >
-                <Input
-                  type="number"
-                  placeholder="Nhập năm sản xuất"
-                  size="large"
-                />
+                <Input type="number" placeholder="Nhập năm sản xuất" size="large" />
               </Form.Item>
             </Col>
           </Row>
@@ -1469,31 +1395,23 @@ const EquipmentManagement = ({ showHeader = true }) => {
                       if (!value) {
                         return Promise.resolve(); // Không bắt buộc
                       }
-
+                      
                       const selectedYear = value.year();
                       const currentYear = dayjs().year();
-
+                      
                       // Lấy giá trị năm sản xuất từ form
-                      const yomValue = form.getFieldValue("yom");
-
+                      const yomValue = form.getFieldValue('yom');
+                      
                       if (yomValue) {
                         if (selectedYear < yomValue) {
-                          return Promise.reject(
-                            new Error(
-                              "Ngày đưa vào sử dụng phải sau năm sản xuất"
-                            )
-                          );
+                          return Promise.reject(new Error("Ngày đưa vào sử dụng phải sau năm sản xuất"));
                         }
                       }
-
+                      
                       if (selectedYear > currentYear) {
-                        return Promise.reject(
-                          new Error(
-                            "Ngày đưa vào sử dụng phải trước năm hiện tại"
-                          )
-                        );
+                        return Promise.reject(new Error("Ngày đưa vào sử dụng phải trước năm hiện tại"));
                       }
-
+                      
                       return Promise.resolve();
                     },
                   },
@@ -1586,9 +1504,7 @@ const EquipmentManagement = ({ showHeader = true }) => {
                 equipmentName: viewingEquipment.equipmentName,
                 origin: viewingEquipment.origin,
                 yom: viewingEquipment.yom,
-                dateUse: viewingEquipment.dateUse
-                  ? dayjs(viewingEquipment.dateUse)
-                  : null,
+                dateUse: viewingEquipment.dateUse ? dayjs(viewingEquipment.dateUse) : null,
                 stageId: viewingEquipment.stageId,
                 issue: viewingEquipment.issue,
               });
@@ -1660,9 +1576,8 @@ const EquipmentManagement = ({ showHeader = true }) => {
                 {viewingEquipment.stageId ? (
                   <Tag color="blue">
                     {Array.isArray(stages)
-                      ? stages.find(
-                          (s) => s.stageId === viewingEquipment.stageId
-                        )?.stageName || "N/A"
+                      ? stages.find((s) => s.stageId === viewingEquipment.stageId)
+                        ?.stageName || "N/A"
                       : "N/A"}
                   </Tag>
                 ) : (
