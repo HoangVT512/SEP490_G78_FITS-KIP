@@ -14,7 +14,7 @@ public class PurchaseRequestsController : ControllerBase
     private readonly ILogger<PurchaseRequestsController> _logger;
 
     public PurchaseRequestsController(
-        IPurchaseRequestService purchaseRequestService, 
+        IPurchaseRequestService purchaseRequestService,
         ILogger<PurchaseRequestsController> logger)
     {
         _purchaseRequestService = purchaseRequestService;
@@ -173,7 +173,7 @@ public class PurchaseRequestsController : ControllerBase
     }
 
     /// <summary>
-    /// Tạo yêu cầu mua hàng mới (Chỉ dành cho Technician)
+    /// Tạo yêu cầu mua hàng mới (Chỉ dành cho Quản lý kỹ thuật)
     /// </summary>
     /// <param name="request">Thông tin yêu cầu mua hàng cần tạo</param>
     /// <returns>Yêu cầu mua hàng vừa được tạo</returns>
@@ -183,7 +183,7 @@ public class PurchaseRequestsController : ControllerBase
     /// <response code="403">Không có quyền (không phải Technician)</response>
     /// <response code="500">Lỗi server nội bộ</response>
     [HttpPost]
-    [Authorize(Roles = "Kỹ thuật viên")]
+    [Authorize(Roles = "Quản lý kỹ thuật")]
     [ProducesResponseType(typeof(ApiResponse<PurchaseRequestDTO>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]

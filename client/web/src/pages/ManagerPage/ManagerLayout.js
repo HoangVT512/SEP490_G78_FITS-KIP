@@ -322,7 +322,7 @@ const ManagerLayout = () => {
       label: "Đăng xuất",
       onClick: async () => {
         await logout();
-        message.success("Đăng xuất thành công!");
+        antdMessage.success("Đăng xuất thành công!");
         navigate("/login");
       },
     },

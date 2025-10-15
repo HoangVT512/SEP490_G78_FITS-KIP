@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Table,
@@ -25,6 +25,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styles from "../../styles/pages/PurchaseRequestManagement.module.css";
+import { purchaseRequestService } from "../../services/purchaseRequestService";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -36,57 +37,39 @@ const PurchaseRequestManagement = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [form] = Form.useForm();
+  const [messageApi, messageContextHolder] = message.useMessage();
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  // Mock data
-  const [requests, setRequests] = useState([
-    {
-      requestId: 1,
-      partNumber: "PT001",
-      partName: "Motor điện 5HP",
-      quantity: 2,
-      reason: "Thay thế motor hỏng tại máy dập 01",
-      requestedBy: "Nguyễn Văn A",
-      requestDate: "2025-01-10",
-      status: "Chờ duyệt",
-      approvedBy: null,
-      approvedDate: null,
-      rejectedBy: null,
-      rejectedDate: null,
-      notes: null,
-    },
-    {
-      requestId: 2,
-      partNumber: "PT002",
-      partName: "Băng tải 10m",
-      quantity: 1,
-      reason: "Bổ sung băng tải cho dây chuyền mới",
-      requestedBy: "Trần Thị B",
-      requestDate: "2025-01-09",
-      status: "Đã duyệt",
-      approvedBy: "Lê Văn C",
-      approvedDate: "2025-01-10",
-      rejectedBy: null,
-      rejectedDate: null,
-      notes: "Đã liên hệ nhà cung cấp",
-    },
-    {
-      requestId: 3,
-      partNumber: "PT003",
-      partName: "Ổ bi SKF 6205",
-      quantity: 10,
-      reason: "Tồn kho thấp, cần bổ sung",
-      requestedBy: "Phạm Văn D",
-      requestDate: "2025-01-08",
-      status: "Từ chối",
-      approvedBy: null,
-      approvedDate: null,
-      rejectedBy: "Lê Văn C",
-      rejectedDate: "2025-01-09",
-      notes: "Đã có ổ bi tương thích trong kho",
-    },
-  ]);
+  const [requests, setRequests] = useState([]);
+
+  // Minimal mapping from partNumber to PartId expected by backend
+  const partNumberToId = {
+    PT001: 1,
+    PT002: 2,
+    PT003: 3,
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await purchaseRequestService.getMyRequests();
+        if (!mounted) return;
+        // res may be array or ApiResponse wrapper handled in service
+        setRequests(Array.isArray(res) ? res : []);
+      } catch (err) {
+        messageApi.error("Không thể tải danh sách yêu cầu. Vui lòng thử lại.");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const columns = [
     {
@@ -169,24 +152,32 @@ const PurchaseRequestManagement = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      const newRequest = {
-        requestId: requests.length + 1,
-        ...values,
-        requestedBy: "Người dùng hiện tại", // Get from auth context
-        requestDate: dayjs().format("YYYY-MM-DD"),
-        status: "Chờ duyệt",
-        approvedBy: null,
-        approvedDate: null,
-        rejectedBy: null,
-        rejectedDate: null,
-        notes: null,
+      // Backend expects { partId, quantity, reason }
+      const payload = {
+        partId: partNumberToId[values.partNumber] || null,
+        quantity: values.quantity,
+        reason: values.reason,
       };
-      setRequests([newRequest, ...requests]);
-      message.success("Tạo yêu cầu mua hàng thành công!");
+      if (!payload.partId) {
+        throw new Error("Phụ tùng không hợp lệ");
+      }
+
+      await purchaseRequestService.create(payload);
+      messageApi.success("Tạo yêu cầu mua hàng thành công!");
+      // refresh list
+      const res = await purchaseRequestService.getMyRequests();
+      setRequests(Array.isArray(res) ? res : []);
       setIsModalVisible(false);
       form.resetFields();
     } catch (error) {
-      message.error("Có lỗi xảy ra!");
+      console.error("Create purchase request error:", error);
+      if (error && error.message && error.message.includes("403")) {
+        messageApi.error(
+          "Bạn không có quyền để tạo yêu cầu. Tài khoản cần có vai trò 'Quản lý kỹ thuật' hoặc hãy đăng nhập lại."
+        );
+      } else {
+        messageApi.error(error?.message || "Có lỗi xảy ra khi tạo yêu cầu!");
+      }
     } finally {
       setLoading(false);
     }
@@ -202,7 +193,7 @@ const PurchaseRequestManagement = () => {
   });
 
   const CreateRequestForm = (
-    <Card title="Tạo yêu cầu mua hàng mới" bordered={false}>
+    <Card title="Tạo yêu cầu mua hàng mới" variant="outlined">
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item
           name="partNumber"
@@ -258,7 +249,7 @@ const PurchaseRequestManagement = () => {
   const RequestListTable = (
     <Card
       title="Danh sách yêu cầu"
-      bordered={false}
+      variant="outlined"
       extra={
         <Button
           type="primary"
@@ -325,6 +316,7 @@ const PurchaseRequestManagement = () => {
 
   return (
     <div className={styles.container}>
+      {messageContextHolder}
       <Tabs items={items} defaultActiveKey="list" />
 
       {/* Detail Modal */}
