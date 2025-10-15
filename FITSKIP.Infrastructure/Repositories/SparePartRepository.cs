@@ -38,9 +38,9 @@ namespace FITSKIP.Infrastructure.Repositories
         public async Task<SparePart> AddAsync(SparePart sparePart, CancellationToken cancellationToken = default)
         {
             var existingPartNumber = await _context.SpareParts
-                .FirstOrDefaultAsync(sp => sp.PartNumber == sparePart.PartNumber && sp.PartId != sparePart.PartId, cancellationToken);
+                .FirstOrDefaultAsync(sp => sp.PartNumber == sparePart.PartNumber, cancellationToken);
             var existingPartName = await _context.SpareParts
-                .FirstOrDefaultAsync(sp => sp.PartName == sparePart.PartName && sp.PartId != sparePart.PartId, cancellationToken);
+                .FirstOrDefaultAsync(sp => sp.PartName == sparePart.PartName, cancellationToken);
 
             if (existingPartName != null)
             {
@@ -62,9 +62,9 @@ namespace FITSKIP.Infrastructure.Repositories
             try
             {
                 var existingPartNumber = await _context.SpareParts
-                    .FirstOrDefaultAsync(sp => sp.PartNumber == sparePart.PartNumber, cancellationToken);
+                    .FirstOrDefaultAsync(sp => sp.PartNumber == sparePart.PartNumber && sp.PartId != sparePart.PartId, cancellationToken);
                 var existingPartName = await _context.SpareParts
-                    .FirstOrDefaultAsync(sp => sp.PartName == sparePart.PartName, cancellationToken);
+                    .FirstOrDefaultAsync(sp => sp.PartName == sparePart.PartName && sp.PartId != sparePart.PartId, cancellationToken);
 
                 if (existingPartName != null)
                 {
