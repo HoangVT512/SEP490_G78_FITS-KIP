@@ -538,6 +538,19 @@ public class UserRepository : IUserRepository
             existingUser.FullName = request.FullName;
             var normalizedEmailProfile = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
             var normalizedPhoneProfile = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
+
+            // Check if email is being changed and set EmailConfirmed to false
+            if (existingUser.Email != normalizedEmailProfile)
+            {
+                existingUser.EmailConfirmed = false;
+            }
+
+            // Check if phone number is being changed and set PhoneNumberConfirmed to false
+            if (existingUser.PhoneNumber != normalizedPhoneProfile)
+            {
+                existingUser.PhoneNumberConfirmed = false;
+            }
+
             existingUser.Email = normalizedEmailProfile;
             existingUser.NormalizedEmail = normalizedEmailProfile?.ToUpperInvariant();
             existingUser.PhoneNumber = normalizedPhoneProfile;
