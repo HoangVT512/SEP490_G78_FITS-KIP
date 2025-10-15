@@ -141,17 +141,37 @@ public class UsersController : ControllerBase
     {
         try
         {
-            // Basic validation - UserName is now auto-generated from EmployeeCode
-            // No need to check UserName requirement here
+            // Validate model state first
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+                return BadRequest(new { success = false, message = $"Error: Validation failed - {string.Join(", ", errors)}" });
+            }
 
-            // Validation 1: Check if username already exists (will be EmployeeCode)
+            // Validate required fields
+            if (string.IsNullOrWhiteSpace(request.EmployeeCode))
+            {
+                return BadRequest(new { success = false, message = "Error: Employee code is required" });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.FullName))
+            {
+                return BadRequest(new { success = false, message = "Error: Full name is required" });
+            }
+
+            // Basic validation - UserName is now auto-generated from EmployeeCode
             var userName = string.IsNullOrEmpty(request.UserName) ? request.EmployeeCode : request.UserName;
+            
+            // Validation 1: Check if username already exists (will be EmployeeCode)
             if (!string.IsNullOrEmpty(userName))
             {
                 var existingUserByUsername = await userService.GetByUsernameAsync(userName, cancellationToken);
                 if (existingUserByUsername != null)
                 {
-                    return BadRequest($"Tên đăng nhập '{userName}' đã tồn tại trong hệ thống");
+                    return BadRequest(new { success = false, message = $"Error: Tên đăng nhập '{userName}' đã tồn tại trong hệ thống" });
                 }
             }
 
@@ -161,7 +181,7 @@ public class UsersController : ControllerBase
                 var existingUserByEmail = await userService.GetByEmailAsync(request.Email, cancellationToken);
                 if (existingUserByEmail != null)
                 {
-                    return BadRequest($"Email '{request.Email}' đã tồn tại trong hệ thống");
+                    return BadRequest(new { success = false, message = $"Error: Email '{request.Email}' đã tồn tại trong hệ thống" });
                 }
             }
 
@@ -171,14 +191,20 @@ public class UsersController : ControllerBase
                 var existingUserByEmployeeCode = await userService.GetByEmployeeCodeAsync(request.EmployeeCode, cancellationToken);
                 if (existingUserByEmployeeCode != null)
                 {
-                    return BadRequest($"Mã nhân viên '{request.EmployeeCode}' đã tồn tại trong hệ thống");
+                    return BadRequest(new { success = false, message = $"Error: Mã nhân viên '{request.EmployeeCode}' đã tồn tại trong hệ thống" });
                 }
             }
 
             // Validation 4: Check email format (only if email is provided)
             if (!string.IsNullOrEmpty(request.Email) && !IsValidEmail(request.Email))
             {
-                return BadRequest("Email không hợp lệ");
+                return BadRequest(new { success = false, message = "Error: Email không hợp lệ" });
+            }
+
+            // Validation 5: Check phone number format (only if phone number is provided)
+            if (!string.IsNullOrEmpty(request.PhoneNumber) && !IsValidVietnamPhoneNumber(request.PhoneNumber))
+            {
+                return BadRequest(new { success = false, message = "Error: Số điện thoại không hợp lệ" });
             }
 
             // Password will be handled by Identity in the service layer
@@ -213,11 +239,19 @@ public class UsersController : ControllerBase
                 LockoutEnabled = createdUser.LockoutEnabled
             };
 
-            return Ok(response);
+            return Ok(new { success = true, data = response, message = "Tạo người dùng thành công" });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = $"Error: {ex.Message}" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { success = false, message = $"Error: {ex.Message}" });
         }
         catch (Exception ex)
         {
-            return StatusCode(500, $"Internal server error: {ex.Message}");
+            return StatusCode(500, new { success = false, message = "Error: Có lỗi xảy ra khi tạo người dùng", details = ex.Message });
         }
     }
 

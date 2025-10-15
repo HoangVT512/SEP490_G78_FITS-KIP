@@ -108,6 +108,9 @@ namespace FITSKIP.API
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.INotificationRepository, FITSKIP.Infrastructure.Repositories.NotificationRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.INotificationHubService, FITSKIP.API.Services.NotificationHubService>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.INotificationService, FITSKIP.Application.Services.NotificationService>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IIncidentRepository, FITSKIP.Infrastructure.Repositories.IncidentRepository>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IIncidentService, FITSKIP.Application.Services.IncidentService>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IShiftRepository, FITSKIP.Infrastructure.Repositories.ShiftRepository>();
 
             // Import Excel service
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IExcelImportService,
