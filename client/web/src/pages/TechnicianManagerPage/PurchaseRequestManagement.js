@@ -11,7 +11,6 @@ import {
   Select,
   message,
   Tag,
-  Tabs,
   DatePicker,
   Row,
   Col,
@@ -102,8 +101,8 @@ const PurchaseRequestManagement = () => {
     },
     {
       title: "Người yêu cầu",
-      dataIndex: "requestedBy",
-      key: "requestedBy",
+      dataIndex: "requestedByName",
+      key: "requestedByName",
       width: 150,
     },
     {
@@ -119,10 +118,19 @@ const PurchaseRequestManagement = () => {
       key: "status",
       width: 120,
       render: (status) => {
+        let displayStatus;
         let color = "warning";
-        if (status === "Đã duyệt") color = "success";
-        if (status === "Từ chối") color = "error";
-        return <Tag color={color}>{status}</Tag>;
+        if (status === "Approved") {
+          displayStatus = "Đã duyệt";
+          color = "success";
+        } else if (status === "Rejected") {
+          displayStatus = "Từ chối";
+          color = "error";
+        } else {
+          displayStatus = "Chờ duyệt";
+          color = "warning";
+        }
+        return <Tag color={color}>{displayStatus}</Tag>;
       },
     },
     {
@@ -139,7 +147,7 @@ const PurchaseRequestManagement = () => {
           >
             Chi tiết
           </Button>
-          {record.status === "Chờ duyệt" && (
+          {record.status === "Pending" && (
             <>
               <Button
                 type="primary"
@@ -276,72 +284,78 @@ const PurchaseRequestManagement = () => {
     const matchSearch =
       req.partNumber.toLowerCase().includes(searchText.toLowerCase()) ||
       req.partName.toLowerCase().includes(searchText.toLowerCase()) ||
-      req.requestedBy.toLowerCase().includes(searchText.toLowerCase());
+      req.requestedByName.toLowerCase().includes(searchText.toLowerCase());
     const matchStatus = filterStatus === "all" || req.status === filterStatus;
     return matchSearch && matchStatus;
   });
 
   const CreateRequestForm = (
-    <Card title="Tạo yêu cầu mua hàng mới" variant="outlined">
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        <Form.Item
-          name="partNumber"
-          label="Mã phụ tùng"
-          rules={[{ required: true, message: "Vui lòng chọn phụ tùng" }]}
+    <Form form={form} layout="vertical" onFinish={handleSubmit}>
+      <Form.Item
+        name="partNumber"
+        label="Mã phụ tùng"
+        rules={[{ required: true, message: "Vui lòng chọn phụ tùng" }]}
+      >
+        <Select
+          placeholder="Chọn phụ tùng"
+          showSearch
+          optionFilterProp="children"
+          onChange={(value, option) => {
+            form.setFieldsValue({ partName: option?.children });
+          }}
+          filterOption={(input, option) =>
+            (option.children || "")
+              .toLowerCase()
+              .indexOf(input.toLowerCase()) >= 0
+          }
         >
-          <Select
-            placeholder="Chọn phụ tùng"
-            showSearch
-            optionFilterProp="children"
-            onChange={(value, option) => {
-              form.setFieldsValue({ partName: option?.children });
+          {(availableParts || []).map((p) => (
+            <Option key={p.partId || p.PartId} value={p.partId || p.PartId}>
+              {`${p.partNumber || p.PartNumber} - ${p.partName || p.PartName}`}
+            </Option>
+          ))}
+        </Select>
+      </Form.Item>
+
+      <Form.Item name="partName" hidden>
+        <Input />
+      </Form.Item>
+
+      <Form.Item
+        name="quantity"
+        label="Số lượng"
+        rules={[
+          { required: true, message: "Vui lòng nhập số lượng" },
+          { type: "number", min: 1, message: "Số lượng phải lớn hơn 0" },
+        ]}
+      >
+        <InputNumber min={1} style={{ width: "100%" }} />
+      </Form.Item>
+
+      <Form.Item
+        name="reason"
+        label="Lý do yêu cầu"
+        rules={[{ required: true, message: "Vui lòng nhập lý do" }]}
+      >
+        <TextArea rows={4} placeholder="Mô tả lý do cần mua phụ tùng..." />
+      </Form.Item>
+
+      <Form.Item style={{ marginBottom: 0 }}>
+        <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+          <Button
+            onClick={() => {
+              setIsModalVisible(false);
+              form.resetFields();
             }}
-            filterOption={(input, option) =>
-              (option.children || "")
-                .toLowerCase()
-                .indexOf(input.toLowerCase()) >= 0
-            }
           >
-            {(availableParts || []).map((p) => (
-              <Option key={p.partId || p.PartId} value={p.partId || p.PartId}>
-                {`${p.partNumber || p.PartNumber} - ${
-                  p.partName || p.PartName
-                }`}
-              </Option>
-            ))}
-          </Select>
-        </Form.Item>
-
-        <Form.Item name="partName" hidden>
-          <Input />
-        </Form.Item>
-
-        <Form.Item
-          name="quantity"
-          label="Số lượng"
-          rules={[
-            { required: true, message: "Vui lòng nhập số lượng" },
-            { type: "number", min: 1, message: "Số lượng phải lớn hơn 0" },
-          ]}
-        >
-          <InputNumber min={1} style={{ width: "100%" }} />
-        </Form.Item>
-
-        <Form.Item
-          name="reason"
-          label="Lý do yêu cầu"
-          rules={[{ required: true, message: "Vui lòng nhập lý do" }]}
-        >
-          <TextArea rows={4} placeholder="Mô tả lý do cần mua phụ tùng..." />
-        </Form.Item>
-
-        <Form.Item style={{ marginBottom: 0 }}>
-          <Button type="primary" htmlType="submit" loading={loading} block>
+            Hủy
+          </Button>
+          <Button type="primary" htmlType="submit" loading={loading}>
             Tạo yêu cầu
           </Button>
-        </Form.Item>
-      </Form>
-    </Card>
+        </Space>
+      </Form.Item>
+    </Form>
   );
 
   const RequestListTable = (
@@ -362,7 +376,7 @@ const PurchaseRequestManagement = () => {
         <Row gutter={16}>
           <Col xs={24} sm={12} md={10}>
             <Search
-              placeholder="Tìm theo mã, tên phụ tùng hoặc người yêu cầu"
+              placeholder="Tìm theo mã, tên phụ tùng hoặc tên người yêu cầu"
               prefix={<SearchOutlined />}
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
@@ -399,23 +413,26 @@ const PurchaseRequestManagement = () => {
     </Card>
   );
 
-  const items = [
-    {
-      key: "create",
-      label: "Tạo yêu cầu",
-      children: CreateRequestForm,
-    },
-    {
-      key: "list",
-      label: "Danh sách yêu cầu",
-      children: RequestListTable,
-    },
-  ];
-
   return (
     <div className={styles.container}>
       {messageContextHolder}
-      <Tabs items={items} defaultActiveKey="list" />
+
+      {/* Main Content - Only Request List */}
+      {RequestListTable}
+
+      {/* Create Request Modal */}
+      <Modal
+        title="Tạo yêu cầu mua hàng mới"
+        open={isModalVisible}
+        onCancel={() => {
+          setIsModalVisible(false);
+          form.resetFields();
+        }}
+        footer={null}
+        width={600}
+      >
+        {CreateRequestForm}
+      </Modal>
 
       {/* Detail Modal */}
       <Modal
@@ -471,7 +488,7 @@ const PurchaseRequestManagement = () => {
               <Col span={12}>
                 <div className={styles.detailItem}>
                   <strong>Người yêu cầu:</strong>
-                  <span>{selectedRequest.requestedBy}</span>
+                  <span>{selectedRequest.requestedByName}</span>
                 </div>
               </Col>
               <Col span={12}>
@@ -487,7 +504,7 @@ const PurchaseRequestManagement = () => {
                   <Col span={12}>
                     <div className={styles.detailItem}>
                       <strong>Người duyệt:</strong>
-                      <span>{selectedRequest.approvedBy}</span>
+                      <span>{selectedRequest.approvedByName}</span>
                     </div>
                   </Col>
                   <Col span={12}>
@@ -507,7 +524,7 @@ const PurchaseRequestManagement = () => {
                   <Col span={12}>
                     <div className={styles.detailItem}>
                       <strong>Người từ chối:</strong>
-                      <span>{selectedRequest.rejectedBy}</span>
+                      <span>{selectedRequest.rejectedByName}</span>
                     </div>
                   </Col>
                   <Col span={12}>
