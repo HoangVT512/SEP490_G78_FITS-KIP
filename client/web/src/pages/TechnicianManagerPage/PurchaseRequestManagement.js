@@ -129,15 +129,35 @@ const PurchaseRequestManagement = () => {
       title: "Thao tác",
       key: "action",
       fixed: "right",
-      width: 100,
+      width: 180,
       render: (_, record) => (
-        <Button
-          type="link"
-          icon={<EyeOutlined />}
-          onClick={() => handleViewDetail(record)}
-        >
-          Chi tiết
-        </Button>
+        <Space>
+          <Button
+            type="link"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDetail(record)}
+          >
+            Chi tiết
+          </Button>
+          {record.status === "Chờ duyệt" && (
+            <>
+              <Button
+                type="primary"
+                icon={<CheckCircleOutlined />}
+                onClick={() => handleApprove(record)}
+              >
+                Duyệt
+              </Button>
+              <Button
+                danger
+                icon={<CloseCircleOutlined />}
+                onClick={() => handleReject(record)}
+              >
+                Từ chối
+              </Button>
+            </>
+          )}
+        </Space>
       ),
     },
   ];
@@ -185,6 +205,71 @@ const PurchaseRequestManagement = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleApprove = async (record) => {
+    Modal.confirm({
+      title: `Xác nhận duyệt yêu cầu REQ${String(record.requestId).padStart(
+        3,
+        "0"
+      )}`,
+      content: "Bạn có chắc muốn duyệt yêu cầu này?",
+      okText: "Duyệt",
+      cancelText: "Hủy",
+      onOk: async () => {
+        setLoading(true);
+        try {
+          await purchaseRequestService.approve(record.requestId);
+          messageApi.success("Duyệt yêu cầu thành công");
+          const res = await purchaseRequestService.getMyRequests();
+          setRequests(Array.isArray(res) ? res : []);
+        } catch (err) {
+          console.error("Approve error", err);
+          messageApi.error(err?.message || "Không thể duyệt yêu cầu");
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+  };
+
+  const handleReject = async (record) => {
+    let reason = "";
+    Modal.confirm({
+      title: `Xác nhận từ chối yêu cầu REQ${String(record.requestId).padStart(
+        3,
+        "0"
+      )}`,
+      content: (
+        <div>
+          <p>
+            Bạn có chắc muốn từ chối yêu cầu này? Có thể nhập lý do (tùy chọn):
+          </p>
+          <Input
+            placeholder="Lý do từ chối"
+            onChange={(e) => (reason = e.target.value)}
+          />
+        </div>
+      ),
+      okText: "Từ chối",
+      cancelText: "Hủy",
+      onOk: async () => {
+        setLoading(true);
+        try {
+          await purchaseRequestService.reject(record.requestId, {
+            reason: reason || undefined,
+          });
+          messageApi.success("Từ chối yêu cầu thành công");
+          const res = await purchaseRequestService.getMyRequests();
+          setRequests(Array.isArray(res) ? res : []);
+        } catch (err) {
+          console.error("Reject error", err);
+          messageApi.error(err?.message || "Không thể từ chối yêu cầu");
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
   };
 
   const filteredRequests = requests.filter((req) => {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Table,
@@ -22,6 +22,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styles from "../../styles/pages/PurchaseApproval.module.css";
+import { purchaseRequestService } from "../../services/purchaseRequestService";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -37,66 +38,54 @@ const PurchaseApproval = () => {
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("Chờ duyệt");
 
-  // Mock data
-  const [requests, setRequests] = useState([
-    {
-      requestId: 1,
-      partNumber: "PT001",
-      partName: "Motor điện 5HP",
-      quantity: 2,
-      unitPrice: 5000000,
-      totalAmount: 10000000,
-      reason: "Thay thế motor hỏng tại máy dập 01",
-      requestedBy: "Nguyễn Văn A",
-      requestedByRole: "Quản lý kỹ thuật",
-      requestDate: "2025-01-10",
-      status: "Chờ duyệt",
-      priority: "High",
-      approvedBy: null,
-      approvedDate: null,
-      rejectedBy: null,
-      rejectedDate: null,
-      approvalNotes: null,
-    },
-    {
-      requestId: 2,
-      partNumber: "PT002",
-      partName: "Băng tải 10m",
-      quantity: 1,
-      unitPrice: 8000000,
-      totalAmount: 8000000,
-      reason: "Bổ sung băng tải cho dây chuyền mới",
-      requestedBy: "Trần Thị B",
-      requestedByRole: "Quản lý kỹ thuật",
-      requestDate: "2025-01-09",
-      status: "Chờ duyệt",
-      priority: "Medium",
-      approvedBy: null,
-      approvedDate: null,
-      rejectedBy: null,
-      rejectedDate: null,
-      approvalNotes: null,
-    },
-    {
-      requestId: 3,
-      partNumber: "PT003",
-      partName: "Ổ bi SKF 6205",
-      quantity: 10,
-      unitPrice: 150000,
-      totalAmount: 1500000,
-      reason: "Tồn kho thấp, cần bổ sung",
-      requestedBy: "Phạm Văn C",
-      requestedByRole: "Quản lý kỹ thuật",
-      requestDate: "2025-01-08",
-      status: "Đã duyệt",
-      priority: "Low",
-      approvedBy: "Quản lý",
-      approvedDate: "2025-01-09",
-      rejectedBy: null,
-      rejectedDate: null,
-      approvalNotes: "Đã xác nhận nhu cầu, tiến hành mua",
-    },
-  ]);
+  const [requests, setRequests] = useState([]);
+
+  // load requests from backend
+  // centralized loader so all refreshes behave the same
+  const loadRequests = async () => {
+    setLoading(true);
+    try {
+      const res = await purchaseRequestService.getAll();
+      const items = (Array.isArray(res) ? res : []).map((it) => ({
+        ...it,
+        status:
+          it.status === "Pending"
+            ? "Chờ duyệt"
+            : it.status === "Approved"
+            ? "Đã duyệt"
+            : it.status === "Rejected"
+            ? "Từ chối"
+            : it.status || "",
+        requestedBy: it.requestedByName || it.requestedBy || "",
+        totalAmount: it.totalAmount || 0,
+      }));
+
+      // apply client-side filter if needed
+      if (filterStatus && filterStatus !== "all") {
+        setRequests(items.filter((r) => r.status === filterStatus));
+      } else {
+        setRequests(items);
+      }
+    } catch (err) {
+      console.error("Could not load purchase requests", err);
+      message.error("Không thể tải danh sách yêu cầu. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    // wrap loadRequests to respect mounted flag for safety
+    const run = async () => {
+      if (!mounted) return;
+      await loadRequests();
+    };
+    run();
+    return () => {
+      mounted = false;
+    };
+  }, [filterStatus]);
 
   const columns = [
     {
@@ -129,7 +118,8 @@ const PurchaseApproval = () => {
       dataIndex: "totalAmount",
       key: "totalAmount",
       width: 130,
-      render: (amount) => `${amount.toLocaleString()} đ`,
+      render: (amount) =>
+        `${(typeof amount === "number" ? amount : 0).toLocaleString()} đ`,
     },
     {
       title: "Người yêu cầu",
@@ -227,25 +217,11 @@ const PurchaseApproval = () => {
   const handleApprove = async (values) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setRequests(
-        requests.map((req) =>
-          req.requestId === selectedRequest.requestId
-            ? {
-                ...req,
-                status: "Đã duyệt",
-                approvedBy: "Quản lý",
-                approvedDate: dayjs().format("YYYY-MM-DD"),
-                approvalNotes: values.notes,
-              }
-            : req
-        )
-      );
-
+      await purchaseRequestService.approve(selectedRequest.requestId);
       message.success("Đã duyệt yêu cầu mua hàng!");
       setApproveModalVisible(false);
+      // refresh list consistently
+      await loadRequests();
     } catch (error) {
       message.error("Có lỗi xảy ra!");
     } finally {
@@ -256,25 +232,12 @@ const PurchaseApproval = () => {
   const handleReject = async (values) => {
     setLoading(true);
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      setRequests(
-        requests.map((req) =>
-          req.requestId === selectedRequest.requestId
-            ? {
-                ...req,
-                status: "Từ chối",
-                rejectedBy: "Quản lý",
-                rejectedDate: dayjs().format("YYYY-MM-DD"),
-                approvalNotes: values.reason,
-              }
-            : req
-        )
-      );
-
+      await purchaseRequestService.reject(selectedRequest.requestId, {
+        reason: values.reason,
+      });
       message.success("Đã từ chối yêu cầu mua hàng!");
       setRejectModalVisible(false);
+      await loadRequests();
     } catch (error) {
       message.error("Có lỗi xảy ra!");
     } finally {
@@ -398,11 +361,21 @@ const PurchaseApproval = () => {
               {selectedRequest.quantity}
             </Descriptions.Item>
             <Descriptions.Item label="Đơn giá" span={1}>
-              {selectedRequest.unitPrice.toLocaleString()} đ
+              {selectedRequest?.unitPrice != null
+                ? `${(typeof selectedRequest.unitPrice === "number"
+                    ? selectedRequest.unitPrice
+                    : 0
+                  ).toLocaleString()} đ`
+                : "-"}
             </Descriptions.Item>
             <Descriptions.Item label="Tổng tiền" span={2}>
               <strong style={{ color: "#1890ff", fontSize: "16px" }}>
-                {selectedRequest.totalAmount.toLocaleString()} đ
+                {selectedRequest?.totalAmount != null
+                  ? `${(typeof selectedRequest.totalAmount === "number"
+                      ? selectedRequest.totalAmount
+                      : 0
+                    ).toLocaleString()} đ`
+                  : "0 đ"}
               </strong>
             </Descriptions.Item>
             <Descriptions.Item label="Ưu tiên" span={1}>

@@ -407,7 +407,8 @@ public class PurchaseRequestsController : ControllerBase
     /// <response code="404">Không tìm thấy yêu cầu mua hàng</response>
     /// <response code="500">Lỗi server nội bộ</response>
     [HttpPost("{id}/approve")]
-    [Authorize(Roles = "Quản lý kỹ thuật")]
+    // Allow both Manager and Technician Manager roles to approve
+    [Authorize(Roles = "Quản lý kỹ thuật,Quản lý")]
     [ProducesResponseType(typeof(ApiResponse<PurchaseRequestDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
@@ -474,7 +475,8 @@ public class PurchaseRequestsController : ControllerBase
     /// <response code="404">Không tìm thấy yêu cầu mua hàng</response>
     /// <response code="500">Lỗi server nội bộ</response>
     [HttpPost("{id}/reject")]
-    [Authorize(Roles = "Quản lý kỹ thuật")]
+    // Allow both Manager and Technician Manager roles to reject
+    [Authorize(Roles = "Quản lý kỹ thuật,Quản lý")]
     [ProducesResponseType(typeof(ApiResponse<PurchaseRequestDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
