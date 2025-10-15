@@ -39,6 +39,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styles from "../../styles/pages/IncidentManagement.module.css";
+import { incidentService } from "../../services/incidentService";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -65,122 +66,102 @@ const IncidentManagement = () => {
     handleFilter();
   }, [searchText, filterStatus, filterPriority, incidents]);
 
-  const fetchIncidents = () => {
+  const fetchIncidents = async () => {
     setLoading(true);
-    setTimeout(() => {
-      const mockData = [
-        {
-          id: "INC001",
-          title: "Máy dập ngừng hoạt động",
-          equipmentName: "Máy dập 01",
-          lineName: "Dây chuyền 1",
-          priority: "Cao",
-          status: "Đang xử lý",
-          reporter: "Nguyễn Văn A",
-          assignedTo: "Trần Văn B",
-          reportDate: "2025-01-10 08:30",
-          resolveDate: null,
-          issue: "Máy bị kẹt, không hoạt động",
-          reason: "Motor quá tải",
-          solution: "Đang kiểm tra và thay thế motor",
-          category: "Hỏng hóc",
-          downtime: 120, // minutes
-          impact: "Cao",
-          attachments: [],
-        },
-        {
-          id: "INC002",
-          title: "Băng tải bị rách",
-          equipmentName: "Băng tải 02",
-          lineName: "Dây chuyền 2",
-          priority: "Trung bình",
-          status: "Hoàn thành",
-          reporter: "Lê Thị C",
-          assignedTo: "Phạm Văn D",
-          reportDate: "2025-01-09 14:15",
-          resolveDate: "2025-01-09 18:30",
-          issue: "Băng tải bị rách ở giữa",
-          reason: "Ma sát quá mức, băng cũ",
-          solution: "Đã thay thế băng tải mới",
-          category: "Hỏng hóc",
-          downtime: 255,
-          impact: "Trung bình",
-          attachments: ["photo1.jpg", "photo2.jpg"],
-        },
-        {
-          id: "INC003",
-          title: "Rò rỉ dầu thủy lực",
-          equipmentName: "Máy ép 03",
-          lineName: "Dây chuyền 1",
-          priority: "Thấp",
-          status: "Chờ xử lý",
-          reporter: "Hoàng Văn E",
-          assignedTo: null,
-          reportDate: "2025-01-10 10:00",
-          resolveDate: null,
-          issue: "Phát hiện rò rỉ dầu thủy lực",
-          reason: "Vòng đệm bị hỏng",
-          solution: null,
-          category: "Bảo trì",
-          downtime: 0,
-          impact: "Thấp",
-          attachments: [],
-        },
-        {
-          id: "INC004",
-          title: "Nhiệt độ máy quá cao",
-          equipmentName: "Máy hàn 04",
-          lineName: "Dây chuyền 3",
-          priority: "Cao",
-          status: "Đang xử lý",
-          reporter: "Đỗ Thị F",
-          assignedTo: "Nguyễn Văn G",
-          reportDate: "2025-01-10 11:30",
-          resolveDate: null,
-          issue: "Nhiệt độ vượt ngưỡng an toàn",
-          reason: "Hệ thống làm mát không hoạt động",
-          solution: "Đang sửa chữa quạt làm mát",
-          category: "An toàn",
-          downtime: 60,
-          impact: "Cao",
-          attachments: ["temp_log.pdf"],
-        },
-        {
-          id: "INC005",
-          title: "Cảm biến lỗi",
-          equipmentName: "Máy kiểm tra 05",
-          lineName: "Dây chuyền 2",
-          priority: "Trung bình",
-          status: "Hoàn thành",
-          reporter: "Võ Văn H",
-          assignedTo: "Lê Văn I",
-          reportDate: "2025-01-08 09:00",
-          resolveDate: "2025-01-08 15:00",
-          issue: "Cảm biến không đọc được dữ liệu",
-          reason: "Cảm biến hỏng",
-          solution: "Đã thay thế cảm biến mới",
-          category: "Hỏng hóc",
-          downtime: 360,
-          impact: "Trung bình",
-          attachments: [],
-        },
-      ];
-      setIncidents(mockData);
-      setFilteredIncidents(mockData);
+    try {
+      const res = await incidentService.getAll();
+      // backend returns { success, data }
+      const items = Array.isArray(res) ? res : res?.data || [];
+      // Normalize to frontend shape
+      const mapped = (items || []).map((it) => {
+        // compute downtime in minutes if possible
+        let downtime = 0;
+        try {
+          if (it.endTime && it.startTime) {
+            const start = dayjs(it.startTime);
+            const end = dayjs(it.endTime);
+            downtime = Math.abs(end.diff(start, "minute"));
+          } else if (it.downtimeMinutes != null) {
+            downtime = Number(it.downtimeMinutes) || 0;
+          } else if (it.duration != null) {
+            // duration may be in hours or minutes depending on API; keep as-is
+            downtime = Number(it.duration) || 0;
+          } else if (it.downtime != null) {
+            downtime = Number(it.downtime) || 0;
+          }
+        } catch (e) {
+          downtime = it.downtimeMinutes || it.downtime || it.duration || 0;
+        }
+
+        return {
+          id: it.incidentId || it.id || it.IncidentId,
+          title:
+            it.title ||
+            it.Title ||
+            it.type?.typeName ||
+            it.typeName ||
+            it.TypeName ||
+            "",
+          equipmentName:
+            it.equipment?.equipmentName ||
+            it.equipmentName ||
+            it.EquipmentName ||
+            "",
+          equipmentCode: it.equipment?.equipmentCode || it.equipmentCode || "",
+          lineName: it.line?.lineName || it.lineName || it.LineName || "",
+          priority: it.priority || it.Priority || "Trung bình",
+          status:
+            it.status ||
+            it.Status ||
+            (it.isResolved ? "Hoàn thành" : "Chờ xử lý"),
+          reporter:
+            it.reportedByName ||
+            it.reporter ||
+            it.Reporter ||
+            it.createdBy ||
+            it.createdByName ||
+            "",
+          assignedTo:
+            it.assignedToName || it.assignedTo || it.AssignedTo || null,
+          reportDate:
+            it.startTime ||
+            it.reportDate ||
+            it.ReportDate ||
+            it.createdDate ||
+            null,
+          resolveDate: it.endTime || it.resolveDate || it.ResolveDate || null,
+          issue: it.issue || it.Issue || it.description || "",
+          reason: it.reason || it.Reason || null,
+          solution: it.solution || it.Solution || null,
+          category: it.category || it.Category || it.type?.typeName || null,
+          downtime: downtime,
+          impact: it.impact || it.Impact || null,
+          attachments: it.attachments || it.files || [],
+        };
+      });
+      setIncidents(mapped);
+      setFilteredIncidents(mapped);
+    } catch (err) {
+      console.error("Error fetching incidents", err);
+      message.error(err?.message || "Không thể tải danh sách sự cố");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   const handleFilter = () => {
     let filtered = [...incidents];
 
     if (searchText) {
-      filtered = filtered.filter(
-        (inc) =>
-          inc.id.toLowerCase().includes(searchText.toLowerCase()) ||
-          inc.title.toLowerCase().includes(searchText.toLowerCase()) ||
-          inc.equipmentName.toLowerCase().includes(searchText.toLowerCase())
-      );
+      const q = String(searchText).toLowerCase();
+      filtered = filtered.filter((inc) => {
+        const idStr = String(inc.id || "").toLowerCase();
+        const titleStr = String(inc.title || "").toLowerCase();
+        const equipmentStr = String(inc.equipmentName || "").toLowerCase();
+        return (
+          idStr.includes(q) || titleStr.includes(q) || equipmentStr.includes(q)
+        );
+      });
     }
 
     if (filterStatus !== "all") {
@@ -316,6 +297,16 @@ const IncidentManagement = () => {
       dataIndex: "equipmentName",
       key: "equipmentName",
       width: 150,
+      render: (text, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{text}</div>
+          {record.equipmentCode && (
+            <div style={{ color: "#999", fontSize: 12 }}>
+              {record.equipmentCode}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       title: "Dây chuyền",
@@ -379,6 +370,7 @@ const IncidentManagement = () => {
       dataIndex: "reportDate",
       key: "reportDate",
       width: 150,
+      render: (d) => (d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"),
     },
     {
       title: "Thao tác",
@@ -661,10 +653,18 @@ const IncidentManagement = () => {
                     )}
                   </Descriptions.Item>
                   <Descriptions.Item label="Ngày báo cáo">
-                    {selectedIncident.reportDate}
+                    {selectedIncident.reportDate
+                      ? dayjs(selectedIncident.reportDate).format(
+                          "DD/MM/YYYY HH:mm"
+                        )
+                      : "-"}
                   </Descriptions.Item>
                   <Descriptions.Item label="Ngày giải quyết">
-                    {selectedIncident.resolveDate || (
+                    {selectedIncident.resolveDate ? (
+                      dayjs(selectedIncident.resolveDate).format(
+                        "DD/MM/YYYY HH:mm"
+                      )
+                    ) : (
                       <span style={{ color: "#bbb" }}>Chưa giải quyết</span>
                     )}
                   </Descriptions.Item>
