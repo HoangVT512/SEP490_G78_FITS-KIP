@@ -110,6 +110,8 @@ namespace FITSKIP.API
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.INotificationService, FITSKIP.Application.Services.NotificationService>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IPurchaseRequestRepository, FITSKIP.Infrastructure.Repositories.PurchaseRequestRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IPurchaseRequestService, FITSKIP.Application.Services.PurchaseRequestService>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.ISparePartRepository, FITSKIP.Infrastructure.Repositories.SparePartRepository>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.ISparePartService, FITSKIP.Application.Services.SparePartService>();
 
             // Import Excel service
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IExcelImportService,
