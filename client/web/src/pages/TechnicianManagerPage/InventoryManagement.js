@@ -25,6 +25,7 @@ import {
   CheckCircleOutlined,
 } from "@ant-design/icons";
 import styles from "../../styles/pages/InventoryManagement.module.css";
+import { sparePartService } from "../../services/sparePartService";
 
 const { Option } = Select;
 const { Search } = Input;
@@ -37,42 +38,8 @@ const InventoryManagement = () => {
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
-  // Mock data
-  const [spareParts, setSpareParts] = useState([
-    {
-      partId: 1,
-      partNumber: "PT001",
-      partName: "Motor điện 5HP",
-      category: "Động cơ",
-      quantity: 15,
-      minQuantity: 5,
-      location: "Kho A - Kệ 1",
-      unitPrice: 5000000,
-      status: "Đủ hàng",
-    },
-    {
-      partId: 2,
-      partNumber: "PT002",
-      partName: "Băng tải 10m",
-      category: "Phụ kiện",
-      quantity: 3,
-      minQuantity: 5,
-      location: "Kho B - Kệ 2",
-      unitPrice: 8000000,
-      status: "Sắp hết",
-    },
-    {
-      partId: 3,
-      partNumber: "PT003",
-      partName: "Ổ bi SKF 6205",
-      category: "Phụ tùng",
-      quantity: 0,
-      minQuantity: 10,
-      location: "Kho A - Kệ 3",
-      unitPrice: 150000,
-      status: "Hết hàng",
-    },
-  ]);
+  // Spare parts loaded from backend
+  const [spareParts, setSpareParts] = useState([]);
 
   const stats = {
     total: spareParts.length,
@@ -90,44 +57,6 @@ const InventoryManagement = () => {
       fixed: "left",
     },
     {
-      title: "Tên phụ tùng",
-      dataIndex: "partName",
-      key: "partName",
-      width: 200,
-    },
-    {
-      title: "Danh mục",
-      dataIndex: "category",
-      key: "category",
-      width: 120,
-    },
-    {
-      title: "Số lượng",
-      dataIndex: "quantity",
-      key: "quantity",
-      width: 100,
-      render: (quantity, record) => (
-        <span
-          style={{
-            color:
-              quantity === 0
-                ? "red"
-                : quantity <= record.minQuantity
-                ? "orange"
-                : "green",
-          }}
-        >
-          {quantity}
-        </span>
-      ),
-    },
-    {
-      title: "Tồn kho tối thiểu",
-      dataIndex: "minQuantity",
-      key: "minQuantity",
-      width: 150,
-    },
-    {
       title: "Vị trí",
       dataIndex: "location",
       key: "location",
@@ -138,18 +67,30 @@ const InventoryManagement = () => {
       dataIndex: "unitPrice",
       key: "unitPrice",
       width: 130,
-      render: (price) => `${price.toLocaleString()} đ`,
+      render: (price) => (price ? `${price.toLocaleString()} đ` : "-"),
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       width: 120,
-      render: (status) => {
+      render: (status, record) => {
         let color = "success";
         if (status === "Sắp hết") color = "warning";
         if (status === "Hết hàng") color = "error";
-        return <Tag color={color}>{status}</Tag>;
+        // Fallback: if no explicit status, infer from quantity and minQuantity
+        if (!status) {
+          const q = record.quantity ?? 0;
+          const minQ = record.minQuantity ?? 5;
+          if (q === 0) color = "error";
+          else if (q <= minQ) color = "warning";
+          else color = "success";
+        }
+        return (
+          <Tag color={color}>
+            {status || (record.quantity === 0 ? "Hết hàng" : "Đủ hàng")}
+          </Tag>
+        );
       },
     },
     {
@@ -199,8 +140,20 @@ const InventoryManagement = () => {
       cancelText: "Hủy",
       okButtonProps: { danger: true },
       onOk: () => {
-        setSpareParts(spareParts.filter((p) => p.partId !== record.partId));
-        message.success("Xóa phụ tùng thành công!");
+        // Call backend delete
+        (async () => {
+          try {
+            setLoading(true);
+            await sparePartService.delete(record.partId);
+            message.success("Xóa phụ tùng thành công!");
+            await loadParts();
+          } catch (error) {
+            console.error("Delete error", error);
+            message.error("Không thể xóa phụ tùng");
+          } finally {
+            setLoading(false);
+          }
+        })();
       },
     });
   };
@@ -208,40 +161,61 @@ const InventoryManagement = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // Determine status based on quantity
-      let status = "Đủ hàng";
-      if (values.quantity === 0) {
-        status = "Hết hàng";
-      } else if (values.quantity <= values.minQuantity) {
-        status = "Sắp hết";
-      }
+      // Map form fields to backend DTO shape
+      const payload = {
+        partNumber: values.partNumber,
+        partName: values.partName,
+        quantity: values.quantity || 0,
+        location: values.location || "",
+      };
 
       if (editingRecord) {
-        // Update
-        setSpareParts(
-          spareParts.map((p) =>
-            p.partId === editingRecord.partId ? { ...p, ...values, status } : p
-          )
-        );
+        await sparePartService.update(editingRecord.partId, payload);
         message.success("Cập nhật phụ tùng thành công!");
       } else {
-        // Add new
-        const newPart = {
-          partId: spareParts.length + 1,
-          ...values,
-          status,
-        };
-        setSpareParts([...spareParts, newPart]);
+        await sparePartService.create(payload);
         message.success("Thêm phụ tùng thành công!");
       }
+
       setIsModalVisible(false);
       form.resetFields();
+      await loadParts();
     } catch (error) {
-      message.error("Có lỗi xảy ra!");
+      console.error("Save error", error);
+      message.error(error.message || "Có lỗi xảy ra!");
     } finally {
       setLoading(false);
     }
   };
+
+  // Load parts from backend
+  const loadParts = async () => {
+    setLoading(true);
+    try {
+      const data = await sparePartService.getAll();
+      // Backend DTO uses PascalCase sometimes; normalize to camelCase
+      const normalized = (data || []).map((p) => ({
+        partId: p.partId || p.PartId,
+        partNumber: p.partNumber || p.PartNumber,
+        partName: p.partName || p.PartName,
+        quantity: p.quantity ?? p.Quantity ?? 0,
+        minQuantity: p.minQuantity ?? 5,
+        location: p.location || p.Location || "",
+        unitPrice: p.unitPrice || p.UnitPrice || null,
+        status: p.status || p.Status || null,
+      }));
+      setSpareParts(normalized);
+    } catch (error) {
+      console.error("Error loading spare parts", error);
+      message.error("Không thể tải danh sách phụ tùng");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadParts();
+  }, []);
 
   const filteredData = spareParts.filter((part) => {
     const matchSearch =
@@ -388,16 +362,11 @@ const InventoryManagement = () => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
-                name="category"
-                label="Danh mục"
-                rules={[{ required: true, message: "Vui lòng chọn danh mục" }]}
+                name="quantity"
+                label="Số lượng"
+                rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
               >
-                <Select placeholder="Chọn danh mục">
-                  <Option value="Động cơ">Động cơ</Option>
-                  <Option value="Phụ kiện">Phụ kiện</Option>
-                  <Option value="Phụ tùng">Phụ tùng</Option>
-                  <Option value="Vật tư">Vật tư</Option>
-                </Select>
+                <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -407,48 +376,6 @@ const InventoryManagement = () => {
                 rules={[{ required: true, message: "Vui lòng nhập vị trí" }]}
               >
                 <Input placeholder="VD: Kho A - Kệ 1" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item
-                name="quantity"
-                label="Số lượng"
-                rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
-              >
-                <InputNumber min={0} style={{ width: "100%" }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="minQuantity"
-                label="Tồn kho tối thiểu"
-                rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng nhập tồn kho tối thiểu",
-                  },
-                ]}
-              >
-                <InputNumber min={0} style={{ width: "100%" }} />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                name="unitPrice"
-                label="Đơn giá (đ)"
-                rules={[{ required: true, message: "Vui lòng nhập đơn giá" }]}
-              >
-                <InputNumber
-                  min={0}
-                  style={{ width: "100%" }}
-                  formatter={(value) =>
-                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                  }
-                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
-                />
               </Form.Item>
             </Col>
           </Row>

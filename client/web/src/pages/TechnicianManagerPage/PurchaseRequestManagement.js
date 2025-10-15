@@ -26,6 +26,7 @@ import {
 import dayjs from "dayjs";
 import styles from "../../styles/pages/PurchaseRequestManagement.module.css";
 import { purchaseRequestService } from "../../services/purchaseRequestService";
+import { sparePartService } from "../../services/sparePartService";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -43,12 +44,7 @@ const PurchaseRequestManagement = () => {
 
   const [requests, setRequests] = useState([]);
 
-  // Minimal mapping from partNumber to PartId expected by backend
-  const partNumberToId = {
-    PT001: 1,
-    PT002: 2,
-    PT003: 3,
-  };
+  const [availableParts, setAvailableParts] = useState([]);
 
   useEffect(() => {
     let mounted = true;
@@ -59,6 +55,13 @@ const PurchaseRequestManagement = () => {
         if (!mounted) return;
         // res may be array or ApiResponse wrapper handled in service
         setRequests(Array.isArray(res) ? res : []);
+        // Also load spare parts for the select
+        try {
+          const parts = await sparePartService.getAll();
+          setAvailableParts(Array.isArray(parts) ? parts : []);
+        } catch (e) {
+          console.warn("Could not load spare parts for select", e);
+        }
       } catch (err) {
         messageApi.error("Không thể tải danh sách yêu cầu. Vui lòng thử lại.");
       } finally {
@@ -154,7 +157,8 @@ const PurchaseRequestManagement = () => {
     try {
       // Backend expects { partId, quantity, reason }
       const payload = {
-        partId: partNumberToId[values.partNumber] || null,
+        // The Select now returns the partId as value
+        partId: values.partNumber || values.partId || null,
         quantity: values.quantity,
         reason: values.reason,
       };
@@ -205,12 +209,21 @@ const PurchaseRequestManagement = () => {
             showSearch
             optionFilterProp="children"
             onChange={(value, option) => {
-              form.setFieldsValue({ partName: option.children });
+              form.setFieldsValue({ partName: option?.children });
             }}
+            filterOption={(input, option) =>
+              (option.children || "")
+                .toLowerCase()
+                .indexOf(input.toLowerCase()) >= 0
+            }
           >
-            <Option value="PT001">PT001 - Motor điện 5HP</Option>
-            <Option value="PT002">PT002 - Băng tải 10m</Option>
-            <Option value="PT003">PT003 - Ổ bi SKF 6205</Option>
+            {(availableParts || []).map((p) => (
+              <Option key={p.partId || p.PartId} value={p.partId || p.PartId}>
+                {`${p.partNumber || p.PartNumber} - ${
+                  p.partName || p.PartName
+                }`}
+              </Option>
+            ))}
           </Select>
         </Form.Item>
 
