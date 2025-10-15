@@ -18,17 +18,17 @@ namespace FITSKIP.Application.Services
             _repository = repository;
         }
 
-        public async Task<IEnumerable<SparePart>> GetAllSparePartsAsync()
+        public async Task<IEnumerable<SparePart>> GetAllSparePartsAsync(CancellationToken cancellationToken = default)
         {
-            return await _repository.GetAllAsync();
+            return await _repository.GetAllAsync(cancellationToken);
         }
 
-        public async Task<SparePart?> GetSparePartByIdAsync(int partId)
+        public async Task<SparePart?> GetSparePartByIdAsync(int partId, CancellationToken cancellationToken = default)
         {
-            return await _repository.GetByIdAsync(partId);
+            return await _repository.GetByIdAsync(partId, cancellationToken);
         }
 
-        public async Task<SparePart> CreateSparePartAsync(SparePart sparePart)
+        public async Task<SparePart> CreateSparePartAsync(SparePart sparePart, CancellationToken cancellationToken = default)
         {
             // Business logic validation
             if (string.IsNullOrWhiteSpace(sparePart.PartNumber))
@@ -44,10 +44,10 @@ namespace FITSKIP.Application.Services
             if (string.IsNullOrWhiteSpace(sparePart.Status))
                 sparePart.Status = "Available";
 
-            return await _repository.AddAsync(sparePart);
+            return await _repository.AddAsync(sparePart, cancellationToken);
         }
 
-        public async Task<bool> UpdateSparePartAsync(int partId, SparePart sparePart)
+        public async Task<bool> UpdateSparePartAsync(int partId, SparePart sparePart, CancellationToken cancellationToken = default)
         {
             // Business logic validation
             if (string.IsNullOrWhiteSpace(sparePart.PartNumber))
@@ -64,24 +64,24 @@ namespace FITSKIP.Application.Services
                 return false;
 
             sparePart.PartId = partId;
-            return await _repository.UpdateAsync(sparePart);
+            return await _repository.UpdateAsync(sparePart, cancellationToken);
         }
 
-        public async Task<bool> DeleteSparePartAsync(int partId)
+        public async Task<bool> DeleteSparePartAsync(int partId, CancellationToken cancellationToken = default)
         {
-            var exists = await _repository.ExistsAsync(partId);
+            var exists = await _repository.ExistsAsync(partId, cancellationToken);
             if (!exists)
                 return false;
 
-            return await _repository.DeleteAsync(partId);
+            return await _repository.DeleteAsync(partId, cancellationToken);
         }
 
-        public async Task<IEnumerable<SparePart>> GetTop5MostUsedSparePartsAsync()
+        public async Task<IEnumerable<SparePart>> GetTop5MostUsedSparePartsAsync(CancellationToken cancellationToken = default)
         {
-            return await _repository.GetTop5MostUsedAsync();
+            return await _repository.GetTop5MostUsedAsync(cancellationToken);
         }
 
-        public async Task<Dictionary<int, int>> GetUsageByWeekAsync(int week, int year)
+        public async Task<Dictionary<int, int>> GetUsageByWeekAsync(int week, int year, CancellationToken cancellationToken = default)
         {
             if (week < 1 || week > 53)
                 throw new ArgumentException("Week must be between 1 and 53", nameof(week));
@@ -89,10 +89,10 @@ namespace FITSKIP.Application.Services
             if (year < 1900 || year > 2100)
                 throw new ArgumentException("Invalid year", nameof(year));
 
-            return await _repository.GetUsageByWeekAsync(week, year);
+            return await _repository.GetUsageByWeekAsync(week, year, cancellationToken);
         }
 
-        public async Task<Dictionary<int, int>> GetUsageByMonthAsync(int month, int year)
+        public async Task<Dictionary<int, int>> GetUsageByMonthAsync(int month, int year, CancellationToken cancellationToken = default)
         {
             if (month < 1 || month > 12)
                 throw new ArgumentException("Month must be between 1 and 12", nameof(month));
@@ -100,16 +100,16 @@ namespace FITSKIP.Application.Services
             if (year < 1900 || year > 2100)
                 throw new ArgumentException("Invalid year", nameof(year));
 
-            return await _repository.GetUsageByMonthAsync(month, year);
+            return await _repository.GetUsageByMonthAsync(month, year, cancellationToken);
         }
-        public async Task<Dictionary<int, int>> GetUsageByCurrentWeekAsync()
+        public async Task<Dictionary<int, int>> GetUsageByCurrentWeekAsync(CancellationToken cancellationToken = default)
         {
-            return await _repository.GetUsageByCurrentWeekAsync();
+            return await _repository.GetUsageByCurrentWeekAsync(cancellationToken);
         }
 
-        public async Task<Dictionary<int, int>> GetUsageByCurrentMonthAsync()
+        public async Task<Dictionary<int, int>> GetUsageByCurrentMonthAsync(CancellationToken cancellationToken = default)
         {
-            return await _repository.GetUsageByCurrentMonthAsync();
+            return await _repository.GetUsageByCurrentMonthAsync(cancellationToken);
         }
     }
 }

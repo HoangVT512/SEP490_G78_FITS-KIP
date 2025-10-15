@@ -18,11 +18,11 @@ namespace FITSKIP.API.Controllers
 
         // GET: api/SparePart
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<SparePartDTO>>> GetAllSpareParts()
+        public async Task<ActionResult<IEnumerable<SparePartDTO>>> GetAllSpareParts(CancellationToken cancellationToken = default)
         {
             try
             {
-                var spareParts = await _service.GetAllSparePartsAsync();
+                var spareParts = await _service.GetAllSparePartsAsync(cancellationToken);
 
                 // Mapping Entity to DTO
                 var sparePartDTOs = spareParts.Select(sp => new SparePartDTO
@@ -47,11 +47,11 @@ namespace FITSKIP.API.Controllers
 
         // GET: api/SparePart/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<SparePartDTO>> GetSparePartById(int id)
+        public async Task<ActionResult<SparePartDTO>> GetSparePartById(int id, CancellationToken cancellationToken = default)
         {
             try
             {
-                var sparePart = await _service.GetSparePartByIdAsync(id);
+                var sparePart = await _service.GetSparePartByIdAsync(id, cancellationToken);
 
                 if (sparePart == null)
                     return NotFound(new { message = $"Spare part with ID {id} not found" });
@@ -79,7 +79,7 @@ namespace FITSKIP.API.Controllers
 
         // POST: api/SparePart
         [HttpPost]
-        public async Task<ActionResult<SparePartDTO>> CreateSparePart([FromBody] CreateSparePartRequest request)
+        public async Task<ActionResult<SparePartDTO>> CreateSparePart([FromBody] CreateSparePartRequest request, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -95,7 +95,7 @@ namespace FITSKIP.API.Controllers
                     Location = request.Location
                 };
 
-                var created = await _service.CreateSparePartAsync(sparePart);
+                var created = await _service.CreateSparePartAsync(sparePart, cancellationToken);
 
                 // Mapping Entity to DTO
                 var sparePartDTO = new SparePartDTO
@@ -124,7 +124,7 @@ namespace FITSKIP.API.Controllers
 
         // PUT: api/SparePart/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSparePart(int id, [FromBody] UpdateSparePartRequest request)
+        public async Task<IActionResult> UpdateSparePart(int id, [FromBody] UpdateSparePartRequest request, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -141,7 +141,7 @@ namespace FITSKIP.API.Controllers
                     Status = request.Status
                 };
 
-                var result = await _service.UpdateSparePartAsync(id, sparePart);
+                var result = await _service.UpdateSparePartAsync(id, sparePart, cancellationToken);
 
                 if (!result)
                     return NotFound(new { message = $"Spare part with ID {id} not found" });
@@ -160,11 +160,11 @@ namespace FITSKIP.API.Controllers
 
         // DELETE: api/SparePart/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteSparePart(int id)
+        public async Task<IActionResult> DeleteSparePart(int id, CancellationToken cancellationToken = default)
         {
             try
             {
-                var result = await _service.DeleteSparePartAsync(id);
+                var result = await _service.DeleteSparePartAsync(id, cancellationToken);
 
                 if (!result)
                     return NotFound(new { message = $"Spare part with ID {id} not found" });
@@ -179,11 +179,11 @@ namespace FITSKIP.API.Controllers
 
         // GET: api/SparePart/top5-most-used
         [HttpGet("top5-most-used")]
-        public async Task<ActionResult<IEnumerable<SparePartDTO>>> GetTop5MostUsed()
+        public async Task<ActionResult<IEnumerable<SparePartDTO>>> GetTop5MostUsed(CancellationToken cancellationToken = default)
         {
             try
             {
-                var spareParts = await _service.GetTop5MostUsedSparePartsAsync();
+                var spareParts = await _service.GetTop5MostUsedSparePartsAsync(cancellationToken);
 
                 // Mapping Entity to DTO and sort by replacement count
                 var sparePartDTOs = spareParts.Select(sp => new SparePartDTO
@@ -210,18 +210,18 @@ namespace FITSKIP.API.Controllers
 
         // GET: api/SparePart/usage/weekly?week=5&year=2024
         [HttpGet("usage/weekly")]
-        public async Task<ActionResult<UsageByWeekResponseDTO>> GetTotalUsageByWeek([FromQuery] int week, [FromQuery] int year)
+        public async Task<ActionResult<UsageByWeekResponseDTO>> GetTotalUsageByWeek([FromQuery] int week, [FromQuery] int year, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (week < 1 || week > 53)
                     return BadRequest(new { message = "Week must be between 1 and 53" });
 
-                var usageData = await _service.GetUsageByWeekAsync(week, year);
+                var usageData = await _service.GetUsageByWeekAsync(week, year, cancellationToken);
 
                 // Get part details
                 var partIds = usageData.Keys.ToList();
-                var allParts = await _service.GetAllSparePartsAsync();
+                var allParts = await _service.GetAllSparePartsAsync(cancellationToken);
                 var parts = allParts.Where(p => partIds.Contains(p.PartId)).ToList();
 
                 // Mapping to DTO
@@ -255,18 +255,18 @@ namespace FITSKIP.API.Controllers
 
         // GET: api/SparePart/usage/monthly?month=12&year=2024
         [HttpGet("usage/monthly")]
-        public async Task<ActionResult<UsageByMonthResponseDTO>> GetTotalUsageByMonth([FromQuery] int month, [FromQuery] int year)
+        public async Task<ActionResult<UsageByMonthResponseDTO>> GetTotalUsageByMonth([FromQuery] int month, [FromQuery] int year, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (month < 1 || month > 12)
                     return BadRequest(new { message = "Month must be between 1 and 12" });
 
-                var usageData = await _service.GetUsageByMonthAsync(month, year);
+                var usageData = await _service.GetUsageByMonthAsync(month, year, cancellationToken);
 
                 // Get part details
                 var partIds = usageData.Keys.ToList();
-                var allParts = await _service.GetAllSparePartsAsync();
+                var allParts = await _service.GetAllSparePartsAsync(cancellationToken);
                 var parts = allParts.Where(p => partIds.Contains(p.PartId)).ToList();
 
                 // Mapping to DTO
@@ -300,7 +300,7 @@ namespace FITSKIP.API.Controllers
 
         // GET: api/SparePart/usage/current-week
         [HttpGet("usage/current-week")]
-        public async Task<ActionResult<UsageByWeekResponseDTO>> GetUsageByCurrentWeek()
+        public async Task<ActionResult<UsageByWeekResponseDTO>> GetUsageByCurrentWeek(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -311,11 +311,11 @@ namespace FITSKIP.API.Controllers
                 var currentWeek = calendar.GetWeekOfYear(today, dateTimeFormat.CalendarWeekRule, dateTimeFormat.FirstDayOfWeek);
                 var currentYear = today.Year;
 
-                var usageData = await _service.GetUsageByCurrentWeekAsync();
+                var usageData = await _service.GetUsageByCurrentWeekAsync(cancellationToken);
 
                 // Get part details
                 var partIds = usageData.Keys.ToList();
-                var allParts = await _service.GetAllSparePartsAsync();
+                var allParts = await _service.GetAllSparePartsAsync(cancellationToken);
                 var parts = allParts.Where(p => partIds.Contains(p.PartId)).ToList();
 
                 // Mapping to DTO
@@ -345,7 +345,7 @@ namespace FITSKIP.API.Controllers
 
         // GET: api/SparePart/usage/current-month
         [HttpGet("usage/current-month")]
-        public async Task<ActionResult<UsageByMonthResponseDTO>> GetUsageByCurrentMonth()
+        public async Task<ActionResult<UsageByMonthResponseDTO>> GetUsageByCurrentMonth(CancellationToken cancellationToken = default)
         {
             try
             {
@@ -353,11 +353,11 @@ namespace FITSKIP.API.Controllers
                 var currentMonth = today.Month;
                 var currentYear = today.Year;
 
-                var usageData = await _service.GetUsageByCurrentMonthAsync();
+                var usageData = await _service.GetUsageByCurrentMonthAsync(cancellationToken);
 
                 // Get part details
                 var partIds = usageData.Keys.ToList();
-                var allParts = await _service.GetAllSparePartsAsync();
+                var allParts = await _service.GetAllSparePartsAsync(cancellationToken);
                 var parts = allParts.Where(p => partIds.Contains(p.PartId)).ToList();
 
                 // Mapping to DTO
