@@ -269,7 +269,7 @@ namespace FITSKIP.API
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
             {
                 app.UseSwagger();
                 app.UseSwaggerUI(options =>
@@ -287,19 +287,25 @@ namespace FITSKIP.API
             app.UseCors("AllowFrontend");
 
             // Authentication & Authorization
-            app.UseAuthentication();
-            app.UseAuthorization();
+            if (!app.Environment.IsEnvironment("Testing"))
+            {
+                app.UseAuthentication();
+                app.UseAuthorization();
+            }
 
             app.MapControllers();
 
             // Map SignalR Hub
             app.MapHub<FITSKIP.API.Hubs.NotificationHub>("/hubs/notifications");
 
-            // Seed data before starting the app
-            using (var scope = app.Services.CreateScope())
+            // Seed data before starting the app (skip for Testing environment)
+            if (!app.Environment.IsEnvironment("Testing"))
             {
-                var context = scope.ServiceProvider.GetRequiredService<FitskipDbContext>();
-                await SeedData.SeedAllData(context);
+                using (var scope = app.Services.CreateScope())
+                {
+                    var context = scope.ServiceProvider.GetRequiredService<FitskipDbContext>();
+                    await SeedData.SeedAllData(context);
+                }
             }
 
             app.Run();
