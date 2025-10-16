@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Layout as AntLayout,
   Menu,
@@ -6,16 +6,17 @@ import {
   Dropdown,
   Badge,
   Button,
-  message,
   Typography,
+  Drawer,
+  App,
+  message as antdMessage,
+  notification as antdNotification,
 } from "antd";
 import {
   DashboardOutlined,
-  ShoppingOutlined,
   ToolOutlined,
-  WarningOutlined,
   FileTextOutlined,
-  CalendarOutlined,
+  WarningOutlined,
   UserOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -23,18 +24,19 @@ import {
   BellOutlined,
   SafetyOutlined,
   EditOutlined,
-  InboxOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import styles from "../../styles/components/TechnicianManagerLayout.module.css";
+import signalRService from "../../services/signalRService";
+import styles from "../../styles/pages/TechnicianManagerLayout.module.css";
 
 // Import technician manager pages
 import TechnicianManagerDashboard from "./TechnicianManagerDashboard";
+import IncidentManagement from "./IncidentList";
 import InventoryManagement from "./InventoryManagement";
 import PurchaseRequestManagement from "./PurchaseRequestManagement";
-import MaintenanceManagement from "./MaintenanceManagement";
-import IncidentList from "./IncidentList";
+import MaintenancePlanManagement from "./MaintenanceManagement";
+import NotificationsList from "../ManagerPage/NotificationsList";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -43,184 +45,179 @@ const TechnicianManagerLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [selectedKey, setSelectedKey] = useState("dashboard");
+  const [notificationCount, setNotificationCount] = useState(0);
+  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
 
   // Get technician manager user info from context
-  const techManagerUser = {
-    name: user?.fullName || "Technician Manager",
-    email: user?.email || "techmanager@fitskip.com",
+  const technicianManagerUser = {
+    name: user?.fullName || "Quản lý kỹ thuật",
+    email: user?.email || "tech-manager@fitskip.com",
     avatar: null,
     role: user?.roles?.[0] || "Quản lý kỹ thuật",
   };
 
-  // Update selected key based on current route
-  React.useEffect(() => {
-    const path = location.pathname;
-    if (path.includes("/inventory")) {
-      setSelectedKey("inventory");
-    } else if (path.includes("/purchase-requests")) {
-      setSelectedKey("purchase-requests");
-    } else if (path.includes("/maintenance")) {
-      setSelectedKey("maintenance");
-    } else if (path.includes("/incidents")) {
-      setSelectedKey("incidents");
-    } else {
-      setSelectedKey("dashboard");
-    }
-  }, [location]);
+  // Fetch initial unread notification count from DB
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          "https://localhost:7003/api/Notifications/unread-count",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
 
-  // Render page content based on path
-  const renderContent = () => {
-    const path = location.pathname;
+        if (response.ok) {
+          const result = await response.json();
+          setNotificationCount(result.data || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching unread count:", error);
+      }
+    };
 
-    if (path.includes("/inventory")) {
-      return <InventoryManagement />;
-    } else if (path.includes("/purchase-requests")) {
-      return <PurchaseRequestManagement />;
-    } else if (path.includes("/maintenance")) {
-      return <MaintenanceManagement />;
-    } else if (path.includes("/incidents")) {
-      return <IncidentList />;
-    } else if (path === "/technician-manager" || path.includes("/dashboard")) {
-      return <TechnicianManagerDashboard />;
-    }
+    fetchUnreadCount();
+  }, []);
 
-    // Default to dashboard
-    return <TechnicianManagerDashboard />;
-  };
+  // Initialize SignalR connection
+  useEffect(() => {
+    const initializeSignalR = async () => {
+      try {
+        const token = localStorage.getItem("token");
 
+        if (!token) {
+          console.warn("No token found, skipping SignalR connection");
+          return;
+        }
+
+        // Start SignalR connection
+        await signalRService.startConnection(token);
+
+        // Lắng nghe thông báo cá nhân
+        signalRService.onReceiveNotification((notificationData) => {
+          console.log("📩 Received notification:", notificationData);
+
+          // Tăng số lượng notification badge
+          setNotificationCount((prev) => prev + 1);
+
+          // Hiển thị message toast (LUÔN LUÔN hiển thị)
+          antdMessage.success({
+            content: `🔔 ${
+              notificationData.title ||
+              notificationData.message ||
+              "Bạn có thông báo mới"
+            }`,
+            duration: 5,
+          });
+        });
+      } catch (error) {
+        console.error("❌ Error initializing SignalR:", error);
+      }
+    };
+
+    initializeSignalR();
+
+    // Cleanup function
+    return () => {
+      signalRService.offReceiveNotification();
+    };
+  }, []); // Empty dependency array - only run once on mount
+
+  // Menu items for technician manager
   const menuItems = [
     {
       key: "dashboard",
       icon: <DashboardOutlined />,
-      label: "Tổng quan",
-    },
-    {
-      key: "inventory",
-      icon: <InboxOutlined />,
-      label: "Quản lý kho phụ tùng",
-    },
-    {
-      key: "purchase-requests",
-      icon: <ShoppingOutlined />,
-      label: "Yêu cầu mua hàng",
-    },
-    {
-      key: "maintenance",
-      icon: <ToolOutlined />,
-      label: "Quản lý bảo trì",
+      label: "Bảng điều khiển",
+      onClick: () => navigate("/technician-manager/dashboard"),
     },
     {
       key: "incidents",
       icon: <WarningOutlined />,
-      label: "Danh sách sự cố",
+      label: "Quản lý sự cố",
+      onClick: () => navigate("/technician-manager/incidents"),
+    },
+    {
+      key: "inventory",
+      icon: <ToolOutlined />,
+      label: "Quản lý phụ tùng",
+      onClick: () => navigate("/technician-manager/inventory"),
+    },
+    {
+      key: "purchase",
+      icon: <FileTextOutlined />,
+      label: "Yêu cầu mua hàng",
+      onClick: () => navigate("/technician-manager/purchase-requests"),
+    },
+    {
+      key: "maintenance",
+      icon: <SafetyOutlined />,
+      label: "Kế hoạch bảo trì",
+      onClick: () => navigate("/technician-manager/maintenance-plans"),
     },
   ];
 
+  // Handle menu click
   const handleMenuClick = ({ key }) => {
     setSelectedKey(key);
-    switch (key) {
-      case "dashboard":
-        navigate("/technician-manager/dashboard");
-        break;
-      case "inventory":
-        navigate("/technician-manager/inventory");
-        break;
-      case "purchase-requests":
-        navigate("/technician-manager/purchase-requests");
-        break;
-      case "maintenance":
-        navigate("/technician-manager/maintenance");
-        break;
-      case "incidents":
-        navigate("/technician-manager/incidents");
-        break;
-      default:
-        navigate("/technician-manager/dashboard");
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate("/login");
+    } catch (error) {
+      antdMessage.error("Lỗi khi đăng xuất");
     }
   };
 
-  const userMenuItems = [
-    {
-      key: "profile",
-      icon: <UserOutlined />,
-      label: "Thông tin cá nhân",
-      onClick: () => navigate("/profile"),
-    },
-    {
-      key: "edit-profile",
-      icon: <EditOutlined />,
-      label: "Chỉnh sửa thông tin",
-      onClick: () => navigate("/profile/edit"),
-    },
-    {
-      key: "change-password",
-      icon: <SafetyOutlined />,
-      label: "Đổi mật khẩu",
-      onClick: () => navigate("/profile/change-password"),
-    },
-    {
-      type: "divider",
-    },
-    {
-      key: "logout",
-      icon: <LogoutOutlined />,
-      label: "Đăng xuất",
-      onClick: async () => {
-        await logout();
-        message.success("Đăng xuất thành công!");
-        navigate("/login");
-      },
-    },
-  ];
+  // Get current content based on selected menu
+  const getContent = () => {
+    const path = location.pathname;
 
-  // Styles
+    if (path.includes("dashboard")) {
+      return <TechnicianManagerDashboard />;
+    } else if (path.includes("incidents")) {
+      return <IncidentManagement />;
+    } else if (path.includes("inventory")) {
+      return <InventoryManagement />;
+    } else if (path.includes("purchase-requests")) {
+      return <PurchaseRequestManagement />;
+    } else if (path.includes("maintenance-plans")) {
+      return <MaintenancePlanManagement />;
+    } else if (path.includes("notifications")) {
+      return <NotificationsList />;
+    }
+
+    return <TechnicianManagerDashboard />;
+  };
+
+  const SIDER_EXPANDED_WIDTH = 280;
+  const SIDER_COLLAPSED_WIDTH = 64;
+
   const siderStyle = {
+    background: "linear-gradient(180deg, #283652 0%, #283652 100%)",
     overflow: "auto",
     height: "100vh",
     position: "fixed",
     left: 0,
     top: 0,
     bottom: 0,
-    background: "linear-gradient(180deg, #283652 0%, #283652 100%)",
+    zIndex: 100,
     boxShadow: "2px 0 8px rgba(0,0,0,0.15)",
   };
 
-  const SIDER_EXPANDED_WIDTH = 280;
-  const SIDER_COLLAPSED_WIDTH = 64;
-
-  const headerStyle = {
-    background: "#fff",
-    padding: "0 24px",
-    boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
-    borderBottom: "1px solid #f0f0f0",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "space-between",
+  const contentWrapperStyle = {
     marginLeft:
       collapsed && !hovered ? SIDER_COLLAPSED_WIDTH : SIDER_EXPANDED_WIDTH,
     transition: "margin-left 0.2s",
-  };
-
-  const contentStyle = {
-    marginLeft:
-      collapsed && !hovered ? SIDER_COLLAPSED_WIDTH : SIDER_EXPANDED_WIDTH,
-    padding: 0,
-    minHeight: "calc(100vh - 70px)",
-    backgroundColor: "#f8fafc",
-    transition: "margin-left 0.2s",
-  };
-
-  const logoStyle = {
-    height: "60px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: collapsed && !hovered ? "center" : "flex-start",
-    padding: collapsed && !hovered ? "0" : "0 16px",
-    borderBottom: "1px solid rgba(255,255,255,0.1)",
-    marginBottom: "8px",
   };
 
   const menuStyle = {
@@ -229,17 +226,41 @@ const TechnicianManagerLayout = () => {
     fontSize: "14px",
   };
 
+  const userMenuItems = [
+    {
+      key: "profile",
+      icon: <UserOutlined />,
+      label: "Hồ sơ",
+      onClick: () => navigate("/profile"),
+    },
+    {
+      key: "notifications",
+      icon: <BellOutlined />,
+      label: "Thông báo",
+      onClick: () => setNotificationDrawerOpen(true),
+    },
+    {
+      key: "logout",
+      icon: <LogoutOutlined />,
+      label: "Đăng xuất",
+      onClick: handleLogout,
+    },
+  ];
+
   return (
     <AntLayout
-      className={styles.techManagerLayout}
+      className={styles.technicianManagerLayout}
       style={{ minHeight: "100vh" }}
     >
-      {/* Sidebar */}
+      {/* Sider */}
       <Sider
         collapsible
+        theme="dark"
         collapsed={collapsed && !hovered}
         onCollapse={setCollapsed}
         onMouseEnter={() => {
+          // Only enable temporary hover-expand when the sider is not in collapsed state.
+          // This prevents a collapsed sider from auto-expanding on hover; user must click to expand.
           if (!collapsed) setHovered(true);
         }}
         onMouseLeave={() => setHovered(false)}
@@ -249,17 +270,17 @@ const TechnicianManagerLayout = () => {
         trigger={null}
       >
         {/* Logo */}
-        <div style={logoStyle}>
+        <div className={styles.technicianManagerLogo}>
           {!collapsed && (
             <Title
               level={4}
               style={{ color: "#fff", margin: 0, fontSize: "16px" }}
             >
-              ⚙️ FITS-KIP Quản lý KT
+              🔧 FITS-KIP QLKT
             </Title>
           )}
           {collapsed && (
-            <Text style={{ color: "#fff", fontSize: "20px" }}>⚙️</Text>
+            <Text style={{ color: "#fff", fontSize: "20px" }}>🔧</Text>
           )}
         </div>
 
@@ -289,57 +310,57 @@ const TechnicianManagerLayout = () => {
             onClick={() =>
               setCollapsed((prev) => {
                 const next = !prev;
+                // If collapsing (next === true), clear hovered so visual collapse is immediate
                 if (next) setHovered(false);
                 return next;
               })
             }
-            style={{
-              color: "#fff",
-              border: "none",
-              background: "rgba(255,255,255,0.1)",
-              width: "40px",
-              height: "40px",
-            }}
+            className={styles.collapseButton}
           />
         </div>
       </Sider>
 
-      <AntLayout>
+      {/* Layout */}
+      <AntLayout style={contentWrapperStyle}>
         {/* Header */}
-        <Header style={headerStyle}>
+        <Header
+          style={{
+            background: "#fff",
+            padding: "0 24px",
+            boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <Title level={4} style={{ margin: 0, color: "#1f2937" }}>
               {menuItems.find((item) => item.key === selectedKey)?.label ||
-                "Tổng quan"}
+                "Bảng điều khiển QLKT"}
             </Title>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-            {/* Notifications */}
-            <Badge count={5} size="small" className={styles.notificationBadge}>
-              <Button
-                type="text"
-                icon={<BellOutlined />}
-                style={{ color: "#6b7280" }}
-              />
+          <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+            {/* Notifications Badge */}
+            <Badge
+              count={notificationCount}
+              onClick={() => setNotificationDrawerOpen(true)}
+              style={{ cursor: "pointer" }}
+            >
+              <BellOutlined style={{ fontSize: "18px", cursor: "pointer" }} />
             </Badge>
 
-            {/* User dropdown */}
-            <Dropdown
-              menu={{ items: userMenuItems }}
-              placement="bottomRight"
-              arrow
-            >
+            {/* User Dropdown */}
+            <Dropdown menu={{ items: userMenuItems }} trigger={["click"]}>
               <div className={styles.userDropdown}>
-                <Avatar
-                  size="small"
-                  icon={<UserOutlined />}
-                  src={techManagerUser.avatar}
-                  style={{ backgroundColor: "#334766" }}
-                />
+                <Avatar size={32} icon={<UserOutlined />} />
                 <div className={styles.userInfo}>
-                  <div className={styles.userName}>{techManagerUser.name}</div>
-                  <div className={styles.userRole}>{techManagerUser.role}</div>
+                  <div className={styles.userName}>
+                    {technicianManagerUser.name}
+                  </div>
+                  <div className={styles.userRole}>
+                    {technicianManagerUser.role}
+                  </div>
                 </div>
               </div>
             </Dropdown>
@@ -347,10 +368,29 @@ const TechnicianManagerLayout = () => {
         </Header>
 
         {/* Content */}
-        <Content style={contentStyle}>
-          <div className={styles.techManagerContent}>{renderContent()}</div>
+        <Content
+          style={{
+            margin: "24px",
+            padding: "24px",
+            background: "#fff",
+            borderRadius: "8px",
+            minHeight: "calc(100vh - 112px)",
+          }}
+        >
+          {getContent()}
         </Content>
       </AntLayout>
+
+      {/* Notifications Drawer */}
+      <Drawer
+        title="Thông báo"
+        placement="right"
+        onClose={() => setNotificationDrawerOpen(false)}
+        open={notificationDrawerOpen}
+        width={400}
+      >
+        <NotificationsList />
+      </Drawer>
     </AntLayout>
   );
 };

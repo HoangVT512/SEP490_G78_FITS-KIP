@@ -51,6 +51,9 @@ class SignalRService {
   // Đăng ký lắng nghe thông báo
   onReceiveNotification(callback) {
     if (this.connection) {
+      // Remove existing listeners first to prevent duplicates
+      this.connection.off("ReceiveNotification");
+
       this.connection.on("ReceiveNotification", (notification) => {
         console.log("Received notification:", notification);
         callback(notification);
@@ -58,13 +61,30 @@ class SignalRService {
     }
   }
 
+  // Hủy đăng ký lắng nghe thông báo
+  offReceiveNotification() {
+    if (this.connection) {
+      this.connection.off("ReceiveNotification");
+    }
+  }
+
   // Đăng ký lắng nghe broadcast
   onReceiveBroadcast(callback) {
     if (this.connection) {
+      // Remove existing listeners first to prevent duplicates
+      this.connection.off("ReceiveBroadcast");
+
       this.connection.on("ReceiveBroadcast", (message) => {
         console.log("Received broadcast:", message);
         callback(message);
       });
+    }
+  }
+
+  // Hủy đăng ký lắng nghe broadcast
+  offReceiveBroadcast() {
+    if (this.connection) {
+      this.connection.off("ReceiveBroadcast");
     }
   }
 
