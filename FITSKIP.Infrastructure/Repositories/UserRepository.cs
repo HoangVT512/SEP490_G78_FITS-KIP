@@ -281,17 +281,28 @@ public class UserRepository : IUserRepository
         if (request.RoleIds != null && request.RoleIds.Length > 0)
         {
             // Only take the first role since we now have 1-to-many relationship
-            var roleId = request.RoleIds[0];
+            var roleIdOrName = request.RoleIds[0];
 
-            // Verify role exists and has name
-            var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
-            if (role == null || string.IsNullOrEmpty(role.Name))
+            // Normalize input
+            var normalizedInput = roleIdOrName?.Trim();
+
+            if (string.IsNullOrEmpty(normalizedInput))
             {
-                throw new Exception($"Role với ID '{roleId}' không tồn tại hoặc không hợp lệ trong hệ thống");
+                throw new ArgumentException("RoleId hoặc Role Name không được để trống");
             }
 
-            // Update RoleId in User entity for navigation
-            existingUser.RoleId = roleId;
+            // Try to find role by Id first, then by Name (case-insensitive)
+            var role = await db.Roles.FirstOrDefaultAsync(
+                r => r.Id == normalizedInput || r.Name == normalizedInput,
+                cancellationToken);
+
+            if (role == null || string.IsNullOrEmpty(role.Name))
+            {
+                throw new Exception($"Role '{normalizedInput}' không tồn tại hoặc không hợp lệ trong hệ thống. Vui lòng kiểm tra lại Role ID hoặc Role Name.");
+            }
+
+            // Update RoleId in User entity for navigation (always store the actual ID)
+            existingUser.RoleId = role.Id;
 
             // If role is "Quản lý" and department is provided, set user as manager
             if (role.Name == "Quản lý" && request.DepartmentId.HasValue && request.DepartmentId.Value > 0)
