@@ -20,7 +20,7 @@ public class UsersController : ControllerBase
         this.userService = userService;
         this.roleService = roleService;
     }
-
+    // GET: https://localhost:7003/api/Users
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<UserDTO>>> Get(CancellationToken cancellationToken)
     {
@@ -135,7 +135,7 @@ public class UsersController : ControllerBase
         }
         return Ok(updatedUser);
     }
-
+    // POST: https://localhost:7003/api/Users
     [HttpPost]
     public async Task<ActionResult<UserDTO>> CreateUser([FromBody] CreateUserRequest request, CancellationToken cancellationToken)
     {
@@ -236,7 +236,9 @@ public class UsersController : ControllerBase
                 EmployeeCode = createdUser.EmployeeCode,
                 PhoneNumber = createdUser.PhoneNumber,
                 EmailConfirmed = createdUser.EmailConfirmed,
-                LockoutEnabled = createdUser.LockoutEnabled
+                LockoutEnabled = createdUser.LockoutEnabled,
+                IsActive = true
+
             };
 
             return Ok(new { success = true, data = response, message = "Tạo người dùng thành công" });
