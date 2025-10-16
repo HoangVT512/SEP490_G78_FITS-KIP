@@ -38,3 +38,5 @@ yarn-error.log*
 *.sqlite
 *.DS_Store
 Thumbs.db
+.vs/FITSKIP/DesignTimeBuild/.dtbcache.v2
+*.v2

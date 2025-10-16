@@ -58,9 +58,12 @@ namespace FITSKIP.API
                     options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
                 });
             builder.Services.AddMemoryCache();
-            // Add DbContext
+            // Add DbContext with support for test database selection
+            var connectionStringName = builder.Environment.IsEnvironment("Testing") ? "TestConnection" : "DefaultConnection";
+            var connectionString = builder.Configuration.GetConnectionString(connectionStringName);
+            
             builder.Services.AddDbContext<FITSKIP.Infrastructure.DbContexts.FitskipDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(connectionString));
 
             // Configure TwilioSettings
             builder.Services.Configure<FITSKIP.Application.Settings.TwilioSettings>(
