@@ -139,7 +139,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     EmployeeCode = "QTV001",
                     PhoneNumber = "0901234567"
                 };
-                admin.PasswordHash = _passwordHasher.HashPassword(admin, "Admin123@");
+                admin.PasswordHash = _passwordHasher.HashPassword(admin, "123456");
                 users.Add(admin);
 
                 // Manager Users - Quản lý
@@ -157,7 +157,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     EmployeeCode = "QL001",
                     PhoneNumber = "0987654321"
                 };
-                manager.PasswordHash = _passwordHasher.HashPassword(manager, "Manager123@");
+                manager.PasswordHash = _passwordHasher.HashPassword(manager, "123456");
                 users.Add(manager);
 
                 // Technical Manager - Quản lý kỹ thuật
@@ -175,7 +175,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     EmployeeCode = "QLKT001",
                     PhoneNumber = "0912345678"
                 };
-                techManager.PasswordHash = _passwordHasher.HashPassword(techManager, "TechMgr123@");
+                techManager.PasswordHash = _passwordHasher.HashPassword(techManager, "123456");
                 users.Add(techManager);
 
                 // Team Leaders - Tổ trưởng
@@ -193,7 +193,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     EmployeeCode = "TT001",
                     PhoneNumber = "0923456789"
                 };
-                teamLeader.PasswordHash = _passwordHasher.HashPassword(teamLeader, "TeamLead123@");
+                teamLeader.PasswordHash = _passwordHasher.HashPassword(teamLeader, "123456");
                 users.Add(teamLeader);
 
                 // Technicians - Kỹ thuật viên
@@ -211,8 +211,26 @@ namespace FITSKIP.Infrastructure.SeedData
                     EmployeeCode = "KTV001",
                     PhoneNumber = "0945678901"
                 };
-                technician.PasswordHash = _passwordHasher.HashPassword(technician, "Tech123@");
+                technician.PasswordHash = _passwordHasher.HashPassword(technician, "123456");
                 users.Add(technician);
+
+                // Additional Technician - Kỹ thuật viên 2
+                var technician2 = new User
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    UserName = "kythuat.vien2",
+                    NormalizedUserName = "KYTHUAT.VIEN2",
+                    Email = "kythuat.vien2@kipvietnam.vn",
+                    NormalizedEmail = "KYTHUAT.VIEN2@KIPVIETNAM.VN",
+                    EmailConfirmed = true,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    ConcurrencyStamp = Guid.NewGuid().ToString(),
+                    FullName = "Nguyễn Thị Kỹ thuật",
+                    EmployeeCode = "KTV002",
+                    PhoneNumber = "0956789012"
+                };
+                technician2.PasswordHash = _passwordHasher.HashPassword(technician2, "123456");
+                users.Add(technician2);
                 await context.Users.AddRangeAsync(users);
                 await context.SaveChangesAsync();
             }
@@ -352,7 +370,7 @@ namespace FITSKIP.Infrastructure.SeedData
                         },
                         new Line
                         {
-                            LineName = "Dây chuyền sản xuất 2", 
+                            LineName = "Dây chuyền sản xuất 2",
                             DepartmentId = productionDept.DepartmentId,
                             IsActive = true
                         },
@@ -636,24 +654,24 @@ namespace FITSKIP.Infrastructure.SeedData
                 for (int day = 30; day >= 0; day--)
                 {
                     var incidentDate = DateTime.Now.AddDays(-day);
-                    
+
                     // Tạo 2-5 incidents mỗi ngày
                     var incidentCount = random.Next(2, 6);
-                    
+
                     for (int i = 0; i < incidentCount; i++)
                     {
                         var selectedEquipment = equipment[random.Next(equipment.Count)];
                         var selectedStopType = stopTypes[random.Next(stopTypes.Count)];
-                        
+
                         // Random thời gian trong ngày
                         var startHour = random.Next(6, 20);
                         var startMinute = random.Next(0, 60);
                         var startTime = new DateTime(incidentDate.Year, incidentDate.Month, incidentDate.Day, startHour, startMinute, 0);
-                        
+
                         // Duration từ 15 phút đến 4 giờ (240 phút)
                         var durationMinutes = random.Next(15, 241);
                         var endTime = startTime.AddMinutes(durationMinutes);
-                        
+
                         // Đảm bảo không vượt quá thời gian hiện tại
                         if (endTime > DateTime.Now)
                         {
