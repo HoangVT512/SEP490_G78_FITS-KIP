@@ -410,7 +410,7 @@ const ManagerLayout = () => {
                 level={4}
                 style={{ color: "#fff", margin: 0, fontSize: "16px" }}
               >
-                📊 FITS-KIP Manager
+                📊 FITS-KIP Quản lý
               </Title>
             )}
             {collapsed && (
