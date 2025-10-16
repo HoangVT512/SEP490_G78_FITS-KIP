@@ -9,18 +9,18 @@ namespace FITSKIP.Domain.Interfaces
 {
     public interface ISparePartRepository
     {
-        Task<IEnumerable<SparePart>> GetAllAsync();
-        Task<SparePart?> GetByIdAsync(int partId);
-        Task<SparePart> AddAsync(SparePart sparePart);
-        Task<bool> UpdateAsync(SparePart sparePart);
-        Task<bool> DeleteAsync(int partId);
-        Task<bool> ExistsAsync(int partId);
-        Task<IEnumerable<SparePart>> GetTop5MostUsedAsync();
-        Task<Dictionary<int, int>> GetReplacementCountsAsync(IEnumerable<int> partIds);
-        Task<Dictionary<int, int>> GetPurchaseRequestCountsAsync(IEnumerable<int> partIds);
-        Task<Dictionary<int, int>> GetUsageByWeekAsync(int week, int year);
-        Task<Dictionary<int, int>> GetUsageByMonthAsync(int month, int year);
-        Task<Dictionary<int, int>> GetUsageByCurrentWeekAsync();
-        Task<Dictionary<int, int>> GetUsageByCurrentMonthAsync();
+        Task<IEnumerable<SparePart>> GetAllAsync(CancellationToken cancellationToken = default);
+        Task<SparePart?> GetByIdAsync(int partId, CancellationToken cancellationToken = default);
+        Task<SparePart> AddAsync(SparePart sparePart, CancellationToken cancellationToken = default);
+        Task<bool> UpdateAsync(SparePart sparePart, CancellationToken cancellationToken = default);
+        Task<bool> DeleteAsync(int partId, CancellationToken cancellationToken = default);
+        Task<bool> ExistsAsync(int partId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<SparePart>> GetTop5MostUsedAsync(CancellationToken cancellationToken = default);
+        Task<Dictionary<int, int>> GetReplacementCountsAsync(IEnumerable<int> partIds, CancellationToken cancellationToken = default);
+        Task<Dictionary<int, int>> GetPurchaseRequestCountsAsync(IEnumerable<int> partIds, CancellationToken cancellationToken = default);
+        Task<Dictionary<int, int>> GetUsageByWeekAsync(int week, int year, CancellationToken cancellationToken = default);
+        Task<Dictionary<int, int>> GetUsageByMonthAsync(int month, int year, CancellationToken cancellationToken = default);
+        Task<Dictionary<int, int>> GetUsageByCurrentWeekAsync(CancellationToken cancellationToken = default);
+        Task<Dictionary<int, int>> GetUsageByCurrentMonthAsync(CancellationToken cancellationToken = default);
     }
 }
