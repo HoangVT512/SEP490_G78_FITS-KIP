@@ -11,7 +11,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.google.zxing.Result;
 import com.journeyapps.barcodescanner.BarcodeCallback;
 import com.journeyapps.barcodescanner.BarcodeResult;
 import com.journeyapps.barcodescanner.DecoratedBarcodeView;
@@ -20,10 +19,13 @@ public class QRScannerActivity extends AppCompatActivity implements BarcodeCallb
 
     private static final int CAMERA_PERMISSION_REQUEST = 100;
     private DecoratedBarcodeView barcodeView;
+    private String productionLine;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        productionLine = getIntent().getStringExtra("production_line");
 
         // Check camera permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -50,6 +52,7 @@ public class QRScannerActivity extends AppCompatActivity implements BarcodeCallb
         // Return result to calling activity
         Intent intent = new Intent();
         intent.putExtra("qr_code", qrCode);
+        intent.putExtra("production_line", productionLine); // Add this line
         setResult(RESULT_OK, intent);
         finish();
     }

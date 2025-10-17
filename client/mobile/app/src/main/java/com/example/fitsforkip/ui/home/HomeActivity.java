@@ -21,6 +21,7 @@ import com.example.fitsforkip.R;
 import com.example.fitsforkip.ui.equipment.EquipmentListActivity;
 import com.example.fitsforkip.ui.incident.IncidentHistoryActivity;
 import com.example.fitsforkip.ui.login.LoginActivity;
+import com.example.fitsforkip.ui.scan.DeviceInfoDialog;
 import com.example.fitsforkip.ui.scan.QRScannerActivity;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
@@ -156,6 +157,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         // Thêm listener cho nút quét QR
         btnScan.setOnClickListener(v -> {
             Intent intent = new Intent(HomeActivity.this, QRScannerActivity.class);
+            intent.putExtra("production_line", productionLine);
             startActivityForResult(intent, 1);
         });
     }
@@ -209,6 +211,20 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
 //            animateFAB();
         } else {
             super.onBackPressed();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == 1 && resultCode == RESULT_OK) {
+            String qrCode = data.getStringExtra("qr_code");
+            String prodLine = data.getStringExtra("production_line");
+            // Assume congDoan is fetched or hardcoded
+            String congDoan = "Công đoạn 1"; // Placeholder, replace with actual logic
+
+            DeviceInfoDialog dialog = new DeviceInfoDialog(this, qrCode, prodLine, congDoan);
+            dialog.show();
         }
     }
 }
