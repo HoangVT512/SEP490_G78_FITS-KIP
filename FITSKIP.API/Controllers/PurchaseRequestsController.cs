@@ -2,6 +2,8 @@ using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using FITSKIP.API.Hubs;
 
 namespace FITSKIP.API.Controllers;
 
@@ -12,13 +14,16 @@ public class PurchaseRequestsController : ControllerBase
 {
     private readonly IPurchaseRequestService _purchaseRequestService;
     private readonly ILogger<PurchaseRequestsController> _logger;
+    private readonly IHubContext<NotificationHub> _hubContext;
 
     public PurchaseRequestsController(
         IPurchaseRequestService purchaseRequestService,
-        ILogger<PurchaseRequestsController> logger)
+        ILogger<PurchaseRequestsController> logger,
+        IHubContext<NotificationHub> hubContext)
     {
         _purchaseRequestService = purchaseRequestService;
         _logger = logger;
+        _hubContext = hubContext;
     }
 
     /// <summary>
@@ -214,6 +219,10 @@ public class PurchaseRequestsController : ControllerBase
 
             var purchaseRequest = await _purchaseRequestService.CreatePurchaseRequestAsync(request, userId);
 
+            // Send real-time update to both groups
+            await _hubContext.Clients.Group("TechnicalManagers").SendAsync("DataUpdated", new { type = "purchaseRequest", action = "created", requestId = purchaseRequest.RequestId });
+            await _hubContext.Clients.Group("Managers").SendAsync("DataUpdated", new { type = "purchaseRequest", action = "created", requestId = purchaseRequest.RequestId });
+
             return CreatedAtAction(
                 nameof(GetPurchaseRequest),
                 new { id = purchaseRequest.RequestId },
@@ -295,6 +304,10 @@ public class PurchaseRequestsController : ControllerBase
                 return NotFound(ApiResponse.ErrorResponse($"Không tìm thấy yêu cầu mua hàng với ID: {id}"));
             }
 
+            // Send real-time update to both groups
+            await _hubContext.Clients.Group("TechnicalManagers").SendAsync("DataUpdated", new { type = "purchaseRequest", action = "updated", requestId = purchaseRequest.RequestId });
+            await _hubContext.Clients.Group("Managers").SendAsync("DataUpdated", new { type = "purchaseRequest", action = "updated", requestId = purchaseRequest.RequestId });
+
             return Ok(ApiResponse<PurchaseRequestDTO>.SuccessResponse(
                 purchaseRequest,
                 "Cập nhật yêu cầu mua hàng thành công"
@@ -365,6 +378,10 @@ public class PurchaseRequestsController : ControllerBase
             {
                 return NotFound(ApiResponse.ErrorResponse($"Không tìm thấy yêu cầu mua hàng với ID: {id}"));
             }
+
+            // Send real-time update to both groups
+            await _hubContext.Clients.Group("TechnicalManagers").SendAsync("DataUpdated", new { type = "purchaseRequest", action = "deleted", requestId = id });
+            await _hubContext.Clients.Group("Managers").SendAsync("DataUpdated", new { type = "purchaseRequest", action = "deleted", requestId = id });
 
             return Ok(ApiResponse.SuccessResponse("Xóa yêu cầu mua hàng thành công"));
         }
@@ -438,6 +455,10 @@ public class PurchaseRequestsController : ControllerBase
             {
                 return NotFound(ApiResponse.ErrorResponse($"Không tìm thấy yêu cầu mua hàng với ID: {id}"));
             }
+
+            // Send real-time update to both groups
+            await _hubContext.Clients.Group("TechnicalManagers").SendAsync("DataUpdated", new { type = "purchaseRequest", action = "approved", requestId = purchaseRequest.RequestId });
+            await _hubContext.Clients.Group("Managers").SendAsync("DataUpdated", new { type = "purchaseRequest", action = "approved", requestId = purchaseRequest.RequestId });
 
             return Ok(ApiResponse<PurchaseRequestDTO>.SuccessResponse(
                 purchaseRequest,
@@ -519,6 +540,10 @@ public class PurchaseRequestsController : ControllerBase
             {
                 return NotFound(ApiResponse.ErrorResponse($"Không tìm thấy yêu cầu mua hàng với ID: {id}"));
             }
+
+            // Send real-time update to both groups
+            await _hubContext.Clients.Group("TechnicalManagers").SendAsync("DataUpdated", new { type = "purchaseRequest", action = "rejected", requestId = purchaseRequest.RequestId });
+            await _hubContext.Clients.Group("Managers").SendAsync("DataUpdated", new { type = "purchaseRequest", action = "rejected", requestId = purchaseRequest.RequestId });
 
             return Ok(ApiResponse<PurchaseRequestDTO>.SuccessResponse(
                 purchaseRequest,

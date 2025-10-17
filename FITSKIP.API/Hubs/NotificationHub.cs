@@ -76,6 +76,13 @@ namespace FITSKIP.API.Hubs
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
             Console.WriteLine($"Connection {Context.ConnectionId} left group {groupName}");
         }
+
+        // Send data update notification to a group
+        public async Task SendDataUpdateToGroup(string groupName, string type, object data)
+        {
+            await Clients.Group(groupName).SendAsync("DataUpdated", new { type, data, timestamp = DateTime.UtcNow });
+            Console.WriteLine($"Sent data update to group {groupName}: {type}");
+        }
     }
 }
 
