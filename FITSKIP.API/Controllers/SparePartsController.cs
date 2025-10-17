@@ -7,11 +7,11 @@ namespace FITSKIP.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class SparePartController : ControllerBase
+    public class SparePartsController : ControllerBase
     {
         private readonly ISparePartService _service;
 
-        public SparePartController(ISparePartService service)
+        public SparePartsController(ISparePartService service)
         {
             _service = service;
         }
