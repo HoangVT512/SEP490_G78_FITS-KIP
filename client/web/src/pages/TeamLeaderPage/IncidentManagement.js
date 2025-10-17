@@ -295,11 +295,31 @@ const IncidentManagement = () => {
   const handleFormSubmit = async (values) => {
     try {
       setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Build payload according to backend CreateIncidentRequest
+      const payload = {
+        equipmentId:
+          form.getFieldValue("equipmentId") || values.equipmentId || null,
+        // StartTime is intentionally omitted so backend will set it to current time
+        endTime: null,
+        typeId: values.typeId || null,
+        issue: values.issue,
+        reason: values.reason || null,
+        solution: values.solution || null,
+        reportedByUserId:
+          currentUser?.id || currentUser?.userId || currentUser?.userID || null,
+      };
 
       if (isEditMode) {
+        // For edit we call update - keep existing behavior but map payload to update DTO
+        const id =
+          selectedIncident?.id ||
+          selectedIncident?.incidentId ||
+          selectedIncident?.IncidentId;
+        await incidentService.update(id, payload);
         message.success("Cập nhật sự cố thành công!");
       } else {
+        await incidentService.create(payload);
         message.success("Thêm sự cố thành công!");
       }
 
@@ -307,7 +327,10 @@ const IncidentManagement = () => {
       form.resetFields();
       fetchIncidents();
     } catch (error) {
-      message.error("Lưu thất bại!");
+      console.error("Save incident error:", error);
+      const errMsg = error?.message || error?.data?.message || "Lưu thất bại!";
+      message.error(errMsg);
+    } finally {
       setLoading(false);
     }
   };
@@ -1318,13 +1341,7 @@ const IncidentManagement = () => {
             </Col>
 
             <Col span={12}>
-              <Form.Item
-                label="Loại dừng"
-                name="typeId"
-                rules={[
-                  { required: true, message: "Vui lòng chọn loại dừng!" },
-                ]}
-              >
+              <Form.Item label="Loại dừng" name="typeId">
                 <Select placeholder="Chọn loại dừng" showSearch>
                   {stopTypes.map((stopType) => (
                     <Option
