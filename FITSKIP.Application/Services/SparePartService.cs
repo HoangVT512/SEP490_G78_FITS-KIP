@@ -40,9 +40,12 @@ namespace FITSKIP.Application.Services
             if (sparePart.Quantity < 0)
                 throw new ArgumentException("Quantity cannot be negative");
 
-            // Set default status if not provided
-            if (string.IsNullOrWhiteSpace(sparePart.Status))
-                sparePart.Status = "Đủ hàng";
+            // Set default MinQuantity if not provided
+            if (sparePart.MinQuantity <= 0)
+                sparePart.MinQuantity = 5;
+
+            // Calculate status based on quantity vs minQuantity
+            sparePart.Status = CalculateStatus(sparePart.Quantity, sparePart.MinQuantity);
 
             return await _repository.AddAsync(sparePart, cancellationToken);
         }
@@ -59,9 +62,12 @@ namespace FITSKIP.Application.Services
             if (sparePart.Quantity < 0)
                 throw new ArgumentException("Quantity cannot be negative");
 
-            // Set default status if not provided
-            if (string.IsNullOrWhiteSpace(sparePart.Status))
-                sparePart.Status = "Đủ hàng";
+            // Set default MinQuantity if not provided
+            if (sparePart.MinQuantity <= 0)
+                sparePart.MinQuantity = 5;
+
+            // Calculate status based on quantity vs minQuantity
+            sparePart.Status = CalculateStatus(sparePart.Quantity, sparePart.MinQuantity);
 
             var exists = await _repository.ExistsAsync(partId);
             if (!exists)
@@ -114,6 +120,19 @@ namespace FITSKIP.Application.Services
         public async Task<Dictionary<int, int>> GetUsageByCurrentMonthAsync(CancellationToken cancellationToken = default)
         {
             return await _repository.GetUsageByCurrentMonthAsync(cancellationToken);
+        }
+
+        /// <summary>
+        /// Tính trạng thái của phụ tùng dựa vào số lượng hiện có so với số lượng tối thiểu
+        /// </summary>
+        private string CalculateStatus(int quantity, int minQuantity)
+        {
+            if (quantity == 0)
+                return "Hết hàng";
+            else if (quantity <= minQuantity)
+                return "Sắp hết";
+            else
+                return "Đủ hàng";
         }
     }
 }

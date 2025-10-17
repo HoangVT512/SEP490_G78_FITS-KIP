@@ -31,6 +31,7 @@ namespace FITSKIP.API.Controllers
                     PartNumber = sp.PartNumber,
                     PartName = sp.PartName,
                     Quantity = sp.Quantity,
+                    MinQuantity = sp.MinQuantity,
                     Location = sp.Location,
                     Status = sp.Status,
                     TotalPurchaseRequest = sp.PurchaseRequests?.Count ?? 0,
@@ -63,6 +64,7 @@ namespace FITSKIP.API.Controllers
                     PartNumber = sparePart.PartNumber,
                     PartName = sparePart.PartName,
                     Quantity = sparePart.Quantity,
+                    MinQuantity = sparePart.MinQuantity,
                     Location = sparePart.Location,
                     Status = sparePart.Status,
                     TotalPurchaseRequest = sparePart.PurchaseRequests?.Count ?? 0,
@@ -92,6 +94,7 @@ namespace FITSKIP.API.Controllers
                     PartNumber = request.PartNumber,
                     PartName = request.PartName,
                     Quantity = request.Quantity,
+                    MinQuantity = request.MinQuantity,
                     Location = request.Location
                 };
 
@@ -104,6 +107,7 @@ namespace FITSKIP.API.Controllers
                     PartNumber = created.PartNumber,
                     PartName = created.PartName,
                     Quantity = created.Quantity,
+                    MinQuantity = created.MinQuantity,
                     Location = created.Location,
                     Status = created.Status,
                     TotalPurchaseRequest = 0,
@@ -137,6 +141,7 @@ namespace FITSKIP.API.Controllers
                     PartNumber = request.PartNumber,
                     PartName = request.PartName,
                     Quantity = request.Quantity,
+                    MinQuantity = request.MinQuantity,
                     Location = request.Location,
                     Status = request.Status
                 };

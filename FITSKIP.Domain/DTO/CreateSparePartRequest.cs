@@ -14,6 +14,8 @@ namespace FITSKIP.Domain.DTO
 
         public int Quantity { get; set; }
 
+        public int MinQuantity { get; set; } = 5;
+
         public string? Location { get; set; }
     }
 }

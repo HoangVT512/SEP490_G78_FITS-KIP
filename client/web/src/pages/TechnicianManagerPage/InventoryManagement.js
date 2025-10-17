@@ -42,6 +42,9 @@ const InventoryManagement = () => {
 
   // Spare parts loaded from backend
   const [spareParts, setSpareParts] = useState([]);
+  const [showMinModal, setShowMinModal] = useState(false);
+  const [minValue, setMinValue] = useState(5); // Single min quantity value for Apply-to-All
+  const [savingMin, setSavingMin] = useState(false);
 
   const stats = {
     total: spareParts.length,
@@ -135,6 +138,13 @@ const InventoryManagement = () => {
       },
     },
     {
+      title: "Số lượng tối thiểu",
+      dataIndex: "minQuantity",
+      key: "minQuantity",
+      width: 140,
+      render: (min) => min ?? 0,
+    },
+    {
       title: "Thao tác",
       key: "action",
       fixed: "right",
@@ -215,6 +225,7 @@ const InventoryManagement = () => {
         partNumber: values.partNumber,
         partName: values.partName,
         quantity: values.quantity || 0,
+        minQuantity: values.minQuantity ?? 5,
         location: values.location || "",
       };
 
@@ -236,6 +247,8 @@ const InventoryManagement = () => {
       setLoading(false);
     }
   };
+
+  // Update minQuantity quickly from table inline edit
 
   // Load parts from backend
   const loadParts = async () => {
@@ -326,9 +339,20 @@ const InventoryManagement = () => {
         variant="borderless"
         className={styles.tableCard}
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            Thêm phụ tùng
-          </Button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button
+              type="default"
+              onClick={() => {
+                setMinValue(5);
+                setShowMinModal(true);
+              }}
+            >
+              Điều chỉnh SL tối thiểu
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              Thêm phụ tùng
+            </Button>
+          </div>
         }
       >
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
@@ -469,6 +493,18 @@ const InventoryManagement = () => {
             </Col>
           </Row>
 
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="minQuantity"
+                label="Số lượng tối thiểu"
+                rules={[{ type: "number", min: 0, message: "Phải >= 0" }]}
+              >
+                <InputNumber min={0} style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
             <Space style={{ width: "100%", justifyContent: "flex-end" }}>
               <Button
@@ -481,6 +517,64 @@ const InventoryManagement = () => {
               </Button>
               <Button type="primary" htmlType="submit" loading={loading}>
                 {editingRecord ? "Cập nhật" : "Thêm mới"}
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Min quantity adjustment modal */}
+      <Modal
+        title="Điều chỉnh số lượng tối thiểu"
+        open={showMinModal}
+        onCancel={() => setShowMinModal(false)}
+        footer={null}
+        width={500}
+      >
+        <Form layout="vertical">
+          <Form.Item label="Áp dụng số lượng tối thiểu cho tất cả phụ tùng">
+            <InputNumber
+              min={0}
+              value={minValue}
+              onChange={(val) => setMinValue(val || 5)}
+              style={{ width: "100%" }}
+              placeholder="Nhập số lượng tối thiểu"
+            />
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 0 }}>
+            <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+              <Button onClick={() => setShowMinModal(false)}>Hủy</Button>
+              <Button
+                type="primary"
+                loading={savingMin}
+                onClick={async () => {
+                  try {
+                    setSavingMin(true);
+                    // Apply minValue to all spare parts
+                    for (const part of spareParts) {
+                      // Send full payload with all required fields
+                      await sparePartService.update(part.partId, {
+                        partNumber: part.partNumber,
+                        partName: part.partName,
+                        quantity: part.quantity,
+                        location: part.location || "",
+                        minQuantity: minValue,
+                      });
+                    }
+                    message.success(
+                      `Áp dụng số lượng tối thiểu ${minValue} cho tất cả phụ tùng thành công`
+                    );
+                    setShowMinModal(false);
+                    await loadParts();
+                  } catch (err) {
+                    console.error(err);
+                    message.error("Không thể áp dụng số lượng tối thiểu");
+                  } finally {
+                    setSavingMin(false);
+                  }
+                }}
+              >
+                Áp dụng cho tất cả
               </Button>
             </Space>
           </Form.Item>
