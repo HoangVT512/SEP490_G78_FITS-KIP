@@ -39,6 +39,7 @@ const InventoryManagement = () => {
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterActive, setFilterActive] = useState("active"); // Filter by IsActive status
 
   // Spare parts loaded from backend
   const [spareParts, setSpareParts] = useState([]);
@@ -145,6 +146,17 @@ const InventoryManagement = () => {
       render: (min) => min ?? 0,
     },
     {
+      title: "Trạng thái hoạt động",
+      dataIndex: "isActive",
+      key: "isActive",
+      width: 130,
+      render: (isActive) => (
+        <Tag color={isActive ? "green" : "red"}>
+          {isActive ? "Đang sử dụng" : "Đã xóa"}
+        </Tag>
+      ),
+    },
+    {
       title: "Thao tác",
       key: "action",
       fixed: "right",
@@ -160,8 +172,8 @@ const InventoryManagement = () => {
           {
             key: "delete",
             icon: <DeleteOutlined />,
-            label: "Xóa",
-            danger: true,
+            label: record.isActive ? "Xóa" : "Khôi phục",
+            danger: record.isActive,
             onClick: () => handleDelete(record),
           },
         ];
@@ -192,23 +204,34 @@ const InventoryManagement = () => {
   };
 
   const handleDelete = (record) => {
+    const isDeleting = record.isActive;
+    const title = isDeleting ? "Xác nhận xóa" : "Xác nhận khôi phục";
+    const content = isDeleting
+      ? `Bạn có chắc chắn muốn xóa phụ tùng "${record.partName}"?`
+      : `Bạn có chắc chắn muốn khôi phục phụ tùng "${record.partName}"?`;
+    const okText = isDeleting ? "Xóa" : "Khôi phục";
+
     Modal.confirm({
-      title: "Xác nhận xóa",
-      content: `Bạn có chắc chắn muốn xóa phụ tùng "${record.partName}"?`,
-      okText: "Xóa",
+      title,
+      content,
+      okText,
       cancelText: "Hủy",
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: isDeleting },
       onOk: () => {
-        // Call backend delete
+        // Call backend delete (soft delete - set IsActive = false)
         (async () => {
           try {
             setLoading(true);
             await sparePartService.delete(record.partId);
-            message.success("Xóa phụ tùng thành công!");
+            message.success(
+              isDeleting
+                ? "Xóa phụ tùng thành công!"
+                : "Khôi phục phụ tùng thành công!"
+            );
             await loadParts();
           } catch (error) {
             console.error("Delete error", error);
-            message.error(error.message || "Không thể xóa phụ tùng");
+            message.error(error.message || "Không thể thực hiện thao tác");
           } finally {
             setLoading(false);
           }
@@ -265,6 +288,7 @@ const InventoryManagement = () => {
         location: p.location || p.Location || "",
         unitPrice: p.unitPrice || p.UnitPrice || null,
         status: p.status || p.Status || null,
+        isActive: p.isActive !== undefined ? p.isActive : true,
       }));
       setSpareParts(normalized);
     } catch (error) {
@@ -284,7 +308,11 @@ const InventoryManagement = () => {
       part.partNumber.toLowerCase().includes(searchText.toLowerCase()) ||
       part.partName.toLowerCase().includes(searchText.toLowerCase());
     const matchStatus = filterStatus === "all" || part.status === filterStatus;
-    return matchSearch && matchStatus;
+    const matchActive =
+      filterActive === "all" ||
+      (filterActive === "active" && part.isActive) ||
+      (filterActive === "inactive" && !part.isActive);
+    return matchSearch && matchStatus && matchActive;
   });
 
   return (
@@ -376,6 +404,18 @@ const InventoryManagement = () => {
                 <Option value="Đủ hàng">Đủ hàng</Option>
                 <Option value="Sắp hết">Sắp hết</Option>
                 <Option value="Hết hàng">Hết hàng</Option>
+              </Select>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Select
+                style={{ width: "100%" }}
+                placeholder="Lọc theo trạng thái hoạt động"
+                value={filterActive}
+                onChange={setFilterActive}
+              >
+                <Option value="all">Tất cả</Option>
+                <Option value="active">Đang sử dụng</Option>
+                <Option value="inactive">Đã xóa</Option>
               </Select>
             </Col>
           </Row>

@@ -22,6 +22,8 @@ namespace FITSKIP.Domain.DTO
 
         public string? Status { get; set; }
 
+        public bool IsActive { get; set; }
+
         public int? TotalPurchaseRequest { get; set; }
         public int? TotalReplacementHistory { get; set; }
     }

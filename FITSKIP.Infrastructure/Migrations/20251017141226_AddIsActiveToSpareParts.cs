@@ -5,24 +5,24 @@
 namespace FITSKIP.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddMinQuantityToSpareParts : Migration
+    public partial class AddIsActiveToSpareParts : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<int>(
-                name: "MinQuantity",
+            migrationBuilder.AddColumn<bool>(
+                name: "IsActive",
                 table: "SpareParts",
-                type: "int",
+                type: "bit",
                 nullable: false,
-                defaultValue: 0);
+                defaultValue: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "MinQuantity",
+                name: "IsActive",
                 table: "SpareParts");
         }
     }

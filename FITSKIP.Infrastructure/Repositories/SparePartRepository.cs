@@ -87,30 +87,20 @@ namespace FITSKIP.Infrastructure.Repositories
 
         public async Task<bool> DeleteAsync(int partId, CancellationToken cancellationToken = default)
         {
-            var sparePart = await _context.SpareParts.FindAsync(partId, cancellationToken);
+            var sparePart = await _context.SpareParts.FindAsync(new object[] { partId }, cancellationToken: cancellationToken);
             if (sparePart == null)
                 return false;
 
-            // Check if spare part is referenced in any purchase requests
-            if (sparePart.PurchaseRequests.Any())
-            {
-                throw new InvalidOperationException("Không thể xóa phụ tùng đang nằm trong yêu cầu mua hàng");
-            }
-
-            // Check if spare part is referenced in any replacement histories
-            if (sparePart.ReplacementHistories.Any())
-            {
-                throw new InvalidOperationException("Không thể xóa phụ tùng đã được sử dụng trong lịch sử thay thế");
-            }
-
-            _context.SpareParts.Remove(sparePart);
-            await _context.SaveChangesAsync();
+            // Soft delete - toggle IsActive status (delete if active, restore if inactive)
+            sparePart.IsActive = !sparePart.IsActive;
+            _context.SpareParts.Update(sparePart);
+            await _context.SaveChangesAsync(cancellationToken);
             return true;
         }
 
         public async Task<bool> ExistsAsync(int partId, CancellationToken cancellationToken = default)
         {
-            return await _context.SpareParts.AnyAsync(sp => sp.PartId == partId);
+            return await _context.SpareParts.AnyAsync(sp => sp.PartId == partId && sp.IsActive);
         }
 
         public async Task<IEnumerable<SparePart>> GetTop5MostUsedAsync(CancellationToken cancellationToken = default)
@@ -124,9 +114,9 @@ namespace FITSKIP.Infrastructure.Repositories
                 .ToListAsync(cancellationToken);
 
             return await _context.SpareParts
+                .Where(sp => topPartIds.Contains(sp.PartId))
                 .Include(sp => sp.PurchaseRequests)
                 .Include(sp => sp.ReplacementHistories)
-                .Where(sp => topPartIds.Contains(sp.PartId))
                 .ToListAsync(cancellationToken);
         }
 

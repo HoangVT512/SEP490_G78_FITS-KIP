@@ -34,6 +34,7 @@ namespace FITSKIP.API.Controllers
                     MinQuantity = sp.MinQuantity,
                     Location = sp.Location,
                     Status = sp.Status,
+                    IsActive = sp.IsActive,
                     TotalPurchaseRequest = sp.PurchaseRequests?.Count ?? 0,
                     TotalReplacementHistory = sp.ReplacementHistories?.Count ?? 0
                 });
@@ -67,6 +68,7 @@ namespace FITSKIP.API.Controllers
                     MinQuantity = sparePart.MinQuantity,
                     Location = sparePart.Location,
                     Status = sparePart.Status,
+                    IsActive = sparePart.IsActive,
                     TotalPurchaseRequest = sparePart.PurchaseRequests?.Count ?? 0,
                     TotalReplacementHistory = sparePart.ReplacementHistories?.Count ?? 0
                 };
@@ -110,6 +112,7 @@ namespace FITSKIP.API.Controllers
                     MinQuantity = created.MinQuantity,
                     Location = created.Location,
                     Status = created.Status,
+                    IsActive = created.IsActive,
                     TotalPurchaseRequest = 0,
                     TotalReplacementHistory = 0
                 };
@@ -203,6 +206,7 @@ namespace FITSKIP.API.Controllers
                     Quantity = sp.Quantity,
                     Location = sp.Location,
                     Status = sp.Status,
+                    IsActive = sp.IsActive,
                     TotalPurchaseRequest = sp.PurchaseRequests?.Count ?? 0,
                     TotalReplacementHistory = sp.ReplacementHistories?.Count ?? 0
                 })

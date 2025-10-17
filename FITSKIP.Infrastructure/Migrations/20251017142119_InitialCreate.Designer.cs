@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251017130558_InitialCreate")]
+    [Migration("20251017142119_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -544,9 +544,15 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PartId"));
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
                     b.Property<string>("Location")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("MinQuantity")
+                        .HasColumnType("int");
 
                     b.Property<string>("PartName")
                         .IsRequired()
