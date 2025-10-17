@@ -25,14 +25,13 @@ namespace FITSKIP.Domain.DTO
         [Required(ErrorMessage = "Equipment ID is required")]
         public int EquipmentId { get; set; }
 
-        [Required(ErrorMessage = "Start time is required")]
-        public DateTime StartTime { get; set; }
+        public DateTime? StartTime { get; set; }
 
         public DateTime? EndTime { get; set; }
 
-        [Required(ErrorMessage = "Type ID is required")]
-        public int TypeId { get; set; }
+        public int? TypeId { get; set; }
 
+        [Required(ErrorMessage = "Issue is required")]
         [MaxLength(500, ErrorMessage = "Issue cannot exceed 500 characters")]
         public string? Issue { get; set; }
 
@@ -41,6 +40,8 @@ namespace FITSKIP.Domain.DTO
 
         [MaxLength(500, ErrorMessage = "Solution cannot exceed 500 characters")]
         public string? Solution { get; set; }
+
+        public string? ReportedByUserId { get; set; }
     }
 
     public class UpdateIncidentRequest

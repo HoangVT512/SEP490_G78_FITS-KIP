@@ -43,21 +43,24 @@ public class IncidentService : IIncidentService
             throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId} hoặc thiết bị đã bị vô hiệu hóa");
         }
 
-        // Validate start time
-        if (request.StartTime > DateTime.Now)
+        // Validate issue is provided
+        if (string.IsNullOrWhiteSpace(request.Issue))
         {
-            throw new InvalidOperationException("Thời gian bắt đầu không thể trong tương lai");
+            throw new InvalidOperationException("Vấn đề không được để trống");
         }
+
+        // Set StartTime to now if not provided
+        var startTime = request.StartTime ?? DateTime.UtcNow;
 
         // Validate end time if provided
         if (request.EndTime.HasValue)
         {
-            if (request.EndTime.Value <= request.StartTime)
+            if (request.EndTime.Value <= startTime)
             {
                 throw new InvalidOperationException("Thời gian kết thúc phải sau thời gian bắt đầu");
             }
 
-            if (request.EndTime.Value > DateTime.Now)
+            if (request.EndTime.Value > DateTime.UtcNow)
             {
                 throw new InvalidOperationException("Thời gian kết thúc không thể trong tương lai");
             }
@@ -67,7 +70,7 @@ public class IncidentService : IIncidentService
         decimal? duration = null;
         if (request.EndTime.HasValue)
         {
-            var timeSpan = request.EndTime.Value - request.StartTime;
+            var timeSpan = request.EndTime.Value - startTime;
             var durationMinutes = timeSpan.TotalMinutes;
 
             // Đảm bảo Duration luôn dương và ít nhất 1 phút
@@ -77,14 +80,16 @@ public class IncidentService : IIncidentService
         var incident = new IncidentHistory
         {
             EquipmentId = request.EquipmentId,
-            StartTime = request.StartTime,
+            StartTime = startTime,
             EndTime = request.EndTime,
             Duration = duration,
-            TypeId = request.TypeId,
+            TypeId = request.TypeId, // Có thể null
             Issue = request.Issue?.Trim(),
             Reason = request.Reason?.Trim(),
             Solution = request.Solution?.Trim(),
-            CreatedDate = DateTime.UtcNow
+            Status = "Chờ xử lý",
+            CreatedDate = DateTime.UtcNow,
+            ReportedByUserId = request.ReportedByUserId
         };
 
         return await _incidentRepository.CreateAsync(incident, cancellationToken);

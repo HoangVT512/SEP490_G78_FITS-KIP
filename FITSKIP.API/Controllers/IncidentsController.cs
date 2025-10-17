@@ -2,6 +2,7 @@ using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace FITSKIP.API.Controllers;
 
@@ -107,15 +108,9 @@ public class IncidentsController : ControllerBase
                 return BadRequest(new { success = false, message = "Error: Equipment ID phải lớn hơn 0" });
             }
 
-            if (request.TypeId <= 0)
-            {
-                return BadRequest(new { success = false, message = "Error: Stop Type ID phải lớn hơn 0" });
-            }
+            // TypeId is optional on create; allow null (can be updated later)
 
-            if (request.StartTime > DateTime.Now)
-            {
-                return BadRequest(new { success = false, message = "Error: Thời gian bắt đầu không thể trong tương lai" });
-            }
+            // StartTime is optional; service will set it to current time if missing
 
             if (request.EndTime.HasValue && request.EndTime.Value <= request.StartTime)
             {
@@ -125,6 +120,13 @@ public class IncidentsController : ControllerBase
             if (request.EndTime.HasValue && request.EndTime.Value > DateTime.Now)
             {
                 return BadRequest(new { success = false, message = "Error: Thời gian kết thúc không thể trong tương lai" });
+            }
+
+            // Set ReportedByUserId from authenticated user if available
+            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                request.ReportedByUserId = userId;
             }
 
             var incident = await _incidentService.CreateIncidentAsync(request);

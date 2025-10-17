@@ -27,6 +27,8 @@ public partial class IncidentHistory
 
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
 
+    public string? ReportedByUserId { get; set; }
+
     public virtual Equipment? Equipment { get; set; }
 
     public virtual StopType? Type { get; set; }
