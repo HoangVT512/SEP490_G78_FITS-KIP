@@ -1,63 +1,81 @@
-/* IncidentManagement.module.css */
+/* Incident Management Styles */
 
-.incidentManagement {
-  padding: 0;
+/* Đảm bảo text trong các cột không bị tràn */
+:global(.ant-table-cell) {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.statsRow {
+/* Đảm bảo Tag không bị tràn */
+:global(.ant-tag) {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Header styling */
+.pageHeader {
   margin-bottom: 24px;
 }
 
-.statsRow :global(.ant-card) {
+/* Statistics Cards */
+.statsCard {
+  text-align: center;
   border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s;
 }
 
-.statsRow :global(.ant-card:hover) {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
+.statsCard :global(.ant-statistic-title) {
+  font-size: 14px;
+  color: #8c8c8c;
 }
 
-.tableCard {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+.statsCard :global(.ant-statistic-content) {
+  font-size: 24px;
+  font-weight: 600;
 }
 
+/* Filter Section */
 .filterSection {
   margin-bottom: 16px;
+}
+
+/* Action Buttons */
+.actionButton {
+  margin-right: 8px;
+}
+
+/* Modal Styling */
+.modalContent {
+  padding: 16px 0;
+}
+
+/* Timeline Styling */
+.timelineItem {
   padding-bottom: 16px;
-  border-bottom: 1px solid #f0f0f0;
 }
 
-.detailContent {
-  padding: 8px 0;
+/* Detail Descriptions */
+.detailDescriptions :global(.ant-descriptions-item-label) {
+  font-weight: 600;
 }
 
-.detailContent :global(.ant-descriptions) {
-  margin-top: 16px;
+/* Form Layout */
+.formItem {
+  margin-bottom: 16px;
 }
 
-.detailContent :global(.ant-timeline) {
-  margin-top: 16px;
+/* Table Wrapper */
+.tableWrapper {
+  overflow-x: auto;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .statsRow {
-    margin-bottom: 16px;
-  }
-
-  .filterSection {
-    padding-bottom: 12px;
-  }
-
-  .filterSection :global(.ant-space) {
-    width: 100%;
-  }
-
-  .filterSection :global(.ant-input),
-  .filterSection :global(.ant-select) {
-    width: 100% !important;
-  }
+/* Ensure proper cell content wrapping */
+.cellContent {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  display: block;
 }

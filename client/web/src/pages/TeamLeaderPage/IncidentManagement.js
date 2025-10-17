@@ -343,15 +343,24 @@ const IncidentManagement = () => {
       dataIndex: "equipmentName",
       key: "equipmentName",
       width: 150,
+      ellipsis: {
+        showTitle: false,
+      },
       render: (text, record) => (
-        <div>
-          <div style={{ fontWeight: 500 }}>{text}</div>
-          {record.equipmentCode && (
-            <div style={{ color: "#999", fontSize: 12 }}>
-              {record.equipmentCode}
-            </div>
-          )}
-        </div>
+        <Tooltip
+          title={`${text}${
+            record.equipmentCode ? ` (${record.equipmentCode})` : ""
+          }`}
+        >
+          <div>
+            <div style={{ fontWeight: 500 }}>{text}</div>
+            {record.equipmentCode && (
+              <div style={{ color: "#999", fontSize: 12 }}>
+                {record.equipmentCode}
+              </div>
+            )}
+          </div>
+        </Tooltip>
       ),
     },
     {
@@ -359,23 +368,39 @@ const IncidentManagement = () => {
       dataIndex: "lineName",
       key: "lineName",
       width: 130,
-      render: (text) => <Tag color="purple">{text}</Tag>,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text}>
+          <Tag color="purple">{text}</Tag>
+        </Tooltip>
+      ),
     },
     {
       title: "Công đoạn",
       dataIndex: "stageName",
       key: "stageName",
       width: 130,
-      render: (text) => <Tag color="blue">{text || "Chưa xác định"}</Tag>,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text || "Chưa xác định"}>
+          <Tag color="blue">{text || "Chưa xác định"}</Tag>
+        </Tooltip>
+      ),
     },
     {
       title: "Vấn đề",
       dataIndex: "issue",
       key: "issue",
       width: 200,
-      ellipsis: true,
+      ellipsis: {
+        showTitle: false,
+      },
       render: (text) => (
-        <Tooltip title={text}>
+        <Tooltip title={text || "Chưa mô tả"}>
           <span>{text || "Chưa mô tả"}</span>
         </Tooltip>
       ),
@@ -385,16 +410,25 @@ const IncidentManagement = () => {
       dataIndex: "category",
       key: "category",
       width: 130,
-      render: (text) => <Tag color="orange">{text || "Chưa phân loại"}</Tag>,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text || "Chưa phân loại"}>
+          <Tag color="orange">{text || "Chưa phân loại"}</Tag>
+        </Tooltip>
+      ),
     },
     {
       title: "Nguyên nhân",
       dataIndex: "reason",
       key: "reason",
       width: 180,
-      ellipsis: true,
+      ellipsis: {
+        showTitle: false,
+      },
       render: (text) => (
-        <Tooltip title={text}>
+        <Tooltip title={text || "Chưa xác định"}>
           <span>{text || "Chưa xác định"}</span>
         </Tooltip>
       ),
@@ -404,9 +438,11 @@ const IncidentManagement = () => {
       dataIndex: "solution",
       key: "solution",
       width: 180,
-      ellipsis: true,
+      ellipsis: {
+        showTitle: false,
+      },
       render: (text) => (
-        <Tooltip title={text}>
+        <Tooltip title={text || "Chưa có giải pháp"}>
           <span>{text || "Chưa có giải pháp"}</span>
         </Tooltip>
       ),
@@ -632,7 +668,7 @@ const IncidentManagement = () => {
           dataSource={filteredIncidents}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 1800 }}
+          scroll={{ x: "max-content" }}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
