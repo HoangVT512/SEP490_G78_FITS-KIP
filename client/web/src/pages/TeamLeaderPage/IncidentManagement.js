@@ -406,6 +406,27 @@ const IncidentManagement = () => {
       ),
     },
     {
+      title: "Khung giờ bắt đầu",
+      dataIndex: "reportDate",
+      key: "startTime",
+      width: 150,
+      render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
+    },
+    {
+      title: "Khung giờ kết thúc",
+      dataIndex: "resolveDate",
+      key: "endTime",
+      width: 150,
+      render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
+    },
+    {
+      title: "Ngày báo cáo",
+      dataIndex: "reportDate",
+      key: "reportDate",
+      width: 150,
+      render: (d) => (d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"),
+    },
+    {
       title: "Loại dừng",
       dataIndex: "category",
       key: "category",
@@ -417,6 +438,20 @@ const IncidentManagement = () => {
         <Tooltip title={text || "Chưa phân loại"}>
           <Tag color="orange">{text || "Chưa phân loại"}</Tag>
         </Tooltip>
+      ),
+    },
+    {
+      title: "Thời gian chết (phút)",
+      dataIndex: "downtime",
+      key: "downtime",
+      width: 150,
+      align: "right",
+      render: (val) => (
+        <span
+          style={{ color: val > 120 ? "#ff4d4f" : "#1890ff", fontWeight: 500 }}
+        >
+          {val} phút
+        </span>
       ),
     },
     {
@@ -448,27 +483,6 @@ const IncidentManagement = () => {
       ),
     },
     {
-      title: "Khung giờ bắt đầu",
-      dataIndex: "reportDate",
-      key: "startTime",
-      width: 150,
-      render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
-    },
-    {
-      title: "Khung giờ kết thúc",
-      dataIndex: "resolveDate",
-      key: "endTime",
-      width: 150,
-      render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
-    },
-    {
-      title: "Ngày báo cáo",
-      dataIndex: "reportDate",
-      key: "reportDate",
-      width: 150,
-      render: (d) => (d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"),
-    },
-    {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
@@ -477,20 +491,6 @@ const IncidentManagement = () => {
         <Tag icon={getStatusIcon(status)} color={getStatusColor(status)}>
           {status}
         </Tag>
-      ),
-    },
-    {
-      title: "Thời gian chết (phút)",
-      dataIndex: "downtime",
-      key: "downtime",
-      width: 150,
-      align: "right",
-      render: (val) => (
-        <span
-          style={{ color: val > 120 ? "#ff4d4f" : "#1890ff", fontWeight: 500 }}
-        >
-          {val} phút
-        </span>
       ),
     },
     {
@@ -709,122 +709,145 @@ const IncidentManagement = () => {
           <div className={styles.detailContent}>
             <Row gutter={[24, 16]}>
               <Col span={24}>
-                <Alert
-                  message={
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                      }}
-                    >
-                      <Tag
-                        color={getPriorityColor(selectedIncident.priority)}
-                        style={{ fontSize: "14px", padding: "4px 12px" }}
-                      >
-                        Mức độ: {selectedIncident.priority}
-                      </Tag>
-                      <Tag
-                        icon={getStatusIcon(selectedIncident.status)}
-                        color={getStatusColor(selectedIncident.status)}
-                        style={{ fontSize: "14px", padding: "4px 12px" }}
-                      >
-                        {selectedIncident.status}
-                      </Tag>
-                    </div>
-                  }
-                  type={selectedIncident.priority === "Cao" ? "error" : "info"}
-                  showIcon
-                />
-              </Col>
-
-              <Col span={24}>
-                <Descriptions bordered column={2}>
-                  <Descriptions.Item label="Mã sự cố" span={2}>
-                    <span style={{ fontWeight: 600, fontSize: "16px" }}>
+                <Descriptions bordered column={3}>
+                  <Descriptions.Item label="Mã sự cố" span={1}>
+                    <span style={{ fontWeight: 600, fontSize: "15px" }}>
                       {selectedIncident.id}
                     </span>
                   </Descriptions.Item>
-                  <Descriptions.Item label="Tiêu đề" span={2}>
+                  {selectedIncident.priority && (
+                    <Descriptions.Item label="Mức độ ưu tiên" span={1}>
+                      <Tag color={getPriorityColor(selectedIncident.priority)}>
+                        {selectedIncident.priority}
+                      </Tag>
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.status && (
+                    <Descriptions.Item label="Trạng thái" span={1}>
+                      <Tag
+                        icon={getStatusIcon(selectedIncident.status)}
+                        color={getStatusColor(selectedIncident.status)}
+                      >
+                        {selectedIncident.status}
+                      </Tag>
+                    </Descriptions.Item>
+                  )}
+                  <Descriptions.Item label="Tiêu đề" span={3}>
                     <span style={{ fontWeight: 600 }}>
                       {selectedIncident.title}
                     </span>
                   </Descriptions.Item>
-                  <Descriptions.Item label="Thiết bị">
-                    {selectedIncident.equipmentName}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Dây chuyền">
-                    <Tag color="purple">{selectedIncident.lineName}</Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Danh mục">
-                    <Tag color="blue">{selectedIncident.category}</Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Tác động">
-                    <Tag
-                      color={
-                        selectedIncident.impact === "Cao"
-                          ? "red"
-                          : selectedIncident.impact === "Trung bình"
-                          ? "orange"
-                          : "green"
-                      }
-                    >
-                      {selectedIncident.impact}
-                    </Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Người báo cáo">
-                    {selectedIncident.reporter}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Người xử lý">
-                    {selectedIncident.assignedTo || (
-                      <span style={{ color: "#bbb" }}>Chưa phân công</span>
-                    )}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Ngày báo cáo">
-                    {selectedIncident.reportDate
-                      ? dayjs(selectedIncident.reportDate).format(
-                          "DD/MM/YYYY HH:mm"
-                        )
-                      : "-"}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Ngày giải quyết">
-                    {selectedIncident.resolveDate ? (
-                      dayjs(selectedIncident.resolveDate).format(
+                  {selectedIncident.equipmentName && (
+                    <Descriptions.Item label="Thiết bị" span={1}>
+                      <div>
+                        <div style={{ fontWeight: 500 }}>
+                          {selectedIncident.equipmentName}
+                        </div>
+                        {selectedIncident.equipmentCode && (
+                          <div style={{ color: "#999", fontSize: 12 }}>
+                            ({selectedIncident.equipmentCode})
+                          </div>
+                        )}
+                      </div>
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.lineName && (
+                    <Descriptions.Item label="Dây chuyền" span={1}>
+                      <Tag color="purple">{selectedIncident.lineName}</Tag>
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.stageName && (
+                    <Descriptions.Item label="Công đoạn" span={1}>
+                      <Tag color="blue">{selectedIncident.stageName}</Tag>
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.category && (
+                    <Descriptions.Item label="Loại dừng" span={1}>
+                      <Tag color="orange">{selectedIncident.category}</Tag>
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.impact && (
+                    <Descriptions.Item label="Tác động" span={1}>
+                      <Tag
+                        color={
+                          selectedIncident.impact === "Cao"
+                            ? "red"
+                            : selectedIncident.impact === "Trung bình"
+                            ? "orange"
+                            : "green"
+                        }
+                      >
+                        {selectedIncident.impact}
+                      </Tag>
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.reporter && (
+                    <Descriptions.Item label="Người báo cáo" span={1}>
+                      {selectedIncident.reporter}
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.assignedTo && (
+                    <Descriptions.Item label="Người xử lý" span={1}>
+                      {selectedIncident.assignedTo}
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.reportDate && (
+                    <Descriptions.Item label="Khung giờ bắt đầu" span={1}>
+                      {dayjs(selectedIncident.reportDate).format("HH:mm")}
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.resolveDate && (
+                    <Descriptions.Item label="Khung giờ kết thúc" span={1}>
+                      {dayjs(selectedIncident.resolveDate).format("HH:mm")}
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.downtime && (
+                    <Descriptions.Item label="Thời gian chết" span={1}>
+                      <span
+                        style={{
+                          color:
+                            selectedIncident.downtime > 120
+                              ? "#ff4d4f"
+                              : "#1890ff",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {selectedIncident.downtime} phút
+                      </span>
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.reportDate && (
+                    <Descriptions.Item label="Ngày báo cáo" span={1}>
+                      {dayjs(selectedIncident.reportDate).format(
                         "DD/MM/YYYY HH:mm"
-                      )
-                    ) : (
-                      <span style={{ color: "#bbb" }}>Chưa giải quyết</span>
-                    )}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Thời gian chết" span={2}>
-                    <span
-                      style={{
-                        color:
-                          selectedIncident.downtime > 120
-                            ? "#ff4d4f"
-                            : "#1890ff",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {selectedIncident.downtime} phút
-                    </span>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Vấn đề" span={2}>
-                    {selectedIncident.issue}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Nguyên nhân" span={2}>
-                    {selectedIncident.reason || (
-                      <span style={{ color: "#bbb" }}>Chưa xác định</span>
-                    )}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Giải pháp" span={2}>
-                    {selectedIncident.solution || (
-                      <span style={{ color: "#bbb" }}>Chưa có giải pháp</span>
-                    )}
-                  </Descriptions.Item>
+                      )}
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.resolveDate && (
+                    <Descriptions.Item label="Ngày giải quyết" span={1}>
+                      {dayjs(selectedIncident.resolveDate).format(
+                        "DD/MM/YYYY HH:mm"
+                      )}
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.issue && (
+                    <Descriptions.Item label="Vấn đề" span={3}>
+                      {selectedIncident.issue}
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.reason && (
+                    <Descriptions.Item label="Nguyên nhân" span={3}>
+                      {selectedIncident.reason}
+                    </Descriptions.Item>
+                  )}
+                  {selectedIncident.solution && (
+                    <Descriptions.Item label="Giải pháp" span={3}>
+                      {selectedIncident.solution}
+                    </Descriptions.Item>
+                  )}
                   {selectedIncident.attachments &&
                     selectedIncident.attachments.length > 0 && (
-                      <Descriptions.Item label="Tài liệu đính kèm" span={2}>
+                      <Descriptions.Item label="Tài liệu đính kèm" span={3}>
                         <Space direction="vertical">
                           {selectedIncident.attachments.map((file, index) => (
                             <Button
