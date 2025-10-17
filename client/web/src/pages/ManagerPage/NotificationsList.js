@@ -166,26 +166,32 @@ const NotificationsList = ({ onClose }) => {
                   !item.isRead ? styles.unread : ""
                 }`}
                 actions={[
-                  !item.isRead && (
+                  <Space key="actions" size="small">
+                    {!item.isRead && (
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<CheckOutlined />}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          markAsRead(item.notificationId);
+                        }}
+                        title="Đánh dấu đã đọc"
+                      />
+                    )}
                     <Button
                       type="text"
                       size="small"
-                      icon={<CheckOutlined />}
-                      onClick={() => markAsRead(item.notificationId)}
-                    >
-                      Đánh dấu đã đọc
-                    </Button>
-                  ),
-                  <Button
-                    type="text"
-                    size="small"
-                    danger
-                    icon={<DeleteOutlined />}
-                    onClick={() => deleteNotificationItem(item.notificationId)}
-                  >
-                    Xóa
-                  </Button>,
-                ].filter(Boolean)}
+                      danger
+                      icon={<DeleteOutlined />}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteNotificationItem(item.notificationId);
+                      }}
+                      title="Xóa"
+                    />
+                  </Space>,
+                ]}
               >
                 <List.Item.Meta
                   avatar={
@@ -199,16 +205,22 @@ const NotificationsList = ({ onClose }) => {
                     </div>
                   }
                   title={
-                    <Space>
-                      <Text strong={!item.isRead}>{item.title}</Text>
+                    <Space size={4}>
+                      <Text strong={!item.isRead} ellipsis>
+                        {item.title}
+                      </Text>
                       {!item.isRead && <Badge status="processing" text="Mới" />}
                     </Space>
                   }
                   description={
-                    <div>
+                    <div style={{ maxWidth: "100%" }}>
                       <Paragraph
-                        ellipsis={{ rows: 2, expandable: true }}
-                        style={{ marginBottom: "8px" }}
+                        ellipsis={{
+                          rows: 2,
+                          expandable: true,
+                          symbol: "xem thêm",
+                        }}
+                        style={{ marginBottom: "8px", wordBreak: "break-word" }}
                       >
                         {item.message}
                       </Paragraph>

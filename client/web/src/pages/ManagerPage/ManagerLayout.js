@@ -524,7 +524,7 @@ const ManagerLayout = () => {
         <Drawer
           title="Thông báo"
           placement="right"
-          width={600}
+          width={720}
           onClose={() => setNotificationDrawerOpen(false)}
           open={notificationDrawerOpen}
           styles={{ body: { padding: 0 } }}

@@ -39,7 +39,6 @@ const PurchaseRequestManagement = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [form] = Form.useForm();
-  const [messageApi, messageContextHolder] = message.useMessage();
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
@@ -68,7 +67,7 @@ const PurchaseRequestManagement = () => {
           console.warn("Could not load spare parts for select", e);
         }
       } catch (err) {
-        messageApi.error("Không thể tải danh sách yêu cầu. Vui lòng thử lại.");
+        message.error("Không thể tải danh sách yêu cầu. Vui lòng thử lại.");
       } finally {
         if (mounted) setLoading(false);
       }
@@ -193,7 +192,7 @@ const PurchaseRequestManagement = () => {
       );
 
       if (pendingRequest) {
-        messageApi.error(
+        message.error(
           `Phụ tùng này đã có yêu cầu đang chờ duyệt (REQ${String(
             pendingRequest.requestId
           ).padStart(
@@ -213,7 +212,7 @@ const PurchaseRequestManagement = () => {
       };
 
       await purchaseRequestService.create(payload);
-      messageApi.success("Tạo yêu cầu mua hàng thành công!");
+      message.success("Tạo yêu cầu mua hàng thành công!");
       // refresh list
       const res = await purchaseRequestService.getMyRequests();
       setRequests(Array.isArray(res) ? res : []);
@@ -228,11 +227,11 @@ const PurchaseRequestManagement = () => {
         "Có lỗi xảy ra khi tạo yêu cầu!";
 
       if (errorMessage.includes("403")) {
-        messageApi.error(
+        message.error(
           "Bạn không có quyền để tạo yêu cầu. Tài khoản cần có vai trò 'Quản lý kỹ thuật' hoặc hãy đăng nhập lại."
         );
       } else {
-        messageApi.error(errorMessage);
+        message.error(errorMessage);
       }
     } finally {
       setLoading(false);
@@ -252,12 +251,12 @@ const PurchaseRequestManagement = () => {
         setLoading(true);
         try {
           await purchaseRequestService.approve(record.requestId);
-          messageApi.success("Duyệt yêu cầu thành công");
+          message.success("Duyệt yêu cầu thành công");
           const res = await purchaseRequestService.getMyRequests();
           setRequests(Array.isArray(res) ? res : []);
         } catch (err) {
           console.error("Approve error", err);
-          messageApi.error(err?.message || "Không thể duyệt yêu cầu");
+          message.error(err?.message || "Không thể duyệt yêu cầu");
         } finally {
           setLoading(false);
         }
@@ -291,12 +290,12 @@ const PurchaseRequestManagement = () => {
           await purchaseRequestService.reject(record.requestId, {
             reason: reason || undefined,
           });
-          messageApi.success("Từ chối yêu cầu thành công");
+          message.success("Từ chối yêu cầu thành công");
           const res = await purchaseRequestService.getMyRequests();
           setRequests(Array.isArray(res) ? res : []);
         } catch (err) {
           console.error("Reject error", err);
-          messageApi.error(err?.message || "Không thể từ chối yêu cầu");
+          message.error(err?.message || "Không thể từ chối yêu cầu");
         } finally {
           setLoading(false);
         }
@@ -439,8 +438,6 @@ const PurchaseRequestManagement = () => {
 
   return (
     <div className={styles.container}>
-      {messageContextHolder}
-
       {/* Main Content - Only Request List */}
       {RequestListTable}
 
