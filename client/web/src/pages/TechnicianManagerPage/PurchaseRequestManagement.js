@@ -28,6 +28,7 @@ import dayjs from "dayjs";
 import styles from "../../styles/pages/PurchaseRequestManagement.module.css";
 import { purchaseRequestService } from "../../services/purchaseRequestService";
 import { sparePartService } from "../../services/sparePartService";
+import signalRService from "../../services/signalRService";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -46,35 +47,51 @@ const PurchaseRequestManagement = () => {
 
   const [availableParts, setAvailableParts] = useState([]);
 
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await purchaseRequestService.getMyRequests();
+      // res may be array or ApiResponse wrapper handled in service
+      setRequests(Array.isArray(res) ? res : []);
+      // Also load spare parts for the select
+      try {
+        const parts = await sparePartService.getAll();
+        // Filter only active parts (IsActive = true)
+        const activeParts = (Array.isArray(parts) ? parts : []).filter(
+          (part) => part.isActive !== false
+        );
+        setAvailableParts(activeParts);
+      } catch (e) {
+        console.warn("Could not load spare parts for select", e);
+      }
+    } catch (err) {
+      message.error("Không thể tải danh sách yêu cầu. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const res = await purchaseRequestService.getMyRequests();
-        if (!mounted) return;
-        // res may be array or ApiResponse wrapper handled in service
-        setRequests(Array.isArray(res) ? res : []);
-        // Also load spare parts for the select
-        try {
-          const parts = await sparePartService.getAll();
-          // Filter only active parts (IsActive = true)
-          const activeParts = (Array.isArray(parts) ? parts : []).filter(
-            (part) => part.isActive !== false
-          );
-          setAvailableParts(activeParts);
-        } catch (e) {
-          console.warn("Could not load spare parts for select", e);
-        }
-      } catch (err) {
-        message.error("Không thể tải danh sách yêu cầu. Vui lòng thử lại.");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    load();
+    loadData();
     return () => {
       mounted = false;
+    };
+  }, []);
+
+  // Thêm useEffect để lắng nghe cập nhật dữ liệu real-time
+  useEffect(() => {
+    const handleDataUpdate = (data) => {
+      if (data.type === "purchaseRequest") {
+        console.log("Purchase request data updated, reloading...");
+        loadData(); // Tải lại dữ liệu khi có thay đổi
+      }
+    };
+
+    signalRService.onDataUpdated(handleDataUpdate);
+
+    return () => {
+      signalRService.offDataUpdated();
     };
   }, []);
 

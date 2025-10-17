@@ -1,6 +1,6 @@
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ConfigProvider, message } from "antd";
+import { ConfigProvider, message, notification } from "antd";
 import { routes } from "./routes/routes";
 import NotFoundPage from "./pages/NotFoundPage/NotFoundPage";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -8,7 +8,15 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 // Configure global message settings
 message.config({
-  top: 100,
+  top: 20,
+  duration: 3,
+  maxCount: 3,
+  rtl: false,
+});
+
+// Configure global notification settings
+notification.config({
+  top: 20,
   duration: 3,
   maxCount: 3,
   rtl: false,

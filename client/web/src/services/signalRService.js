@@ -141,6 +141,26 @@ class SignalRService {
   getConnectionState() {
     return this.connection ? this.connection.state : "Disconnected";
   }
+
+  // Đăng ký lắng nghe cập nhật dữ liệu
+  onDataUpdated(callback) {
+    if (this.connection) {
+      // Remove existing listeners first to prevent duplicates
+      this.connection.off("DataUpdated");
+
+      this.connection.on("DataUpdated", (data) => {
+        console.log("Data updated:", data);
+        callback(data);
+      });
+    }
+  }
+
+  // Hủy đăng ký lắng nghe cập nhật dữ liệu
+  offDataUpdated() {
+    if (this.connection) {
+      this.connection.off("DataUpdated");
+    }
+  }
 }
 
 // Export singleton instance

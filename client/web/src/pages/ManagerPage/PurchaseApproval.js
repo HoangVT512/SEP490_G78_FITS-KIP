@@ -25,6 +25,7 @@ import {
 import dayjs from "dayjs";
 import styles from "../../styles/pages/PurchaseApproval.module.css";
 import { purchaseRequestService } from "../../services/purchaseRequestService";
+import signalRService from "../../services/signalRService";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -86,6 +87,22 @@ const PurchaseApproval = () => {
     run();
     return () => {
       mounted = false;
+    };
+  }, [filterStatus]);
+
+  // Thêm useEffect để lắng nghe cập nhật dữ liệu real-time
+  useEffect(() => {
+    const handleDataUpdate = (data) => {
+      if (data.type === "purchaseRequest") {
+        console.log("Purchase request data updated, reloading...");
+        loadRequests(); // Tải lại dữ liệu khi có thay đổi
+      }
+    };
+
+    signalRService.onDataUpdated(handleDataUpdate);
+
+    return () => {
+      signalRService.offDataUpdated();
     };
   }, [filterStatus]);
 
