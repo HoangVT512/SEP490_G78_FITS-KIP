@@ -486,8 +486,10 @@ const ManagerLayout = () => {
                   onClick={() => {
                     // Mở drawer notifications
                     setNotificationDrawerOpen(true);
-                    // Reset notification count khi click
-                    setNotificationCount(0);
+                    // Refresh unread count from server
+                    notificationService.getUnreadCount().then((count) => {
+                      setNotificationCount(count);
+                    });
                   }}
                 />
               </Badge>

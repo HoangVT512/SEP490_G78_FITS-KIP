@@ -83,6 +83,18 @@ const NotificationsList = ({ onClose }) => {
     }
   };
 
+  // Delete all read notifications
+  const deleteAllRead = async () => {
+    try {
+      await notificationService.deleteAllReadNotifications();
+      message.success("Đã xóa tất cả thông báo đã đọc");
+      fetchNotifications();
+    } catch (error) {
+      console.error("Error deleting all read notifications:", error);
+      message.error("Lỗi khi xóa thông báo đã đọc");
+    }
+  };
+
   useEffect(() => {
     fetchNotifications();
   }, [unreadOnly]);
@@ -117,6 +129,16 @@ const NotificationsList = ({ onClose }) => {
               onClick={markAllAsRead}
             >
               Đánh dấu tất cả đã đọc
+            </Button>
+          )}
+          {notifications.filter((n) => n.isRead).length > 0 && (
+            <Button
+              type="text"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={deleteAllRead}
+            >
+              Xóa những tin đã đọc
             </Button>
           )}
         </Space>

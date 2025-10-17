@@ -135,7 +135,7 @@ export const markNotificationAsRead = async (notificationId) => {
 export const markAllNotificationsAsRead = async () => {
   try {
     const response = await fetch(
-      `${API_BASE_URL}/Notifications/mark-all-read`,
+      `${API_BASE_URL}/Notifications/read-all`,
       getFetchConfig({
         method: "PUT",
       })
@@ -200,6 +200,30 @@ export const getNotificationSummary = async () => {
   }
 };
 
+/**
+ * Delete all read notifications
+ * @returns {Promise<boolean>} True if successful
+ */
+export const deleteAllReadNotifications = async () => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/Notifications/delete-all-read`,
+      getFetchConfig({
+        method: "DELETE",
+      })
+    );
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error deleting all read notifications:", error);
+    throw error;
+  }
+};
+
 export default {
   getNotifications,
   getUnreadCount,
@@ -208,4 +232,5 @@ export default {
   markAllNotificationsAsRead,
   deleteNotification,
   getNotificationSummary,
+  deleteAllReadNotifications,
 };

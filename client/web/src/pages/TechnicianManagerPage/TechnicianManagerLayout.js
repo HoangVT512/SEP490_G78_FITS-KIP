@@ -333,7 +333,13 @@ const TechnicianManagerLayout = () => {
             {/* Notifications Badge */}
             <Badge
               count={notificationCount}
-              onClick={() => setNotificationDrawerOpen(true)}
+              onClick={() => {
+                setNotificationDrawerOpen(true);
+                // Refresh unread count from server
+                notificationService.getUnreadCount().then((count) => {
+                  setNotificationCount(count);
+                });
+              }}
               style={{ cursor: "pointer" }}
             >
               <BellOutlined style={{ fontSize: "18px", cursor: "pointer" }} />
