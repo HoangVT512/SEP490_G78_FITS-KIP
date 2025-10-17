@@ -287,11 +287,9 @@ namespace FITSKIP.API
             app.UseCors("AllowFrontend");
 
             // Authentication & Authorization
-            if (!app.Environment.IsEnvironment("Testing"))
-            {
-                app.UseAuthentication();
-                app.UseAuthorization();
-            }
+            app.UseAuthentication();
+            app.UseAuthorization();
+
 
             app.MapControllers();
 
@@ -299,13 +297,10 @@ namespace FITSKIP.API
             app.MapHub<FITSKIP.API.Hubs.NotificationHub>("/hubs/notifications");
 
             // Seed data before starting the app (skip for Testing environment)
-            if (!app.Environment.IsEnvironment("Testing"))
+            using (var scope = app.Services.CreateScope())
             {
-                using (var scope = app.Services.CreateScope())
-                {
-                    var context = scope.ServiceProvider.GetRequiredService<FitskipDbContext>();
-                    await SeedData.SeedAllData(context);
-                }
+                var context = scope.ServiceProvider.GetRequiredService<FitskipDbContext>();
+                await SeedData.SeedAllData(context);
             }
 
             app.Run();
