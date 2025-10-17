@@ -11,5 +11,6 @@ namespace FITSKIP.Application.Interfaces
         Task<IncidentHistory?> UpdateIncidentAsync(int id, UpdateIncidentRequest request, CancellationToken cancellationToken = default);
         Task<bool> DeleteIncidentAsync(int id, CancellationToken cancellationToken = default);
         Task<DowntimeStatsDTO> GetDowntimeStatsAsync(string period, DateTime? startDate = null, DateTime? endDate = null, int? lineId = null, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<dynamic>> GetStopTypesAsync(CancellationToken cancellationToken = default);
     }
 }

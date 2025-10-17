@@ -69,7 +69,7 @@ public class IncidentService : IIncidentService
         {
             var timeSpan = request.EndTime.Value - request.StartTime;
             var durationMinutes = timeSpan.TotalMinutes;
-            
+
             // Đảm bảo Duration luôn dương và ít nhất 1 phút
             duration = Math.Max(1, (decimal)durationMinutes);
         }
@@ -131,7 +131,7 @@ public class IncidentService : IIncidentService
         {
             var timeSpan = request.EndTime.Value - request.StartTime;
             var durationMinutes = timeSpan.TotalMinutes;
-            
+
             // Đảm bảo Duration luôn dương và ít nhất 1 phút
             duration = Math.Max(1, (decimal)durationMinutes);
         }
@@ -220,9 +220,10 @@ public class IncidentService : IIncidentService
         // Group by line
         var downtimeByLines = incidents
             .Where(i => i.Equipment?.Stage?.Line != null)
-            .GroupBy(i => new { 
-                LineId = i.Equipment!.Stage!.Line!.LineId, 
-                LineName = i.Equipment.Stage.Line.LineName 
+            .GroupBy(i => new
+            {
+                LineId = i.Equipment!.Stage!.Line!.LineId,
+                LineName = i.Equipment.Stage.Line.LineName
             })
             .Select(g => new DowntimeByLineDTO
             {
@@ -236,9 +237,10 @@ public class IncidentService : IIncidentService
         // Group by stop type
         var incidentsByStopType = incidents
             .Where(i => i.Type != null)
-            .GroupBy(i => new { 
-                TypeId = i.TypeId ?? 0, 
-                TypeName = i.Type!.TypeName ?? "Unknown" 
+            .GroupBy(i => new
+            {
+                TypeId = i.TypeId ?? 0,
+                TypeName = i.Type!.TypeName ?? "Unknown"
             })
             .Select(g => new IncidentByStopTypeDTO
             {
@@ -255,8 +257,8 @@ public class IncidentService : IIncidentService
 
         foreach (var shift in shifts)
         {
-            var shiftIncidents = incidents.Where(i => 
-                i.StartTime.HasValue && 
+            var shiftIncidents = incidents.Where(i =>
+                i.StartTime.HasValue &&
                 IsTimeInShift(i.StartTime.Value.TimeOfDay, shift.StartTime, shift.EndTime)
             ).ToList();
 
@@ -280,10 +282,23 @@ public class IncidentService : IIncidentService
         };
     }
 
+    public async Task<IReadOnlyList<dynamic>> GetStopTypesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var stopTypes = await _incidentRepository.GetStopTypesAsync(cancellationToken);
+            return stopTypes;
+        }
+        catch (Exception)
+        {
+            return new List<dynamic>();
+        }
+    }
+
     private static bool IsTimeInShift(TimeSpan time, TimeOnly shiftStart, TimeOnly shiftEnd)
     {
         var timeOnly = TimeOnly.FromTimeSpan(time);
-        
+
         if (shiftStart <= shiftEnd)
         {
             // Normal shift (e.g., 06:00 - 14:00)

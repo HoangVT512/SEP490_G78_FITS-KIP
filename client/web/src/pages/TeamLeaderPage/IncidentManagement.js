@@ -45,6 +45,7 @@ import { incidentService } from "../../services/incidentService";
 import { equipmentService } from "../../services/equipmentService";
 import { lineService } from "../../services/lineService";
 import { stageService } from "../../services/stageService";
+import { stopTypeService } from "../../services/stopTypeService";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -67,6 +68,7 @@ const IncidentManagement = () => {
   const [equipments, setEquipments] = useState([]);
   const [lines, setLines] = useState([]);
   const [stages, setStages] = useState([]);
+  const [stopTypes, setStopTypes] = useState([]);
   const [selectedEquipment, setSelectedEquipment] = useState(null);
 
   useEffect(() => {
@@ -74,6 +76,7 @@ const IncidentManagement = () => {
     fetchEquipments();
     fetchLines();
     fetchStages();
+    fetchStopTypes();
   }, []);
 
   useEffect(() => {
@@ -110,6 +113,17 @@ const IncidentManagement = () => {
     } catch (error) {
       console.error("Error fetching stages:", error);
       message.error("Không thể tải danh sách công đoạn");
+    }
+  };
+
+  const fetchStopTypes = async () => {
+    try {
+      const response = await stopTypeService.getStopTypes();
+      const data = Array.isArray(response) ? response : response?.data || [];
+      setStopTypes(data);
+    } catch (error) {
+      console.error("Error fetching stop types:", error);
+      message.error("Không thể tải danh sách loại dừng");
     }
   };
 
@@ -1180,151 +1194,140 @@ const IncidentManagement = () => {
           form={form}
           layout="vertical"
           onFinish={handleFormSubmit}
-          initialValues={{
-            status: "Chờ xử lý",
-            priority: "Trung bình",
-            category: "Hỏng hóc",
-            impact: "Trung bình",
-          }}
+          initialValues={{ status: "Chờ xử lý" }}
         >
           <Row gutter={16}>
+            {/* hidden status so it's always 'Chờ xử lý' on submit and not editable */}
+            <Form.Item name="status" hidden>
+              <Input />
+            </Form.Item>
+
             <Col span={12}>
               <Form.Item
-                label="Tiêu đề sự cố"
-                name="title"
-                rules={[{ required: true, message: "Vui lòng nhập tiêu đề!" }]}
-              >
-                <Input placeholder="Nhập tiêu đề sự cố" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="Thiết bị"
-                name="equipmentId"
-                rules={[{ required: true, message: "Vui lòng chọn thiết bị!" }]}
+                label="Mã thiết bị"
+                name="equipmentCode"
+                rules={[
+                  { required: true, message: "Vui lòng chọn mã thiết bị!" },
+                ]}
               >
                 <Select
-                  placeholder="Chọn thiết bị"
+                  placeholder="Chọn hoặc tìm mã thiết bị"
+                  showSearch
+                  optionFilterProp="children"
+                  onSearch={() => {}}
                   onChange={(value) => {
+                    // value will be equipmentId (we store id as value but show code+name)
                     const equipment = equipments.find(
                       (e) => e.equipmentId === value
                     );
                     if (equipment) {
                       setSelectedEquipment(equipment);
+                      // set equipmentId, lineId, stageId in form so other fields stay in sync
                       form.setFieldsValue({
+                        equipmentId: equipment.equipmentId,
+                        equipmentCode: equipment.equipmentCode,
                         lineId: equipment.lineId,
                         stageId: equipment.stageId,
                       });
+                    } else {
+                      setSelectedEquipment(null);
+                      form.setFieldsValue({ equipmentId: null });
                     }
                   }}
-                  showSearch
-                  filterOption={(input, option) =>
-                    (option?.children ?? "")
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
                 >
                   {equipments.map((equipment) => (
                     <Option
                       key={equipment.equipmentId}
                       value={equipment.equipmentId}
                     >
-                      {equipment.equipmentName} ({equipment.equipmentCode})
+                      {equipment.equipmentCode} - {equipment.equipmentName}
                     </Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
+              {/* hidden equipmentId so form submission includes the id */}
+              <Form.Item name="equipmentId" hidden>
+                <Input />
+              </Form.Item>
+              <Form.Item label="Thiết bị">
+                <Input
+                  disabled
+                  value={
+                    selectedEquipment
+                      ? `${selectedEquipment.equipmentName}${
+                          selectedEquipment.equipmentCode
+                            ? ` (${selectedEquipment.equipmentCode})`
+                            : ""
+                        }`
+                      : ""
+                  }
+                  placeholder="Chưa chọn thiết bị"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="lineId" hidden>
+                <Input />
+              </Form.Item>
+              <Form.Item label="Dây chuyền">
+                <Input
+                  disabled
+                  value={
+                    selectedEquipment
+                      ? lines.find((l) => l.lineId === selectedEquipment.lineId)
+                          ?.lineName || ""
+                      : lines.find(
+                          (l) => l.lineId === form.getFieldValue("lineId")
+                        )?.lineName || ""
+                  }
+                  placeholder="Chưa chọn dây chuyền"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="stageId" hidden>
+                <Input />
+              </Form.Item>
+              <Form.Item label="Công đoạn">
+                <Input
+                  disabled
+                  value={
+                    selectedEquipment
+                      ? stages.find(
+                          (s) => s.stageId === selectedEquipment.stageId
+                        )?.stageName || ""
+                      : stages.find(
+                          (s) => s.stageId === form.getFieldValue("stageId")
+                        )?.stageName || ""
+                  }
+                  placeholder="Chưa chọn công đoạn"
+                />
+              </Form.Item>
+            </Col>
+
+            <Col span={12}>
               <Form.Item
-                label="Dây chuyền"
-                name="lineId"
+                label="Loại dừng"
+                name="typeId"
                 rules={[
-                  { required: true, message: "Vui lòng chọn dây chuyền!" },
+                  { required: true, message: "Vui lòng chọn loại dừng!" },
                 ]}
               >
-                <Select placeholder="Chọn dây chuyền" disabled>
-                  {lines.map((line) => (
-                    <Option key={line.lineId} value={line.lineId}>
-                      {line.lineName}
+                <Select placeholder="Chọn loại dừng" showSearch>
+                  {stopTypes.map((stopType) => (
+                    <Option
+                      key={stopType.stopTypeId || stopType.typeId}
+                      value={stopType.stopTypeId || stopType.typeId}
+                    >
+                      {stopType.typeName || stopType.stopTypeName}
                     </Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item
-                label="Công đoạn"
-                name="stageId"
-                rules={[
-                  { required: true, message: "Vui lòng chọn công đoạn!" },
-                ]}
-              >
-                <Select placeholder="Chọn công đoạn" disabled>
-                  {stages.map((stage) => (
-                    <Option key={stage.stageId} value={stage.stageId}>
-                      {stage.stageName}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                label="Danh mục"
-                name="category"
-                rules={[{ required: true, message: "Vui lòng chọn danh mục!" }]}
-              >
-                <Select placeholder="Chọn danh mục">
-                  <Option value="Hỏng hóc">Hỏng hóc</Option>
-                  <Option value="Bảo trì">Bảo trì</Option>
-                  <Option value="An toàn">An toàn</Option>
-                  <Option value="Chất lượng">Chất lượng</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                label="Mức độ ưu tiên"
-                name="priority"
-                rules={[{ required: true, message: "Vui lòng chọn mức độ!" }]}
-              >
-                <Select placeholder="Chọn mức độ">
-                  <Option value="Cao">Cao</Option>
-                  <Option value="Trung bình">Trung bình</Option>
-                  <Option value="Thấp">Thấp</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                label="Tác động"
-                name="impact"
-                rules={[{ required: true, message: "Vui lòng chọn tác động!" }]}
-              >
-                <Select placeholder="Chọn tác động">
-                  <Option value="Cao">Cao</Option>
-                  <Option value="Trung bình">Trung bình</Option>
-                  <Option value="Thấp">Thấp</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                label="Trạng thái"
-                name="status"
-                rules={[
-                  { required: true, message: "Vui lòng chọn trạng thái!" },
-                ]}
-              >
-                <Select placeholder="Chọn trạng thái">
-                  <Option value="Chờ xử lý">Chờ xử lý</Option>
-                  <Option value="Đang xử lý">Đang xử lý</Option>
-                  <Option value="Hoàn thành">Hoàn thành</Option>
-                  <Option value="Hủy">Hủy</Option>
-                </Select>
-              </Form.Item>
-            </Col>
+
             <Col span={12}>
               <Form.Item
                 label="Người báo cáo"
@@ -1335,34 +1338,14 @@ const IncidentManagement = () => {
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item label="Người xử lý" name="assignedTo">
-                <Input placeholder="Nhập tên người xử lý" />
+              <Form.Item name="status" hidden>
+                <Input />
+              </Form.Item>
+              <Form.Item label="Trạng thái">
+                <Input disabled value="Chờ xử lý" />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item
-                label="Ngày báo cáo"
-                name="reportDate"
-                rules={[{ required: true, message: "Vui lòng chọn ngày!" }]}
-              >
-                <DatePicker
-                  showTime
-                  format="YYYY-MM-DD HH:mm"
-                  style={{ width: "100%" }}
-                  placeholder="Chọn ngày giờ"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Ngày giải quyết" name="resolveDate">
-                <DatePicker
-                  showTime
-                  format="YYYY-MM-DD HH:mm"
-                  style={{ width: "100%" }}
-                  placeholder="Chọn ngày giờ"
-                />
-              </Form.Item>
-            </Col>
+
             <Col span={24}>
               <Form.Item
                 label="Mô tả vấn đề"
@@ -1386,18 +1369,6 @@ const IncidentManagement = () => {
                   rows={3}
                   placeholder="Mô tả giải pháp đã/đang thực hiện..."
                 />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Thời gian chết (phút)" name="downtime">
-                <Input type="number" placeholder="0" min={0} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Tài liệu đính kèm" name="attachments">
-                <Upload>
-                  <Button icon={<UploadOutlined />}>Tải lên file</Button>
-                </Upload>
               </Form.Item>
             </Col>
           </Row>

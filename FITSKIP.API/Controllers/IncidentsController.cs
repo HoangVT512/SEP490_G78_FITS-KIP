@@ -35,6 +35,23 @@ public class IncidentsController : ControllerBase
     }
 
     /// <summary>
+    /// Lấy danh sách loại dừng
+    /// </summary>
+    [HttpGet("stop-types")]
+    public async Task<IActionResult> GetStopTypes()
+    {
+        try
+        {
+            var stopTypes = await _incidentService.GetStopTypesAsync();
+            return Ok(new { success = true, data = stopTypes });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi lấy danh sách loại dừng", details = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Lấy thông tin sự cố theo ID
     /// </summary>
     [HttpGet("{id}")]
@@ -111,7 +128,7 @@ public class IncidentsController : ControllerBase
             }
 
             var incident = await _incidentService.CreateIncidentAsync(request);
-            return CreatedAtAction(nameof(GetIncident), new { id = incident.IncidentId }, 
+            return CreatedAtAction(nameof(GetIncident), new { id = incident.IncidentId },
                 new { success = true, data = incident, message = "Tạo sự cố thành công" });
         }
         catch (InvalidOperationException ex)
