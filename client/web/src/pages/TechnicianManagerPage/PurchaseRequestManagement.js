@@ -14,6 +14,7 @@ import {
   DatePicker,
   Row,
   Col,
+  Dropdown,
 } from "antd";
 import {
   PlusOutlined,
@@ -21,6 +22,7 @@ import {
   EyeOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styles from "../../styles/pages/PurchaseRequestManagement.module.css";
@@ -57,7 +59,11 @@ const PurchaseRequestManagement = () => {
         // Also load spare parts for the select
         try {
           const parts = await sparePartService.getAll();
-          setAvailableParts(Array.isArray(parts) ? parts : []);
+          // Filter only active parts (IsActive = true)
+          const activeParts = (Array.isArray(parts) ? parts : []).filter(
+            (part) => part.isActive !== false
+          );
+          setAvailableParts(activeParts);
         } catch (e) {
           console.warn("Could not load spare parts for select", e);
         }
@@ -137,36 +143,27 @@ const PurchaseRequestManagement = () => {
       title: "Thao tác",
       key: "action",
       fixed: "right",
-      width: 180,
-      render: (_, record) => (
-        <Space>
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => handleViewDetail(record)}
+      width: 100,
+      render: (_, record) => {
+        const menuItems = [
+          {
+            key: "view",
+            icon: <EyeOutlined />,
+            label: "Chi tiết",
+            onClick: () => handleViewDetail(record),
+          },
+        ];
+
+        return (
+          <Dropdown
+            menu={{ items: menuItems }}
+            trigger={["click"]}
+            destroyOnHidden={true}
           >
-            Chi tiết
-          </Button>
-          {record.status === "Pending" && (
-            <>
-              <Button
-                type="primary"
-                icon={<CheckCircleOutlined />}
-                onClick={() => handleApprove(record)}
-              >
-                Duyệt
-              </Button>
-              <Button
-                danger
-                icon={<CloseCircleOutlined />}
-                onClick={() => handleReject(record)}
-              >
-                Từ chối
-              </Button>
-            </>
-          )}
-        </Space>
-      ),
+            <Button type="link" icon={<DownOutlined />} />
+          </Dropdown>
+        );
+      },
     },
   ];
 
