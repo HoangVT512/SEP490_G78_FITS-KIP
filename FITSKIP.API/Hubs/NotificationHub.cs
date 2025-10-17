@@ -21,12 +21,16 @@ namespace FITSKIP.API.Hubs
                 var roles = Context.User?.FindAll(ClaimTypes.Role)?.Select(c => c.Value) ?? Enumerable.Empty<string>();
                 foreach (var role in roles)
                 {
-                    if (role.Contains("Quản lý") || role.Contains("Manager"))
+                    Console.WriteLine($"User {userId} has role: {role}");
+
+                    // Fix: Check for exact role "Quản lý" (Manager) first, NOT "Quản lý kỹ thuật"
+                    if (role == "Quản lý" || role == "Manager")
                     {
                         await Groups.AddToGroupAsync(Context.ConnectionId, "Managers");
                         Console.WriteLine($"User {userId} added to Managers group");
                     }
-                    else if (role.Contains("Quản lý kỹ thuật") || role.Contains("Technical Manager"))
+                    // Check for Technical Manager role (includes "Quản lý kỹ thuật")
+                    if (role == "Quản lý kỹ thuật" || role == "Technical Manager" || role.Contains("Quản lý kỹ thuật"))
                     {
                         await Groups.AddToGroupAsync(Context.ConnectionId, "TechnicalManagers");
                         Console.WriteLine($"User {userId} added to TechnicalManagers group");
@@ -51,11 +55,12 @@ namespace FITSKIP.API.Hubs
         }
 
         // Client can call this to mark notification as read
-        public async Task MarkAsRead(int notificationId)
+        public Task MarkAsRead(int notificationId)
         {
             var userId = Context.UserIdentifier ?? Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             Console.WriteLine($"User {userId} marked notification {notificationId} as read");
             // The actual marking will be done through the API endpoint
+            return Task.CompletedTask;
         }
 
         // Join a specific group (for role-based or department-based notifications)

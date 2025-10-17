@@ -10,10 +10,18 @@ class SignalRService {
   async startConnection(token) {
     try {
       // Tạo connection với URL của NotificationHub
+      // Đảm bảo URL không có undefined hoặc các tham số không cần thiết
+      const baseUrl =
+        process.env.REACT_APP_API_BASE_URL || "https://localhost:7003/api";
+      const hubUrl = `${baseUrl.replace("/api", "")}/hubs/notifications`;
+
+      console.log("🔗 SignalR connecting to:", hubUrl);
+
       this.connection = new signalR.HubConnectionBuilder()
-        .withUrl(`${process.env.REACT_APP_API_BASE_URL}/hubs/notifications`, {
+        .withUrl(hubUrl, {
           accessTokenFactory: () => token,
           transport: signalR.HttpTransportType.WebSockets,
+          skipNegotiation: false, // Ensure proper negotiation
         })
         .withAutomaticReconnect([0, 2000, 5000, 10000, 30000]) // Tự động reconnect
         .configureLogging(signalR.LogLevel.Information)

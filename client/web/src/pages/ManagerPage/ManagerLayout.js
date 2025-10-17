@@ -33,6 +33,7 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import signalRService from "../../services/signalRService";
+import * as notificationService from "../../services/notificationService";
 import styles from "../../styles/pages/ManagerLayout.module.css";
 
 // Import manager pages
@@ -71,20 +72,8 @@ const ManagerLayout = () => {
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(
-          `${process.env.REACT_APP_API_BASE_URL}/Notifications/unread-count`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.ok) {
-          const result = await response.json();
-          setNotificationCount(result.data || 0);
-        }
+        const count = await notificationService.getUnreadCount();
+        setNotificationCount(count);
       } catch (error) {
         console.error("Error fetching unread count:", error);
       }

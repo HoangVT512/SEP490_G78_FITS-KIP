@@ -28,6 +28,7 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import signalRService from "../../services/signalRService";
+import * as notificationService from "../../services/notificationService";
 import styles from "../../styles/pages/TechnicianManagerLayout.module.css";
 
 // Import technician manager pages
@@ -63,20 +64,8 @@ const TechnicianManagerLayout = () => {
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(
-          "https://localhost:7003/api/Notifications/unread-count",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.ok) {
-          const result = await response.json();
-          setNotificationCount(result.data || 0);
-        }
+        const count = await notificationService.getUnreadCount();
+        setNotificationCount(count);
       } catch (error) {
         console.error("Error fetching unread count:", error);
       }

@@ -20,6 +20,7 @@ import {
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import "dayjs/locale/vi";
+import * as notificationService from "../../services/notificationService";
 import styles from "../../styles/pages/NotificationsList.module.css";
 
 dayjs.extend(relativeTime);
@@ -36,22 +37,8 @@ const NotificationsList = ({ onClose }) => {
   const fetchNotifications = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL}/Notifications?unreadOnly=${unreadOnly}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        const result = await response.json();
-        setNotifications(result.data || []);
-      } else {
-        message.error("Không thể tải danh sách thông báo");
-      }
+      const data = await notificationService.getNotifications(unreadOnly);
+      setNotifications(data);
     } catch (error) {
       console.error("Error fetching notifications:", error);
       message.error("Lỗi khi tải thông báo");
@@ -63,23 +50,9 @@ const NotificationsList = ({ onClose }) => {
   // Mark notification as read
   const markAsRead = async (notificationId) => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL}/Notifications/${notificationId}/read`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        message.success("Đã đánh dấu đã đọc");
-        fetchNotifications(); // Refresh list
-      } else {
-        message.error("Không thể đánh dấu đã đọc");
-      }
+      await notificationService.markNotificationAsRead(notificationId);
+      message.success("Đã đánh dấu đã đọc");
+      fetchNotifications(); // Refresh list
     } catch (error) {
       console.error("Error marking as read:", error);
       message.error("Lỗi khi đánh dấu đã đọc");
@@ -89,23 +62,9 @@ const NotificationsList = ({ onClose }) => {
   // Mark all as read
   const markAllAsRead = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL}/Notifications/read-all`,
-        {
-          method: "PUT",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        message.success("Đã đánh dấu tất cả đã đọc");
-        fetchNotifications();
-      } else {
-        message.error("Không thể đánh dấu tất cả đã đọc");
-      }
+      await notificationService.markAllNotificationsAsRead();
+      message.success("Đã đánh dấu tất cả đã đọc");
+      fetchNotifications();
     } catch (error) {
       console.error("Error marking all as read:", error);
       message.error("Lỗi khi đánh dấu tất cả đã đọc");
@@ -113,25 +72,11 @@ const NotificationsList = ({ onClose }) => {
   };
 
   // Delete notification
-  const deleteNotification = async (notificationId) => {
+  const deleteNotificationItem = async (notificationId) => {
     try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(
-        `${process.env.REACT_APP_API_BASE_URL}/Notifications/${notificationId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        message.success("Đã xóa thông báo");
-        fetchNotifications();
-      } else {
-        message.error("Không thể xóa thông báo");
-      }
+      await notificationService.deleteNotification(notificationId);
+      message.success("Đã xóa thông báo");
+      fetchNotifications();
     } catch (error) {
       console.error("Error deleting notification:", error);
       message.error("Lỗi khi xóa thông báo");
@@ -236,7 +181,7 @@ const NotificationsList = ({ onClose }) => {
                     size="small"
                     danger
                     icon={<DeleteOutlined />}
-                    onClick={() => deleteNotification(item.notificationId)}
+                    onClick={() => deleteNotificationItem(item.notificationId)}
                   >
                     Xóa
                   </Button>,
