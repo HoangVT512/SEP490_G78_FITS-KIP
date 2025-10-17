@@ -21,6 +21,7 @@ import {
   Timeline,
   Upload,
   Alert,
+  Dropdown,
 } from "antd";
 import {
   PlusOutlined,
@@ -36,6 +37,7 @@ import {
   FileTextOutlined,
   UploadOutlined,
   FilterOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styles from "../../styles/pages/IncidentManagement.module.css";
@@ -109,6 +111,7 @@ const IncidentManagement = () => {
             "",
           equipmentCode: it.equipment?.equipmentCode || it.equipmentCode || "",
           lineName: it.line?.lineName || it.lineName || it.LineName || "",
+          stageName: it.stage?.stageName || it.stageName || it.StageName || "",
           priority: it.priority || it.Priority || "Trung bình",
           status:
             it.status ||
@@ -281,18 +284,6 @@ const IncidentManagement = () => {
       render: (text) => <span style={{ fontWeight: 500 }}>{text}</span>,
     },
     {
-      title: "Tiêu đề",
-      dataIndex: "title",
-      key: "title",
-      width: 200,
-      ellipsis: true,
-      render: (text) => (
-        <Tooltip title={text}>
-          <span>{text}</span>
-        </Tooltip>
-      ),
-    },
-    {
       title: "Thiết bị",
       dataIndex: "equipmentName",
       key: "equipmentName",
@@ -316,15 +307,75 @@ const IncidentManagement = () => {
       render: (text) => <Tag color="purple">{text}</Tag>,
     },
     {
-      title: "Mức độ",
-      dataIndex: "priority",
-      key: "priority",
-      width: 100,
-      render: (priority) => (
-        <Tag color={getPriorityColor(priority)} style={{ fontWeight: 500 }}>
-          {priority}
-        </Tag>
+      title: "Công đoạn",
+      dataIndex: "stageName",
+      key: "stageName",
+      width: 130,
+      render: (text) => <Tag color="blue">{text || "Chưa xác định"}</Tag>,
+    },
+    {
+      title: "Vấn đề",
+      dataIndex: "issue",
+      key: "issue",
+      width: 200,
+      ellipsis: true,
+      render: (text) => (
+        <Tooltip title={text}>
+          <span>{text || "Chưa mô tả"}</span>
+        </Tooltip>
       ),
+    },
+    {
+      title: "Loại dừng",
+      dataIndex: "category",
+      key: "category",
+      width: 130,
+      render: (text) => <Tag color="orange">{text || "Chưa phân loại"}</Tag>,
+    },
+    {
+      title: "Nguyên nhân",
+      dataIndex: "reason",
+      key: "reason",
+      width: 180,
+      ellipsis: true,
+      render: (text) => (
+        <Tooltip title={text}>
+          <span>{text || "Chưa xác định"}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Giải pháp",
+      dataIndex: "solution",
+      key: "solution",
+      width: 180,
+      ellipsis: true,
+      render: (text) => (
+        <Tooltip title={text}>
+          <span>{text || "Chưa có giải pháp"}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Khung giờ bắt đầu",
+      dataIndex: "reportDate",
+      key: "startTime",
+      width: 150,
+      render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
+    },
+    {
+      title: "Khung giờ kết thúc",
+      dataIndex: "resolveDate",
+      key: "endTime",
+      width: 150,
+      render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
+    },
+    {
+      title: "Ngày báo cáo",
+      dataIndex: "reportDate",
+      key: "reportDate",
+      width: 150,
+      render: (d) => (d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"),
     },
     {
       title: "Trạng thái",
@@ -336,20 +387,6 @@ const IncidentManagement = () => {
           {status}
         </Tag>
       ),
-    },
-    {
-      title: "Người báo cáo",
-      dataIndex: "reporter",
-      key: "reporter",
-      width: 130,
-    },
-    {
-      title: "Người xử lý",
-      dataIndex: "assignedTo",
-      key: "assignedTo",
-      width: 130,
-      render: (text) =>
-        text || <span style={{ color: "#bbb" }}>Chưa phân công</span>,
     },
     {
       title: "Thời gian chết (phút)",
@@ -366,53 +403,53 @@ const IncidentManagement = () => {
       ),
     },
     {
-      title: "Ngày báo cáo",
-      dataIndex: "reportDate",
-      key: "reportDate",
-      width: 150,
-      render: (d) => (d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"),
-    },
-    {
       title: "Thao tác",
       key: "action",
-      width: 180,
+      width: 120,
       fixed: "right",
-      render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="Xem chi tiết">
-            <Button
-              type="link"
-              icon={<EyeOutlined />}
-              size="small"
-              onClick={() => handleViewDetail(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Chỉnh sửa">
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              size="small"
-              onClick={() => handleEditIncident(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Xóa sự cố"
-            description="Bạn có chắc chắn muốn xóa sự cố này?"
-            onConfirm={() => handleDeleteIncident(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
+      render: (_, record) => {
+        const items = [
+          {
+            key: "view",
+            icon: <EyeOutlined />,
+            label: "Xem chi tiết",
+            onClick: () => handleViewDetail(record),
+          },
+          {
+            key: "edit",
+            icon: <EditOutlined />,
+            label: "Chỉnh sửa",
+            onClick: () => handleEditIncident(record),
+          },
+          {
+            key: "delete",
+            icon: <DeleteOutlined />,
+            label: "Xóa",
+            danger: true,
+            onClick: () => {
+              Modal.confirm({
+                title: "Xóa sự cố",
+                content: "Bạn có chắc chắn muốn xóa sự cố này?",
+                okText: "Xóa",
+                cancelText: "Hủy",
+                okButtonProps: { danger: true },
+                onOk() {
+                  handleDeleteIncident(record.id);
+                },
+              });
+            },
+          },
+        ];
+        return (
+          <Dropdown
+            menu={{ items }}
+            trigger={["click"]}
+            placement="bottomRight"
           >
-            <Tooltip title="Xóa">
-              <Button
-                type="link"
-                danger
-                icon={<DeleteOutlined />}
-                size="small"
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
+            <DownOutlined style={{ cursor: "pointer", fontSize: "16px" }} />
+          </Dropdown>
+        );
+      },
     },
   ];
 
