@@ -145,10 +145,22 @@ public class IncidentService : IIncidentService
         existingIncident.StartTime = request.StartTime;
         existingIncident.EndTime = request.EndTime;
         existingIncident.Duration = duration;
-        existingIncident.TypeId = request.TypeId;
+
+        // Update TypeId only if provided
+        if (request.TypeId.HasValue && request.TypeId > 0)
+        {
+            existingIncident.TypeId = request.TypeId;
+        }
+
         existingIncident.Issue = request.Issue?.Trim();
         existingIncident.Reason = request.Reason?.Trim();
         existingIncident.Solution = request.Solution?.Trim();
+
+        // Update status if provided
+        if (!string.IsNullOrEmpty(request.Status))
+        {
+            existingIncident.Status = request.Status;
+        }
 
         return await _incidentRepository.UpdateAsync(existingIncident, cancellationToken);
     }

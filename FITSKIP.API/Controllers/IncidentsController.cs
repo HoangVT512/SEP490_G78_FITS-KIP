@@ -182,7 +182,7 @@ public class IncidentsController : ControllerBase
                 return BadRequest(new { success = false, message = "Error: Equipment ID phải lớn hơn 0" });
             }
 
-            if (request.TypeId <= 0)
+            if (request.TypeId.HasValue && request.TypeId <= 0)
             {
                 return BadRequest(new { success = false, message = "Error: Stop Type ID phải lớn hơn 0" });
             }

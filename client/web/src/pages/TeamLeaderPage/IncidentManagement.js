@@ -159,6 +159,10 @@ const IncidentManagement = () => {
 
         return {
           id: it.incidentId || it.id || it.IncidentId,
+          equipmentId: it.equipmentId || it.equipment?.equipmentId,
+          typeId: it.typeId || it.type?.typeId || it.type?.stopTypeId,
+          lineId: it.equipment?.lineId || it.line?.lineId,
+          stageId: it.equipment?.stageId || it.stage?.stageId,
           title:
             it.title ||
             it.Title ||
@@ -268,10 +272,33 @@ const IncidentManagement = () => {
   const handleEditIncident = (record) => {
     setIsEditMode(true);
     setSelectedIncident(record);
+
+    // Find the equipment to pre-select it
+    const equipment = equipments.find(
+      (e) => e.equipmentId === record.equipmentId
+    );
+    if (equipment) {
+      setSelectedEquipment(equipment);
+    }
+
+    // Set form values with proper equipment selection
     form.setFieldsValue({
-      ...record,
-      reportDate: record.reportDate ? dayjs(record.reportDate) : null,
-      resolveDate: record.resolveDate ? dayjs(record.resolveDate) : null,
+      equipmentCode: record.equipmentId, // This is the value for the Select, which uses equipmentId
+      equipmentId: record.equipmentId,
+      lineId: equipment?.lineId || record.lineId,
+      stageId: equipment?.stageId || record.stageId,
+      typeId:
+        record.typeId ||
+        (record.category
+          ? stopTypes.find((st) => st.typeName === record.category)?.stopTypeId
+          : null),
+      issue: record.issue,
+      reason: record.reason,
+      solution: record.solution,
+      status: record.status,
+      startTime: record.reportDate ? dayjs(record.reportDate) : null,
+      endTime: record.resolveDate ? dayjs(record.resolveDate) : null,
+      reporter: record.reporter,
     });
     setFormModalVisible(true);
   };
@@ -279,11 +306,13 @@ const IncidentManagement = () => {
   const handleDeleteIncident = async (id) => {
     try {
       setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await incidentService.delete(id);
       message.success("Xóa sự cố thành công!");
       fetchIncidents();
     } catch (error) {
-      message.error("Xóa thất bại!");
+      console.error("Delete incident error:", error);
+      const errMsg = error?.message || error?.data?.message || "Xóa thất bại!";
+      message.error(errMsg);
       setLoading(false);
     }
   };
@@ -302,7 +331,7 @@ const IncidentManagement = () => {
         equipmentId:
           form.getFieldValue("equipmentId") || values.equipmentId || null,
         // StartTime is intentionally omitted so backend will set it to current time
-        endTime: null,
+        endTime: values.endTime ? dayjs(values.endTime).toDate() : null,
         typeId: values.typeId || null,
         issue: values.issue,
         reason: values.reason || null,
@@ -312,12 +341,40 @@ const IncidentManagement = () => {
       };
 
       if (isEditMode) {
-        // For edit we call update - keep existing behavior but map payload to update DTO
+        // For edit include startTime, endTime and status
+        // Get equipmentId from form or selectedEquipment
+        const formEquipmentId = form.getFieldValue("equipmentId");
+        const finalEquipmentId =
+          formEquipmentId ||
+          selectedEquipment?.equipmentId ||
+          selectedIncident.equipmentId;
+
+        // Find typeId from stopTypes if not in values
+        let typeId = values.typeId;
+        if (!typeId && selectedIncident.category) {
+          const stopType = stopTypes.find(
+            (st) => st.typeName === selectedIncident.category
+          );
+          typeId = stopType?.stopTypeId || stopType?.typeId;
+        }
+
+        const editPayload = {
+          equipmentId: finalEquipmentId,
+          startTime: values.startTime
+            ? dayjs(values.startTime).toDate()
+            : dayjs(selectedIncident.reportDate).toDate(),
+          endTime: values.endTime ? dayjs(values.endTime).toDate() : null,
+          typeId: typeId || null, // Send null if not changed
+          issue: values.issue || selectedIncident.issue,
+          reason: values.reason || selectedIncident.reason,
+          solution: values.solution || selectedIncident.solution,
+          status: values.status || selectedIncident.status || "Chờ xử lý",
+        };
         const id =
           selectedIncident?.id ||
           selectedIncident?.incidentId ||
           selectedIncident?.IncidentId;
-        await incidentService.update(id, payload);
+        await incidentService.update(id, editPayload);
         message.success("Cập nhật sự cố thành công!");
       } else {
         await incidentService.create(payload);
@@ -1020,10 +1077,12 @@ const IncidentManagement = () => {
           initialValues={{ status: "Chờ xử lý" }}
         >
           <Row gutter={16}>
-            {/* hidden status so it's always 'Chờ xử lý' on submit and not editable */}
-            <Form.Item name="status" hidden>
-              <Input />
-            </Form.Item>
+            {/* hidden status field for create mode, visible for edit mode */}
+            {!isEditMode && (
+              <Form.Item name="status" hidden>
+                <Input />
+              </Form.Item>
+            )}
 
             <Col span={12}>
               <Form.Item
@@ -1146,12 +1205,67 @@ const IncidentManagement = () => {
             </Col>
 
             <Col span={12}>
-              <Form.Item name="status" hidden>
-                <Input />
-              </Form.Item>
-              <Form.Item label="Trạng thái">
-                <Input disabled value="Chờ xử lý" />
-              </Form.Item>
+              {isEditMode ? (
+                <Form.Item
+                  label="Thời gian bắt đầu"
+                  name="startTime"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Vui lòng nhập thời gian bắt đầu!",
+                    },
+                  ]}
+                >
+                  <DatePicker
+                    showTime={{ format: "HH:mm" }}
+                    format="DD/MM/YYYY HH:mm"
+                    placeholder="Chọn thời gian bắt đầu"
+                  />
+                </Form.Item>
+              ) : (
+                <Form.Item name="status" hidden>
+                  <Input />
+                </Form.Item>
+              )}
+            </Col>
+
+            <Col span={12}>
+              {isEditMode && (
+                <Form.Item label="Thời gian kết thúc" name="endTime">
+                  <DatePicker
+                    showTime={{ format: "HH:mm" }}
+                    format="DD/MM/YYYY HH:mm"
+                    placeholder="Chọn thời gian kết thúc"
+                  />
+                </Form.Item>
+              )}
+            </Col>
+
+            <Col span={12}>
+              {isEditMode && (
+                <Form.Item
+                  label="Trạng thái"
+                  name="status"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Vui lòng chọn trạng thái!",
+                    },
+                  ]}
+                >
+                  <Select placeholder="Chọn trạng thái">
+                    <Option value="Chờ xử lý">Chờ xử lý</Option>
+                    <Option value="Đang xử lý">Đang xử lý</Option>
+                    <Option value="Hoàn thành">Hoàn thành</Option>
+                    <Option value="Hủy">Hủy</Option>
+                  </Select>
+                </Form.Item>
+              )}
+              {!isEditMode && (
+                <Form.Item label="Trạng thái">
+                  <Input disabled value="Chờ xử lý" />
+                </Form.Item>
+              )}
             </Col>
 
             <Col span={12}>

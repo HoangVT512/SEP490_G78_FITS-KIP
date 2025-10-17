@@ -54,8 +54,7 @@ namespace FITSKIP.Domain.DTO
 
         public DateTime? EndTime { get; set; }
 
-        [Required(ErrorMessage = "Type ID is required")]
-        public int TypeId { get; set; }
+        public int? TypeId { get; set; }
 
         [MaxLength(500, ErrorMessage = "Issue cannot exceed 500 characters")]
         public string? Issue { get; set; }
@@ -65,6 +64,9 @@ namespace FITSKIP.Domain.DTO
 
         [MaxLength(500, ErrorMessage = "Solution cannot exceed 500 characters")]
         public string? Solution { get; set; }
+
+        [MaxLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
+        public string? Status { get; set; }
     }
 
     public class DowntimeStatsDTO
