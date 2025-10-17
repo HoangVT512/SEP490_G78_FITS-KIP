@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251016101729_AddReportedByToIncidentHistory")]
-    partial class AddReportedByToIncidentHistory
+    [Migration("20251017023021_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -141,9 +141,6 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Reason")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReportedBy")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ReportedByUserId")

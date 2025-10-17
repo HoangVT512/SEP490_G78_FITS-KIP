@@ -342,6 +342,7 @@ namespace FITSKIP.Infrastructure.Migrations
                     Origin = table.Column<string>(type: "nvarchar(150)", maxLength: 150, nullable: true),
                     YOM = table.Column<int>(type: "int", nullable: true),
                     QRCode = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    Issue = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     StageID = table.Column<int>(type: "int", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
                 },
@@ -369,11 +370,17 @@ namespace FITSKIP.Infrastructure.Migrations
                     Reason = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Solution = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Issue = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    CreatedDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()")
+                    CreatedDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
+                    ReportedByUserId = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Incident__5F46CAB00C9D9F0A", x => x.IncidentID);
+                    table.ForeignKey(
+                        name: "FK_IncidentHistory_AspNetUsers_ReportedByUserId",
+                        column: x => x.ReportedByUserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK__IncidentH__Equip__7B5B524B",
                         column: x => x.EquipmentID,
@@ -519,6 +526,11 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "IX_IncidentHistory_EquipmentID",
                 table: "IncidentHistory",
                 column: "EquipmentID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_IncidentHistory_ReportedByUserId",
+                table: "IncidentHistory",
+                column: "ReportedByUserId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_IncidentHistory_TypeID",
