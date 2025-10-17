@@ -498,6 +498,34 @@ const InventoryManagement = () => {
                     max: 100,
                     message: "Tên phụ tùng không được vượt quá 100 ký tự",
                   },
+                  {
+                    validator: async (_, value) => {
+                      if (!value) return;
+                      try {
+                        // Check if partName already exists (only when adding new or changing)
+                        const existingParts = spareParts.filter(
+                          (p) =>
+                            p.partName.toLowerCase() === value.toLowerCase()
+                        );
+                        if (editingRecord) {
+                          // When editing, exclude current record
+                          const conflicts = existingParts.filter(
+                            (p) => p.partId !== editingRecord.partId
+                          );
+                          if (conflicts.length > 0) {
+                            throw new Error("Tên phụ tùng đã tồn tại");
+                          }
+                        } else {
+                          // When adding new
+                          if (existingParts.length > 0) {
+                            throw new Error("Tên phụ tùng đã tồn tại");
+                          }
+                        }
+                      } catch (error) {
+                        throw new Error(error.message);
+                      }
+                    },
+                  },
                 ]}
               >
                 <Input placeholder="VD: Motor điện 5HP" />
