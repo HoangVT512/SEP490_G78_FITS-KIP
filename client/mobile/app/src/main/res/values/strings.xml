@@ -1,0 +1,88 @@
+<resources>
+    <string name="app_name">FITSForKIP</string>
+
+    <!-- Content descriptions -->
+    <string name="factory_logo_desc">LOGO NHÀ MÁY</string>
+    <string name="user_avatar_desc">HÌNH ẢNH NGƯỜI DÙNG</string>
+
+    <!-- Titles -->
+    <string name="login_title">HỆ THỐNG QUÉT MÃ QR-CODE</string>
+    <string name="login_subtitle">Đăng nhập để tiếp tục</string>
+
+    <!-- Hints -->
+    <string name="hint_employee_id">Mã nhân viên</string>
+    <string name="hint_production_line">Chọn dây chuyền</string>
+
+    <!-- Buttons -->
+    <string name="btn_login">ĐĂNG NHẬP</string>
+
+    <!-- Footer -->
+    <string name="footer_text">K.I.P</string>
+
+    <!-- Home Content -->
+    <string name="scan_qr_title">Quét mã QR</string>
+    <string name="scan_qr_subtitle">Quét mã QR để kiểm tra thiết bị</string>
+    <string name="scan_qr_desc">Hình icon quét mã qr code</string>
+    <string name="statistics_title">Thống kê</string>
+    <string name="statistics_subtitle">Xem báo cáo và thống kê</string>
+    <string name="statistics_desc">Hình icon phân tích</string>
+    <string name="quick_access_title">Truy cập nhanh</string>
+    <string name="quick_access_subtitle">Các chức năng thường dùng</string>
+    <string name="quick_access_desc">Quick Access Icon</string>
+    <string name="arrow_desc">Arrow Right</string>
+
+    <!-- Navigation Drawer -->
+    <string name="navigation_drawer_open">Mở trang chủ</string>
+    <string name="navigation_drawer_close">Đóng trang chủ</string>
+    <string name="nav_home">Trang chủ</string>
+    <string name="nav_equipment">Thiết bị</string>
+    <string name="nav_history">Lịch sử</string>
+    <string name="nav_scanner">Quét mã</string>
+    <string name="nav_settings">Cài đặt</string>
+    <string name="nav_logout">Đăng xuất</string>
+
+    <!-- Equipment -->
+    <string name="equipment_title">Thiết bị</string>
+    <string name="equipment_list_title">Danh sách thiết bị</string>
+    <string name="total_equipment">Tổng số thiết bị</string>
+    <string name="equipment_count_icon_desc">Số lượng thiết bị icon</string>
+
+    <!-- Incident History -->
+    <string name="incident_history_title">Lịch sử sự cố</string>
+    <string name="total_incidents">Tổng số sự cố</string>
+    <string name="incident_count_icon_desc">Số lượng sự cố icon</string>
+    <string name="qr_code_label">QR Code: </string>
+    <string name="equipment_code_label">Mã TB: </string>
+    <string name="equipment_name_label">Tên TB: </string>
+    <string name="stage_label">Công đoạn: </string>
+    <string name="line_label">Dây chuyền: </string>
+    <string name="issue_label">Vấn đề: </string>
+    <string name="start_time_label">BD: </string>
+    <string name="end_time_label">KT: </string>
+    <string name="duration_label">Thời lượng: </string>
+    <string name="issue_type_label">Loại: </string>
+    <string name="delete_desc">Xóa</string>
+    <string name="upload_desc">Tải lên</string>
+    <string name="save_temp_desc">Lưu tạm thời</string>
+    <string name="delete_all_desc">Xóa tất cả</string>
+
+    <!-- Toast Messages -->
+    <string name="history_toast">Lịch sử</string>
+    <string name="deleted_all_toast">Đã xóa tất cả</string>
+    <string name="saved_temp_toast">Đã lưu tạm thời</string>
+    <string name="uploading_toast">Đang tải lên dữ liệu</string>
+    <string name="deleted_incident_toast">Đã xóa sự cố</string>
+    <string name="logged_out_toast">Đã đăng xuất</string>
+
+    <!-- Dialogs -->
+    <string name="logout_title">Đăng xuất</string>
+    <string name="logout_message">Bạn có chắc chắn muốn đăng xuất?</string>
+    <string name="logout_positive">Đăng xuất</string>
+    <string name="cancel">Hủy</string>
+    <string name="delete_all_title">Xóa tất cả</string>
+    <string name="delete_all_message">Bạn có chắc chắn muốn xóa tất cả lịch sử sự cố?</string>
+    <string name="delete_all_positive">Xóa</string>
+    <string name="delete_incident_title">Xóa sự cố</string>
+    <string name="delete_incident_message">Bạn có chắc chắn muốn xóa sự cố này?</string>
+    <string name="delete_incident_positive">Xóa</string>
+</resources>
