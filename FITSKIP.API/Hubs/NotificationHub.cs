@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
+using System.Security.Claims;
 
 namespace FITSKIP.API.Hubs
 {
@@ -8,35 +9,51 @@ namespace FITSKIP.API.Hubs
     {
         public override async Task OnConnectedAsync()
         {
-            var userId = Context.UserIdentifier ?? Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            
+            var userId = Context.UserIdentifier ?? Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
             if (!string.IsNullOrEmpty(userId))
             {
                 // Add user to their personal group
                 await Groups.AddToGroupAsync(Context.ConnectionId, $"user_{userId}");
                 Console.WriteLine($"User {userId} connected to NotificationHub with ConnectionId: {Context.ConnectionId}");
+
+                // Add user to role-based groups
+                var roles = Context.User?.FindAll(ClaimTypes.Role)?.Select(c => c.Value) ?? Enumerable.Empty<string>();
+                foreach (var role in roles)
+                {
+                    if (role.Contains("Quản lý") || role.Contains("Manager"))
+                    {
+                        await Groups.AddToGroupAsync(Context.ConnectionId, "Managers");
+                        Console.WriteLine($"User {userId} added to Managers group");
+                    }
+                    else if (role.Contains("Quản lý kỹ thuật") || role.Contains("Technical Manager"))
+                    {
+                        await Groups.AddToGroupAsync(Context.ConnectionId, "TechnicalManagers");
+                        Console.WriteLine($"User {userId} added to TechnicalManagers group");
+                    }
+                }
             }
-            
+
             await base.OnConnectedAsync();
         }
 
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var userId = Context.UserIdentifier ?? Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            
+            var userId = Context.UserIdentifier ?? Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+
             if (!string.IsNullOrEmpty(userId))
             {
                 await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"user_{userId}");
                 Console.WriteLine($"User {userId} disconnected from NotificationHub");
             }
-            
+
             await base.OnDisconnectedAsync(exception);
         }
 
         // Client can call this to mark notification as read
         public async Task MarkAsRead(int notificationId)
         {
-            var userId = Context.UserIdentifier ?? Context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userId = Context.UserIdentifier ?? Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             Console.WriteLine($"User {userId} marked notification {notificationId} as read");
             // The actual marking will be done through the API endpoint
         }

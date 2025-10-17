@@ -31,11 +31,9 @@ namespace FITSKIP.Application.Services
 
             var createdNotification = await _notificationRepository.CreateAsync(notification);
 
-            // Send real-time notification
-            if (!string.IsNullOrEmpty(request.UserId))
-            {
-                await SendNotificationToUserAsync(request.UserId, request.Title ?? "", request.Message, "info");
-            }
+            // NOTE: Do NOT send real-time notification here automatically
+            // Let the caller decide when to send real-time notifications
+            // This prevents duplicate notifications when used with SendNotificationToGroupAsync
 
             return MapToDTO(createdNotification);
         }

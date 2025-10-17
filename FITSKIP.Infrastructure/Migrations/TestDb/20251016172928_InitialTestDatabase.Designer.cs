@@ -9,11 +9,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace FITSKIP.Infrastructure.Migrations
+namespace FITSKIP.Infrastructure.Migrations.TestDb
 {
-    [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251015032532_InitialCreate")]
-    partial class InitialCreate
+    [DbContext(typeof(TestDbContext))]
+    [Migration("20251016172928_InitialTestDatabase")]
+    partial class InitialTestDatabase
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -85,6 +85,9 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
+                    b.Property<string>("Issue")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Origin")
                         .HasMaxLength(150)
                         .HasColumnType("nvarchar(150)");
@@ -140,6 +143,9 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<string>("Reason")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("ReportedByUserId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("Solution")
                         .HasColumnType("nvarchar(max)");
 
@@ -154,6 +160,8 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasName("PK__Incident__5F46CAB00C9D9F0A");
 
                     b.HasIndex("EquipmentId");
+
+                    b.HasIndex("ReportedByUserId");
 
                     b.HasIndex("TypeId");
 
@@ -815,12 +823,18 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasForeignKey("EquipmentId")
                         .HasConstraintName("FK__IncidentH__Equip__7B5B524B");
 
+                    b.HasOne("FITSKIP.Domain.Entities.User", "ReportedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReportedByUserId");
+
                     b.HasOne("FITSKIP.Domain.Entities.StopType", "Type")
                         .WithMany("IncidentHistories")
                         .HasForeignKey("TypeId")
                         .HasConstraintName("FK__IncidentH__TypeI__7F2BE32F");
 
                     b.Navigation("Equipment");
+
+                    b.Navigation("ReportedByUser");
 
                     b.Navigation("Type");
                 });

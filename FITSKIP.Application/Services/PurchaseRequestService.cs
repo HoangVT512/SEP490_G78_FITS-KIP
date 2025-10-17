@@ -9,16 +9,19 @@ public class PurchaseRequestService : IPurchaseRequestService
 {
     private readonly IPurchaseRequestRepository _purchaseRequestRepository;
     private readonly IUserRepository _userRepository;
+    private readonly INotificationService _notificationService;
     //private readonly ISparePartRepository _sparePartRepository;
 
     public PurchaseRequestService(
         IPurchaseRequestRepository purchaseRequestRepository,
-        IUserRepository userRepository
+        IUserRepository userRepository,
+        INotificationService notificationService
         //ISparePartRepository sparePartRepository
         )
     {
         _purchaseRequestRepository = purchaseRequestRepository;
         _userRepository = userRepository;
+        _notificationService = notificationService;
         //_sparePartRepository = sparePartRepository;
     }
 
@@ -47,8 +50,8 @@ public class PurchaseRequestService : IPurchaseRequestService
     }
 
     public async Task<PurchaseRequestDTO> CreatePurchaseRequestAsync(
-        CreatePurchaseRequestRequest request, 
-        string userId, 
+        CreatePurchaseRequestRequest request,
+        string userId,
         CancellationToken cancellationToken = default)
     {
         // Validate user exists
@@ -75,13 +78,39 @@ public class PurchaseRequestService : IPurchaseRequestService
         };
 
         var createdRequest = await _purchaseRequestRepository.CreateAsync(purchaseRequest, cancellationToken);
+
+        // Get all managers to send notifications
+        var managers = await _userRepository.GetUsersByRoleAsync("Quản lý", cancellationToken);
+
+        // Create notification record in database for each manager
+        foreach (var manager in managers)
+        {
+            if (!string.IsNullOrEmpty(manager.Id))
+            {
+                await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+                {
+                    UserId = manager.Id,
+                    Title = "Đơn yêu cầu mua hàng mới",
+                    Message = $"Có một đơn yêu cầu mua hàng mới từ {user.FullName} (Mã: {createdRequest.RequestId})"
+                });
+            }
+        }
+
+        // Send ONE real-time notification to all managers group
+        await _notificationService.SendNotificationToGroupAsync(
+            "Managers",
+            "Đơn yêu cầu mua hàng mới",
+            $"Có một đơn yêu cầu mua hàng mới từ {user.FullName} (Mã: {createdRequest.RequestId})",
+            "info"
+        );
+
         return PurchaseRequestDTO.FromEntity(createdRequest);
     }
 
     public async Task<PurchaseRequestDTO?> UpdatePurchaseRequestAsync(
-        int id, 
-        UpdatePurchaseRequestRequest request, 
-        string userId, 
+        int id,
+        UpdatePurchaseRequestRequest request,
+        string userId,
         CancellationToken cancellationToken = default)
     {
         var existingRequest = await _purchaseRequestRepository.GetByIdAsync(id, cancellationToken);
@@ -102,15 +131,15 @@ public class PurchaseRequestService : IPurchaseRequestService
             throw new InvalidOperationException($"Không thể cập nhật yêu cầu đã {existingRequest.Status}");
         }
 
-/*        // Validate spare part exists if PartId is being changed
-        if (existingRequest.PartId != request.PartId)
-        {
-            var sparePartExists = await _sparePartRepository.ExistsAsync(request.PartId, cancellationToken);
-            if (!sparePartExists)
-            {
-                throw new InvalidOperationException($"Không tìm thấy linh kiện với ID: {request.PartId}");
-            }
-        }*/
+        /*        // Validate spare part exists if PartId is being changed
+                if (existingRequest.PartId != request.PartId)
+                {
+                    var sparePartExists = await _sparePartRepository.ExistsAsync(request.PartId, cancellationToken);
+                    if (!sparePartExists)
+                    {
+                        throw new InvalidOperationException($"Không tìm thấy linh kiện với ID: {request.PartId}");
+                    }
+                }*/
 
         existingRequest.PartId = request.PartId;
         existingRequest.Quantity = request.Quantity;
@@ -144,8 +173,8 @@ public class PurchaseRequestService : IPurchaseRequestService
     }
 
     public async Task<PurchaseRequestDTO?> ApprovePurchaseRequestAsync(
-        int id, 
-        string managerId, 
+        int id,
+        string managerId,
         CancellationToken cancellationToken = default)
     {
         var existingRequest = await _purchaseRequestRepository.GetByIdAsync(id, cancellationToken);
@@ -174,13 +203,33 @@ public class PurchaseRequestService : IPurchaseRequestService
         existingRequest.RejectedAt = null;
 
         var updatedRequest = await _purchaseRequestRepository.UpdateAsync(existingRequest, cancellationToken);
+
+        if (updatedRequest != null)
+        {
+            // Send notification to the requester (QLKT) about approval
+            await _notificationService.SendNotificationToUserAsync(
+                existingRequest.RequestedBy,
+                "Đơn yêu cầu mua hàng được duyệt",
+                $"Đơn yêu cầu mua hàng (Mã: {id}) của bạn đã được {manager.FullName} duyệt",
+                "success"
+            );
+
+            // Create notification record in database
+            await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+            {
+                UserId = existingRequest.RequestedBy,
+                Title = "Đơn yêu cầu mua hàng được duyệt ✓",
+                Message = $"Đơn yêu cầu mua hàng (Mã: {id}) của bạn đã được {manager.FullName} duyệt"
+            });
+        }
+
         return updatedRequest == null ? null : PurchaseRequestDTO.FromEntity(updatedRequest);
     }
 
     public async Task<PurchaseRequestDTO?> RejectPurchaseRequestAsync(
-        int id, 
-        string managerId, 
-        string reason, 
+        int id,
+        string managerId,
+        string reason,
         CancellationToken cancellationToken = default)
     {
         var existingRequest = await _purchaseRequestRepository.GetByIdAsync(id, cancellationToken);
@@ -210,6 +259,26 @@ public class PurchaseRequestService : IPurchaseRequestService
         existingRequest.Reason = reason; // Store rejection reason
 
         var updatedRequest = await _purchaseRequestRepository.UpdateAsync(existingRequest, cancellationToken);
+
+        if (updatedRequest != null)
+        {
+            // Send notification to the requester (QLKT) about rejection
+            await _notificationService.SendNotificationToUserAsync(
+                existingRequest.RequestedBy,
+                "Đơn yêu cầu mua hàng bị từ chối",
+                $"Đơn yêu cầu mua hàng (Mã: {id}) của bạn đã bị {manager.FullName} từ chối. Lý do: {reason}",
+                "warning"
+            );
+
+            // Create notification record in database
+            await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+            {
+                UserId = existingRequest.RequestedBy,
+                Title = "Đơn yêu cầu mua hàng bị từ chối ✗",
+                Message = $"Đơn yêu cầu mua hàng (Mã: {id}) của bạn đã bị {manager.FullName} từ chối. Lý do: {reason}"
+            });
+        }
+
         return updatedRequest == null ? null : PurchaseRequestDTO.FromEntity(updatedRequest);
     }
 }

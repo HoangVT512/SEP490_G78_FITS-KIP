@@ -28,4 +28,6 @@ public partial class IncidentHistory
     public virtual Equipment? Equipment { get; set; }
 
     public virtual StopType? Type { get; set; }
+
+    public virtual User? ReportedByUser { get; set; }
 }

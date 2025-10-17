@@ -58,9 +58,12 @@ namespace FITSKIP.API
                     options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
                 });
             builder.Services.AddMemoryCache();
-            // Add DbContext
+            // Add DbContext with support for test database selection
+            var connectionStringName = builder.Environment.IsEnvironment("Testing") ? "TestConnection" : "DefaultConnection";
+            var connectionString = builder.Configuration.GetConnectionString(connectionStringName);
+            
             builder.Services.AddDbContext<FITSKIP.Infrastructure.DbContexts.FitskipDbContext>(options =>
-                options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseSqlServer(connectionString));
 
             // Configure TwilioSettings
             builder.Services.Configure<FITSKIP.Application.Settings.TwilioSettings>(
@@ -266,7 +269,7 @@ namespace FITSKIP.API
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
+            if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
             {
                 app.UseSwagger();
                 app.UseSwaggerUI(options =>
@@ -287,12 +290,13 @@ namespace FITSKIP.API
             app.UseAuthentication();
             app.UseAuthorization();
 
+
             app.MapControllers();
 
             // Map SignalR Hub
             app.MapHub<FITSKIP.API.Hubs.NotificationHub>("/hubs/notifications");
 
-            // Seed data before starting the app
+            // Seed data before starting the app (skip for Testing environment)
             using (var scope = app.Services.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<FitskipDbContext>();

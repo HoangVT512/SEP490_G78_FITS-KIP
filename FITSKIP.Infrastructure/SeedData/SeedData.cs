@@ -139,7 +139,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     EmployeeCode = "QTV001",
                     PhoneNumber = "0901234567"
                 };
-                admin.PasswordHash = _passwordHasher.HashPassword(admin, "Admin123@");
+                admin.PasswordHash = _passwordHasher.HashPassword(admin, "123456");
                 users.Add(admin);
 
                 // Manager Users - Quản lý
@@ -157,7 +157,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     EmployeeCode = "QL001",
                     PhoneNumber = "0987654321"
                 };
-                manager.PasswordHash = _passwordHasher.HashPassword(manager, "Manager123@");
+                manager.PasswordHash = _passwordHasher.HashPassword(manager, "123456");
                 users.Add(manager);
 
                 // Technical Manager - Quản lý kỹ thuật
@@ -175,7 +175,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     EmployeeCode = "QLKT001",
                     PhoneNumber = "0912345678"
                 };
-                techManager.PasswordHash = _passwordHasher.HashPassword(techManager, "TechMgr123@");
+                techManager.PasswordHash = _passwordHasher.HashPassword(techManager, "123456");
                 users.Add(techManager);
 
                 // Team Leaders - Tổ trưởng
@@ -193,7 +193,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     EmployeeCode = "TT001",
                     PhoneNumber = "0923456789"
                 };
-                teamLeader.PasswordHash = _passwordHasher.HashPassword(teamLeader, "TeamLead123@");
+                teamLeader.PasswordHash = _passwordHasher.HashPassword(teamLeader, "123456");
                 users.Add(teamLeader);
 
                 // Technicians - Kỹ thuật viên
@@ -211,8 +211,26 @@ namespace FITSKIP.Infrastructure.SeedData
                     EmployeeCode = "KTV001",
                     PhoneNumber = "0945678901"
                 };
-                technician.PasswordHash = _passwordHasher.HashPassword(technician, "Tech123@");
+                technician.PasswordHash = _passwordHasher.HashPassword(technician, "123456");
                 users.Add(technician);
+
+                // Additional Technician - Kỹ thuật viên 2
+                var technician2 = new User
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    UserName = "kythuat.vien2",
+                    NormalizedUserName = "KYTHUAT.VIEN2",
+                    Email = "kythuat.vien2@kipvietnam.vn",
+                    NormalizedEmail = "KYTHUAT.VIEN2@KIPVIETNAM.VN",
+                    EmailConfirmed = true,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    ConcurrencyStamp = Guid.NewGuid().ToString(),
+                    FullName = "Nguyễn Thị Kỹ thuật",
+                    EmployeeCode = "KTV002",
+                    PhoneNumber = "0956789012"
+                };
+                technician2.PasswordHash = _passwordHasher.HashPassword(technician2, "123456");
+                users.Add(technician2);
                 await context.Users.AddRangeAsync(users);
                 await context.SaveChangesAsync();
             }
@@ -300,31 +318,15 @@ namespace FITSKIP.Infrastructure.SeedData
                 {
                     new StopType
                     {
-                        TypeName = "Hỏng hóc thiết bị"
+                        TypeName = "Dừng ngắn"
                     },
                     new StopType
                     {
-                        TypeName = "Bảo trì định kỳ"
+                        TypeName = "Dừng dài"
                     },
                     new StopType
                     {
-                        TypeName = "Thiếu nguyên liệu"
-                    },
-                    new StopType
-                    {
-                        TypeName = "Sự cố điện"
-                    },
-                    new StopType
-                    {
-                        TypeName = "Thay đổi sản phẩm"
-                    },
-                    new StopType
-                    {
-                        TypeName = "Kiểm tra chất lượng"
-                    },
-                    new StopType
-                    {
-                        TypeName = "Sự cố khác"
+                        TypeName = "Phế phẩm"
                     }
                 };
 
@@ -352,7 +354,7 @@ namespace FITSKIP.Infrastructure.SeedData
                         },
                         new Line
                         {
-                            LineName = "Dây chuyền sản xuất 2", 
+                            LineName = "Dây chuyền sản xuất 2",
                             DepartmentId = productionDept.DepartmentId,
                             IsActive = true
                         },
@@ -632,55 +634,49 @@ namespace FITSKIP.Infrastructure.SeedData
                 var incidents = new List<IncidentHistory>();
                 var random = new Random();
 
-                // Tạo incident data cho 30 ngày qua
-                for (int day = 30; day >= 0; day--)
+                // Tạo 15 incidents mẫu
+                for (int i = 0; i < 15; i++)
                 {
-                    var incidentDate = DateTime.Now.AddDays(-day);
-                    
-                    // Tạo 2-5 incidents mỗi ngày
-                    var incidentCount = random.Next(2, 6);
-                    
-                    for (int i = 0; i < incidentCount; i++)
+                    var selectedEquipment = equipment[random.Next(equipment.Count)];
+                    var selectedStopType = stopTypes[random.Next(stopTypes.Count)];
+
+                    // Random thời gian trong 7 ngày qua
+                    var daysAgo = random.Next(0, 7);
+                    var incidentDate = DateTime.Now.AddDays(-daysAgo);
+
+                    // Random thời gian trong ngày
+                    var startHour = random.Next(6, 20);
+                    var startMinute = random.Next(0, 60);
+                    var startTime = new DateTime(incidentDate.Year, incidentDate.Month, incidentDate.Day, startHour, startMinute, 0);
+
+                    // Duration từ 5 phút đến 2 giờ (120 phút)
+                    var durationMinutes = random.Next(5, 121);
+                    var endTime = startTime.AddMinutes(durationMinutes);
+
+                    // Đảm bảo không vượt quá thời gian hiện tại
+                    if (endTime > DateTime.Now)
                     {
-                        var selectedEquipment = equipment[random.Next(equipment.Count)];
-                        var selectedStopType = stopTypes[random.Next(stopTypes.Count)];
-                        
-                        // Random thời gian trong ngày
-                        var startHour = random.Next(6, 20);
-                        var startMinute = random.Next(0, 60);
-                        var startTime = new DateTime(incidentDate.Year, incidentDate.Month, incidentDate.Day, startHour, startMinute, 0);
-                        
-                        // Duration từ 15 phút đến 4 giờ (240 phút)
-                        var durationMinutes = random.Next(15, 241);
-                        var endTime = startTime.AddMinutes(durationMinutes);
-                        
-                        // Đảm bảo không vượt quá thời gian hiện tại
-                        if (endTime > DateTime.Now)
-                        {
-                            endTime = DateTime.Now;
-                            // Tính lại duration để đảm bảo không âm
-                            var actualDuration = (endTime - startTime).TotalMinutes;
-                            durationMinutes = (int)Math.Max(1, actualDuration); // Cast về int và tối thiểu 1 phút
-                        }
-
-                        // Đảm bảo Duration luôn dương và có giá trị hợp lý
-                        var finalDuration = Math.Max(1, (decimal)durationMinutes);
-
-                        var incident = new IncidentHistory
-                        {
-                            EquipmentId = selectedEquipment.EquipmentId,
-                            StartTime = startTime,
-                            EndTime = endTime,
-                            Duration = finalDuration, // Luôn dương
-                            TypeId = selectedStopType.TypeId,
-                            Issue = GetRandomIssue(selectedStopType.TypeName, random),
-                            Reason = GetRandomReason(selectedStopType.TypeName, random),
-                            Solution = GetRandomSolution(selectedStopType.TypeName, random),
-                            CreatedDate = startTime.AddMinutes(random.Next(5, 30))
-                        };
-
-                        incidents.Add(incident);
+                        endTime = DateTime.Now;
+                        var actualDuration = (endTime - startTime).TotalMinutes;
+                        durationMinutes = (int)Math.Max(1, actualDuration);
                     }
+
+                    var finalDuration = Math.Max(1, (decimal)durationMinutes);
+
+                    var incident = new IncidentHistory
+                    {
+                        EquipmentId = selectedEquipment.EquipmentId,
+                        StartTime = startTime,
+                        EndTime = endTime,
+                        Duration = finalDuration,
+                        TypeId = selectedStopType.TypeId,
+                        Issue = GetRandomIssue(selectedStopType.TypeName, random),
+                        Reason = GetRandomReason(selectedStopType.TypeName, random),
+                        Solution = GetRandomSolution(selectedStopType.TypeName, random),
+                        CreatedDate = startTime.AddMinutes(random.Next(1, 15))
+                    };
+
+                    incidents.Add(incident);
                 }
 
                 await context.IncidentHistories.AddRangeAsync(incidents);
@@ -692,37 +688,29 @@ namespace FITSKIP.Infrastructure.SeedData
         {
             var issues = stopTypeName switch
             {
-                "Hỏng hóc thiết bị" => new[]
+                "dừng ngắn" => new[]
                 {
-                    "Máy ngừng hoạt động đột ngột",
-                    "Tiếng ồn bất thường từ máy",
-                    "Rò rỉ dầu thủy lực",
-                    "Bộ phận quay không hoạt động",
-                    "Quá nhiệt động cơ"
+                    "Máy dừng hoạt động ngắn",
+                    "Tạm dừng để điều chỉnh",
+                    "Dừng để kiểm tra nhanh",
+                    "Tạm nghỉ giữa ca",
+                    "Dừng để vệ sinh nhanh"
                 },
-                "Bảo trì định kỳ" => new[]
+                "dừng dài" => new[]
                 {
-                    "Bảo trì định kỳ hàng tuần",
-                    "Thay dầu máy",
-                    "Kiểm tra hệ thống an toàn",
-                    "Hiệu chỉnh thiết bị đo",
-                    "Làm sạch bộ lọc"
+                    "Máy hỏng nặng cần sửa chữa",
+                    "Bảo trì định kỳ kéo dài",
+                    "Thiếu phụ tùng thay thế",
+                    "Sự cố hệ thống điện",
+                    "Vấn đề kỹ thuật nghiêm trọng"
                 },
-                "Thiếu nguyên liệu" => new[]
+                "phế phẩm" => new[]
                 {
-                    "Hết nguyên liệu chính",
-                    "Thiếu phụ liệu đóng gói",
-                    "Chờ giao hàng từ nhà cung cấp",
-                    "Nguyên liệu không đạt chất lượng",
-                    "Kho nguyên liệu đang kiểm kế"
-                },
-                "Sự cố điện" => new[]
-                {
-                    "Mất điện đột ngột",
-                    "Dao động điện áp",
-                    "Cháy cầu chì",
-                    "Sự cố máy biến áp",
-                    "Chập điện tại tủ điện"
+                    "Sản phẩm không đạt chất lượng",
+                    "Lỗi lắp ráp",
+                    "Vấn đề nguyên liệu",
+                    "Hỏng trong quá trình sản xuất",
+                    "Không đạt tiêu chuẩn kỹ thuật"
                 },
                 _ => new[] { "Sự cố không xác định", "Cần kiểm tra thêm", "Vấn đề kỹ thuật" }
             };
@@ -734,37 +722,29 @@ namespace FITSKIP.Infrastructure.SeedData
         {
             var reasons = stopTypeName switch
             {
-                "Hỏng hóc thiết bị" => new[]
+                "dừng ngắn" => new[]
                 {
-                    "Hao mòn tự nhiên do sử dụng lâu",
-                    "Thiếu bảo trì định kỳ",
-                    "Quá tải máy móc",
-                    "Chất lượng phụ tùng kém",
-                    "Điều kiện môi trường khắc nghiệt"
+                    "Điều chỉnh thông số máy",
+                    "Kiểm tra chất lượng nhanh",
+                    "Tạm nghỉ giữa ca sản xuất",
+                    "Vệ sinh máy nhanh",
+                    "Thay đổi setup sản phẩm"
                 },
-                "Bảo trì định kỳ" => new[]
+                "dừng dài" => new[]
                 {
-                    "Theo lịch bảo trì định kỳ",
-                    "Đảm bảo chất lượng sản phẩm",
-                    "Tuân thủ quy định an toàn",
-                    "Duy trì hiệu suất máy",
-                    "Phòng ngừa hỏng hóc"
+                    "Hỏng hóc nặng cần sửa chữa",
+                    "Thiếu phụ tùng thay thế",
+                    "Bảo trì định kỳ kéo dài",
+                    "Sự cố hệ thống điện",
+                    "Vấn đề kỹ thuật nghiêm trọng"
                 },
-                "Thiếu nguyên liệu" => new[]
+                "phế phẩm" => new[]
                 {
-                    "Đơn hàng tăng đột ngột",
-                    "Nhà cung cấp giao chậm",
-                    "Lỗi dự báo nhu cầu",
-                    "Vấn đề về vận chuyển",
-                    "Thiếu kiểm soát tồn kho"
-                },
-                "Sự cố điện" => new[]
-                {
-                    "Hệ thống điện quá tải",
-                    "Thiết bị điện cũ",
-                    "Thời tiết xấu",
-                    "Sự cố lưới điện quốc gia",
-                    "Bảo trì hệ thống điện"
+                    "Nguyên liệu không đạt chất lượng",
+                    "Lỗi vận hành của công nhân",
+                    "Thiết bị không chính xác",
+                    "Thiếu kiểm soát chất lượng",
+                    "Điều kiện môi trường sản xuất"
                 },
                 _ => new[] { "Chưa xác định nguyên nhân", "Đang điều tra", "Cần phân tích thêm" }
             };
@@ -776,37 +756,29 @@ namespace FITSKIP.Infrastructure.SeedData
         {
             var solutions = stopTypeName switch
             {
-                "Hỏng hóc thiết bị" => new[]
+                "dừng ngắn" => new[]
                 {
-                    "Thay thế bộ phận hỏng",
-                    "Sửa chữa và hiệu chỉnh lại",
-                    "Liên hệ nhà cung cấp hỗ trợ",
-                    "Thực hiện bảo trì khẩn cấp",
-                    "Tạm dừng và kiểm tra toàn bộ"
+                    "Điều chỉnh lại thông số",
+                    "Hoàn thành kiểm tra nhanh",
+                    "Tiếp tục sản xuất",
+                    "Ghi nhận và theo dõi",
+                    "Đào tạo lại quy trình"
                 },
-                "Bảo trì định kỳ" => new[]
+                "dừng dài" => new[]
                 {
-                    "Hoàn thành bảo trì theo kế hoạch",
-                    "Kiểm tra và xác nhận hoạt động",
-                    "Cập nhật nhật ký bảo trì",
-                    "Lên lịch bảo trì tiếp theo",
-                    "Đào tạo vận hành lại"
+                    "Thay thế phụ tùng hỏng",
+                    "Sửa chữa chuyên sâu",
+                    "Liên hệ kỹ thuật viên",
+                    "Chuẩn bị máy dự phòng",
+                    "Lên kế hoạch bảo trì"
                 },
-                "Thiếu nguyên liệu" => new[]
+                "phế phẩm" => new[]
                 {
-                    "Liên hệ nhà cung cấp gấp",
-                    "Sử dụng nguyên liệu thay thế",
-                    "Điều chỉnh kế hoạch sản xuất",
-                    "Tăng cường kiểm soát kho",
-                    "Đàm phán với nhiều nhà cung cấp"
-                },
-                "Sự cố điện" => new[]
-                {
-                    "Khôi phục nguồn điện",
-                    "Kiểm tra và thay cầu chì",
-                    "Sử dụng nguồn điện dự phòng",
-                    "Liên hệ điện lực hỗ trợ",
-                    "Kiểm tra toàn bộ hệ thống điện"
+                    "Kiểm tra chất lượng nguyên liệu",
+                    "Đào tạo lại công nhân",
+                    "Hiệu chỉnh thiết bị",
+                    "Tăng cường kiểm soát chất lượng",
+                    "Cải thiện quy trình sản xuất"
                 },
                 _ => new[] { "Tiếp tục theo dõi", "Báo cáo cấp trên", "Cần hỗ trợ chuyên gia" }
             };

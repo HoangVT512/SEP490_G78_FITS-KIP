@@ -21,6 +21,7 @@ import {
   Timeline,
   Upload,
   Alert,
+  Dropdown,
 } from "antd";
 import {
   PlusOutlined,
@@ -36,10 +37,14 @@ import {
   FileTextOutlined,
   UploadOutlined,
   FilterOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styles from "../../styles/pages/IncidentManagement.module.css";
 import { incidentService } from "../../services/incidentService";
+import { equipmentService } from "../../services/equipmentService";
+import { lineService } from "../../services/lineService";
+import { stageService } from "../../services/stageService";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -58,13 +63,55 @@ const IncidentManagement = () => {
   const [filterPriority, setFilterPriority] = useState("all");
   const [form] = Form.useForm();
 
+  // State for dropdown data
+  const [equipments, setEquipments] = useState([]);
+  const [lines, setLines] = useState([]);
+  const [stages, setStages] = useState([]);
+  const [selectedEquipment, setSelectedEquipment] = useState(null);
+
   useEffect(() => {
     fetchIncidents();
+    fetchEquipments();
+    fetchLines();
+    fetchStages();
   }, []);
 
   useEffect(() => {
     handleFilter();
   }, [searchText, filterStatus, filterPriority, incidents]);
+
+  const fetchEquipments = async () => {
+    try {
+      const response = await equipmentService.getEquipments();
+      const data = Array.isArray(response) ? response : response?.data || [];
+      setEquipments(data);
+    } catch (error) {
+      console.error("Error fetching equipments:", error);
+      message.error("Không thể tải danh sách thiết bị");
+    }
+  };
+
+  const fetchLines = async () => {
+    try {
+      const response = await lineService.getLines();
+      const data = Array.isArray(response) ? response : response?.data || [];
+      setLines(data);
+    } catch (error) {
+      console.error("Error fetching lines:", error);
+      message.error("Không thể tải danh sách dây chuyền");
+    }
+  };
+
+  const fetchStages = async () => {
+    try {
+      const response = await stageService.getStages();
+      const data = Array.isArray(response) ? response : response?.data || [];
+      setStages(data);
+    } catch (error) {
+      console.error("Error fetching stages:", error);
+      message.error("Không thể tải danh sách công đoạn");
+    }
+  };
 
   const fetchIncidents = async () => {
     setLoading(true);
@@ -108,7 +155,18 @@ const IncidentManagement = () => {
             it.EquipmentName ||
             "",
           equipmentCode: it.equipment?.equipmentCode || it.equipmentCode || "",
-          lineName: it.line?.lineName || it.lineName || it.LineName || "",
+          lineName:
+            it.equipment?.stage?.line?.lineName ||
+            it.line?.lineName ||
+            it.lineName ||
+            it.LineName ||
+            "",
+          stageName:
+            it.equipment?.stage?.stageName ||
+            it.stage?.stageName ||
+            it.stageName ||
+            it.StageName ||
+            "",
           priority: it.priority || it.Priority || "Trung bình",
           status:
             it.status ||
@@ -281,31 +339,28 @@ const IncidentManagement = () => {
       render: (text) => <span style={{ fontWeight: 500 }}>{text}</span>,
     },
     {
-      title: "Tiêu đề",
-      dataIndex: "title",
-      key: "title",
-      width: 200,
-      ellipsis: true,
-      render: (text) => (
-        <Tooltip title={text}>
-          <span>{text}</span>
-        </Tooltip>
-      ),
-    },
-    {
       title: "Thiết bị",
       dataIndex: "equipmentName",
       key: "equipmentName",
       width: 150,
+      ellipsis: {
+        showTitle: false,
+      },
       render: (text, record) => (
-        <div>
-          <div style={{ fontWeight: 500 }}>{text}</div>
-          {record.equipmentCode && (
-            <div style={{ color: "#999", fontSize: 12 }}>
-              {record.equipmentCode}
-            </div>
-          )}
-        </div>
+        <Tooltip
+          title={`${text}${
+            record.equipmentCode ? ` (${record.equipmentCode})` : ""
+          }`}
+        >
+          <div>
+            <div style={{ fontWeight: 500 }}>{text}</div>
+            {record.equipmentCode && (
+              <div style={{ color: "#999", fontSize: 12 }}>
+                {record.equipmentCode}
+              </div>
+            )}
+          </div>
+        </Tooltip>
       ),
     },
     {
@@ -313,18 +368,105 @@ const IncidentManagement = () => {
       dataIndex: "lineName",
       key: "lineName",
       width: 130,
-      render: (text) => <Tag color="purple">{text}</Tag>,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text}>
+          <Tag color="purple">{text}</Tag>
+        </Tooltip>
+      ),
     },
     {
-      title: "Mức độ",
-      dataIndex: "priority",
-      key: "priority",
-      width: 100,
-      render: (priority) => (
-        <Tag color={getPriorityColor(priority)} style={{ fontWeight: 500 }}>
-          {priority}
-        </Tag>
+      title: "Công đoạn",
+      dataIndex: "stageName",
+      key: "stageName",
+      width: 130,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text || "Chưa xác định"}>
+          <Tag color="blue">{text || "Chưa xác định"}</Tag>
+        </Tooltip>
       ),
+    },
+    {
+      title: "Vấn đề",
+      dataIndex: "issue",
+      key: "issue",
+      width: 200,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text || "Chưa mô tả"}>
+          <span>{text || "Chưa mô tả"}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Loại dừng",
+      dataIndex: "category",
+      key: "category",
+      width: 130,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text || "Chưa phân loại"}>
+          <Tag color="orange">{text || "Chưa phân loại"}</Tag>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Nguyên nhân",
+      dataIndex: "reason",
+      key: "reason",
+      width: 180,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text || "Chưa xác định"}>
+          <span>{text || "Chưa xác định"}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Giải pháp",
+      dataIndex: "solution",
+      key: "solution",
+      width: 180,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text || "Chưa có giải pháp"}>
+          <span>{text || "Chưa có giải pháp"}</span>
+        </Tooltip>
+      ),
+    },
+    {
+      title: "Khung giờ bắt đầu",
+      dataIndex: "reportDate",
+      key: "startTime",
+      width: 150,
+      render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
+    },
+    {
+      title: "Khung giờ kết thúc",
+      dataIndex: "resolveDate",
+      key: "endTime",
+      width: 150,
+      render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
+    },
+    {
+      title: "Ngày báo cáo",
+      dataIndex: "reportDate",
+      key: "reportDate",
+      width: 150,
+      render: (d) => (d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"),
     },
     {
       title: "Trạng thái",
@@ -336,20 +478,6 @@ const IncidentManagement = () => {
           {status}
         </Tag>
       ),
-    },
-    {
-      title: "Người báo cáo",
-      dataIndex: "reporter",
-      key: "reporter",
-      width: 130,
-    },
-    {
-      title: "Người xử lý",
-      dataIndex: "assignedTo",
-      key: "assignedTo",
-      width: 130,
-      render: (text) =>
-        text || <span style={{ color: "#bbb" }}>Chưa phân công</span>,
     },
     {
       title: "Thời gian chết (phút)",
@@ -366,53 +494,53 @@ const IncidentManagement = () => {
       ),
     },
     {
-      title: "Ngày báo cáo",
-      dataIndex: "reportDate",
-      key: "reportDate",
-      width: 150,
-      render: (d) => (d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"),
-    },
-    {
       title: "Thao tác",
       key: "action",
-      width: 180,
+      width: 120,
       fixed: "right",
-      render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="Xem chi tiết">
-            <Button
-              type="link"
-              icon={<EyeOutlined />}
-              size="small"
-              onClick={() => handleViewDetail(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Chỉnh sửa">
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              size="small"
-              onClick={() => handleEditIncident(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Xóa sự cố"
-            description="Bạn có chắc chắn muốn xóa sự cố này?"
-            onConfirm={() => handleDeleteIncident(record.id)}
-            okText="Xóa"
-            cancelText="Hủy"
+      render: (_, record) => {
+        const items = [
+          {
+            key: "view",
+            icon: <EyeOutlined />,
+            label: "Xem chi tiết",
+            onClick: () => handleViewDetail(record),
+          },
+          {
+            key: "edit",
+            icon: <EditOutlined />,
+            label: "Chỉnh sửa",
+            onClick: () => handleEditIncident(record),
+          },
+          {
+            key: "delete",
+            icon: <DeleteOutlined />,
+            label: "Xóa",
+            danger: true,
+            onClick: () => {
+              Modal.confirm({
+                title: "Xóa sự cố",
+                content: "Bạn có chắc chắn muốn xóa sự cố này?",
+                okText: "Xóa",
+                cancelText: "Hủy",
+                okButtonProps: { danger: true },
+                onOk() {
+                  handleDeleteIncident(record.id);
+                },
+              });
+            },
+          },
+        ];
+        return (
+          <Dropdown
+            menu={{ items }}
+            trigger={["click"]}
+            placement="bottomRight"
           >
-            <Tooltip title="Xóa">
-              <Button
-                type="link"
-                danger
-                icon={<DeleteOutlined />}
-                size="small"
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
+            <DownOutlined style={{ cursor: "pointer", fontSize: "16px" }} />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -540,7 +668,7 @@ const IncidentManagement = () => {
           dataSource={filteredIncidents}
           rowKey="id"
           loading={loading}
-          scroll={{ x: 1800 }}
+          scroll={{ x: "max-content" }}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -810,29 +938,72 @@ const IncidentManagement = () => {
             <Col span={12}>
               <Form.Item
                 label="Thiết bị"
-                name="equipmentName"
+                name="equipmentId"
                 rules={[{ required: true, message: "Vui lòng chọn thiết bị!" }]}
               >
-                <Select placeholder="Chọn thiết bị">
-                  <Option value="Máy dập 01">Máy dập 01</Option>
-                  <Option value="Băng tải 02">Băng tải 02</Option>
-                  <Option value="Máy ép 03">Máy ép 03</Option>
-                  <Option value="Máy hàn 04">Máy hàn 04</Option>
+                <Select
+                  placeholder="Chọn thiết bị"
+                  onChange={(value) => {
+                    const equipment = equipments.find(
+                      (e) => e.equipmentId === value
+                    );
+                    if (equipment) {
+                      setSelectedEquipment(equipment);
+                      form.setFieldsValue({
+                        lineId: equipment.lineId,
+                        stageId: equipment.stageId,
+                      });
+                    }
+                  }}
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.children ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                >
+                  {equipments.map((equipment) => (
+                    <Option
+                      key={equipment.equipmentId}
+                      value={equipment.equipmentId}
+                    >
+                      {equipment.equipmentName} ({equipment.equipmentCode})
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 label="Dây chuyền"
-                name="lineName"
+                name="lineId"
                 rules={[
                   { required: true, message: "Vui lòng chọn dây chuyền!" },
                 ]}
               >
-                <Select placeholder="Chọn dây chuyền">
-                  <Option value="Dây chuyền 1">Dây chuyền 1</Option>
-                  <Option value="Dây chuyền 2">Dây chuyền 2</Option>
-                  <Option value="Dây chuyền 3">Dây chuyền 3</Option>
+                <Select placeholder="Chọn dây chuyền" disabled>
+                  {lines.map((line) => (
+                    <Option key={line.lineId} value={line.lineId}>
+                      {line.lineName}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Công đoạn"
+                name="stageId"
+                rules={[
+                  { required: true, message: "Vui lòng chọn công đoạn!" },
+                ]}
+              >
+                <Select placeholder="Chọn công đoạn" disabled>
+                  {stages.map((stage) => (
+                    <Option key={stage.stageId} value={stage.stageId}>
+                      {stage.stageName}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>

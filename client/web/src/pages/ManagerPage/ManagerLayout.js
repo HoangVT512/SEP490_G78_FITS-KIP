@@ -67,6 +67,32 @@ const ManagerLayout = () => {
     role: user?.roles?.[0] || "Quản lý",
   };
 
+  // Fetch initial unread notification count from DB
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch(
+          "https://localhost:7003/api/Notifications/unread-count",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        if (response.ok) {
+          const result = await response.json();
+          setNotificationCount(result.data || 0);
+        }
+      } catch (error) {
+        console.error("Error fetching unread count:", error);
+      }
+    };
+
+    fetchUnreadCount();
+  }, []);
+
   // Initialize SignalR connection
   useEffect(() => {
     const initializeSignalR = async () => {
@@ -167,7 +193,8 @@ const ManagerLayout = () => {
 
     // Cleanup khi unmount
     return () => {
-      signalRService.stopConnection();
+      signalRService.offReceiveNotification();
+      signalRService.offReceiveBroadcast();
     };
   }, []); // Empty dependency - chỉ chạy 1 lần
 
@@ -410,7 +437,7 @@ const ManagerLayout = () => {
                 level={4}
                 style={{ color: "#fff", margin: 0, fontSize: "16px" }}
               >
-                📊 FITS-KIP Manager
+                📊 FITS-KIP Quản lý
               </Title>
             )}
             {collapsed && (

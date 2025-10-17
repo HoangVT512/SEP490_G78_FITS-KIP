@@ -8,10 +8,10 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace FITSKIP.Infrastructure.Migrations
+namespace FITSKIP.Infrastructure.Migrations.TestDb
 {
-    [DbContext(typeof(FitskipDbContext))]
-    partial class FitskipDbContextModelSnapshot : ModelSnapshot
+    [DbContext(typeof(TestDbContext))]
+    partial class TestDbContextModelSnapshot : ModelSnapshot
     {
         protected override void BuildModel(ModelBuilder modelBuilder)
         {

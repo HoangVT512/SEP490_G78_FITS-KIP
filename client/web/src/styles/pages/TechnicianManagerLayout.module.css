@@ -1,20 +1,21 @@
-/* ManagerLayout CSS Module */
-.managerLayout {
+/* TechnicianManagerLayout CSS Module */
+.technicianManagerLayout {
   min-height: 100vh;
 }
 
-.managerLayout :global(.ant-layout-sider) {
+.technicianManagerLayout :global(.ant-layout-sider) {
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15) !important;
+  background: linear-gradient(180deg, #283652 0%, #283652 100%) !important;
 }
 
-.managerLayout :global(.ant-menu-dark.ant-menu-inline .ant-menu-item) {
+.technicianManagerLayout :global(.ant-menu-dark.ant-menu-inline .ant-menu-item) {
   background: transparent;
   margin: 4px 8px;
   border-radius: 8px;
   font-weight: 500;
 }
 
-.managerLayout :global(.ant-menu-dark .ant-menu-item .ant-menu-title-content) {
+.technicianManagerLayout :global(.ant-menu-dark .ant-menu-item .ant-menu-title-content) {
   white-space: normal;
   line-height: 1.2;
   display: inline-block;
@@ -24,26 +25,26 @@
   padding-right: 8px;
 }
 
-.managerLayout :global(.ant-layout-sider .ant-menu) {
+.technicianManagerLayout :global(.ant-layout-sider .ant-menu) {
   padding: 8px 12px;
 }
 
-.managerLayout :global(.ant-layout-sider-collapsed .ant-menu-item .ant-menu-title-content) {
+.technicianManagerLayout :global(.ant-layout-sider-collapsed .ant-menu-item .ant-menu-title-content) {
   display: none;
 }
 
-.managerLayout :global(.ant-layout-sider-collapsed .ant-menu-item-selected) {
+.technicianManagerLayout :global(.ant-layout-sider-collapsed .ant-menu-item-selected) {
   background: #334766 !important;
   border-right: 3px solid #5a7a9d;
 }
 
-.managerLayout :global(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected) {
+.technicianManagerLayout :global(.ant-menu-dark.ant-menu-inline .ant-menu-item-selected) {
   background: #334766 !important;
   color: #fff !important;
   box-shadow: 0 2px 8px rgba(51, 71, 102, 0.3);
 }
 
-.managerLayout :global(.ant-layout-header) {
+.technicianManagerLayout :global(.ant-layout-header) {
   padding: 0 24px;
   background: #fff;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
@@ -52,13 +53,13 @@
   z-index: 10;
 }
 
-.managerLayout :global(.ant-layout-content) {
+.technicianManagerLayout :global(.ant-layout-content) {
   background: #f8fafc;
   padding: 24px;
   overflow-y: auto;
 }
 
-.managerLogo {
+.technicianManagerLogo {
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -68,7 +69,7 @@
   min-height: 64px;
 }
 
-.managerLogo h4 {
+.technicianManagerLogo h4 {
   color: #fff !important;
   margin: 0;
   font-size: 16px;
@@ -131,33 +132,49 @@
   margin: 0;
 }
 
-.managerLayout :global(.ant-layout-sider) {
-  background: linear-gradient(180deg, #283652 0%, #283652 100%) !important;
-}
-
-.managerLayout :global(.ant-menu-item .anticon) {
+.technicianManagerLayout :global(.ant-menu-item .anticon) {
   font-size: 16px;
 }
 
-.managerLayout :global(.ant-layout-sider::-webkit-scrollbar) {
+.technicianManagerLayout :global(.ant-layout-sider::-webkit-scrollbar) {
   width: 6px;
 }
 
-.managerLayout :global(.ant-layout-sider::-webkit-scrollbar-track) {
+.technicianManagerLayout :global(.ant-layout-sider::-webkit-scrollbar-track) {
   background: rgba(255, 255, 255, 0.1);
 }
 
-.managerLayout :global(.ant-layout-sider::-webkit-scrollbar-thumb) {
+.technicianManagerLayout :global(.ant-layout-sider::-webkit-scrollbar-thumb) {
   background: rgba(255, 255, 255, 0.3);
   border-radius: 3px;
 }
 
+.notificationsList {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.notificationItem {
+  padding: 12px;
+  border-bottom: 1px solid #e8e8e8;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.notificationItem:hover {
+  background-color: #f5f5f5;
+}
+
+.notificationItem:last-child {
+  border-bottom: none;
+}
+
 @media (max-width: 768px) {
-  .managerLayout :global(.ant-layout-header) {
+  .technicianManagerLayout :global(.ant-layout-header) {
     padding: 0 16px;
   }
   
-  .managerLayout :global(.ant-layout-content) {
+  .technicianManagerLayout :global(.ant-layout-content) {
     padding: 16px;
   }
   
