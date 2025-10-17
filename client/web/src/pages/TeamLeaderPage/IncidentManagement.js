@@ -190,6 +190,7 @@ const IncidentManagement = () => {
             it.Status ||
             (it.isResolved ? "Hoàn thành" : "Chờ xử lý"),
           reporter:
+            it.reportedByUser?.fullName ||
             it.reportedByName ||
             it.reporter ||
             it.Reporter ||
@@ -758,49 +759,115 @@ const IncidentManagement = () => {
               {/* Main Information Card */}
               <Col span={24}>
                 <Card size="small">
-                  <Row gutter={[16, 12]}>
-                    {/* Row 1: ID, Priority, Status */}
-                    <Col span={8}>
+                  <Row gutter={[16, 16]}>
+                    {/* Row 1: Mã sự cố */}
+                    <Col span={24}>
                       <div
                         style={{
                           fontSize: 13,
-                          color: "#333",
+                          color: "#666",
                           marginBottom: 6,
                           fontWeight: 600,
                         }}
                       >
                         Mã sự cố
                       </div>
-                      <div style={{ fontWeight: 700, fontSize: "16px" }}>
-                        {selectedIncident.id}
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          fontSize: "18px",
+                          color: "#1890ff",
+                        }}
+                      >
+                        #{selectedIncident.id}
                       </div>
                     </Col>
+
+                    {/* Row 2: Thiết bị */}
+                    {selectedIncident.equipmentName && (
+                      <Col span={24}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            color: "#666",
+                            marginBottom: 6,
+                            fontWeight: 600,
+                          }}
+                        >
+                          Thiết bị
+                        </div>
+                        <div style={{ fontWeight: 600, fontSize: "14px" }}>
+                          {selectedIncident.equipmentName}
+                          {selectedIncident.equipmentCode && (
+                            <span style={{ color: "#999", marginLeft: 8 }}>
+                              ({selectedIncident.equipmentCode})
+                            </span>
+                          )}
+                        </div>
+                      </Col>
+                    )}
+
+                    {/* Row 3: Time Info (StartTime, EndTime, Duration) */}
                     <Col span={8}>
                       <div
                         style={{
                           fontSize: 13,
-                          color: "#333",
+                          color: "#666",
                           marginBottom: 6,
                           fontWeight: 600,
                         }}
                       >
-                        Mức độ ưu tiên
+                        Thời gian bắt đầu
                       </div>
-                      {selectedIncident.priority ? (
-                        <Tag
-                          color={getPriorityColor(selectedIncident.priority)}
-                        >
-                          {selectedIncident.priority}
-                        </Tag>
-                      ) : (
-                        "-"
-                      )}
+                      <div style={{ fontSize: "13px" }}>
+                        {selectedIncident.reportDate
+                          ? dayjs(selectedIncident.reportDate).format(
+                              "DD/MM/YYYY HH:mm"
+                            )
+                          : "-"}
+                      </div>
                     </Col>
                     <Col span={8}>
                       <div
                         style={{
                           fontSize: 13,
-                          color: "#333",
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Thời gian kết thúc
+                      </div>
+                      <div style={{ fontSize: "13px" }}>
+                        {selectedIncident.resolveDate
+                          ? dayjs(selectedIncident.resolveDate).format(
+                              "DD/MM/YYYY HH:mm"
+                            )
+                          : "-"}
+                      </div>
+                    </Col>
+                    <Col span={8}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Thời lượng (phút)
+                      </div>
+                      <div style={{ fontSize: "13px", fontWeight: 600 }}>
+                        {selectedIncident.downtime || "-"}
+                      </div>
+                    </Col>
+
+                    {/* Row 4: Status, StopType */}
+                    <Col span={12}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
                           marginBottom: 6,
                           fontWeight: 600,
                         }}
@@ -815,391 +882,114 @@ const IncidentManagement = () => {
                           {selectedIncident.status}
                         </Tag>
                       ) : (
-                        "-"
+                        <span>-</span>
                       )}
                     </Col>
-
-                    {/* Row 2: Title (full width) */}
-                    <Col span={24}>
+                    <Col span={12}>
                       <div
                         style={{
                           fontSize: 13,
-                          color: "#333",
+                          color: "#666",
                           marginBottom: 6,
                           fontWeight: 600,
                         }}
                       >
-                        Tiêu đề
+                        Loại dừng
                       </div>
-                      <div style={{ fontWeight: 700, fontSize: "15px" }}>
-                        {selectedIncident.title}
+                      {selectedIncident.category ? (
+                        <Tag color="orange">{selectedIncident.category}</Tag>
+                      ) : (
+                        <span>-</span>
+                      )}
+                    </Col>
+
+                    {/* Row 5: Issue (Vấn đề) */}
+                    <Col span={24}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Vấn đề
+                      </div>
+                      <div style={{ fontSize: "14px", lineHeight: 1.6 }}>
+                        {selectedIncident.issue || "-"}
                       </div>
                     </Col>
 
-                    {/* Row 3-4: Equipment & Location */}
-                    {selectedIncident.equipmentName && (
-                      <Col span={8}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Thiết bị
-                        </div>
-                        <div style={{ fontWeight: 600, fontSize: "14px" }}>
-                          {selectedIncident.equipmentName}
-                        </div>
-                        {selectedIncident.equipmentCode && (
-                          <div style={{ color: "#999", fontSize: 11 }}>
-                            ({selectedIncident.equipmentCode})
-                          </div>
-                        )}
-                      </Col>
-                    )}
-                    {selectedIncident.lineName && (
-                      <Col span={8}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Dây chuyền
-                        </div>
-                        <Tag color="purple">{selectedIncident.lineName}</Tag>
-                      </Col>
-                    )}
-                    {selectedIncident.stageName && (
-                      <Col span={8}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Công đoạn
-                        </div>
-                        <Tag color="blue">{selectedIncident.stageName}</Tag>
-                      </Col>
-                    )}
-                    {selectedIncident.category && (
-                      <Col span={8}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Loại dừng
-                        </div>
-                        <Tag color="orange">{selectedIncident.category}</Tag>
-                      </Col>
-                    )}
-                    {selectedIncident.impact && (
-                      <Col span={8}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Tác động
-                        </div>
-                        <Tag
-                          color={
-                            selectedIncident.impact === "Cao"
-                              ? "red"
-                              : selectedIncident.impact === "Trung bình"
-                              ? "orange"
-                              : "green"
-                          }
-                        >
-                          {selectedIncident.impact}
-                        </Tag>
-                      </Col>
-                    )}
-
-                    {/* People */}
-                    {selectedIncident.reporter && (
-                      <Col span={8}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Người báo cáo
-                        </div>
-                        <div style={{ fontWeight: 500, fontSize: "14px" }}>
-                          {selectedIncident.reporter}
-                        </div>
-                      </Col>
-                    )}
-                    {selectedIncident.assignedTo && (
-                      <Col span={8}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Người xử lý
-                        </div>
-                        <div style={{ fontWeight: 500, fontSize: "14px" }}>
-                          {selectedIncident.assignedTo}
-                        </div>
-                      </Col>
-                    )}
-
-                    {/* Time Information */}
-                    {selectedIncident.reportDate && (
-                      <Col span={8}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Ngày báo cáo
-                        </div>
-                        <div style={{ fontSize: "14px" }}>
-                          {dayjs(selectedIncident.reportDate).format(
-                            "DD/MM/YYYY HH:mm"
-                          )}
-                        </div>
-                      </Col>
-                    )}
-                    {selectedIncident.resolveDate && (
-                      <Col span={8}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Ngày giải quyết
-                        </div>
-                        <div style={{ fontSize: "14px" }}>
-                          {dayjs(selectedIncident.resolveDate).format(
-                            "DD/MM/YYYY HH:mm"
-                          )}
-                        </div>
-                      </Col>
-                    )}
-                    {selectedIncident.reportDate && (
-                      <Col span={8}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Khung giờ bắt đầu
-                        </div>
-                        <div style={{ fontSize: "14px" }}>
-                          {dayjs(selectedIncident.reportDate).format("HH:mm")}
-                        </div>
-                      </Col>
-                    )}
-                    {selectedIncident.resolveDate && (
-                      <Col span={8}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Khung giờ kết thúc
-                        </div>
-                        <div style={{ fontSize: "14px" }}>
-                          {dayjs(selectedIncident.resolveDate).format("HH:mm")}
-                        </div>
-                      </Col>
-                    )}
-                    {selectedIncident.downtime !== undefined && (
-                      <Col span={8}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Thời gian chết
-                        </div>
-                        <span
-                          style={{
-                            color:
-                              selectedIncident.downtime > 120
-                                ? "#ff4d4f"
-                                : "#1890ff",
-                            fontWeight: 700,
-                            fontSize: "14px",
-                          }}
-                        >
-                          {selectedIncident.downtime} phút
-                        </span>
-                      </Col>
-                    )}
-
-                    {/* Issue, Reason, Solution */}
-                    {selectedIncident.issue && (
-                      <Col span={24}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Vấn đề
-                        </div>
-                        <div style={{ fontSize: "14px" }}>
-                          {selectedIncident.issue}
-                        </div>
-                      </Col>
-                    )}
-                    {selectedIncident.reason && (
-                      <Col span={24}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Nguyên nhân
-                        </div>
-                        <div style={{ fontSize: "14px" }}>
-                          {selectedIncident.reason}
-                        </div>
-                      </Col>
-                    )}
-                    {selectedIncident.solution && (
-                      <Col span={24}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#333",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Giải pháp
-                        </div>
-                        <div style={{ fontSize: "14px" }}>
-                          {selectedIncident.solution}
-                        </div>
-                      </Col>
-                    )}
-
-                    {/* Attachments */}
-                    {selectedIncident.attachments &&
-                      selectedIncident.attachments.length > 0 && (
-                        <Col span={24}>
-                          <div
-                            style={{
-                              fontSize: 13,
-                              color: "#333",
-                              marginBottom: 6,
-                              fontWeight: 600,
-                            }}
-                          >
-                            Tài liệu đính kèm
-                          </div>
-                          <Space wrap>
-                            {selectedIncident.attachments.map((file, index) => (
-                              <Button
-                                key={index}
-                                type="link"
-                                icon={<FileTextOutlined />}
-                                size="small"
-                              >
-                                {file}
-                              </Button>
-                            ))}
-                          </Space>
-                        </Col>
-                      )}
-                  </Row>
-                </Card>
-              </Col>
-
-              {/* Timeline */}
-              <Col span={24}>
-                <Card title="Lịch sử xử lý" size="small">
-                  <Timeline>
-                    <Timeline.Item
-                      color="blue"
-                      dot={<ExclamationCircleOutlined />}
-                    >
-                      <div>
-                        <strong>Báo cáo sự cố</strong>
-                        <div style={{ color: "#8c8c8c", fontSize: "12px" }}>
-                          {selectedIncident.reportDate} -{" "}
-                          {selectedIncident.reporter}
-                        </div>
-                        <div style={{ marginTop: "4px" }}>
-                          {selectedIncident.issue}
-                        </div>
+                    {/* Row 6: Reason (Nguyên nhân) */}
+                    <Col span={24}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Nguyên nhân
                       </div>
-                    </Timeline.Item>
-                    {selectedIncident.status !== "Chờ xử lý" && (
-                      <Timeline.Item
-                        color="orange"
-                        dot={<ClockCircleOutlined />}
+                      <div style={{ fontSize: "14px", lineHeight: 1.6 }}>
+                        {selectedIncident.reason || "-"}
+                      </div>
+                    </Col>
+
+                    {/* Row 7: Solution (Giải pháp) */}
+                    <Col span={24}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
                       >
-                        <div>
-                          <strong>Bắt đầu xử lý</strong>
-                          <div style={{ color: "#8c8c8c", fontSize: "12px" }}>
-                            {selectedIncident.assignedTo}
-                          </div>
-                        </div>
-                      </Timeline.Item>
-                    )}
-                    {selectedIncident.status === "Hoàn thành" && (
-                      <Timeline.Item
-                        color="green"
-                        dot={<CheckCircleOutlined />}
+                        Giải pháp
+                      </div>
+                      <div style={{ fontSize: "14px", lineHeight: 1.6 }}>
+                        {selectedIncident.solution || "-"}
+                      </div>
+                    </Col>
+
+                    {/* Row 8: CreatedDate, ReportedByUserId */}
+                    <Col span={12}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
                       >
-                        <div>
-                          <strong>Hoàn thành</strong>
-                          <div style={{ color: "#8c8c8c", fontSize: "12px" }}>
-                            {selectedIncident.resolveDate}
-                          </div>
-                          <div style={{ marginTop: "4px" }}>
-                            {selectedIncident.solution}
-                          </div>
-                        </div>
-                      </Timeline.Item>
-                    )}
-                  </Timeline>
+                        Ngày tạo
+                      </div>
+                      <div style={{ fontSize: "13px" }}>
+                        {selectedIncident.reportDate
+                          ? dayjs(selectedIncident.reportDate).format(
+                              "DD/MM/YYYY"
+                            )
+                          : "-"}
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Người báo cáo
+                      </div>
+                      <div style={{ fontSize: "13px" }}>
+                        {selectedIncident.reporter || "-"}
+                      </div>
+                    </Col>
+                  </Row>
                 </Card>
               </Col>
             </Row>

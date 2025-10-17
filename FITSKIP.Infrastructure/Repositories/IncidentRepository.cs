@@ -21,6 +21,7 @@ public class IncidentRepository : IIncidentRepository
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
+            .Include(i => i.ReportedByUser)
             .OrderByDescending(i => i.CreatedDate)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -33,6 +34,7 @@ public class IncidentRepository : IIncidentRepository
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
+            .Include(i => i.ReportedByUser)
             .FirstOrDefaultAsync(i => i.IncidentId == id, cancellationToken);
     }
 
