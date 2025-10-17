@@ -61,6 +61,20 @@ public class PurchaseRequestService : IPurchaseRequestService
             throw new InvalidOperationException("Không tìm thấy người dùng");
         }
 
+        // Check if there's already a pending request for this part
+        var existingPendingRequest = await _purchaseRequestRepository.GetByPartIdAndStatusAsync(
+            request.PartId,
+            "Chờ duyệt",
+            cancellationToken
+        );
+
+        if (existingPendingRequest != null)
+        {
+            throw new InvalidOperationException(
+                $"Phụ tùng này đã có yêu cầu đang chờ duyệt (REQ{existingPendingRequest.RequestId.ToString().PadLeft(3, '0')}). Vui lòng chờ hoàn thành yêu cầu này trước khi tạo yêu cầu mới!"
+            );
+        }
+
         // Validate spare part exists
         //var sparePartExists = await _sparePartRepository.ExistsAsync(request.PartId, cancellationToken);
         //if (!sparePartExists)

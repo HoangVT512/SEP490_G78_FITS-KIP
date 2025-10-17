@@ -180,16 +180,37 @@ const PurchaseRequestManagement = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
+      // The Select now returns the partId as value
+      const partId = values.partNumber || values.partId || null;
+
+      if (!partId) {
+        throw new Error("Phụ tùng không hợp lệ");
+      }
+
+      // Check if there's already a pending request for this part
+      const pendingRequest = requests.find(
+        (req) => req.partId === partId && req.status === "Chờ duyệt"
+      );
+
+      if (pendingRequest) {
+        messageApi.error(
+          `Phụ tùng này đã có yêu cầu đang chờ duyệt (REQ${String(
+            pendingRequest.requestId
+          ).padStart(
+            3,
+            "0"
+          )}). Vui lòng chờ hoàn thành yêu cầu này trước khi tạo yêu cầu mới!`
+        );
+        setLoading(false);
+        return;
+      }
+
       // Backend expects { partId, quantity, reason }
       const payload = {
-        // The Select now returns the partId as value
-        partId: values.partNumber || values.partId || null,
+        partId: partId,
         quantity: values.quantity,
         reason: values.reason,
       };
-      if (!payload.partId) {
-        throw new Error("Phụ tùng không hợp lệ");
-      }
 
       await purchaseRequestService.create(payload);
       messageApi.success("Tạo yêu cầu mua hàng thành công!");
@@ -200,12 +221,18 @@ const PurchaseRequestManagement = () => {
       form.resetFields();
     } catch (error) {
       console.error("Create purchase request error:", error);
-      if (error && error.message && error.message.includes("403")) {
+      // Try to get message from backend response first, then from error message
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Có lỗi xảy ra khi tạo yêu cầu!";
+
+      if (errorMessage.includes("403")) {
         messageApi.error(
           "Bạn không có quyền để tạo yêu cầu. Tài khoản cần có vai trò 'Quản lý kỹ thuật' hoặc hãy đăng nhập lại."
         );
       } else {
-        messageApi.error(error?.message || "Có lỗi xảy ra khi tạo yêu cầu!");
+        messageApi.error(errorMessage);
       }
     } finally {
       setLoading(false);
