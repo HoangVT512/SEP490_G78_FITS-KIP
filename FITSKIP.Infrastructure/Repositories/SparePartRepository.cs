@@ -100,7 +100,7 @@ namespace FITSKIP.Infrastructure.Repositories
 
         public async Task<bool> ExistsAsync(int partId, CancellationToken cancellationToken = default)
         {
-            return await _context.SpareParts.AnyAsync(sp => sp.PartId == partId && sp.IsActive);
+            return await _context.SpareParts.AnyAsync(sp => sp.PartId == partId);
         }
 
         public async Task<IEnumerable<SparePart>> GetTop5MostUsedAsync(CancellationToken cancellationToken = default)

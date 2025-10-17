@@ -539,6 +539,7 @@ const InventoryManagement = () => {
                 name="minQuantity"
                 label="Số lượng tối thiểu"
                 rules={[{ type: "number", min: 0, message: "Phải >= 0" }]}
+                initialValue={editingRecord ? undefined : 5}
               >
                 <InputNumber min={0} style={{ width: "100%" }} />
               </Form.Item>
@@ -590,8 +591,11 @@ const InventoryManagement = () => {
                 onClick={async () => {
                   try {
                     setSavingMin(true);
-                    // Apply minValue to all spare parts
-                    for (const part of spareParts) {
+                    // Apply minValue to all active spare parts only
+                    const activeParts = spareParts.filter(
+                      (part) => part.isActive
+                    );
+                    for (const part of activeParts) {
                       // Send full payload with all required fields
                       await sparePartService.update(part.partId, {
                         partNumber: part.partNumber,
@@ -602,7 +606,7 @@ const InventoryManagement = () => {
                       });
                     }
                     message.success(
-                      `Áp dụng số lượng tối thiểu ${minValue} cho tất cả phụ tùng thành công`
+                      `Áp dụng số lượng tối thiểu ${minValue} cho ${activeParts.length} phụ tùng đang sử dụng thành công`
                     );
                     setShowMinModal(false);
                     await loadParts();
