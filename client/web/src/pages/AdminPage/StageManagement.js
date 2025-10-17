@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Card,
   Table,
@@ -61,6 +61,7 @@ const StageManagement = ({ showHeader = true }) => {
   const [equipmentByStage, setEquipmentByStage] = useState([]);
   const [equipments, setEquipments] = useState([]); // Added for equipment count calculation
   const [loading, setLoading] = useState(false);
+  const searchInput = useRef(null);
   const [searchText, setSearchText] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
@@ -75,6 +76,66 @@ const StageManagement = ({ showHeader = true }) => {
     // Persist archive view state in localStorage
     const saved = localStorage.getItem("stageArchiveView");
     return saved ? saved === "true" : false;
+  });
+
+  const getColumnSearchProps = (dataIndex, placeholderText) => ({
+    filterDropdown: ({
+      setSelectedKeys,
+      selectedKeys,
+      confirm,
+      clearFilters,
+      close,
+    }) => (
+      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
+        <Input
+          ref={searchInput}
+          placeholder={`${placeholderText}`}
+          value={selectedKeys[0]}
+          onChange={(e) =>
+            setSelectedKeys(e.target.value ? [e.target.value] : [])
+          }
+          onPressEnter={() => confirm()}
+          style={{ marginBottom: 8, display: "block" }}
+        />
+        <Space>
+          <Button
+            type="primary"
+            onClick={() => confirm()}
+            icon={<SearchOutlined />}
+            size="small"
+            style={{ width: 90 }}
+          >
+            Tìm kiếm
+          </Button>
+          <Button
+            onClick={() => clearFilters && clearFilters()}
+            size="small"
+            style={{ width: 90 }}
+          >
+            Đặt lại
+          </Button>
+          <Button type="link" size="small" onClick={() => close()}>
+            Đóng
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: (filtered) => (
+      <SearchOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
+    ),
+    onFilter: (value, record) => {
+      const recordValue = record[dataIndex];
+      return recordValue
+        ? recordValue.toString().toLowerCase().includes(value.toLowerCase())
+        : false;
+    },
+    filterDropdownProps: {
+      onOpenChange(open) {
+        if (open) {
+          setTimeout(() => searchInput.current?.select(), 100);
+        }
+      },
+    },
   });
 
   useEffect(() => {
@@ -387,6 +448,7 @@ const StageManagement = ({ showHeader = true }) => {
       title: "Công đoạn",
       key: "stage",
       width: 280,
+      ...getColumnSearchProps("stageName", "Tìm kiếm công đoạn"),
       render: (_, record) => (
         <Space>
           <div
@@ -408,10 +470,10 @@ const StageManagement = ({ showHeader = true }) => {
             <div style={{ fontWeight: "600", fontSize: "14px" }}>
               {record.stageName}
             </div>
-            <div style={{ fontSize: "12px", color: "#6b7280" }}>
+            {/* <div style={{ fontSize: "12px", color: "#6b7280" }}>
               <GroupOutlined style={{ marginRight: "4px" }} />
               {record.line?.lineName || "Chưa phân dây chuyền"}
-            </div>
+            </div> */}
           </div>
         </Space>
       ),
@@ -420,6 +482,21 @@ const StageManagement = ({ showHeader = true }) => {
       title: "Dây chuyền",
       key: "line",
       width: 200,
+      ...getColumnSearchProps("lineName", "Tìm kiếm dây chuyền"),
+      filters: Array.isArray(lines)
+        ? lines
+            .filter((line) => line.lineName)
+            .map((line) => ({
+              text: line.lineName,
+              value: line.lineName,
+            }))
+        : [],
+      onFilter: (value, record) => {
+        // For dropdown filter (exact match on lineName)
+        if (record.line?.lineName === value) return true;
+        // For search input (includes in lineName)
+        return record.line?.lineName?.toLowerCase().includes(value.toLowerCase()) || false;
+      },
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: "500" }}>
@@ -474,7 +551,7 @@ const StageManagement = ({ showHeader = true }) => {
       ),
     },
     {
-      title: "Hành động",
+      title: "Thao tác",
       key: "actions",
       width: 100,
       align: "center",
@@ -842,7 +919,7 @@ const StageManagement = ({ showHeader = true }) => {
                   name="isActive"
                   label={
                     <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                      Trạng thái hoạt động
+                      Trạng thái
                     </span>
                   }
                   rules={[
@@ -858,7 +935,7 @@ const StageManagement = ({ showHeader = true }) => {
                 <Form.Item
                   label={
                     <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                      Trạng thái hoạt động
+                      Trạng thái
                     </span>
                   }
                 >

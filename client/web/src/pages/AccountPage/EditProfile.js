@@ -114,7 +114,7 @@ const EditProfile = () => {
       let errorMessage = "Có lỗi xảy ra khi cập nhật thông tin!";
 
       if (error.message.includes("Đã có người dùng sử dụng email này")) {
-        errorMessage = "Đã có người dùng sử dụng email này, không được dùng.";
+        //errorMessage = "Đã có người dùng sử dụng email này, không được dùng.";
         form.setFields([
           {
             name: "email",
@@ -124,8 +124,7 @@ const EditProfile = () => {
       } else if (
         error.message.includes("Đã có người dùng sử dụng số điện thoại này")
       ) {
-        errorMessage =
-          "Đã có người dùng sử dụng số điện thoại này, không được dùng.";
+        //errorMessage ="Đã có người dùng sử dụng số điện thoại này, không được dùng.";
         form.setFields([
           {
             name: "phoneNumber",
@@ -138,7 +137,7 @@ const EditProfile = () => {
         errorMessage = error.message;
       }
 
-      message.error(errorMessage);
+      //message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -405,7 +404,7 @@ const EditProfile = () => {
                   </Col>
 
                   <Col xs={24} md={12}>
-                    <Form.Item label="Chức vụ" name="position">
+                    {/* <Form.Item label="Chức vụ" name="position">
                       <Input
                         prefix={<IdcardOutlined />}
                         value={currentUser?.position || "N/A"}
@@ -413,7 +412,7 @@ const EditProfile = () => {
                         size="large"
                         className={styles.editProfileDisabledField}
                       />
-                    </Form.Item>
+                    </Form.Item> */}
                   </Col>
                 </Row>
 

@@ -2,7 +2,9 @@ using FITSKIP.Application.Interfaces;
 using FITSKIP.Application.Services;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using FITSKIP.Infrastructure.DbContexts;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using System.Text.RegularExpressions;
 
@@ -14,11 +16,13 @@ public class UsersController : ControllerBase
 {
     private readonly IUserService userService;
     private readonly IRoleService roleService;
+    private readonly FitskipDbContext db;
 
-    public UsersController(IUserService userService, IRoleService roleService)
+    public UsersController(IUserService userService, IRoleService roleService, FitskipDbContext db)
     {
         this.userService = userService;
         this.roleService = roleService;
+        this.db = db;
     }
 
     [HttpGet]
@@ -520,6 +524,9 @@ public class UsersController : ControllerBase
 
             var users = await userService.GetUsersWithRolesAsync(cancellationToken);
 
+            // Get all lines for mapping
+            var allLines = await db.Lines.AsNoTracking().ToDictionaryAsync(l => l.LineId, l => l.LineName, cancellationToken);
+
             using (var package = new ExcelPackage())
             {
                 var worksheet = package.Workbook.Worksheets.Add("Users");
@@ -532,9 +539,11 @@ public class UsersController : ControllerBase
                 worksheet.Cells[1, 5].Value = "Số điện thoại";
                 worksheet.Cells[1, 6].Value = "Trạng thái";
                 worksheet.Cells[1, 7].Value = "Vai trò";
+                worksheet.Cells[1, 8].Value = "Phòng ban";
+                worksheet.Cells[1, 9].Value = "Dây chuyền";
 
                 // Style headers
-                using (var range = worksheet.Cells[1, 1, 1, 7])
+                using (var range = worksheet.Cells[1, 1, 1, 9])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
@@ -551,6 +560,11 @@ public class UsersController : ControllerBase
                     var user = users[i];
                     var row = i + 2;
 
+                    // Get line names from LineIds
+                    var lineNames = user.LineIds != null && user.LineIds.Any()
+                        ? string.Join(", ", user.LineIds.Select(id => allLines.ContainsKey(id) ? allLines[id] : $"Line {id}"))
+                        : "Không có dây chuyền";
+
                     worksheet.Cells[row, 1].Value = user.UserName;
                     worksheet.Cells[row, 2].Value = user.Email;
                     worksheet.Cells[row, 3].Value = user.FullName;
@@ -560,9 +574,11 @@ public class UsersController : ControllerBase
                     worksheet.Cells[row, 7].Value = user.Roles != null && user.Roles.Any()
                         ? string.Join(", ", user.Roles)
                         : "Không có vai trò";
+                    worksheet.Cells[row, 8].Value = user.DepartmentName ?? "Chưa có PB";
+                    worksheet.Cells[row, 9].Value = lineNames;
 
                     // Add borders to data rows
-                    using (var range = worksheet.Cells[row, 1, row, 7])
+                    using (var range = worksheet.Cells[row, 1, row, 9])
                     {
                         range.Style.Border.Top.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
                         range.Style.Border.Bottom.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;

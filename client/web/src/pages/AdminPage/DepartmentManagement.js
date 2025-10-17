@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Card,
   Table,
@@ -44,6 +44,7 @@ const { Search } = Input;
 const DepartmentManagement = ({ showHeader = true }) => {
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(false);
+  const searchInput = useRef(null);
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -153,6 +154,66 @@ const DepartmentManagement = ({ showHeader = true }) => {
     }
   };
 
+  const getColumnSearchProps = (dataIndex, placeholderText) => ({
+    filterDropdown: ({
+      setSelectedKeys,
+      selectedKeys,
+      confirm,
+      clearFilters,
+      close,
+    }) => (
+      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
+        <Input
+          ref={searchInput}
+          placeholder={`${placeholderText}`}
+          value={selectedKeys[0]}
+          onChange={(e) =>
+            setSelectedKeys(e.target.value ? [e.target.value] : [])
+          }
+          onPressEnter={() => confirm()}
+          style={{ marginBottom: 8, display: "block" }}
+        />
+        <Space>
+          <Button
+            type="primary"
+            onClick={() => confirm()}
+            icon={<SearchOutlined />}
+            size="small"
+            style={{ width: 90 }}
+          >
+            Tìm kiếm
+          </Button>
+          <Button
+            onClick={() => clearFilters && clearFilters()}
+            size="small"
+            style={{ width: 90 }}
+          >
+            Đặt lại
+          </Button>
+          <Button type="link" size="small" onClick={() => close()}>
+            Đóng
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: (filtered) => (
+      <SearchOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
+    ),
+    onFilter: (value, record) => {
+      const recordValue = record[dataIndex];
+      return recordValue
+        ? recordValue.toString().toLowerCase().includes(value.toLowerCase())
+        : false;
+    },
+    filterDropdownProps: {
+      onOpenChange(open) {
+        if (open) {
+          setTimeout(() => searchInput.current?.select(), 100);
+        }
+      },
+    },
+  });
+
   const handleAction = async (action, department) => {
     switch (action) {
       case "view":
@@ -186,19 +247,35 @@ const DepartmentManagement = ({ showHeader = true }) => {
         });
         break;
       case "activate":
-        try {
-          setLoading(true);
-          await departmentService.updateDepartment(department.departmentId, {
-            ...department,
-            isActive: true,
-          });
-          message.success("Đã kích hoạt phòng ban thành công");
-          loadDepartments();
-        } catch (error) {
-          console.error("Error activating department:", error);
-          message.error("Không thể kích hoạt phòng ban");
-          setLoading(false);
-        }
+        Modal.confirm({
+          title: "Xác nhận kích hoạt phòng ban",
+          content: `Bạn có chắc chắn muốn kích hoạt phòng ban "${department.departmentName}"?`,
+          okText: "Kích hoạt",
+          cancelText: "Hủy",
+          okType: "primary",
+          okButtonProps: {
+            style: {
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              color: "#fff",
+            },
+          },
+          onOk: async () => {
+            try {
+              setLoading(true);
+              await departmentService.updateDepartment(department.departmentId, {
+                ...department,
+                isActive: true,
+              });
+              message.success("Đã kích hoạt phòng ban thành công");
+              loadDepartments();
+            } catch (error) {
+              console.error("Error activating department:", error);
+              message.error("Không thể kích hoạt phòng ban");
+              setLoading(false);
+            }
+          },
+        });
         break;
       case "deactivate":
         Modal.confirm({
@@ -272,6 +349,21 @@ const DepartmentManagement = ({ showHeader = true }) => {
       title: "Phòng ban",
       key: "department",
       width: 280,
+      ...getColumnSearchProps("departmentName", "Tìm kiếm phòng ban"),
+      filters: Array.isArray(departments)
+        ? departments
+          .filter(
+            (dept, idx, arr) =>
+              arr.findIndex(
+                (d) => d.departmentName === dept.departmentName
+              ) === idx
+          )
+          .map((dept) => ({
+            text: dept.departmentName,
+            value: dept.departmentName,
+          }))
+        : [],
+      onFilter: (value, record) => record.departmentName === value,
       render: (_, record) => (
         <Space>
           <div
@@ -320,6 +412,27 @@ const DepartmentManagement = ({ showHeader = true }) => {
       title: "Quản lý",
       key: "manager",
       width: 200,
+      ...getColumnSearchProps("managerName", "Tìm kiếm quản lý theo tên hoặc mã nhân viên"),
+      filters: Array.isArray(managers)
+        ? managers
+            .filter((manager) => manager.fullName) // Only include managers with fullName
+            .map((manager) => ({
+              text: `${manager.fullName} (${manager.employeeCode})`,
+              value: manager.fullName,
+            }))
+        : [],
+      onFilter: (value, record) => {
+        if (typeof value === 'string' && value.length > 0) {
+          // Check if it's a dropdown filter (exact match on fullName)
+          if (record.managerName === value) return true;
+          // Otherwise, it's a search input - check both name and employee code
+          const searchValue = value.toLowerCase();
+          const nameMatch = record.managerName ? record.managerName.toLowerCase().includes(searchValue) : false;
+          const codeMatch = record.managerEmployeeCode ? record.managerEmployeeCode.toLowerCase().includes(searchValue) : false;
+          return nameMatch || codeMatch;
+        }
+        return false;
+      },
       render: (_, record) => (
         <div>
           <div
@@ -367,7 +480,7 @@ const DepartmentManagement = ({ showHeader = true }) => {
       ),
     },
     {
-      title: "Hành động",
+      title: "Thao tác",
       key: "actions",
       width: 100,
       align: "center",

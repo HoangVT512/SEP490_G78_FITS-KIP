@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Card,
   Table,
@@ -73,6 +73,7 @@ const LineManagement = ({ showHeader = true }) => {
   const [departmentActive, setDepartmentActive] = useState([]);
   const [stages, setStages] = useState([]); // Added for stage count calculation
   const [loading, setLoading] = useState(false);
+  const searchInput = useRef(null);
   const [searchText, setSearchText] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isViewModalVisible, setIsViewModalVisible] = useState(false);
@@ -107,9 +108,15 @@ const LineManagement = ({ showHeader = true }) => {
     try {
       const response = await lineService.getLines();
       if (Array.isArray(response)) {
-        setLines(response);
+        setLines(response.map(line => ({
+          ...line,
+          departmentName: line.department?.departmentName || ""
+        })));
       } else if (response.success) {
-        setLines(response.data || []);
+        setLines((response.data || []).map(line => ({
+          ...line,
+          departmentName: line.department?.departmentName || ""
+        })));
       } else {
         message.error(response.message || "Không thể tải danh sách dây chuyền");
         setLines([]);
@@ -343,11 +350,72 @@ const LineManagement = ({ showHeader = true }) => {
     minHeight: "calc(100vh - 70px)",
   };
 
+  const getColumnSearchProps = (dataIndex, placeholderText) => ({
+    filterDropdown: ({
+      setSelectedKeys,
+      selectedKeys,
+      confirm,
+      clearFilters,
+      close,
+    }) => (
+      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
+        <Input
+          ref={searchInput}
+          placeholder={`${placeholderText}`}
+          value={selectedKeys[0]}
+          onChange={(e) =>
+            setSelectedKeys(e.target.value ? [e.target.value] : [])
+          }
+          onPressEnter={() => confirm()}
+          style={{ marginBottom: 8, display: "block" }}
+        />
+        <Space>
+          <Button
+            type="primary"
+            onClick={() => confirm()}
+            icon={<SearchOutlined />}
+            size="small"
+            style={{ width: 90 }}
+          >
+            Tìm kiếm
+          </Button>
+          <Button
+            onClick={() => clearFilters && clearFilters()}
+            size="small"
+            style={{ width: 90 }}
+          >
+            Đặt lại
+          </Button>
+          <Button type="link" size="small" onClick={() => close()}>
+            Đóng
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: (filtered) => (
+      <SearchOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
+    ),
+    onFilter: (value, record) => {
+      const recordValue = record[dataIndex];
+      return recordValue
+        ? recordValue.toString().toLowerCase().includes(value.toLowerCase())
+        : false;
+    },
+    filterDropdownProps: {
+      onOpenChange(open) {
+        if (open) {
+          setTimeout(() => searchInput.current?.select(), 100);
+        }
+      },
+    },
+  });
+
   const columns = [
     {
       title: "Dây chuyền",
       key: "line",
       width: 280,
+      ...getColumnSearchProps("lineName", "Tìm kiếm dây chuyền"),
       render: (_, record) => (
         <Space>
           <div
@@ -369,10 +437,10 @@ const LineManagement = ({ showHeader = true }) => {
             <div style={{ fontWeight: "600", fontSize: "14px" }}>
               {record.lineName}
             </div>
-            <div style={{ fontSize: "12px", color: "#6b7280" }}>
+            {/* <div style={{ fontSize: "12px", color: "#6b7280" }}>
               <EnvironmentOutlined style={{ marginRight: "4px" }} />
               {record.department?.departmentName || "Chưa phân phòng"}
-            </div>
+            </div> */}
           </div>
         </Space>
       ),
@@ -381,6 +449,22 @@ const LineManagement = ({ showHeader = true }) => {
       title: "Phòng ban",
       key: "department",
       width: 200,
+      dataIndex: "departmentName",
+      ...getColumnSearchProps("departmentName", "Tìm kiếm phòng ban"),
+      filters: Array.isArray(departments)
+        ? departments
+            .filter(
+              (dept, idx, arr) =>
+                arr.findIndex(
+                  (d) => d.departmentName === dept.departmentName
+                ) === idx
+            )
+            .map((dept) => ({
+              text: dept.departmentName,
+              value: dept.departmentName,
+            }))
+        : [],
+      onFilter: (value, record) => record.departmentName === value,
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: "500" }}>
@@ -418,7 +502,7 @@ const LineManagement = ({ showHeader = true }) => {
       ),
     },
     {
-      title: "Hành động",
+      title: "Thao tác",
       key: "actions",
       width: 100,
       align: "center",
@@ -850,7 +934,7 @@ const LineManagement = ({ showHeader = true }) => {
                   <SettingOutlined
                     style={{ marginRight: "8px", color: "#334766" }}
                   />
-                  Danh sách giai đoạn ({viewingLine.stages?.length || 0})
+                  Danh sách công đoạn ({viewingLine.stages?.length || 0})
                 </span>
               }
               size="small"
@@ -878,7 +962,7 @@ const LineManagement = ({ showHeader = true }) => {
                               {stage.stageName}
                             </span>
                             <Tag color="blue" size="small">
-                              Giai đoạn {index + 1}
+                              công đoạn {index + 1}
                             </Tag>
                             <Tag
                               color={stage.isActive ? "success" : "error"}
@@ -918,7 +1002,7 @@ const LineManagement = ({ showHeader = true }) => {
                   <SettingOutlined
                     style={{ fontSize: "24px", marginBottom: "8px" }}
                   />
-                  <div>Chưa có giai đoạn nào trong dây chuyền này</div>
+                  <div>Chưa có công đoạn nào trong dây chuyền này</div>
                 </div>
               )}
             </Card>

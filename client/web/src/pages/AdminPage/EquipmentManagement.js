@@ -124,17 +124,33 @@ const EquipmentManagement = ({ showHeader = true }) => {
         setIsModalVisible(true);
         break;
       case "activate":
-        try {
-          setLoading(true);
-          await equipmentService.toggleEquipmentStatus(equipment.equipmentId);
-          message.success("Đã kích hoạt thiết bị thành công");
-          loadEquipments();
-        } catch (error) {
-          console.error("Error activating equipment:", error);
-          message.error("Không thể kích hoạt thiết bị");
-        } finally {
-          setLoading(false);
-        }
+        Modal.confirm({
+          title: "Xác nhận kích hoạt thiết bị",
+          content: `Bạn có chắc chắn muốn kích hoạt thiết bị "${equipment.equipmentName}"?`,
+          okText: "Kích hoạt",
+          cancelText: "Hủy",
+          okType: "primary",
+          okButtonProps: {
+            style: {
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              color: "#fff",
+            },
+          },
+          onOk: async () => {
+            try {
+              setLoading(true);
+              await equipmentService.toggleEquipmentStatus(equipment.equipmentId);
+              message.success("Đã kích hoạt thiết bị thành công");
+              loadEquipments();
+            } catch (error) {
+              console.error("Error activating equipment:", error);
+              message.error("Không thể kích hoạt thiết bị");
+            } finally {
+              setLoading(false);
+            }
+          },
+        });
         break;
       case "deactivate":
         Modal.confirm({
@@ -145,8 +161,8 @@ const EquipmentManagement = ({ showHeader = true }) => {
           okType: "danger",
           okButtonProps: {
             style: {
-              backgroundColor: "#334766",
-              borderColor: "#334766",
+              backgroundColor: "#ff4d4f",
+              borderColor: "#ff4d4f",
               color: "#fff",
             },
           },

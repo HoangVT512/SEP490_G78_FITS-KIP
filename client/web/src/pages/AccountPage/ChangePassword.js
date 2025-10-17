@@ -140,7 +140,7 @@ const ChangePassword = () => {
             </div>
           </Col>
 
-          <Col sx={24} md={24} lg={18} xl={20} xxl={6}>
+          <Col xs={24} sm={24} md={18} lg={18} xl={18}>
             <Card
               title={
                 <Space>

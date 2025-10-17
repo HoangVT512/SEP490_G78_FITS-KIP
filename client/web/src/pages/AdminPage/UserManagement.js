@@ -288,7 +288,7 @@ const UserManagement = ({ showHeader = true }) => {
               <ul>
                 {response.failedUsers.map((failed, index) => (
                   <li key={index} style={{ marginBottom: "8px" }}>
-                    <strong>{failed.userName || failed.email}</strong>:{" "}
+                    <strong>{failed.fullName || failed.email}</strong>:{" "}
                     {failed.error}
                   </li>
                 ))}
