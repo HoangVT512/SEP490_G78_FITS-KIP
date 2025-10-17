@@ -46,12 +46,14 @@ import { equipmentService } from "../../services/equipmentService";
 import { lineService } from "../../services/lineService";
 import { stageService } from "../../services/stageService";
 import { stopTypeService } from "../../services/stopTypeService";
+import { useAuth } from "../../contexts/AuthContext";
 
 const { TextArea } = Input;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 const IncidentManagement = () => {
+  const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [incidents, setIncidents] = useState([]);
   const [filteredIncidents, setFilteredIncidents] = useState([]);
@@ -70,6 +72,7 @@ const IncidentManagement = () => {
   const [stages, setStages] = useState([]);
   const [stopTypes, setStopTypes] = useState([]);
   const [selectedEquipment, setSelectedEquipment] = useState(null);
+  const [currentReporter, setCurrentReporter] = useState(null);
 
   useEffect(() => {
     fetchIncidents();
@@ -251,6 +254,13 @@ const IncidentManagement = () => {
     setIsEditMode(false);
     setSelectedIncident(null);
     form.resetFields();
+    // Auto-fill reporter with current user name
+    const reporterName =
+      currentUser?.fullName || currentUser?.userName || "Không xác định";
+    setCurrentReporter(reporterName);
+    form.setFieldsValue({
+      reporter: reporterName,
+    });
     setFormModalVisible(true);
   };
 
@@ -1329,21 +1339,31 @@ const IncidentManagement = () => {
             </Col>
 
             <Col span={12}>
-              <Form.Item
-                label="Người báo cáo"
-                name="reporter"
-                rules={[{ required: true, message: "Vui lòng nhập tên!" }]}
-              >
-                <Input placeholder="Nhập tên người báo cáo" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
               <Form.Item name="status" hidden>
                 <Input />
               </Form.Item>
               <Form.Item label="Trạng thái">
                 <Input disabled value="Chờ xử lý" />
               </Form.Item>
+            </Col>
+
+            <Col span={12}>
+              <Form.Item
+                label="Người báo cáo"
+                name="reporter"
+                rules={[{ required: true, message: "Vui lòng nhập tên!" }]}
+              >
+                <Input disabled placeholder="Nhập tên người báo cáo" />
+              </Form.Item>
+            </Col>
+
+            <Col span={24}>
+              <Alert
+                type="error"
+                message="Lưu ý: Nếu đây không phải là tài khoản của bạn, vui lòng đăng nhập bằng tài khoản của bạn trước khi báo cáo sự cố!"
+                showIcon
+                style={{ marginBottom: 16, marginTop: 8 }}
+              />
             </Col>
 
             <Col span={24}>
