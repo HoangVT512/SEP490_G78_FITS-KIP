@@ -42,6 +42,9 @@ import {
 import dayjs from "dayjs";
 import styles from "../../styles/pages/IncidentManagement.module.css";
 import { incidentService } from "../../services/incidentService";
+import { equipmentService } from "../../services/equipmentService";
+import { lineService } from "../../services/lineService";
+import { stageService } from "../../services/stageService";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -60,13 +63,55 @@ const IncidentManagement = () => {
   const [filterPriority, setFilterPriority] = useState("all");
   const [form] = Form.useForm();
 
+  // State for dropdown data
+  const [equipments, setEquipments] = useState([]);
+  const [lines, setLines] = useState([]);
+  const [stages, setStages] = useState([]);
+  const [selectedEquipment, setSelectedEquipment] = useState(null);
+
   useEffect(() => {
     fetchIncidents();
+    fetchEquipments();
+    fetchLines();
+    fetchStages();
   }, []);
 
   useEffect(() => {
     handleFilter();
   }, [searchText, filterStatus, filterPriority, incidents]);
+
+  const fetchEquipments = async () => {
+    try {
+      const response = await equipmentService.getEquipments();
+      const data = Array.isArray(response) ? response : response?.data || [];
+      setEquipments(data);
+    } catch (error) {
+      console.error("Error fetching equipments:", error);
+      message.error("Không thể tải danh sách thiết bị");
+    }
+  };
+
+  const fetchLines = async () => {
+    try {
+      const response = await lineService.getLines();
+      const data = Array.isArray(response) ? response : response?.data || [];
+      setLines(data);
+    } catch (error) {
+      console.error("Error fetching lines:", error);
+      message.error("Không thể tải danh sách dây chuyền");
+    }
+  };
+
+  const fetchStages = async () => {
+    try {
+      const response = await stageService.getStages();
+      const data = Array.isArray(response) ? response : response?.data || [];
+      setStages(data);
+    } catch (error) {
+      console.error("Error fetching stages:", error);
+      message.error("Không thể tải danh sách công đoạn");
+    }
+  };
 
   const fetchIncidents = async () => {
     setLoading(true);
@@ -110,8 +155,18 @@ const IncidentManagement = () => {
             it.EquipmentName ||
             "",
           equipmentCode: it.equipment?.equipmentCode || it.equipmentCode || "",
-          lineName: it.line?.lineName || it.lineName || it.LineName || "",
-          stageName: it.stage?.stageName || it.stageName || it.StageName || "",
+          lineName:
+            it.equipment?.stage?.line?.lineName ||
+            it.line?.lineName ||
+            it.lineName ||
+            it.LineName ||
+            "",
+          stageName:
+            it.equipment?.stage?.stageName ||
+            it.stage?.stageName ||
+            it.stageName ||
+            it.StageName ||
+            "",
           priority: it.priority || it.Priority || "Trung bình",
           status:
             it.status ||
@@ -847,29 +902,72 @@ const IncidentManagement = () => {
             <Col span={12}>
               <Form.Item
                 label="Thiết bị"
-                name="equipmentName"
+                name="equipmentId"
                 rules={[{ required: true, message: "Vui lòng chọn thiết bị!" }]}
               >
-                <Select placeholder="Chọn thiết bị">
-                  <Option value="Máy dập 01">Máy dập 01</Option>
-                  <Option value="Băng tải 02">Băng tải 02</Option>
-                  <Option value="Máy ép 03">Máy ép 03</Option>
-                  <Option value="Máy hàn 04">Máy hàn 04</Option>
+                <Select
+                  placeholder="Chọn thiết bị"
+                  onChange={(value) => {
+                    const equipment = equipments.find(
+                      (e) => e.equipmentId === value
+                    );
+                    if (equipment) {
+                      setSelectedEquipment(equipment);
+                      form.setFieldsValue({
+                        lineId: equipment.lineId,
+                        stageId: equipment.stageId,
+                      });
+                    }
+                  }}
+                  showSearch
+                  filterOption={(input, option) =>
+                    (option?.children ?? "")
+                      .toLowerCase()
+                      .includes(input.toLowerCase())
+                  }
+                >
+                  {equipments.map((equipment) => (
+                    <Option
+                      key={equipment.equipmentId}
+                      value={equipment.equipmentId}
+                    >
+                      {equipment.equipmentName} ({equipment.equipmentCode})
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 label="Dây chuyền"
-                name="lineName"
+                name="lineId"
                 rules={[
                   { required: true, message: "Vui lòng chọn dây chuyền!" },
                 ]}
               >
-                <Select placeholder="Chọn dây chuyền">
-                  <Option value="Dây chuyền 1">Dây chuyền 1</Option>
-                  <Option value="Dây chuyền 2">Dây chuyền 2</Option>
-                  <Option value="Dây chuyền 3">Dây chuyền 3</Option>
+                <Select placeholder="Chọn dây chuyền" disabled>
+                  {lines.map((line) => (
+                    <Option key={line.lineId} value={line.lineId}>
+                      {line.lineName}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                label="Công đoạn"
+                name="stageId"
+                rules={[
+                  { required: true, message: "Vui lòng chọn công đoạn!" },
+                ]}
+              >
+                <Select placeholder="Chọn công đoạn" disabled>
+                  {stages.map((stage) => (
+                    <Option key={stage.stageId} value={stage.stageId}>
+                      {stage.stageName}
+                    </Option>
+                  ))}
                 </Select>
               </Form.Item>
             </Col>
