@@ -13,12 +13,14 @@ import {
   Col,
   Descriptions,
   Select,
+  Dropdown,
 } from "antd";
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   EyeOutlined,
   SearchOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styles from "../../styles/pages/PurchaseApproval.module.css";
@@ -114,37 +116,10 @@ const PurchaseApproval = () => {
       width: 80,
     },
     {
-      title: "Tổng tiền",
-      dataIndex: "totalAmount",
-      key: "totalAmount",
-      width: 130,
-      render: (amount) =>
-        `${(typeof amount === "number" ? amount : 0).toLocaleString()} đ`,
-    },
-    {
       title: "Người yêu cầu",
       dataIndex: "requestedBy",
       key: "requestedBy",
       width: 150,
-    },
-    {
-      title: "Ưu tiên",
-      dataIndex: "priority",
-      key: "priority",
-      width: 100,
-      render: (priority) => {
-        let color = "default";
-        if (priority === "High") color = "error";
-        else if (priority === "Medium") color = "warning";
-        return <Tag color={color}>{priority}</Tag>;
-      },
-    },
-    {
-      title: "Ngày YC",
-      dataIndex: "requestDate",
-      key: "requestDate",
-      width: 110,
-      render: (date) => dayjs(date).format("DD/MM/YYYY"),
     },
     {
       title: "Trạng thái",
@@ -162,38 +137,51 @@ const PurchaseApproval = () => {
       title: "Thao tác",
       key: "action",
       fixed: "right",
-      width: 200,
-      render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => handleViewDetail(record)}
+      width: 120,
+      render: (_, record) => {
+        // Only show actions if status is "Chờ duyệt"
+        if (record.status !== "Chờ duyệt") {
+          return (
+            <Button
+              type="link"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewDetail(record)}
+              title="Xem chi tiết"
+            />
+          );
+        }
+
+        const menuItems = [
+          {
+            key: "view",
+            label: "Xem chi tiết",
+            icon: <EyeOutlined />,
+            onClick: () => handleViewDetail(record),
+          },
+          {
+            key: "approve",
+            label: "Duyệt",
+            icon: <CheckCircleOutlined />,
+            onClick: () => handleApproveClick(record),
+          },
+          {
+            key: "reject",
+            label: "Từ chối",
+            icon: <CloseCircleOutlined />,
+            onClick: () => handleRejectClick(record),
+          },
+        ];
+
+        return (
+          <Dropdown
+            menu={{ items: menuItems }}
+            placement="bottomRight"
+            trigger={["click"]}
           >
-            Xem
-          </Button>
-          {record.status === "Chờ duyệt" && (
-            <>
-              <Button
-                type="link"
-                style={{ color: "#52c41a" }}
-                icon={<CheckCircleOutlined />}
-                onClick={() => handleApproveClick(record)}
-              >
-                Duyệt
-              </Button>
-              <Button
-                type="link"
-                danger
-                icon={<CloseCircleOutlined />}
-                onClick={() => handleRejectClick(record)}
-              >
-                Từ chối
-              </Button>
-            </>
-          )}
-        </Space>
-      ),
+            <Button type="link" size="small" icon={<EyeOutlined />} />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -360,63 +348,29 @@ const PurchaseApproval = () => {
             <Descriptions.Item label="Số lượng" span={1}>
               {selectedRequest.quantity}
             </Descriptions.Item>
-            <Descriptions.Item label="Đơn giá" span={1}>
-              {selectedRequest?.unitPrice != null
-                ? `${(typeof selectedRequest.unitPrice === "number"
-                    ? selectedRequest.unitPrice
-                    : 0
-                  ).toLocaleString()} đ`
-                : "-"}
-            </Descriptions.Item>
-            <Descriptions.Item label="Tổng tiền" span={2}>
-              <strong style={{ color: "#1890ff", fontSize: "16px" }}>
-                {selectedRequest?.totalAmount != null
-                  ? `${(typeof selectedRequest.totalAmount === "number"
-                      ? selectedRequest.totalAmount
-                      : 0
-                    ).toLocaleString()} đ`
-                  : "0 đ"}
-              </strong>
-            </Descriptions.Item>
-            <Descriptions.Item label="Ưu tiên" span={1}>
-              <Tag
-                color={
-                  selectedRequest.priority === "High"
-                    ? "error"
-                    : selectedRequest.priority === "Medium"
-                    ? "warning"
-                    : "default"
-                }
-              >
-                {selectedRequest.priority}
-              </Tag>
-            </Descriptions.Item>
             <Descriptions.Item label="Người yêu cầu" span={1}>
-              {selectedRequest.requestedBy} ({selectedRequest.requestedByRole})
-            </Descriptions.Item>
-            <Descriptions.Item label="Ngày yêu cầu" span={2}>
-              {dayjs(selectedRequest.requestDate).format("DD/MM/YYYY")}
+              {selectedRequest.requestedBy}
             </Descriptions.Item>
             <Descriptions.Item label="Lý do yêu cầu" span={2}>
-              {selectedRequest.reason}
+              {selectedRequest.reason || "-"}
             </Descriptions.Item>
             {selectedRequest.approvedBy && (
               <>
                 <Descriptions.Item label="Người duyệt" span={1}>
-                  {selectedRequest.approvedBy}
+                  {selectedRequest.approvedByName || selectedRequest.approvedBy}
                 </Descriptions.Item>
                 <Descriptions.Item label="Ngày duyệt" span={1}>
-                  {dayjs(selectedRequest.approvedDate).format("DD/MM/YYYY")}
+                  {dayjs(selectedRequest.approvedAt).format("DD/MM/YYYY HH:mm")}
                 </Descriptions.Item>
               </>
             )}
             {selectedRequest.rejectedBy && (
               <>
                 <Descriptions.Item label="Người từ chối" span={1}>
-                  {selectedRequest.rejectedBy}
+                  {selectedRequest.rejectedByName || selectedRequest.rejectedBy}
                 </Descriptions.Item>
                 <Descriptions.Item label="Ngày từ chối" span={1}>
-                  {dayjs(selectedRequest.rejectedDate).format("DD/MM/YYYY")}
+                  {dayjs(selectedRequest.rejectedAt).format("DD/MM/YYYY HH:mm")}
                 </Descriptions.Item>
               </>
             )}

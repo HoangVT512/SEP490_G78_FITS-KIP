@@ -126,10 +126,10 @@ const PurchaseRequestManagement = () => {
       render: (status) => {
         let displayStatus;
         let color = "warning";
-        if (status === "Approved") {
+        if (status === "Đã duyệt") {
           displayStatus = "Đã duyệt";
           color = "success";
-        } else if (status === "Rejected") {
+        } else if (status === "Từ chối") {
           displayStatus = "Từ chối";
           color = "error";
         } else {
