@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251017035201_InitialCreate")]
+    [Migration("20251017130558_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
