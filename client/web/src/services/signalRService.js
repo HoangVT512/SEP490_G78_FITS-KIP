@@ -11,7 +11,7 @@ class SignalRService {
     try {
       // Tạo connection với URL của NotificationHub
       this.connection = new signalR.HubConnectionBuilder()
-        .withUrl("https://localhost:7003/hubs/notifications", {
+        .withUrl(`${process.env.REACT_APP_API_BASE_URL}/hubs/notifications`, {
           accessTokenFactory: () => token,
           transport: signalR.HttpTransportType.WebSockets,
         })

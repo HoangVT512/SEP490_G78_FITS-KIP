@@ -38,7 +38,7 @@ const NotificationsList = ({ onClose }) => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `https://localhost:7003/api/Notifications?unreadOnly=${unreadOnly}`,
+        `${process.env.REACT_APP_API_BASE_URL}/Notifications?unreadOnly=${unreadOnly}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -65,7 +65,7 @@ const NotificationsList = ({ onClose }) => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `https://localhost:7003/api/Notifications/${notificationId}/read`,
+        `${process.env.REACT_APP_API_BASE_URL}/Notifications/${notificationId}/read`,
         {
           method: "PUT",
           headers: {
@@ -91,7 +91,7 @@ const NotificationsList = ({ onClose }) => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `https://localhost:7003/api/Notifications/read-all`,
+        `${process.env.REACT_APP_API_BASE_URL}/Notifications/read-all`,
         {
           method: "PUT",
           headers: {
@@ -117,7 +117,7 @@ const NotificationsList = ({ onClose }) => {
     try {
       const token = localStorage.getItem("token");
       const response = await fetch(
-        `https://localhost:7003/api/Notifications/${notificationId}`,
+        `${process.env.REACT_APP_API_BASE_URL}/Notifications/${notificationId}`,
         {
           method: "DELETE",
           headers: {

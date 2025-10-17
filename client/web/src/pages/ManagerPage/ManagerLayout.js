@@ -73,7 +73,7 @@ const ManagerLayout = () => {
       try {
         const token = localStorage.getItem("token");
         const response = await fetch(
-          "https://localhost:7003/api/Notifications/unread-count",
+          `${process.env.REACT_APP_API_BASE_URL}/Notifications/unread-count`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
