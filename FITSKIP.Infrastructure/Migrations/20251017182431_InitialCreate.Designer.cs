@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251017142119_InitialCreate")]
+    [Migration("20251017182431_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -151,6 +151,9 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     b.Property<DateTime?>("StartTime")
                         .HasColumnType("datetime");
+
+                    b.Property<string>("Status")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int?>("TypeId")
                         .HasColumnType("int")

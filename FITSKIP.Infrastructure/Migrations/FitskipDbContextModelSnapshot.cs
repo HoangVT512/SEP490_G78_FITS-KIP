@@ -149,6 +149,9 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<DateTime?>("StartTime")
                         .HasColumnType("datetime");
 
+                    b.Property<string>("Status")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int?>("TypeId")
                         .HasColumnType("int")
                         .HasColumnName("TypeID");
