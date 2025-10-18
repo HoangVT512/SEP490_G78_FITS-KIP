@@ -15,6 +15,7 @@ import {
   Col,
   Statistic,
   Dropdown,
+  Alert,
 } from "antd";
 import {
   PlusOutlined,
@@ -46,6 +47,8 @@ const InventoryManagement = () => {
   const [showMinModal, setShowMinModal] = useState(false);
   const [minValue, setMinValue] = useState(5); // Single min quantity value for Apply-to-All
   const [savingMin, setSavingMin] = useState(false);
+
+  const [showLowStockAlert, setShowLowStockAlert] = useState(true);
 
   const stats = {
     total: spareParts.length,
@@ -315,8 +318,126 @@ const InventoryManagement = () => {
     return matchSearch && matchStatus && matchActive;
   });
 
+  // Get list of low stock and out of stock spare parts for alerts
+  const getLowStockAlerts = () => {
+    const lowStockItems = spareParts.filter(
+      (p) => p.isActive && (p.status === "Sắp hết" || p.status === "Low Stock")
+    );
+    const outOfStockItems = spareParts.filter(
+      (p) =>
+        p.isActive && (p.status === "Hết hàng" || p.status === "Out of Stock")
+    );
+    return { lowStockItems, outOfStockItems };
+  };
+
+  const { lowStockItems, outOfStockItems } = getLowStockAlerts();
+
   return (
     <div className={styles.container}>
+      {/* Combined Alert for Low Stock and Out of Stock Items - Modal Style */}
+      {showLowStockAlert &&
+        (lowStockItems.length > 0 || outOfStockItems.length > 0) && (
+          <div
+            style={{
+              position: "fixed",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 1000,
+              width: "90%",
+              maxWidth: 700,
+              boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+              borderRadius: 8,
+              backgroundColor: "#fff",
+              maxHeight: "80vh",
+              overflowY: "auto",
+            }}
+          >
+            <Alert
+              message={
+                outOfStockItems.length > 0
+                  ? `❌ ${outOfStockItems.length} phụ tùng đã hết, ⚠️ ${lowStockItems.length} phụ tùng sắp hết hàng`
+                  : `⚠️ ${lowStockItems.length} phụ tùng sắp hết hàng`
+              }
+              description={
+                <div>
+                  {/* Out of Stock Section */}
+                  {outOfStockItems.length > 0 && (
+                    <div style={{ marginBottom: 16 }}>
+                      <h4
+                        style={{
+                          color: "#ff4d4f",
+                          marginTop: 8,
+                          marginBottom: 8,
+                        }}
+                      >
+                        🔴 Đã hết hàng ({outOfStockItems.length}):
+                      </h4>
+                      <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
+                        {outOfStockItems.map((part) => (
+                          <li key={part.partId}>
+                            <strong>{part.partName}</strong> ({part.partNumber})
+                            - Số lượng: 0
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Low Stock Section */}
+                  {lowStockItems.length > 0 && (
+                    <div>
+                      <h4
+                        style={{
+                          color: "#faad14",
+                          marginTop: 8,
+                          marginBottom: 8,
+                        }}
+                      >
+                        🟡 Sắp hết hàng ({lowStockItems.length}):
+                      </h4>
+                      <ul style={{ marginBottom: 8, paddingLeft: 20 }}>
+                        {lowStockItems.map((part) => (
+                          <li key={part.partId}>
+                            <strong>{part.partName}</strong> ({part.partNumber})
+                            - Còn lại:{" "}
+                            <strong style={{ color: "#faad14" }}>
+                              {part.quantity}
+                            </strong>{" "}
+                            cái
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              }
+              type={outOfStockItems.length > 0 ? "error" : "warning"}
+              closable
+              onClose={() => setShowLowStockAlert(false)}
+              style={{ marginBottom: 0, borderRadius: 8 }}
+              showIcon
+            />
+          </div>
+        )}
+
+      {/* Overlay when alert is shown */}
+      {showLowStockAlert &&
+        (lowStockItems.length > 0 || outOfStockItems.length > 0) && (
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: "rgba(0,0,0,0.45)",
+              zIndex: 999,
+            }}
+            onClick={() => setShowLowStockAlert(false)}
+          />
+        )}
+
       {/* Statistics */}
       <Row gutter={[16, 16]} className={styles.statsRow}>
         <Col xs={24} sm={12} lg={6}>
