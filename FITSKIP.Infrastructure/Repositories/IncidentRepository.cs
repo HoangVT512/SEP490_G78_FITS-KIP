@@ -22,6 +22,7 @@ public class IncidentRepository : IIncidentRepository
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
             .Include(i => i.ReportedByUser)
+            .Include(i => i.Slot)
             .OrderByDescending(i => i.CreatedDate)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -35,6 +36,7 @@ public class IncidentRepository : IIncidentRepository
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
             .Include(i => i.ReportedByUser)
+            .Include(i => i.Slot)
             .FirstOrDefaultAsync(i => i.IncidentId == id, cancellationToken);
     }
 
@@ -64,6 +66,10 @@ public class IncidentRepository : IIncidentRepository
 
         await _context.Entry(incident)
             .Reference(i => i.Type)
+            .LoadAsync(cancellationToken);
+
+        await _context.Entry(incident)
+            .Reference(i => i.Slot)
             .LoadAsync(cancellationToken);
 
         return incident;
@@ -97,6 +103,10 @@ public class IncidentRepository : IIncidentRepository
             .Reference(i => i.Type)
             .LoadAsync(cancellationToken);
 
+        await _context.Entry(incident)
+            .Reference(i => i.Slot)
+            .LoadAsync(cancellationToken);
+
         return incident;
     }
 
@@ -118,6 +128,7 @@ public class IncidentRepository : IIncidentRepository
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
+            .Include(i => i.Slot)
             .Where(i => i.StartTime >= startDate && i.StartTime <= endDate)
             .OrderByDescending(i => i.CreatedDate)
             .AsNoTracking()
@@ -131,6 +142,7 @@ public class IncidentRepository : IIncidentRepository
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
+            .Include(i => i.Slot)
             .Where(i => i.Equipment != null &&
                        i.Equipment.Stage != null &&
                        i.Equipment.Stage.Line != null &&

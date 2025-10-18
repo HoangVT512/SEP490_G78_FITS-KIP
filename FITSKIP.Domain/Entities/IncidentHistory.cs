@@ -29,9 +29,13 @@ public partial class IncidentHistory
 
     public string? ReportedByUserId { get; set; }
 
+    public int? SlotId { get; set; }
+
     public virtual Equipment? Equipment { get; set; }
 
     public virtual StopType? Type { get; set; }
 
     public virtual User? ReportedByUser { get; set; }
+
+    public virtual ShiftSlot? Slot { get; set; }
 }

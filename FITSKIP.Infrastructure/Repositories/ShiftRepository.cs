@@ -27,4 +27,14 @@ public class ShiftRepository : IShiftRepository
         return await _context.Shifts
             .FirstOrDefaultAsync(s => s.ShiftId == id, cancellationToken);
     }
+
+    public async Task<IReadOnlyList<ShiftSlot>> GetAllSlotsAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.ShiftSlots
+            .Include(s => s.Shift)
+            .OrderBy(s => s.Shift.StartTime)
+            .ThenBy(s => s.SlotStartTime)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
 }

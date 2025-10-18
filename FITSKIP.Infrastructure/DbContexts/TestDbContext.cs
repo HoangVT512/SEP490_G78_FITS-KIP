@@ -117,6 +117,7 @@ public class TestDbContext : IdentityDbContext<User>
             entity.Property(e => e.Duration).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.EndTime).HasColumnType("datetime");
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
+            entity.Property(e => e.SlotId).HasColumnName("SlotID");
             entity.Property(e => e.StartTime).HasColumnType("datetime");
             entity.Property(e => e.TypeId).HasColumnName("TypeID");
             entity.Property(e => e.Issue).HasMaxLength(500);

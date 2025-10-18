@@ -139,12 +139,13 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.Duration).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.EndTime).HasColumnType("datetime");
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
+            entity.Property(e => e.SlotId).HasColumnName("SlotID");
             entity.Property(e => e.StartTime).HasColumnType("datetime");
             entity.Property(e => e.TypeId).HasColumnName("TypeID");
             entity.Property(e => e.Issue).HasMaxLength(500);
             entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
 
-            // Equipment and Type relationships - no reverse collections
+            // Equipment, Type, and Slot relationships - no reverse collections
             entity.HasOne(d => d.Equipment).WithMany()
                 .HasForeignKey(d => d.EquipmentId)
                 .HasConstraintName("FK__IncidentH__Equip__7B5B524B");
@@ -152,6 +153,10 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.HasOne(d => d.Type).WithMany(p => p.IncidentHistories)
                 .HasForeignKey(d => d.TypeId)
                 .HasConstraintName("FK__IncidentH__TypeI__7F2BE32F");
+
+            entity.HasOne(d => d.Slot).WithMany()
+                .HasForeignKey(d => d.SlotId)
+                .HasConstraintName("FK__IncidentH__SlotI__8A2B4C5D");
         });
 
         modelBuilder.Entity<Line>(entity =>

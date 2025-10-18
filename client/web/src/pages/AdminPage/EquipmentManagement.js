@@ -1164,13 +1164,27 @@ const EquipmentManagement = ({ showHeader = true }) => {
       <Card>
         <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
           <Col xs={24} sm={12} md={8}>
-            <Search
-              placeholder="Tìm kiếm theo mã, tên, xuất xứ..."
-              allowClear
-              enterButton={<SearchOutlined />}
-              onSearch={(value) => setSearchText(value)}
-              onChange={(e) => setSearchText(e.target.value)}
-            />
+            <Input.Group compact>
+              <Input
+                placeholder="Tìm kiếm theo mã, tên, xuất xứ..."
+                allowClear
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                style={{ width: "calc(100% - 40px)" }}
+              />
+              <Button
+                type="primary"
+                icon={<SearchOutlined />}
+                style={{
+                  backgroundColor: "#334766",
+                  borderColor: "#334766",
+                  width: "40px",
+                }}
+                onClick={() => {
+                  // Optional: You can add search logic here if needed
+                }}
+              />
+            </Input.Group>
           </Col>
           <Col xs={24} sm={6} md={4}></Col>
           <Col xs={24} sm={6} md={12}>

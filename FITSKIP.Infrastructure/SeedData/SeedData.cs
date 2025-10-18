@@ -318,6 +318,14 @@ namespace FITSKIP.Infrastructure.SeedData
                 {
                     new StopType
                     {
+                        TypeName = "Chuẩn bị sản xuất"
+                    },
+                    new StopType
+                    {
+                        TypeName = "Vệ sinh đầu/cuối ca"
+                    },
+                    new StopType
+                    {
                         TypeName = "Dừng ngắn"
                     },
                     new StopType
@@ -327,6 +335,18 @@ namespace FITSKIP.Infrastructure.SeedData
                     new StopType
                     {
                         TypeName = "Phế phẩm"
+                    },
+                    new StopType
+                    {
+                        TypeName = "Chờ vật tư"
+                    },
+                    new StopType
+                    {
+                        TypeName = "Mất điện"
+                    },
+                    new StopType
+                    {
+                        TypeName = "Đổi mã"
                     }
                 };
 
@@ -621,12 +641,50 @@ namespace FITSKIP.Infrastructure.SeedData
             }
         }
 
+        public static async Task SeedShiftSlots(FitskipDbContext context)
+        {
+            if (!await context.ShiftSlots.AnyAsync())
+            {
+                var shiftSlots = new List<ShiftSlot>
+                {
+                    // Ca sáng (ShiftID = 1)
+                    new ShiftSlot { ShiftId = 1, SlotStartTime = new TimeOnly(6, 0), SlotEndTime = new TimeOnly(7, 0), Duration = 60 },
+                    new ShiftSlot { ShiftId = 1, SlotStartTime = new TimeOnly(7, 0), SlotEndTime = new TimeOnly(8, 0), Duration = 60 },
+                    new ShiftSlot { ShiftId = 1, SlotStartTime = new TimeOnly(8, 0), SlotEndTime = new TimeOnly(9, 0), Duration = 50 },
+                    new ShiftSlot { ShiftId = 1, SlotStartTime = new TimeOnly(9, 0), SlotEndTime = new TimeOnly(10, 0), Duration = 60 },
+                    new ShiftSlot { ShiftId = 1, SlotStartTime = new TimeOnly(10, 0), SlotEndTime = new TimeOnly(11, 30), Duration = 60 },
+                    new ShiftSlot { ShiftId = 1, SlotStartTime = new TimeOnly(11, 30), SlotEndTime = new TimeOnly(12, 30), Duration = 50 },
+                    new ShiftSlot { ShiftId = 1, SlotStartTime = new TimeOnly(12, 30), SlotEndTime = new TimeOnly(14, 0), Duration = 90 },
+                    // Ca chiều (ShiftID = 2)
+                    new ShiftSlot { ShiftId = 2, SlotStartTime = new TimeOnly(14, 0), SlotEndTime = new TimeOnly(15, 0), Duration = 60 },
+                    new ShiftSlot { ShiftId = 2, SlotStartTime = new TimeOnly(15, 0), SlotEndTime = new TimeOnly(16, 0), Duration = 60 },
+                    new ShiftSlot { ShiftId = 2, SlotStartTime = new TimeOnly(16, 0), SlotEndTime = new TimeOnly(17, 0), Duration = 50 },
+                    new ShiftSlot { ShiftId = 2, SlotStartTime = new TimeOnly(17, 0), SlotEndTime = new TimeOnly(18, 30), Duration = 60 },
+                    new ShiftSlot { ShiftId = 2, SlotStartTime = new TimeOnly(18, 30), SlotEndTime = new TimeOnly(19, 30), Duration = 60 },
+                    new ShiftSlot { ShiftId = 2, SlotStartTime = new TimeOnly(19, 30), SlotEndTime = new TimeOnly(20, 30), Duration = 50 },
+                    new ShiftSlot { ShiftId = 2, SlotStartTime = new TimeOnly(20, 30), SlotEndTime = new TimeOnly(22, 0), Duration = 90 },
+                    // Ca đêm (ShiftID = 3)
+                    new ShiftSlot { ShiftId = 3, SlotStartTime = new TimeOnly(22, 0), SlotEndTime = new TimeOnly(23, 0), Duration = 60 },
+                    new ShiftSlot { ShiftId = 3, SlotStartTime = new TimeOnly(23, 0), SlotEndTime = new TimeOnly(0, 0), Duration = 60 },
+                    new ShiftSlot { ShiftId = 3, SlotStartTime = new TimeOnly(0, 0), SlotEndTime = new TimeOnly(1, 0), Duration = 50 },
+                    new ShiftSlot { ShiftId = 3, SlotStartTime = new TimeOnly(1, 0), SlotEndTime = new TimeOnly(3, 0), Duration = 75 },
+                    new ShiftSlot { ShiftId = 3, SlotStartTime = new TimeOnly(3, 0), SlotEndTime = new TimeOnly(4, 0), Duration = 60 },
+                    new ShiftSlot { ShiftId = 3, SlotStartTime = new TimeOnly(4, 0), SlotEndTime = new TimeOnly(5, 0), Duration = 50 },
+                    new ShiftSlot { ShiftId = 3, SlotStartTime = new TimeOnly(5, 0), SlotEndTime = new TimeOnly(6, 0), Duration = 60 }
+                };
+
+                await context.ShiftSlots.AddRangeAsync(shiftSlots);
+                await context.SaveChangesAsync();
+            }
+        }
+
         public static async Task SeedIncidentHistories(FitskipDbContext context)
         {
             if (!await context.IncidentHistories.AnyAsync())
             {
                 var equipment = await context.Equipment.ToListAsync();
                 var stopTypes = await context.StopTypes.ToListAsync();
+                var shiftSlots = await context.ShiftSlots.ToListAsync();
 
                 if (!equipment.Any() || !stopTypes.Any())
                     return;
@@ -639,6 +697,7 @@ namespace FITSKIP.Infrastructure.SeedData
                 {
                     var selectedEquipment = equipment[random.Next(equipment.Count)];
                     var selectedStopType = stopTypes[random.Next(stopTypes.Count)];
+                    var selectedSlot = shiftSlots.Any() ? shiftSlots[random.Next(shiftSlots.Count)] : null;
 
                     // Random thời gian trong 7 ngày qua
                     var daysAgo = random.Next(0, 7);
@@ -670,9 +729,10 @@ namespace FITSKIP.Infrastructure.SeedData
                         EndTime = endTime,
                         Duration = finalDuration,
                         TypeId = selectedStopType.TypeId,
-                        Issue = GetRandomIssue(selectedStopType.TypeName, random),
-                        Reason = GetRandomReason(selectedStopType.TypeName, random),
-                        Solution = GetRandomSolution(selectedStopType.TypeName, random),
+                        SlotId = selectedSlot?.SlotId,
+                        Issue = GetRandomIssue(selectedStopType.TypeName ?? "", random),
+                        Reason = GetRandomReason(selectedStopType.TypeName ?? "", random),
+                        Solution = GetRandomSolution(selectedStopType.TypeName ?? "", random),
                         CreatedDate = startTime.AddMinutes(random.Next(1, 15))
                     };
 
@@ -688,6 +748,18 @@ namespace FITSKIP.Infrastructure.SeedData
         {
             var issues = stopTypeName switch
             {
+                "Chuẩn bị sản xuất" => new[]
+                {
+                    "Chuẩn bị nguyên liệu đầu ca",
+                    "Họp đầu ca",
+                },
+                "Vệ sinh đầu/cuối ca" => new[]
+                {
+                    "Vệ sinh máy đầu ca",
+                    "Vệ sinh máy cuối ca",
+                    "Dọn dẹp khu vực sản xuất",
+                    "Kiểm tra vệ sinh"
+                },
                 "dừng ngắn" => new[]
                 {
                     "Máy dừng hoạt động ngắn",
@@ -712,6 +784,19 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Hỏng trong quá trình sản xuất",
                     "Không đạt tiêu chuẩn kỹ thuật"
                 },
+                "Chờ vật tư" => new[]
+                {
+                    "Thiếu nguyên liệu",
+                    "Chờ linh kiện"
+                },
+                "Mất điện" => new[]
+                {
+                    "Mất điện đột ngột",
+                },
+                "Đổi mã" => new[]
+                {
+                    "Đổi mã sản phẩm",
+                },
                 _ => new[] { "Sự cố không xác định", "Cần kiểm tra thêm", "Vấn đề kỹ thuật" }
             };
 
@@ -722,6 +807,16 @@ namespace FITSKIP.Infrastructure.SeedData
         {
             var reasons = stopTypeName switch
             {
+                "Chuẩn bị sản xuất" => new[]
+                {
+                    "",
+                },
+                "Vệ sinh đầu/cuối ca" => new[]
+                {
+                    "Dọn dẹp sau sản xuất",
+                    "Kiểm tra vệ sinh an toàn",
+                    "Chuẩn bị cho ca tiếp theo"
+                },
                 "dừng ngắn" => new[]
                 {
                     "Điều chỉnh thông số máy",
@@ -746,6 +841,18 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Thiếu kiểm soát chất lượng",
                     "Điều kiện môi trường sản xuất"
                 },
+                "Chờ vật tư" => new[]
+                {
+                    "",
+                },
+                "Mất điện" => new[]
+                {
+                    "",
+                },
+                "Đổi mã" => new[]
+                {
+                    "",
+                },
                 _ => new[] { "Chưa xác định nguyên nhân", "Đang điều tra", "Cần phân tích thêm" }
             };
 
@@ -756,6 +863,14 @@ namespace FITSKIP.Infrastructure.SeedData
         {
             var solutions = stopTypeName switch
             {
+                "Chuẩn bị sản xuất" => new[]
+                {
+                    "",
+                },
+                "Vệ sinh đầu/cuối ca" => new[]
+                {
+                    "",
+                },
                 "dừng ngắn" => new[]
                 {
                     "Điều chỉnh lại thông số",
@@ -780,6 +895,18 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Tăng cường kiểm soát chất lượng",
                     "Cải thiện quy trình sản xuất"
                 },
+                "Chờ vật tư" => new[]
+                {
+                    "",
+                },
+                "Mất điện" => new[]
+                {
+                    "",
+                },
+                "Đổi mã" => new[]
+                {
+                    "",
+                },
                 _ => new[] { "Tiếp tục theo dõi", "Báo cáo cấp trên", "Cần hỗ trợ chuyên gia" }
             };
 
@@ -797,6 +924,7 @@ namespace FITSKIP.Infrastructure.SeedData
             await SeedStages(context);
             await SeedEquipment(context);
             await SeedShifts(context);
+            await SeedShiftSlots(context);
             await SeedIncidentHistories(context);
         }
     }

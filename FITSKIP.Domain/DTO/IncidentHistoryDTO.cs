@@ -31,41 +31,63 @@ namespace FITSKIP.Domain.DTO
 
         public int? TypeId { get; set; }
 
-        [Required(ErrorMessage = "Issue is required")]
-        [MaxLength(500, ErrorMessage = "Issue cannot exceed 500 characters")]
-        public string? Issue { get; set; }
+        [MaxLength(500, ErrorMessage = "Vấn đề không vượt quá 500 ký tự")]
+        public string? Issue { get; set; } // Optional - có thể null
 
-        [MaxLength(500, ErrorMessage = "Reason cannot exceed 500 characters")]
-        public string? Reason { get; set; }
+        [MaxLength(500, ErrorMessage = "Lý do không vượt quá 500 ký tự")]
+        public string? Reason { get; set; } // Optional - có thể null
 
-        [MaxLength(500, ErrorMessage = "Solution cannot exceed 500 characters")]
-        public string? Solution { get; set; }
+        [MaxLength(500, ErrorMessage = "Giải pháp không vượt quá 500 ký tự")]
+        public string? Solution { get; set; } // Optional - có thể null
 
         public string? ReportedByUserId { get; set; }
     }
 
+    public class CreateBulkIncidentRequest
+    {
+        [Required(ErrorMessage = "Danh sách sự cố là bắt buộc")]
+        [MinLength(1, ErrorMessage = "Phải có ít nhất 1 sự cố")]
+        public List<CreateIncidentRequest> Incidents { get; set; } = new();
+    }
+
+    public class BulkIncidentResponse
+    {
+        public int TotalRequested { get; set; }
+        public int SuccessCount { get; set; }
+        public int FailureCount { get; set; }
+        public List<IncidentHistoryDTO> SuccessfulIncidents { get; set; } = new();
+        public List<BulkIncidentError> Errors { get; set; } = new();
+    }
+
+    public class BulkIncidentError
+    {
+        public int Index { get; set; }
+        public string ErrorMessage { get; set; } = string.Empty;
+        public CreateIncidentRequest? FailedRequest { get; set; }
+    }
+
     public class UpdateIncidentRequest
     {
-        [Required(ErrorMessage = "Equipment ID is required")]
+        [Required(ErrorMessage = "ID thiết bị là bắt buộc")]
         public int EquipmentId { get; set; }
 
-        [Required(ErrorMessage = "Start time is required")]
+        [Required(ErrorMessage = "Thời gian bắt đầu là bắt buộc")]
         public DateTime StartTime { get; set; }
 
         public DateTime? EndTime { get; set; }
 
         public int? TypeId { get; set; }
 
-        [MaxLength(500, ErrorMessage = "Issue cannot exceed 500 characters")]
+        [MaxLength(500, ErrorMessage = "Vấn đề không vượt quá 500 ký tự")]
         public string? Issue { get; set; }
 
-        [MaxLength(500, ErrorMessage = "Reason cannot exceed 500 characters")]
-        public string? Reason { get; set; }
+        [MaxLength(500, ErrorMessage = "Lý do không vượt quá 500 ký tự")]
+        public string? Reason { get; set; } // Optional - có thể null
 
-        [MaxLength(500, ErrorMessage = "Solution cannot exceed 500 characters")]
-        public string? Solution { get; set; }
+        [MaxLength(500, ErrorMessage = "Giải pháp không vượt quá 500 ký tự")]
+        public string? Solution { get; set; } // Optional - có thể null
 
-        [MaxLength(50, ErrorMessage = "Status cannot exceed 50 characters")]
+        [MaxLength(50, ErrorMessage = "Trạng thái không vượt quá 50 ký tự")]
         public string? Status { get; set; }
 
         public string? ReportedByUserId { get; set; }

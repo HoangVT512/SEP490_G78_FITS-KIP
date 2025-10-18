@@ -143,6 +143,10 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<string>("ReportedByUserId")
                         .HasColumnType("nvarchar(450)");
 
+                    b.Property<int?>("SlotId")
+                        .HasColumnType("int")
+                        .HasColumnName("SlotID");
+
                     b.Property<string>("Solution")
                         .HasColumnType("nvarchar(max)");
 
@@ -162,6 +166,8 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.HasIndex("EquipmentId");
 
                     b.HasIndex("ReportedByUserId");
+
+                    b.HasIndex("SlotId");
 
                     b.HasIndex("TypeId");
 
@@ -833,6 +839,11 @@ namespace FITSKIP.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("ReportedByUserId");
 
+                    b.HasOne("FITSKIP.Domain.Entities.ShiftSlot", "Slot")
+                        .WithMany()
+                        .HasForeignKey("SlotId")
+                        .HasConstraintName("FK__IncidentH__SlotI__8A2B4C5D");
+
                     b.HasOne("FITSKIP.Domain.Entities.StopType", "Type")
                         .WithMany("IncidentHistories")
                         .HasForeignKey("TypeId")
@@ -841,6 +852,8 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("Equipment");
 
                     b.Navigation("ReportedByUser");
+
+                    b.Navigation("Slot");
 
                     b.Navigation("Type");
                 });

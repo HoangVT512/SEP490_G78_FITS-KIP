@@ -148,6 +148,107 @@ public class IncidentsController : ControllerBase
     }
 
     /// <summary>
+    /// Tạo nhiều sự cố cùng lúc (Bulk Create)
+    /// </summary>
+    [HttpPost("bulk")]
+    public async Task<IActionResult> CreateBulkIncidents([FromBody] CreateBulkIncidentRequest request)
+    {
+        try
+        {
+            // Validate request object first
+            if (request == null || request.Incidents == null || request.Incidents.Count == 0)
+            {
+                return BadRequest(new { success = false, message = "Error: Danh sách sự cố không được rỗng" });
+            }
+
+            // Validate ModelState (attributes validation)
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+                return BadRequest(new { success = false, message = $"Error: Validation failed - {string.Join(", ", errors)}" });
+            }
+
+            // Validate each incident
+            for (int i = 0; i < request.Incidents.Count; i++)
+            {
+                var incident = request.Incidents[i];
+                
+                if (incident.EquipmentId <= 0)
+                {
+                    return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Equipment ID phải lớn hơn 0" });
+                }
+
+                if (incident.EndTime.HasValue && incident.StartTime.HasValue && incident.EndTime.Value <= incident.StartTime.Value)
+                {
+                    return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Thời gian kết thúc phải sau thời gian bắt đầu" });
+                }
+
+                if (incident.EndTime.HasValue && incident.EndTime.Value > DateTime.Now)
+                {
+                    return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Thời gian kết thúc không thể trong tương lai" });
+                }
+            }
+
+            // Set ReportedByUserId from authenticated user if not provided
+            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                foreach (var incident in request.Incidents)
+                {
+                    if (string.IsNullOrEmpty(incident.ReportedByUserId))
+                    {
+                        incident.ReportedByUserId = userId;
+                    }
+                }
+            }
+
+            var result = await _incidentService.CreateBulkIncidentsAsync(request);
+            
+            if (result.SuccessCount == 0)
+            {
+                return BadRequest(new 
+                { 
+                    success = false, 
+                    message = "Không thể tạo sự cố nào", 
+                    data = result 
+                });
+            }
+            
+            if (result.FailureCount > 0)
+            {
+                return Ok(new 
+                { 
+                    success = true, 
+                    message = $"Đã tạo thành công {result.SuccessCount}/{result.TotalRequested} sự cố. {result.FailureCount} sự cố thất bại.", 
+                    data = result 
+                });
+            }
+
+            return Ok(new 
+            { 
+                success = true, 
+                message = $"Đã tạo thành công tất cả {result.SuccessCount} sự cố", 
+                data = result 
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { success = false, message = $"{ex.Message}" });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = $"{ex.Message}" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi tạo nhiều sự cố", details = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Cập nhật thông tin sự cố
     /// </summary>
     [HttpPut("{id}")]

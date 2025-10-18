@@ -21,6 +21,14 @@ export const incidentService = {
     return res?.data || res;
   },
 
+  async createBulk(incidents) {
+    const res = await apiRequest("/Incidents/bulk", {
+      method: "POST",
+      body: JSON.stringify({ incidents }),
+    });
+    return res?.data || res;
+  },
+
   async update(id, payload) {
     const res = await apiRequest(`/Incidents/${encodeURIComponent(id)}`, {
       method: "PUT",

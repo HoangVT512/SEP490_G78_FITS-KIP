@@ -43,11 +43,7 @@ public class IncidentService : IIncidentService
             throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId} hoặc thiết bị đã bị vô hiệu hóa");
         }
 
-        // Validate issue is provided
-        if (string.IsNullOrWhiteSpace(request.Issue))
-        {
-            throw new InvalidOperationException("Vấn đề không được để trống");
-        }
+        // Issue can be null or empty - no validation required
 
         // Set StartTime to now if not provided
         var startTime = request.StartTime ?? DateTime.Now;
@@ -77,6 +73,9 @@ public class IncidentService : IIncidentService
             duration = Math.Max(1, (decimal)durationMinutes);
         }
 
+        // Find appropriate slot for the incident
+        var slotId = await FindSlotForIncidentAsync(startTime, request.EndTime, cancellationToken);
+
         var incident = new IncidentHistory
         {
             EquipmentId = request.EquipmentId,
@@ -87,12 +86,135 @@ public class IncidentService : IIncidentService
             Issue = request.Issue?.Trim(),
             Reason = request.Reason?.Trim(),
             Solution = request.Solution?.Trim(),
-            Status = "Chờ xử lý",
+            Status = request.EndTime.HasValue ? "Hoàn thành" : "Chờ xử lý",
             CreatedDate = DateTime.Now,
-            ReportedByUserId = request.ReportedByUserId
+            ReportedByUserId = request.ReportedByUserId,
+            SlotId = slotId
         };
 
         return await _incidentRepository.CreateAsync(incident, cancellationToken);
+    }
+
+    public async Task<BulkIncidentResponse> CreateBulkIncidentsAsync(CreateBulkIncidentRequest request, CancellationToken cancellationToken = default)
+    {
+        var response = new BulkIncidentResponse
+        {
+            TotalRequested = request.Incidents.Count
+        };
+
+        for (int i = 0; i < request.Incidents.Count; i++)
+        {
+            var incidentRequest = request.Incidents[i];
+            try
+            {
+                // Validate equipment exists and is active
+                var equipment = await _equipmentRepository.GetByIdAsync(incidentRequest.EquipmentId, cancellationToken);
+                if (equipment == null || !equipment.IsActive)
+                {
+                    response.FailureCount++;
+                    response.Errors.Add(new BulkIncidentError
+                    {
+                        Index = i + 1,
+                        ErrorMessage = $"Không tìm thấy thiết bị với ID: {incidentRequest.EquipmentId} hoặc thiết bị đã bị vô hiệu hóa",
+                        FailedRequest = incidentRequest
+                    });
+                    continue;
+                }
+
+                // Set StartTime to now if not provided
+                var startTime = incidentRequest.StartTime ?? DateTime.Now;
+
+                // Validate end time if provided
+                if (incidentRequest.EndTime.HasValue)
+                {
+                    if (incidentRequest.EndTime.Value <= startTime)
+                    {
+                        response.FailureCount++;
+                        response.Errors.Add(new BulkIncidentError
+                        {
+                            Index = i + 1,
+                            ErrorMessage = "Thời gian kết thúc phải sau thời gian bắt đầu",
+                            FailedRequest = incidentRequest
+                        });
+                        continue;
+                    }
+
+                    if (incidentRequest.EndTime.Value > DateTime.Now)
+                    {
+                        response.FailureCount++;
+                        response.Errors.Add(new BulkIncidentError
+                        {
+                            Index = i + 1,
+                            ErrorMessage = "Thời gian kết thúc không thể trong tương lai",
+                            FailedRequest = incidentRequest
+                        });
+                        continue;
+                    }
+                }
+
+                // Calculate duration if end time is provided
+                decimal? duration = null;
+                if (incidentRequest.EndTime.HasValue)
+                {
+                    var timeSpan = incidentRequest.EndTime.Value - startTime;
+                    var durationMinutes = timeSpan.TotalMinutes;
+                    duration = Math.Max(1, (decimal)durationMinutes);
+                }
+
+                // Find appropriate slot for the incident
+                var slotId = await FindSlotForIncidentAsync(startTime, incidentRequest.EndTime, cancellationToken);
+
+                var incident = new IncidentHistory
+                {
+                    EquipmentId = incidentRequest.EquipmentId,
+                    StartTime = startTime,
+                    EndTime = incidentRequest.EndTime,
+                    Duration = duration,
+                    TypeId = incidentRequest.TypeId,
+                    Issue = incidentRequest.Issue?.Trim(),
+                    Reason = incidentRequest.Reason?.Trim(),
+                    Solution = incidentRequest.Solution?.Trim(),
+                    Status = incidentRequest.EndTime.HasValue ? "Hoàn thành" : "Chờ xử lý",
+                    CreatedDate = DateTime.Now,
+                    ReportedByUserId = incidentRequest.ReportedByUserId,
+                    SlotId = slotId
+                };
+
+                var createdIncident = await _incidentRepository.CreateAsync(incident, cancellationToken);
+                response.SuccessCount++;
+                
+                // Map to DTO for response
+                response.SuccessfulIncidents.Add(new IncidentHistoryDTO
+                {
+                    IncidentId = createdIncident.IncidentId,
+                    EquipmentId = createdIncident.EquipmentId ?? 0,
+                    EquipmentName = createdIncident.Equipment?.EquipmentName,
+                    EquipmentCode = createdIncident.Equipment?.EquipmentCode,
+                    LineName = createdIncident.Equipment?.Stage?.Line?.LineName,
+                    StartTime = createdIncident.StartTime,
+                    EndTime = createdIncident.EndTime,
+                    Duration = createdIncident.Duration,
+                    TypeId = createdIncident.TypeId,
+                    TypeName = createdIncident.Type?.TypeName,
+                    Reason = createdIncident.Reason,
+                    Solution = createdIncident.Solution,
+                    Issue = createdIncident.Issue,
+                    CreatedDate = createdIncident.CreatedDate
+                });
+            }
+            catch (Exception ex)
+            {
+                response.FailureCount++;
+                response.Errors.Add(new BulkIncidentError
+                {
+                    Index = i + 1,
+                    ErrorMessage = ex.Message,
+                    FailedRequest = incidentRequest
+                });
+            }
+        }
+
+        return response;
     }
 
     public async Task<IncidentHistory?> UpdateIncidentAsync(int id, UpdateIncidentRequest request, CancellationToken cancellationToken = default)
@@ -141,10 +263,14 @@ public class IncidentService : IIncidentService
             duration = Math.Max(1, (decimal)durationMinutes);
         }
 
+        // Find appropriate slot for the incident
+        var slotId = await FindSlotForIncidentAsync(request.StartTime, request.EndTime, cancellationToken);
+
         existingIncident.EquipmentId = request.EquipmentId;
         existingIncident.StartTime = request.StartTime;
         existingIncident.EndTime = request.EndTime;
         existingIncident.Duration = duration;
+        existingIncident.SlotId = slotId;
 
         // Update TypeId only if provided
         if (request.TypeId.HasValue && request.TypeId > 0)
@@ -159,8 +285,8 @@ public class IncidentService : IIncidentService
         }
 
         existingIncident.Issue = request.Issue?.Trim();
-        existingIncident.Reason = request.Reason?.Trim();
-        existingIncident.Solution = request.Solution?.Trim();
+        existingIncident.Reason = request.Reason?.Trim(); // Có thể null
+        existingIncident.Solution = request.Solution?.Trim(); // Có thể null
 
         // Update status if provided
         if (!string.IsNullOrEmpty(request.Status))
@@ -237,7 +363,7 @@ public class IncidentService : IIncidentService
         }
 
         // Calculate statistics
-        var totalDowntime = incidents.Where(i => i.Duration.HasValue).Sum(i => i.Duration.Value);
+        var totalDowntime = incidents.Where(i => i.Duration.HasValue).Sum(i => i.Duration!.Value);
         var totalIncidents = incidents.Count;
 
         // Group by line
@@ -252,7 +378,7 @@ public class IncidentService : IIncidentService
             {
                 LineId = g.Key.LineId,
                 LineName = g.Key.LineName,
-                TotalDowntime = g.Where(i => i.Duration.HasValue).Sum(i => i.Duration.Value),
+                TotalDowntime = g.Where(i => i.Duration.HasValue).Sum(i => i.Duration!.Value),
                 IncidentCount = g.Count()
             })
             .ToList();
@@ -270,7 +396,7 @@ public class IncidentService : IIncidentService
                 TypeId = g.Key.TypeId,
                 TypeName = g.Key.TypeName,
                 IncidentCount = g.Count(),
-                TotalDowntime = g.Where(i => i.Duration.HasValue).Sum(i => i.Duration.Value)
+                TotalDowntime = g.Where(i => i.Duration.HasValue).Sum(i => i.Duration!.Value)
             })
             .ToList();
 
@@ -289,7 +415,7 @@ public class IncidentService : IIncidentService
             {
                 ShiftId = shift.ShiftId,
                 ShiftName = shift.ShiftName,
-                TotalDowntime = shiftIncidents.Where(i => i.Duration.HasValue).Sum(i => i.Duration.Value),
+                TotalDowntime = shiftIncidents.Where(i => i.Duration.HasValue).Sum(i => i.Duration!.Value),
                 IncidentCount = shiftIncidents.Count
             });
         }
@@ -331,6 +457,44 @@ public class IncidentService : IIncidentService
         {
             // Night shift crossing midnight (e.g., 22:00 - 06:00)
             return timeOnly >= shiftStart || timeOnly < shiftEnd;
+        }
+    }
+
+    private async Task<int?> FindSlotForIncidentAsync(DateTime startTime, DateTime? endTime, CancellationToken cancellationToken = default)
+    {
+        var slots = await _shiftRepository.GetAllSlotsAsync(cancellationToken);
+        var startTimeOfDay = TimeOnly.FromDateTime(startTime);
+
+        // If no end time, find slot that contains the start time
+        if (!endTime.HasValue)
+        {
+            var slotForStartTime = slots.FirstOrDefault(slot =>
+                IsTimeInSlot(startTimeOfDay, slot.SlotStartTime, slot.SlotEndTime));
+
+            return slotForStartTime?.SlotId;
+        }
+
+        // If both start and end time exist, find slot that contains the entire incident period
+        var endTimeOfDay = TimeOnly.FromDateTime(endTime.Value);
+
+        var slotForIncident = slots.FirstOrDefault(slot =>
+            slot.SlotStartTime <= startTimeOfDay &&
+            endTimeOfDay <= slot.SlotEndTime);
+
+        return slotForIncident?.SlotId;
+    }
+
+    private static bool IsTimeInSlot(TimeOnly time, TimeOnly slotStart, TimeOnly slotEnd)
+    {
+        if (slotStart <= slotEnd)
+        {
+            // Normal slot (e.g., 06:00 - 07:00)
+            return time >= slotStart && time < slotEnd;
+        }
+        else
+        {
+            // Slot crossing midnight (e.g., 22:00 - 01:00)
+            return time >= slotStart || time < slotEnd;
         }
     }
 }

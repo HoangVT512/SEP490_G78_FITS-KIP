@@ -374,7 +374,8 @@ namespace FITSKIP.Infrastructure.Migrations
                     Issue = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
-                    ReportedByUserId = table.Column<string>(type: "nvarchar(450)", nullable: true)
+                    ReportedByUserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
+                    SlotID = table.Column<int>(type: "int", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -389,6 +390,11 @@ namespace FITSKIP.Infrastructure.Migrations
                         column: x => x.EquipmentID,
                         principalTable: "Equipment",
                         principalColumn: "EquipmentID");
+                    table.ForeignKey(
+                        name: "FK__IncidentH__SlotI__8A2B4C5D",
+                        column: x => x.SlotID,
+                        principalTable: "ShiftSlots",
+                        principalColumn: "SlotID");
                     table.ForeignKey(
                         name: "FK__IncidentH__TypeI__7F2BE32F",
                         column: x => x.TypeID,
@@ -534,6 +540,11 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "IX_IncidentHistory_ReportedByUserId",
                 table: "IncidentHistory",
                 column: "ReportedByUserId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_IncidentHistory_SlotID",
+                table: "IncidentHistory",
+                column: "SlotID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_IncidentHistory_TypeID",
