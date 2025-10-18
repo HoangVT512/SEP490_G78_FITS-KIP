@@ -73,6 +73,18 @@ public class DepartmentService : IDepartmentService
         return updated == null ? null : MapToDto(updated);
     }
 
+    public async Task<DepartmentDTO?> ToggleStatusAsync(int id, CancellationToken cancellationToken = default)
+    {
+        var entity = await repository.GetByIdAsync(id, cancellationToken);
+        if (entity == null) return null;
+
+        // Toggle IsActive status
+        entity.IsActive = !entity.IsActive;
+        
+        var updated = await repository.UpdateAsync(entity, cancellationToken);
+        return updated == null ? null : MapToDto(updated);
+    }
+
     public Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
     {
         return repository.DeleteAsync(id, cancellationToken);

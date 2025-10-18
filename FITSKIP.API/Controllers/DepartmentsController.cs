@@ -107,6 +107,35 @@ namespace FITSKIP.API.Controllers
             return null;
         }
 
+        [HttpPatch("{id:int}/toggle-status")]
+        public async Task<ActionResult<DepartmentDTO>> ToggleStatus(int id, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var department = await departmentService.GetByIdAsync(id, cancellationToken);
+                if (department == null)
+                {
+                    return NotFound(new { success = false, message = "Khong tìm thấy phòng ban ID" + id });
+                }
+
+                var updatedDepartment = await departmentService.ToggleStatusAsync(id, cancellationToken);
+                if (updatedDepartment == null)
+                {
+                    return BadRequest(new { success = false, message = "Không thể thay đổi trạng thái phòng ban ID" + id });
+                }
+
+                return Ok(new { 
+                    success = true, 
+                    message = $"Đã thay đổi trạng thái phòng ban ID" + id, 
+                    data = updatedDepartment 
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
+
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
         {
