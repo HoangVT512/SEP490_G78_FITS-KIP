@@ -330,8 +330,7 @@ const IncidentManagement = () => {
     const newId = incidentForms.length + 1;
     setIncidentForms([...incidentForms, { id: newId, status: "Chờ xử lý" }]);
     message.info({
-      content:
-        "Một bản ghi sự cố khác đã được thêm bên dưới.",
+      content: "Một bản ghi sự cố khác đã được thêm bên dưới.",
       duration: 3,
     });
 
