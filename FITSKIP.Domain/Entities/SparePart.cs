@@ -13,9 +13,13 @@ public partial class SparePart
 
     public int Quantity { get; set; }
 
+    public int MinQuantity { get; set; } = 5;
+
     public string? Location { get; set; }
 
     public string? Status { get; set; }
+
+    public bool IsActive { get; set; } = true;
 
     public virtual ICollection<PurchaseRequest> PurchaseRequests { get; set; } = new List<PurchaseRequest>();
 

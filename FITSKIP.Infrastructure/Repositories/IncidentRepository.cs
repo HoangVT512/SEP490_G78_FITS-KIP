@@ -21,6 +21,7 @@ public class IncidentRepository : IIncidentRepository
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
+            .Include(i => i.ReportedByUser)
             .OrderByDescending(i => i.CreatedDate)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -33,6 +34,7 @@ public class IncidentRepository : IIncidentRepository
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
+            .Include(i => i.ReportedByUser)
             .FirstOrDefaultAsync(i => i.IncidentId == id, cancellationToken);
     }
 
@@ -45,13 +47,13 @@ public class IncidentRepository : IIncidentRepository
         await _context.Entry(incident)
             .Reference(i => i.Equipment)
             .LoadAsync(cancellationToken);
-        
+
         if (incident.Equipment != null)
         {
             await _context.Entry(incident.Equipment)
                 .Reference(e => e.Stage)
                 .LoadAsync(cancellationToken);
-            
+
             if (incident.Equipment.Stage != null)
             {
                 await _context.Entry(incident.Equipment.Stage)
@@ -76,13 +78,13 @@ public class IncidentRepository : IIncidentRepository
         await _context.Entry(incident)
             .Reference(i => i.Equipment)
             .LoadAsync(cancellationToken);
-        
+
         if (incident.Equipment != null)
         {
             await _context.Entry(incident.Equipment)
                 .Reference(e => e.Stage)
                 .LoadAsync(cancellationToken);
-            
+
             if (incident.Equipment.Stage != null)
             {
                 await _context.Entry(incident.Equipment.Stage)
@@ -129,13 +131,21 @@ public class IncidentRepository : IIncidentRepository
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
-            .Where(i => i.Equipment != null && 
-                       i.Equipment.Stage != null && 
-                       i.Equipment.Stage.Line != null && 
+            .Where(i => i.Equipment != null &&
+                       i.Equipment.Stage != null &&
+                       i.Equipment.Stage.Line != null &&
                        i.Equipment.Stage.Line.LineId == lineId &&
-                       i.StartTime >= startDate && 
+                       i.StartTime >= startDate &&
                        i.StartTime <= endDate)
             .OrderByDescending(i => i.CreatedDate)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<dynamic>> GetStopTypesAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.StopTypes
+            .Select(s => new { typeId = s.TypeId, typeName = s.TypeName } as dynamic)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }

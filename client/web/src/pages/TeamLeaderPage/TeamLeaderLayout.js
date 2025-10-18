@@ -171,18 +171,18 @@ const TeamLeaderLayout = () => {
       label: "Thông tin cá nhân",
       onClick: () => navigate("/profile"),
     },
-    {
-      key: "edit-profile",
-      icon: <EditOutlined />,
-      label: "Chỉnh sửa thông tin",
-      onClick: () => navigate("/profile/edit"),
-    },
-    {
-      key: "change-password",
-      icon: <SafetyOutlined />,
-      label: "Đổi mật khẩu",
-      onClick: () => navigate("/profile/change-password"),
-    },
+    // {
+    //   key: "edit-profile",
+    //   icon: <EditOutlined />,
+    //   label: "Chỉnh sửa thông tin",
+    //   onClick: () => navigate("/profile/edit"),
+    // },
+    // {
+    //   key: "change-password",
+    //   icon: <SafetyOutlined />,
+    //   label: "Đổi mật khẩu",
+    //   onClick: () => navigate("/profile/change-password"),
+    // },
     {
       type: "divider",
     },

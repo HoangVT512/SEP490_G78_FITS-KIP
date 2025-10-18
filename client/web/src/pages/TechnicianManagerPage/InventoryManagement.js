@@ -39,9 +39,13 @@ const InventoryManagement = () => {
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [filterActive, setFilterActive] = useState("active"); // Filter by IsActive status
 
   // Spare parts loaded from backend
   const [spareParts, setSpareParts] = useState([]);
+  const [showMinModal, setShowMinModal] = useState(false);
+  const [minValue, setMinValue] = useState(5); // Single min quantity value for Apply-to-All
+  const [savingMin, setSavingMin] = useState(false);
 
   const stats = {
     total: spareParts.length,
@@ -135,6 +139,24 @@ const InventoryManagement = () => {
       },
     },
     {
+      title: "Số lượng tối thiểu",
+      dataIndex: "minQuantity",
+      key: "minQuantity",
+      width: 140,
+      render: (min) => min ?? 0,
+    },
+    {
+      title: "Trạng thái hoạt động",
+      dataIndex: "isActive",
+      key: "isActive",
+      width: 130,
+      render: (isActive) => (
+        <Tag color={isActive ? "green" : "red"}>
+          {isActive ? "Đang sử dụng" : "Đã xóa"}
+        </Tag>
+      ),
+    },
+    {
       title: "Thao tác",
       key: "action",
       fixed: "right",
@@ -150,8 +172,8 @@ const InventoryManagement = () => {
           {
             key: "delete",
             icon: <DeleteOutlined />,
-            label: "Xóa",
-            danger: true,
+            label: record.isActive ? "Xóa" : "Khôi phục",
+            danger: record.isActive,
             onClick: () => handleDelete(record),
           },
         ];
@@ -182,23 +204,34 @@ const InventoryManagement = () => {
   };
 
   const handleDelete = (record) => {
+    const isDeleting = record.isActive;
+    const title = isDeleting ? "Xác nhận xóa" : "Xác nhận khôi phục";
+    const content = isDeleting
+      ? `Bạn có chắc chắn muốn xóa phụ tùng "${record.partName}"?`
+      : `Bạn có chắc chắn muốn khôi phục phụ tùng "${record.partName}"?`;
+    const okText = isDeleting ? "Xóa" : "Khôi phục";
+
     Modal.confirm({
-      title: "Xác nhận xóa",
-      content: `Bạn có chắc chắn muốn xóa phụ tùng "${record.partName}"?`,
-      okText: "Xóa",
+      title,
+      content,
+      okText,
       cancelText: "Hủy",
-      okButtonProps: { danger: true },
+      okButtonProps: { danger: isDeleting },
       onOk: () => {
-        // Call backend delete
+        // Call backend delete (soft delete - set IsActive = false)
         (async () => {
           try {
             setLoading(true);
             await sparePartService.delete(record.partId);
-            message.success("Xóa phụ tùng thành công!");
+            message.success(
+              isDeleting
+                ? "Xóa phụ tùng thành công!"
+                : "Khôi phục phụ tùng thành công!"
+            );
             await loadParts();
           } catch (error) {
             console.error("Delete error", error);
-            message.error(error.message || "Không thể xóa phụ tùng");
+            message.error(error.message || "Không thể thực hiện thao tác");
           } finally {
             setLoading(false);
           }
@@ -215,6 +248,7 @@ const InventoryManagement = () => {
         partNumber: values.partNumber,
         partName: values.partName,
         quantity: values.quantity || 0,
+        minQuantity: values.minQuantity ?? 5,
         location: values.location || "",
       };
 
@@ -237,6 +271,8 @@ const InventoryManagement = () => {
     }
   };
 
+  // Update minQuantity quickly from table inline edit
+
   // Load parts from backend
   const loadParts = async () => {
     setLoading(true);
@@ -252,6 +288,7 @@ const InventoryManagement = () => {
         location: p.location || p.Location || "",
         unitPrice: p.unitPrice || p.UnitPrice || null,
         status: p.status || p.Status || null,
+        isActive: p.isActive !== undefined ? p.isActive : true,
       }));
       setSpareParts(normalized);
     } catch (error) {
@@ -271,7 +308,11 @@ const InventoryManagement = () => {
       part.partNumber.toLowerCase().includes(searchText.toLowerCase()) ||
       part.partName.toLowerCase().includes(searchText.toLowerCase());
     const matchStatus = filterStatus === "all" || part.status === filterStatus;
-    return matchSearch && matchStatus;
+    const matchActive =
+      filterActive === "all" ||
+      (filterActive === "active" && part.isActive) ||
+      (filterActive === "inactive" && !part.isActive);
+    return matchSearch && matchStatus && matchActive;
   });
 
   return (
@@ -326,9 +367,20 @@ const InventoryManagement = () => {
         variant="borderless"
         className={styles.tableCard}
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
-            Thêm phụ tùng
-          </Button>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Button
+              type="default"
+              onClick={() => {
+                setMinValue(5);
+                setShowMinModal(true);
+              }}
+            >
+              Điều chỉnh SL tối thiểu
+            </Button>
+            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+              Thêm phụ tùng
+            </Button>
+          </div>
         }
       >
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
@@ -352,6 +404,18 @@ const InventoryManagement = () => {
                 <Option value="Đủ hàng">Đủ hàng</Option>
                 <Option value="Sắp hết">Sắp hết</Option>
                 <Option value="Hết hàng">Hết hàng</Option>
+              </Select>
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <Select
+                style={{ width: "100%" }}
+                placeholder="Lọc theo trạng thái hoạt động"
+                value={filterActive}
+                onChange={setFilterActive}
+              >
+                <Option value="all">Tất cả</Option>
+                <Option value="active">Đang sử dụng</Option>
+                <Option value="inactive">Đã xóa</Option>
               </Select>
             </Col>
           </Row>
@@ -434,6 +498,34 @@ const InventoryManagement = () => {
                     max: 100,
                     message: "Tên phụ tùng không được vượt quá 100 ký tự",
                   },
+                  {
+                    validator: async (_, value) => {
+                      if (!value) return;
+                      try {
+                        // Check if partName already exists (only when adding new or changing)
+                        const existingParts = spareParts.filter(
+                          (p) =>
+                            p.partName.toLowerCase() === value.toLowerCase()
+                        );
+                        if (editingRecord) {
+                          // When editing, exclude current record
+                          const conflicts = existingParts.filter(
+                            (p) => p.partId !== editingRecord.partId
+                          );
+                          if (conflicts.length > 0) {
+                            throw new Error("Tên phụ tùng đã tồn tại");
+                          }
+                        } else {
+                          // When adding new
+                          if (existingParts.length > 0) {
+                            throw new Error("Tên phụ tùng đã tồn tại");
+                          }
+                        }
+                      } catch (error) {
+                        throw new Error(error.message);
+                      }
+                    },
+                  },
                 ]}
               >
                 <Input placeholder="VD: Motor điện 5HP" />
@@ -469,6 +561,19 @@ const InventoryManagement = () => {
             </Col>
           </Row>
 
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="minQuantity"
+                label="Số lượng tối thiểu"
+                rules={[{ type: "number", min: 0, message: "Phải >= 0" }]}
+                initialValue={editingRecord ? undefined : 5}
+              >
+                <InputNumber min={0} style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
             <Space style={{ width: "100%", justifyContent: "flex-end" }}>
               <Button
@@ -481,6 +586,67 @@ const InventoryManagement = () => {
               </Button>
               <Button type="primary" htmlType="submit" loading={loading}>
                 {editingRecord ? "Cập nhật" : "Thêm mới"}
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Min quantity adjustment modal */}
+      <Modal
+        title="Điều chỉnh số lượng tối thiểu"
+        open={showMinModal}
+        onCancel={() => setShowMinModal(false)}
+        footer={null}
+        width={500}
+      >
+        <Form layout="vertical">
+          <Form.Item label="Áp dụng số lượng tối thiểu cho tất cả phụ tùng">
+            <InputNumber
+              min={0}
+              value={minValue}
+              onChange={(val) => setMinValue(val || 5)}
+              style={{ width: "100%" }}
+              placeholder="Nhập số lượng tối thiểu"
+            />
+          </Form.Item>
+          <Form.Item style={{ marginBottom: 0 }}>
+            <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+              <Button onClick={() => setShowMinModal(false)}>Hủy</Button>
+              <Button
+                type="primary"
+                loading={savingMin}
+                onClick={async () => {
+                  try {
+                    setSavingMin(true);
+                    // Apply minValue to all active spare parts only
+                    const activeParts = spareParts.filter(
+                      (part) => part.isActive
+                    );
+                    for (const part of activeParts) {
+                      // Send full payload with all required fields
+                      await sparePartService.update(part.partId, {
+                        partNumber: part.partNumber,
+                        partName: part.partName,
+                        quantity: part.quantity,
+                        location: part.location || "",
+                        minQuantity: minValue,
+                      });
+                    }
+                    message.success(
+                      `Áp dụng số lượng tối thiểu ${minValue} cho ${activeParts.length} phụ tùng đang sử dụng thành công`
+                    );
+                    setShowMinModal(false);
+                    await loadParts();
+                  } catch (err) {
+                    console.error(err);
+                    message.error("Không thể áp dụng số lượng tối thiểu");
+                  } finally {
+                    setSavingMin(false);
+                  }
+                }}
+              >
+                Áp dụng cho tất cả
               </Button>
             </Space>
           </Form.Item>

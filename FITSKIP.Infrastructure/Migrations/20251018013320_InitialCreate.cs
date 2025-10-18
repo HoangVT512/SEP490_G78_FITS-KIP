@@ -49,8 +49,10 @@ namespace FITSKIP.Infrastructure.Migrations
                     PartNumber = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     PartName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
+                    MinQuantity = table.Column<int>(type: "int", nullable: false),
                     Location = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true, defaultValue: "Available")
+                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true, defaultValue: "Available"),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -370,6 +372,7 @@ namespace FITSKIP.Infrastructure.Migrations
                     Reason = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Solution = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Issue = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
                     ReportedByUserId = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },

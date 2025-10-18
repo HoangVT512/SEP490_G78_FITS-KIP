@@ -74,8 +74,8 @@ const ForgotPassword = () => {
         message.success("Mã OTP đã được gửi đến email của bạn!");
       } else {
         // Chuẩn hóa số điện thoại về định dạng +84xxxxxxxxx
-        const normalizedPhone = values.phoneNumber.startsWith('0')
-          ? '+84' + values.phoneNumber.substring(1)
+        const normalizedPhone = values.phoneNumber.startsWith("0")
+          ? "+84" + values.phoneNumber.substring(1)
           : values.phoneNumber;
 
         await authService.sendForgotPasswordSmsOtp(normalizedPhone);
@@ -235,13 +235,22 @@ const ForgotPassword = () => {
 
   // Handle back button
   const handleBack = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+    if (currentStep === 2) {
+      // From step 3 (reset password), go back to step 1 (choose method)
+      setCurrentStep(0);
+      form.resetFields();
+      setOtpDigits(["", "", "", "", "", ""]); // Reset OTP digits
+      setOtpTimer(300); // Reset timer
+      setCanResendOtp(false);
+    } else if (currentStep === 1) {
+      // From step 2 (verify OTP), go back to step 1 (choose method)
+      setCurrentStep(0);
       form.resetFields();
       setOtpDigits(["", "", "", "", "", ""]); // Reset OTP digits
       setOtpTimer(300); // Reset timer
       setCanResendOtp(false);
     } else {
+      // From step 1 (choose method), go to login
       navigate("/login");
     }
   };
@@ -335,7 +344,8 @@ const ForgotPassword = () => {
                   { required: true, message: "Vui lòng nhập số điện thoại!" },
                   {
                     pattern: /^(0[0-9]{9}|\+84[0-9]{9})$/,
-                    message: "Số điện thoại phải có định dạng: 0xxxxxxxxx hoặc +84xxxxxxxxx!",
+                    message:
+                      "Số điện thoại phải có định dạng: 0xxxxxxxxx hoặc +84xxxxxxxxx!",
                   },
                 ]}
                 className={styles.forgotPasswordInputItem}
@@ -689,6 +699,8 @@ const ForgotPassword = () => {
               >
                 {currentStep === 0
                   ? "Quay lại đăng nhập"
+                  : currentStep === 2
+                  ? "Hủy"
                   : "Quay lại bước trước"}
               </Button>
             </div>

@@ -632,4 +632,37 @@ public class UsersController : ControllerBase
             return StatusCode(500, $"Internal server error: {ex.Message}");
         }
     }
+
+    // GET: https://localhost:7003/api/Users/active-team-leads/{lineId}
+    [HttpGet]
+    [Route("active-team-leads/{lineId}")]
+    public async Task<IActionResult> GetActiveTeamLeadsByLine(int lineId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var teamLeads = await userService.GetActiveTeamLeadsByLineAsync(lineId, cancellationToken);
+
+            var teamLeadDTOs = teamLeads.Select(teamLead => new
+            {
+                Id = teamLead.Id,
+                UserId = teamLead.Id,
+                UserName = teamLead.UserName,
+                Email = teamLead.Email,
+                PhoneNumber = teamLead.PhoneNumber,
+                FullName = teamLead.FullName,
+                EmployeeCode = teamLead.EmployeeCode,
+                DepartmentId = teamLead.DepartmentId,
+                DepartmentName = teamLead.Department?.DepartmentName,
+                IsActive = teamLead.IsActive,
+                RoleId = teamLead.RoleId,
+                RoleName = teamLead.Role?.Name
+            }).ToList();
+
+            return Ok(teamLeadDTOs);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"Lỗi: {ex.Message}");
+        }
+    }
 }

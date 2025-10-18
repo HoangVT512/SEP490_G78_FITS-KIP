@@ -119,6 +119,11 @@ namespace FITSKIP.Application.Services
             await _notificationHubService.SendToAllAsync(notificationData);
         }
 
+        public async Task DeleteAllReadNotificationsAsync(string userId)
+        {
+            await _notificationRepository.DeleteAllReadByUserIdAsync(userId);
+        }
+
         private NotificationDTO MapToDTO(Notification notification)
         {
             return new NotificationDTO

@@ -40,17 +40,25 @@ import {
   DownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import * as utcPlugin from "dayjs/plugin/utc";
 import styles from "../../styles/pages/IncidentManagement.module.css";
+
+// Extend dayjs with UTC plugin
+dayjs.extend(utcPlugin.default || utcPlugin);
 import { incidentService } from "../../services/incidentService";
 import { equipmentService } from "../../services/equipmentService";
 import { lineService } from "../../services/lineService";
 import { stageService } from "../../services/stageService";
+import { stopTypeService } from "../../services/stopTypeService";
+import { userService } from "../../services/userService";
+import { useAuth } from "../../contexts/AuthContext";
 
 const { TextArea } = Input;
 const { Option } = Select;
 const { RangePicker } = DatePicker;
 
 const IncidentManagement = () => {
+  const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(false);
   const [incidents, setIncidents] = useState([]);
   const [filteredIncidents, setFilteredIncidents] = useState([]);
@@ -67,18 +75,28 @@ const IncidentManagement = () => {
   const [equipments, setEquipments] = useState([]);
   const [lines, setLines] = useState([]);
   const [stages, setStages] = useState([]);
+  const [stopTypes, setStopTypes] = useState([]);
   const [selectedEquipment, setSelectedEquipment] = useState(null);
+  const [currentReporter, setCurrentReporter] = useState(null);
+  const [teamLeads, setTeamLeads] = useState([]);
 
   useEffect(() => {
     fetchIncidents();
     fetchEquipments();
     fetchLines();
     fetchStages();
+    fetchStopTypes();
   }, []);
 
   useEffect(() => {
     handleFilter();
-  }, [searchText, filterStatus, filterPriority, incidents]);
+  }, [searchText, filterStatus, filterPriority, incidents, teamLeads]);
+
+  useEffect(() => {
+    if (formModalVisible && (selectedEquipment || currentUser)) {
+      fetchTeamLeads();
+    }
+  }, [selectedEquipment, currentUser, formModalVisible]);
 
   const fetchEquipments = async () => {
     try {
@@ -86,7 +104,7 @@ const IncidentManagement = () => {
       const data = Array.isArray(response) ? response : response?.data || [];
       setEquipments(data);
     } catch (error) {
-      console.error("Error fetching equipments:", error);
+      console.error("Lỗi khi tải danh sách thiết bị:", error);
       message.error("Không thể tải danh sách thiết bị");
     }
   };
@@ -97,7 +115,7 @@ const IncidentManagement = () => {
       const data = Array.isArray(response) ? response : response?.data || [];
       setLines(data);
     } catch (error) {
-      console.error("Error fetching lines:", error);
+      console.error("Lỗi khi tải danh sách dây chuyền:", error);
       message.error("Không thể tải danh sách dây chuyền");
     }
   };
@@ -108,8 +126,50 @@ const IncidentManagement = () => {
       const data = Array.isArray(response) ? response : response?.data || [];
       setStages(data);
     } catch (error) {
-      console.error("Error fetching stages:", error);
+      console.error("Lỗi khi tải danh sách công đoạn:", error);
       message.error("Không thể tải danh sách công đoạn");
+    }
+  };
+
+  const fetchStopTypes = async () => {
+    try {
+      const response = await stopTypeService.getStopTypes();
+      const data = Array.isArray(response) ? response : response?.data || [];
+      setStopTypes(data);
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách loại dừng:", error);
+      message.error("Không thể tải danh sách loại dừng");
+    }
+  };
+
+  const fetchTeamLeads = async () => {
+    try {
+      // Get lineId from selected equipment or current user's line
+      let lineId = null;
+
+      // First try to get from selected equipment
+      if (selectedEquipment?.lineId) {
+        lineId = selectedEquipment.lineId;
+      }
+      // If no selected equipment, try to get from current user's lines
+      else if (currentUser?.userLines && currentUser.userLines.length > 0) {
+        lineId = currentUser.userLines[0].lineId; // Take first line if user has multiple
+      }
+
+      if (!lineId) {
+        console.warn("Không xác định được dây chuyền để tải tổ trưởng");
+        setTeamLeads([]);
+        return;
+      }
+
+      // Get active team leads for the specific line
+      const response = await userService.getActiveTeamLeadsByLine(lineId);
+      const data = Array.isArray(response) ? response : response?.data || [];
+      setTeamLeads(data);
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách tổ trưởng:", error);
+      message.error("Không thể tải danh sách tổ trưởng");
+      setTeamLeads([]);
     }
   };
 
@@ -127,7 +187,7 @@ const IncidentManagement = () => {
           if (it.endTime && it.startTime) {
             const start = dayjs(it.startTime);
             const end = dayjs(it.endTime);
-            downtime = Math.abs(end.diff(start, "minute"));
+            downtime = Math.abs(end.diff(start, "minute", true)); // true for floating point precision
           } else if (it.downtimeMinutes != null) {
             downtime = Number(it.downtimeMinutes) || 0;
           } else if (it.duration != null) {
@@ -142,6 +202,10 @@ const IncidentManagement = () => {
 
         return {
           id: it.incidentId || it.id || it.IncidentId,
+          equipmentId: it.equipmentId || it.equipment?.equipmentId,
+          typeId: it.typeId || it.type?.typeId || it.type?.stopTypeId,
+          lineId: it.equipment?.lineId || it.line?.lineId,
+          stageId: it.equipment?.stageId || it.stage?.stageId,
           title:
             it.title ||
             it.Title ||
@@ -173,12 +237,18 @@ const IncidentManagement = () => {
             it.Status ||
             (it.isResolved ? "Hoàn thành" : "Chờ xử lý"),
           reporter:
+            it.reportedByUser?.fullName ||
             it.reportedByName ||
             it.reporter ||
             it.Reporter ||
             it.createdBy ||
             it.createdByName ||
             "",
+          reportedByUserId:
+            it.reportedByUserId ||
+            it.reportedByUser?.id ||
+            it.reporterId ||
+            null,
           assignedTo:
             it.assignedToName || it.assignedTo || it.AssignedTo || null,
           reportDate:
@@ -200,7 +270,7 @@ const IncidentManagement = () => {
       setIncidents(mapped);
       setFilteredIncidents(mapped);
     } catch (err) {
-      console.error("Error fetching incidents", err);
+      console.error("Lỗi khi tải danh sách sự cố:", err);
       message.error(err?.message || "Không thể tải danh sách sự cố");
     } finally {
       setLoading(false);
@@ -236,17 +306,52 @@ const IncidentManagement = () => {
   const handleAddIncident = () => {
     setIsEditMode(false);
     setSelectedIncident(null);
+    setSelectedEquipment(null); // Reset selected equipment
     form.resetFields();
+    // Auto-fill reporter with current user ID (can be changed to other team leads)
+    form.setFieldsValue({
+      //reporter: currentUser?.id || currentUser?.userId || currentUser?.userID || null,
+      reporter: currentUser?.fullName || currentUser?.userName || "Không xác định",
+    });
     setFormModalVisible(true);
   };
 
   const handleEditIncident = (record) => {
     setIsEditMode(true);
     setSelectedIncident(record);
+
+    // Find the equipment to pre-select it
+    const equipment = equipments.find(
+      (e) => e.equipmentId === record.equipmentId
+    );
+    if (equipment) {
+      setSelectedEquipment(equipment);
+    }
+
+    // Set form values with proper equipment selection
     form.setFieldsValue({
-      ...record,
-      reportDate: record.reportDate ? dayjs(record.reportDate) : null,
-      resolveDate: record.resolveDate ? dayjs(record.resolveDate) : null,
+      equipmentCode: record.equipmentId, // This is the value for the Select, which uses equipmentId
+      equipmentId: record.equipmentId,
+      lineId: equipment?.lineId || record.lineId,
+      stageId: equipment?.stageId || record.stageId,
+      typeId:
+        record.typeId ||
+        (record.category
+          ? stopTypes.find((st) => st.typeName === record.category)?.stopTypeId
+          : null),
+      issue: record.issue,
+      reason: record.reason,
+      solution: record.solution,
+      status: record.status, // Will be overridden below
+      startTime: record.reportDate ? dayjs(record.reportDate) : null,
+      endTime: record.resolveDate ? dayjs(record.resolveDate) : null,
+      reporter: record.reportedByUserId || record.reporterId || null, // Use user ID for editing
+    });
+
+    // Set status based on presence of endTime
+    const hasEndTime = record.resolveDate && dayjs(record.resolveDate).isValid();
+    form.setFieldsValue({
+      status: hasEndTime ? "Hoàn thành" : "Chờ xử lý"
     });
     setFormModalVisible(true);
   };
@@ -254,11 +359,13 @@ const IncidentManagement = () => {
   const handleDeleteIncident = async (id) => {
     try {
       setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      await incidentService.delete(id);
       message.success("Xóa sự cố thành công!");
       fetchIncidents();
     } catch (error) {
-      message.error("Xóa thất bại!");
+      console.error("Lỗi khi xóa sự cố:", error);
+      const errMsg = error?.message || error?.data?.message || "Xóa thất bại!";
+      message.error(errMsg);
       setLoading(false);
     }
   };
@@ -271,19 +378,81 @@ const IncidentManagement = () => {
   const handleFormSubmit = async (values) => {
     try {
       setLoading(true);
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      // Determine status based on presence of endTime
+      const hasEndTime = values.endTime && dayjs(values.endTime).isValid();
+      const status = hasEndTime ? "Hoàn thành" : "Chờ xử lý";
+
+      // Build payload according to backend CreateIncidentRequest
+      const payload = {
+        equipmentId:
+          form.getFieldValue("equipmentId") || values.equipmentId || null,
+        startTime: values.startTime ? dayjs(values.startTime).format('YYYY-MM-DDTHH:mm:ss.SSS') : null,
+        endTime: values.endTime ? dayjs(values.endTime).format('YYYY-MM-DDTHH:mm:ss.SSS') : null,
+        typeId: values.typeId || null,
+        issue: values.issue,
+        reason: values.reason || null,
+        solution: values.solution || null,
+        status: status, // Set status based on endTime presence
+        reportedByUserId:
+          values.reporter ||
+          currentUser?.id ||
+          currentUser?.userId ||
+          currentUser?.userID ||
+          null,
+      };
 
       if (isEditMode) {
+        // For edit include startTime, endTime and status
+        // Get equipmentId from form or selectedEquipment
+        const formEquipmentId = form.getFieldValue("equipmentId");
+        const finalEquipmentId =
+          formEquipmentId ||
+          selectedEquipment?.equipmentId ||
+          selectedIncident.equipmentId;
+
+        // Find typeId from stopTypes if not in values
+        let typeId = values.typeId;
+        if (!typeId && selectedIncident.category) {
+          const stopType = stopTypes.find(
+            (st) => st.typeName === selectedIncident.category
+          );
+          typeId = stopType?.stopTypeId || stopType?.typeId;
+        }
+
+        const editPayload = {
+          equipmentId: finalEquipmentId,
+          startTime: values.startTime
+            ? dayjs(values.startTime).format('YYYY-MM-DDTHH:mm:ss.SSS')
+            : dayjs(selectedIncident.reportDate).format('YYYY-MM-DDTHH:mm:ss.SSS'),
+          endTime: values.endTime ? dayjs(values.endTime).format('YYYY-MM-DDTHH:mm:ss.SSS') : null,
+          typeId: typeId || null, // Send null if not changed
+          issue: values.issue || selectedIncident.issue,
+          reason: values.reason || selectedIncident.reason,
+          solution: values.solution || selectedIncident.solution,
+          status: status, // Set status based on endTime presence
+          reportedByUserId: values.reporter || selectedIncident.reportedByUserId || null,
+        };
+        const id =
+          selectedIncident?.id ||
+          selectedIncident?.incidentId ||
+          selectedIncident?.IncidentId;
+        await incidentService.update(id, editPayload);
         message.success("Cập nhật sự cố thành công!");
       } else {
+        await incidentService.create(payload);
         message.success("Thêm sự cố thành công!");
       }
 
       setFormModalVisible(false);
+      setSelectedEquipment(null); // Reset selected equipment after successful submit
       form.resetFields();
       fetchIncidents();
     } catch (error) {
-      message.error("Lưu thất bại!");
+      console.error("Lỗi khi lưu sự cố:", error);
+      const errMsg = error?.message || error?.data?.message || "Lưu thất bại!";
+      message.error(errMsg);
+    } finally {
       setLoading(false);
     }
   };
@@ -329,9 +498,19 @@ const IncidentManagement = () => {
     }
   };
 
+  const getReporterName = (reporterId) => {
+    if (!reporterId) return "";
+    const teamLead = teamLeads.find(tl =>
+      tl.id === reporterId ||
+      tl.userId === reporterId ||
+      tl.userID === reporterId
+    );
+    return teamLead ? (teamLead.fullName || teamLead.userName) : reporterId;
+  };
+
   const columns = [
     {
-      title: "Mã sự cố",
+      title: "#",
       dataIndex: "id",
       key: "id",
       width: 100,
@@ -348,9 +527,8 @@ const IncidentManagement = () => {
       },
       render: (text, record) => (
         <Tooltip
-          title={`${text}${
-            record.equipmentCode ? ` (${record.equipmentCode})` : ""
-          }`}
+          title={`${text}${record.equipmentCode ? ` (${record.equipmentCode})` : ""
+            }`}
         >
           <div>
             <div style={{ fontWeight: 500 }}>{text}</div>
@@ -406,6 +584,41 @@ const IncidentManagement = () => {
       ),
     },
     {
+      title: "Ngày",
+      dataIndex: "reportDate",
+      key: "reportDate",
+      width: 150,
+      render: (d) => (d ? dayjs(d).format("DD/MM/YYYY") : "-"),
+    },
+    {
+      title: "Thời gian BD",
+      dataIndex: "reportDate",
+      key: "startTime",
+      width: 150,
+      render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
+    },
+    {
+      title: "Thời gian KT",
+      dataIndex: "resolveDate",
+      key: "endTime",
+      width: 150,
+      render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
+    },
+    {
+      title: "Tổng TG(phút)",
+      dataIndex: "downtime",
+      key: "downtime",
+      width: 150,
+      align: "center",
+      render: (val) => (
+        <span
+          style={{ color: val > 5 ? "#ff4d4f" : "#1890ff", fontWeight: 500 }}
+        >
+          {typeof val === 'number' ? val.toFixed(2) : val}
+        </span>
+      ),
+    },
+    {
       title: "Loại dừng",
       dataIndex: "category",
       key: "category",
@@ -448,27 +661,6 @@ const IncidentManagement = () => {
       ),
     },
     {
-      title: "Khung giờ bắt đầu",
-      dataIndex: "reportDate",
-      key: "startTime",
-      width: 150,
-      render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
-    },
-    {
-      title: "Khung giờ kết thúc",
-      dataIndex: "resolveDate",
-      key: "endTime",
-      width: 150,
-      render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
-    },
-    {
-      title: "Ngày báo cáo",
-      dataIndex: "reportDate",
-      key: "reportDate",
-      width: 150,
-      render: (d) => (d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"),
-    },
-    {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
@@ -477,20 +669,6 @@ const IncidentManagement = () => {
         <Tag icon={getStatusIcon(status)} color={getStatusColor(status)}>
           {status}
         </Tag>
-      ),
-    },
-    {
-      title: "Thời gian chết (phút)",
-      dataIndex: "downtime",
-      key: "downtime",
-      width: 150,
-      align: "right",
-      render: (val) => (
-        <span
-          style={{ color: val > 120 ? "#ff4d4f" : "#1890ff", fontWeight: 500 }}
-        >
-          {val} phút
-        </span>
       ),
     },
     {
@@ -550,7 +728,7 @@ const IncidentManagement = () => {
     pending: incidents.filter((i) => i.status === "Chờ xử lý").length,
     inProgress: incidents.filter((i) => i.status === "Đang xử lý").length,
     completed: incidents.filter((i) => i.status === "Hoàn thành").length,
-    totalDowntime: incidents.reduce((sum, i) => sum + i.downtime, 0),
+    totalDowntime: incidents.reduce((sum, i) => sum + (i.downtime || 0), 0).toFixed(2),
   };
 
   return (
@@ -614,6 +792,7 @@ const IncidentManagement = () => {
               type="primary"
               icon={<PlusOutlined />}
               onClick={handleAddIncident}
+              style={{ backgroundColor: "#334766", borderColor: "#334766" }}
             >
               Báo cáo sự cố
             </Button>
@@ -648,7 +827,7 @@ const IncidentManagement = () => {
               <Option value="Hoàn thành">Hoàn thành</Option>
               <Option value="Hủy">Hủy</Option>
             </Select>
-            <Select
+            {/* <Select
               value={filterPriority}
               onChange={setFilterPriority}
               style={{ width: 150 }}
@@ -658,7 +837,7 @@ const IncidentManagement = () => {
               <Option value="Cao">Cao</Option>
               <Option value="Trung bình">Trung bình</Option>
               <Option value="Thấp">Thấp</Option>
-            </Select>
+            </Select> */}
           </Space>
         </div>
 
@@ -699,6 +878,7 @@ const IncidentManagement = () => {
               setDetailModalVisible(false);
               handleEditIncident(selectedIncident);
             }}
+            style={{ backgroundColor: "#334766", borderColor: "#334766" }}
           >
             Chỉnh sửa
           </Button>,
@@ -707,190 +887,244 @@ const IncidentManagement = () => {
       >
         {selectedIncident && (
           <div className={styles.detailContent}>
-            <Row gutter={[24, 16]}>
+            <Row gutter={[16, 16]}>
+              {/* Main Information Card */}
               <Col span={24}>
-                <Alert
-                  message={
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "12px",
-                      }}
-                    >
-                      <Tag
-                        color={getPriorityColor(selectedIncident.priority)}
-                        style={{ fontSize: "14px", padding: "4px 12px" }}
+                <Card size="small">
+                  <Row gutter={[16, 16]}>
+                    {/* Row 1: Mã sự cố */}
+                    <Col span={24}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
                       >
-                        Mức độ: {selectedIncident.priority}
-                      </Tag>
-                      <Tag
-                        icon={getStatusIcon(selectedIncident.status)}
-                        color={getStatusColor(selectedIncident.status)}
-                        style={{ fontSize: "14px", padding: "4px 12px" }}
-                      >
-                        {selectedIncident.status}
-                      </Tag>
-                    </div>
-                  }
-                  type={selectedIncident.priority === "Cao" ? "error" : "info"}
-                  showIcon
-                />
-              </Col>
-
-              <Col span={24}>
-                <Descriptions bordered column={2}>
-                  <Descriptions.Item label="Mã sự cố" span={2}>
-                    <span style={{ fontWeight: 600, fontSize: "16px" }}>
-                      {selectedIncident.id}
-                    </span>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Tiêu đề" span={2}>
-                    <span style={{ fontWeight: 600 }}>
-                      {selectedIncident.title}
-                    </span>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Thiết bị">
-                    {selectedIncident.equipmentName}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Dây chuyền">
-                    <Tag color="purple">{selectedIncident.lineName}</Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Danh mục">
-                    <Tag color="blue">{selectedIncident.category}</Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Tác động">
-                    <Tag
-                      color={
-                        selectedIncident.impact === "Cao"
-                          ? "red"
-                          : selectedIncident.impact === "Trung bình"
-                          ? "orange"
-                          : "green"
-                      }
-                    >
-                      {selectedIncident.impact}
-                    </Tag>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Người báo cáo">
-                    {selectedIncident.reporter}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Người xử lý">
-                    {selectedIncident.assignedTo || (
-                      <span style={{ color: "#bbb" }}>Chưa phân công</span>
-                    )}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Ngày báo cáo">
-                    {selectedIncident.reportDate
-                      ? dayjs(selectedIncident.reportDate).format(
-                          "DD/MM/YYYY HH:mm"
-                        )
-                      : "-"}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Ngày giải quyết">
-                    {selectedIncident.resolveDate ? (
-                      dayjs(selectedIncident.resolveDate).format(
-                        "DD/MM/YYYY HH:mm"
-                      )
-                    ) : (
-                      <span style={{ color: "#bbb" }}>Chưa giải quyết</span>
-                    )}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Thời gian chết" span={2}>
-                    <span
-                      style={{
-                        color:
-                          selectedIncident.downtime > 120
-                            ? "#ff4d4f"
-                            : "#1890ff",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {selectedIncident.downtime} phút
-                    </span>
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Vấn đề" span={2}>
-                    {selectedIncident.issue}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Nguyên nhân" span={2}>
-                    {selectedIncident.reason || (
-                      <span style={{ color: "#bbb" }}>Chưa xác định</span>
-                    )}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Giải pháp" span={2}>
-                    {selectedIncident.solution || (
-                      <span style={{ color: "#bbb" }}>Chưa có giải pháp</span>
-                    )}
-                  </Descriptions.Item>
-                  {selectedIncident.attachments &&
-                    selectedIncident.attachments.length > 0 && (
-                      <Descriptions.Item label="Tài liệu đính kèm" span={2}>
-                        <Space direction="vertical">
-                          {selectedIncident.attachments.map((file, index) => (
-                            <Button
-                              key={index}
-                              type="link"
-                              icon={<FileTextOutlined />}
-                              size="small"
-                            >
-                              {file}
-                            </Button>
-                          ))}
-                        </Space>
-                      </Descriptions.Item>
-                    )}
-                </Descriptions>
-              </Col>
-
-              {/* Timeline */}
-              <Col span={24}>
-                <Card title="Lịch sử xử lý" size="small">
-                  <Timeline>
-                    <Timeline.Item
-                      color="blue"
-                      dot={<ExclamationCircleOutlined />}
-                    >
-                      <div>
-                        <strong>Báo cáo sự cố</strong>
-                        <div style={{ color: "#8c8c8c", fontSize: "12px" }}>
-                          {selectedIncident.reportDate} -{" "}
-                          {selectedIncident.reporter}
-                        </div>
-                        <div style={{ marginTop: "4px" }}>
-                          {selectedIncident.issue}
-                        </div>
+                        Mã sự cố
                       </div>
-                    </Timeline.Item>
-                    {selectedIncident.status !== "Chờ xử lý" && (
-                      <Timeline.Item
-                        color="orange"
-                        dot={<ClockCircleOutlined />}
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          fontSize: "18px",
+                          color: "#334766",
+                        }}
                       >
-                        <div>
-                          <strong>Bắt đầu xử lý</strong>
-                          <div style={{ color: "#8c8c8c", fontSize: "12px" }}>
-                            {selectedIncident.assignedTo}
-                          </div>
+                        #{selectedIncident.id}
+                      </div>
+                    </Col>
+
+                    {/* Row 2: Thiết bị */}
+                    {selectedIncident.equipmentName && (
+                      <Col span={24}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            color: "#666",
+                            marginBottom: 6,
+                            fontWeight: 600,
+                          }}
+                        >
+                          Thiết bị
                         </div>
-                      </Timeline.Item>
+                        <div style={{ fontWeight: 600, fontSize: "14px" }}>
+                          {selectedIncident.equipmentName}
+                          {selectedIncident.equipmentCode && (
+                            <span style={{ color: "#999", marginLeft: 8 }}>
+                              ({selectedIncident.equipmentCode})
+                            </span>
+                          )}
+                        </div>
+                      </Col>
                     )}
-                    {selectedIncident.status === "Hoàn thành" && (
-                      <Timeline.Item
-                        color="green"
-                        dot={<CheckCircleOutlined />}
+
+                    {/* Row 3: Time Info (StartTime, EndTime, Duration) */}
+                    <Col span={8}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
                       >
-                        <div>
-                          <strong>Hoàn thành</strong>
-                          <div style={{ color: "#8c8c8c", fontSize: "12px" }}>
-                            {selectedIncident.resolveDate}
-                          </div>
-                          <div style={{ marginTop: "4px" }}>
-                            {selectedIncident.solution}
-                          </div>
-                        </div>
-                      </Timeline.Item>
-                    )}
-                  </Timeline>
+                        Thời gian bắt đầu
+                      </div>
+                      <div style={{ fontSize: "13px" }}>
+                        {selectedIncident.reportDate
+                          ? dayjs(selectedIncident.reportDate).format(
+                            "DD/MM/YYYY HH:mm:ss"
+                          )
+                          : "-"}
+                      </div>
+                    </Col>
+                    <Col span={8}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Thời gian kết thúc
+                      </div>
+                      <div style={{ fontSize: "13px" }}>
+                        {selectedIncident.resolveDate
+                          ? dayjs(selectedIncident.resolveDate).format(
+                            "DD/MM/YYYY HH:mm:ss"
+                          )
+                          : "-"}
+                      </div>
+                    </Col>
+                    <Col span={8}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Thời lượng (phút)
+                      </div>
+                      <div style={{ fontSize: "13px", fontWeight: 600 }}>
+                        {selectedIncident.downtime.toFixed(2) || "-"}
+                      </div>
+                    </Col>
+
+                    {/* Row 4: Status, StopType */}
+                    <Col span={12}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Trạng thái
+                      </div>
+                      {selectedIncident.status ? (
+                        <Tag
+                          icon={getStatusIcon(selectedIncident.status)}
+                          color={getStatusColor(selectedIncident.status)}
+                        >
+                          {selectedIncident.status}
+                        </Tag>
+                      ) : (
+                        <span>-</span>
+                      )}
+                    </Col>
+                    <Col span={12}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Loại dừng
+                      </div>
+                      {selectedIncident.category ? (
+                        <Tag color="orange">{selectedIncident.category}</Tag>
+                      ) : (
+                        <span>-</span>
+                      )}
+                    </Col>
+
+                    {/* Row 5: Issue (Vấn đề) */}
+                    <Col span={24}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Vấn đề
+                      </div>
+                      <div style={{ fontSize: "14px", lineHeight: 1.6 }}>
+                        {selectedIncident.issue || "-"}
+                      </div>
+                    </Col>
+
+                    {/* Row 6: Reason (Nguyên nhân) */}
+                    <Col span={24}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Nguyên nhân
+                      </div>
+                      <div style={{ fontSize: "14px", lineHeight: 1.6 }}>
+                        {selectedIncident.reason || "-"}
+                      </div>
+                    </Col>
+
+                    {/* Row 7: Solution (Giải pháp) */}
+                    <Col span={24}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Giải pháp
+                      </div>
+                      <div style={{ fontSize: "14px", lineHeight: 1.6 }}>
+                        {selectedIncident.solution || "-"}
+                      </div>
+                    </Col>
+
+                    {/* Row 8: CreatedDate, ReportedByUserId */}
+                    <Col span={12}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Ngày tạo
+                      </div>
+                      <div style={{ fontSize: "13px" }}>
+                        {selectedIncident.reportDate
+                          ? dayjs(selectedIncident.reportDate).format(
+                            "DD/MM/YYYY"
+                          )
+                          : "-"}
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: "#666",
+                          marginBottom: 6,
+                          fontWeight: 600,
+                        }}
+                      >
+                        Người báo cáo
+                      </div>
+                      <div style={{ fontSize: "13px" }}>
+                        {(() => {
+                          const reporterUser = teamLeads.find(tl => tl.id === selectedIncident.reporter || tl.userId === selectedIncident.reporter || tl.userID === selectedIncident.reporter);
+                          return reporterUser ? reporterUser.fullName || reporterUser.userName : selectedIncident.reporter;
+                        })()}
+                      </div>
+                    </Col>
+                  </Row>
                 </Card>
               </Col>
             </Row>
@@ -909,6 +1143,7 @@ const IncidentManagement = () => {
         open={formModalVisible}
         onCancel={() => {
           setFormModalVisible(false);
+          setSelectedEquipment(null); // Reset selected equipment when closing modal
           form.resetFields();
         }}
         footer={null}
@@ -918,194 +1153,266 @@ const IncidentManagement = () => {
           form={form}
           layout="vertical"
           onFinish={handleFormSubmit}
-          initialValues={{
-            status: "Chờ xử lý",
-            priority: "Trung bình",
-            category: "Hỏng hóc",
-            impact: "Trung bình",
-          }}
+          initialValues={{ status: "Chờ xử lý" }}
         >
           <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                label="Tiêu đề sự cố"
-                name="title"
-                rules={[{ required: true, message: "Vui lòng nhập tiêu đề!" }]}
-              >
-                <Input placeholder="Nhập tiêu đề sự cố" />
+            {/* hidden status field for create mode, visible for edit mode */}
+            {!isEditMode && (
+              <Form.Item name="status" hidden>
+                <Input />
               </Form.Item>
-            </Col>
+            )}
+
             <Col span={12}>
               <Form.Item
-                label="Thiết bị"
-                name="equipmentId"
-                rules={[{ required: true, message: "Vui lòng chọn thiết bị!" }]}
+                label="Mã thiết bị"
+                name="equipmentCode"
+                rules={[
+                  { required: true, message: "Vui lòng chọn mã thiết bị!" },
+                ]}
               >
                 <Select
-                  placeholder="Chọn thiết bị"
+                  placeholder="Chọn hoặc tìm mã thiết bị"
+                  showSearch
+                  allowClear
+                  optionFilterProp="children"
+                  onSearch={() => { }}
                   onChange={(value) => {
+                    // value will be equipmentId (we store id as value but show code+name)
                     const equipment = equipments.find(
                       (e) => e.equipmentId === value
                     );
                     if (equipment) {
                       setSelectedEquipment(equipment);
+                      // set equipmentId, lineId, stageId in form so other fields stay in sync
                       form.setFieldsValue({
+                        equipmentId: equipment.equipmentId,
+                        equipmentCode: equipment.equipmentCode,
                         lineId: equipment.lineId,
                         stageId: equipment.stageId,
                       });
+                    } else {
+                      setSelectedEquipment(null);
+                      form.setFieldsValue({ equipmentId: null });
                     }
                   }}
-                  showSearch
-                  filterOption={(input, option) =>
-                    (option?.children ?? "")
-                      .toLowerCase()
-                      .includes(input.toLowerCase())
-                  }
                 >
                   {equipments.map((equipment) => (
                     <Option
                       key={equipment.equipmentId}
                       value={equipment.equipmentId}
                     >
-                      {equipment.equipmentName} ({equipment.equipmentCode})
+                      {equipment.equipmentCode} - {equipment.equipmentName}
                     </Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                label="Dây chuyền"
-                name="lineId"
-                rules={[
-                  { required: true, message: "Vui lòng chọn dây chuyền!" },
-                ]}
-              >
-                <Select placeholder="Chọn dây chuyền" disabled>
-                  {lines.map((line) => (
-                    <Option key={line.lineId} value={line.lineId}>
-                      {line.lineName}
-                    </Option>
-                  ))}
-                </Select>
+              {/* hidden equipmentId so form submission includes the id */}
+              <Form.Item name="equipmentId" hidden>
+                <Input />
+              </Form.Item>
+              <Form.Item label="Thiết bị">
+                <Input
+                  disabled
+                  value={
+                    selectedEquipment
+                      ? `${selectedEquipment.equipmentName}${selectedEquipment.equipmentCode
+                        ? ` (${selectedEquipment.equipmentCode})`
+                        : ""
+                      }`
+                      : ""
+                  }
+                  placeholder="-- Chọn --"
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                label="Công đoạn"
-                name="stageId"
-                rules={[
-                  { required: true, message: "Vui lòng chọn công đoạn!" },
-                ]}
-              >
-                <Select placeholder="Chọn công đoạn" disabled>
-                  {stages.map((stage) => (
-                    <Option key={stage.stageId} value={stage.stageId}>
-                      {stage.stageName}
-                    </Option>
-                  ))}
-                </Select>
+              <Form.Item name="lineId" hidden>
+                <Input />
+              </Form.Item>
+              <Form.Item label="Dây chuyền">
+                <Input
+                  disabled
+                  value={
+                    selectedEquipment
+                      ? lines.find((l) => l.lineId === selectedEquipment.lineId)
+                        ?.lineName || ""
+                      : lines.find(
+                        (l) => l.lineId === form.getFieldValue("lineId")
+                      )?.lineName || ""
+                  }
+                  placeholder="-- Chọn --"
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item
-                label="Danh mục"
-                name="category"
-                rules={[{ required: true, message: "Vui lòng chọn danh mục!" }]}
-              >
-                <Select placeholder="Chọn danh mục">
-                  <Option value="Hỏng hóc">Hỏng hóc</Option>
-                  <Option value="Bảo trì">Bảo trì</Option>
-                  <Option value="An toàn">An toàn</Option>
-                  <Option value="Chất lượng">Chất lượng</Option>
-                </Select>
+              <Form.Item name="stageId" hidden>
+                <Input />
+              </Form.Item>
+              <Form.Item label="Công đoạn">
+                <Input
+                  disabled
+                  value={
+                    selectedEquipment
+                      ? stages.find(
+                        (s) => s.stageId === selectedEquipment.stageId
+                      )?.stageName || ""
+                      : stages.find(
+                        (s) => s.stageId === form.getFieldValue("stageId")
+                      )?.stageName || ""
+                  }
+                  placeholder="-- Chọn --"
+                />
               </Form.Item>
             </Col>
-            <Col span={8}>
+
+            <Col span={12}>
               <Form.Item
-                label="Mức độ ưu tiên"
-                name="priority"
-                rules={[{ required: true, message: "Vui lòng chọn mức độ!" }]}
-              >
-                <Select placeholder="Chọn mức độ">
-                  <Option value="Cao">Cao</Option>
-                  <Option value="Trung bình">Trung bình</Option>
-                  <Option value="Thấp">Thấp</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                label="Tác động"
-                name="impact"
-                rules={[{ required: true, message: "Vui lòng chọn tác động!" }]}
-              >
-                <Select placeholder="Chọn tác động">
-                  <Option value="Cao">Cao</Option>
-                  <Option value="Trung bình">Trung bình</Option>
-                  <Option value="Thấp">Thấp</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item
-                label="Trạng thái"
-                name="status"
+                label="Loại"
+                name="typeId"
                 rules={[
-                  { required: true, message: "Vui lòng chọn trạng thái!" },
+                  { required: true, message: "Vui lòng chọn loại!" },
                 ]}
               >
-                <Select placeholder="Chọn trạng thái">
-                  <Option value="Chờ xử lý">Chờ xử lý</Option>
-                  <Option value="Đang xử lý">Đang xử lý</Option>
-                  <Option value="Hoàn thành">Hoàn thành</Option>
-                  <Option value="Hủy">Hủy</Option>
+                <Select
+                  placeholder="-- Chọn --"
+                  showSearch
+                  allowClear
+                  optionFilterProp="children"
+                  onSearch={() => { }}
+                  onChange={(value) => {
+                    // value will be equipmentId (we store id as value but show code+name)
+                    const stopType = stopTypes.find(
+                      (e) => e.stopTypeId === value
+                    );
+                  }}
+                >
+                  {
+                    stopTypes.map((stopType) => (
+                      <Option
+                        key={stopType.stopTypeId || stopType.typeId}
+                        value={stopType.stopTypeId || stopType.typeId}
+                      >
+                        {stopType.typeName || stopType.stopTypeName}
+                      </Option>
+                    ))
+                  }
                 </Select>
               </Form.Item>
             </Col>
+
+            <Col span={12}>
+              {/* {isEditMode ? ( */}
+              <Form.Item
+                label="Thời gian bắt đầu"
+                name="startTime"
+                rules={[
+                  {
+                    required: true,
+                    message: "Vui lòng nhập thời gian bắt đầu!",
+                  },
+                ]}
+              >
+                <DatePicker
+                  showTime={{ format: "HH:mm:ss" }}
+                  format="DD/MM/YYYY HH:mm:ss"
+                  placeholder="Chọn thời gian bắt đầu"
+                  style={{ width: '100%' }}
+                />
+              </Form.Item>
+              {/* ) : (
+                <Form.Item name="status" hidden>
+                  <Input />
+                </Form.Item>
+              )} */}
+            </Col>
+
+            <Col span={12}>
+              {/* {isEditMode && ( */}
+              <Form.Item label="Thời gian kết thúc" name="endTime">
+                <DatePicker
+                  showTime={{ format: "HH:mm:ss" }}
+                  format="DD/MM/YYYY HH:mm:ss"
+                  placeholder="Chọn thời gian kết thúc"
+                  style={{ width: '100%' }}
+                  onChange={(value) => {
+                    const hasEndTime = value && dayjs(value).isValid();
+                    const status = hasEndTime ? "Hoàn thành" : "Chờ xử lý";
+                    form.setFieldsValue({ status });
+                  }}
+                />
+              </Form.Item>
+              {/* )} */}
+            </Col>
+
+            <Col span={12}>
+              {isEditMode && (
+                <Form.Item
+                  label="Trạng thái"
+                  name="status"
+                  rules={[
+                    {
+                      required: true,
+                      message: "Vui lòng chọn trạng thái!",
+                    },
+                  ]}
+                >
+                  <Select placeholder="Chọn trạng thái" disabled>
+                    <Option value="Chờ xử lý">Chờ xử lý</Option>
+                    <Option value="Đang xử lý">Đang xử lý</Option>
+                    <Option value="Hoàn thành">Hoàn thành</Option>
+                    <Option value="Hủy">Hủy</Option>
+                  </Select>
+                </Form.Item>
+              )}
+              {!isEditMode && (
+                <Form.Item label="Trạng thái">
+                  <Input disabled value="Chờ xử lý" />
+                </Form.Item>
+              )}
+            </Col>
+
             <Col span={12}>
               <Form.Item
                 label="Người báo cáo"
                 name="reporter"
-                rules={[{ required: true, message: "Vui lòng nhập tên!" }]}
+                rules={[{ required: true, message: "Vui lòng chọn người báo cáo!" }]}
               >
-                <Input placeholder="Nhập tên người báo cáo" />
+                <Select
+                  placeholder="Chọn người báo cáo"
+                  showSearch
+                  allowClear
+                  optionFilterProp="children"
+                  onSearch={() => {}}
+                >
+                  {teamLeads.map((teamLead) => (
+                    <Option
+                      key={teamLead.id || teamLead.userId || teamLead.userID}
+                      value={teamLead.id || teamLead.userId || teamLead.userID}
+                    >
+                      {teamLead.fullName || teamLead.userName || "Không xác định"}
+                    </Option>
+                  ))}
+                </Select>
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item label="Người xử lý" name="assignedTo">
-                <Input placeholder="Nhập tên người xử lý" />
-              </Form.Item>
+
+            <Col span={24}>
+              <Alert
+                type="info"
+                message="Lưu ý: Mặc định là tài khoản hiện đang đăng nhập. Bạn có thể chọn tổ trưởng khác trong cùng dây chuyền để báo cáo sự cố."
+                showIcon
+                style={{ marginBottom: 16, marginTop: 8 }}
+              />
             </Col>
-            <Col span={12}>
-              <Form.Item
-                label="Ngày báo cáo"
-                name="reportDate"
-                rules={[{ required: true, message: "Vui lòng chọn ngày!" }]}
-              >
-                <DatePicker
-                  showTime
-                  format="YYYY-MM-DD HH:mm"
-                  style={{ width: "100%" }}
-                  placeholder="Chọn ngày giờ"
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Ngày giải quyết" name="resolveDate">
-                <DatePicker
-                  showTime
-                  format="YYYY-MM-DD HH:mm"
-                  style={{ width: "100%" }}
-                  placeholder="Chọn ngày giờ"
-                />
-              </Form.Item>
-            </Col>
+
             <Col span={24}>
               <Form.Item
                 label="Mô tả vấn đề"
                 name="issue"
-                rules={[{ required: true, message: "Vui lòng mô tả vấn đề!" }]}
+                rules={[{ message: "Vui lòng mô tả vấn đề!" }]}
               >
                 <TextArea
                   rows={3}
@@ -1126,18 +1433,6 @@ const IncidentManagement = () => {
                 />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item label="Thời gian chết (phút)" name="downtime">
-                <Input type="number" placeholder="0" min={0} />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item label="Tài liệu đính kèm" name="attachments">
-                <Upload>
-                  <Button icon={<UploadOutlined />}>Tải lên file</Button>
-                </Upload>
-              </Form.Item>
-            </Col>
           </Row>
 
           <Form.Item style={{ marginBottom: 0, marginTop: 16 }}>
@@ -1145,19 +1440,24 @@ const IncidentManagement = () => {
               <Button
                 onClick={() => {
                   setFormModalVisible(false);
+                  setSelectedEquipment(null); // Reset selected equipment when canceling
                   form.resetFields();
                 }}
               >
                 Hủy
               </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                style={{ backgroundColor: "#334766", borderColor: "#334766" }}>
                 {isEditMode ? "Cập nhật" : "Báo cáo"}
               </Button>
             </Space>
           </Form.Item>
         </Form>
       </Modal>
-    </div>
+    </div >
   );
 };
 

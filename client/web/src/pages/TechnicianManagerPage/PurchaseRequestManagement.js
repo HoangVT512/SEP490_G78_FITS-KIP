@@ -14,6 +14,7 @@ import {
   DatePicker,
   Row,
   Col,
+  Dropdown,
 } from "antd";
 import {
   PlusOutlined,
@@ -21,11 +22,13 @@ import {
   EyeOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styles from "../../styles/pages/PurchaseRequestManagement.module.css";
 import { purchaseRequestService } from "../../services/purchaseRequestService";
 import { sparePartService } from "../../services/sparePartService";
+import signalRService from "../../services/signalRService";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -37,7 +40,6 @@ const PurchaseRequestManagement = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [form] = Form.useForm();
-  const [messageApi, messageContextHolder] = message.useMessage();
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
@@ -45,31 +47,51 @@ const PurchaseRequestManagement = () => {
 
   const [availableParts, setAvailableParts] = useState([]);
 
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await purchaseRequestService.getMyRequests();
+      // res may be array or ApiResponse wrapper handled in service
+      setRequests(Array.isArray(res) ? res : []);
+      // Also load spare parts for the select
+      try {
+        const parts = await sparePartService.getAll();
+        // Filter only active parts (IsActive = true)
+        const activeParts = (Array.isArray(parts) ? parts : []).filter(
+          (part) => part.isActive !== false
+        );
+        setAvailableParts(activeParts);
+      } catch (e) {
+        console.warn("Could not load spare parts for select", e);
+      }
+    } catch (err) {
+      message.error("Không thể tải danh sách yêu cầu. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const res = await purchaseRequestService.getMyRequests();
-        if (!mounted) return;
-        // res may be array or ApiResponse wrapper handled in service
-        setRequests(Array.isArray(res) ? res : []);
-        // Also load spare parts for the select
-        try {
-          const parts = await sparePartService.getAll();
-          setAvailableParts(Array.isArray(parts) ? parts : []);
-        } catch (e) {
-          console.warn("Could not load spare parts for select", e);
-        }
-      } catch (err) {
-        messageApi.error("Không thể tải danh sách yêu cầu. Vui lòng thử lại.");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    load();
+    loadData();
     return () => {
       mounted = false;
+    };
+  }, []);
+
+  // Thêm useEffect để lắng nghe cập nhật dữ liệu real-time
+  useEffect(() => {
+    const handleDataUpdate = (data) => {
+      if (data.type === "purchaseRequest") {
+        console.log("Purchase request data updated, reloading...");
+        loadData(); // Tải lại dữ liệu khi có thay đổi
+      }
+    };
+
+    signalRService.onDataUpdated(handleDataUpdate);
+
+    return () => {
+      signalRService.offDataUpdated();
     };
   }, []);
 
@@ -120,10 +142,10 @@ const PurchaseRequestManagement = () => {
       render: (status) => {
         let displayStatus;
         let color = "warning";
-        if (status === "Approved") {
+        if (status === "Đã duyệt") {
           displayStatus = "Đã duyệt";
           color = "success";
-        } else if (status === "Rejected") {
+        } else if (status === "Từ chối") {
           displayStatus = "Từ chối";
           color = "error";
         } else {
@@ -137,36 +159,27 @@ const PurchaseRequestManagement = () => {
       title: "Thao tác",
       key: "action",
       fixed: "right",
-      width: 180,
-      render: (_, record) => (
-        <Space>
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => handleViewDetail(record)}
+      width: 100,
+      render: (_, record) => {
+        const menuItems = [
+          {
+            key: "view",
+            icon: <EyeOutlined />,
+            label: "Chi tiết",
+            onClick: () => handleViewDetail(record),
+          },
+        ];
+
+        return (
+          <Dropdown
+            menu={{ items: menuItems }}
+            trigger={["click"]}
+            destroyOnHidden={true}
           >
-            Chi tiết
-          </Button>
-          {record.status === "Pending" && (
-            <>
-              <Button
-                type="primary"
-                icon={<CheckCircleOutlined />}
-                onClick={() => handleApprove(record)}
-              >
-                Duyệt
-              </Button>
-              <Button
-                danger
-                icon={<CloseCircleOutlined />}
-                onClick={() => handleReject(record)}
-              >
-                Từ chối
-              </Button>
-            </>
-          )}
-        </Space>
-      ),
+            <Button type="link" icon={<DownOutlined />} />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -183,19 +196,40 @@ const PurchaseRequestManagement = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // Backend expects { partId, quantity, reason }
-      const payload = {
-        // The Select now returns the partId as value
-        partId: values.partNumber || values.partId || null,
-        quantity: values.quantity,
-        reason: values.reason,
-      };
-      if (!payload.partId) {
+      // The Select now returns the partId as value
+      const partId = values.partNumber || values.partId || null;
+
+      if (!partId) {
         throw new Error("Phụ tùng không hợp lệ");
       }
 
+      // Check if there's already a pending request for this part
+      const pendingRequest = requests.find(
+        (req) => req.partId === partId && req.status === "Chờ duyệt"
+      );
+
+      if (pendingRequest) {
+        message.error(
+          `Phụ tùng này đã có yêu cầu đang chờ duyệt (REQ${String(
+            pendingRequest.requestId
+          ).padStart(
+            3,
+            "0"
+          )}). Vui lòng chờ hoàn thành yêu cầu này trước khi tạo yêu cầu mới!`
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Backend expects { partId, quantity, reason }
+      const payload = {
+        partId: partId,
+        quantity: values.quantity,
+        reason: values.reason,
+      };
+
       await purchaseRequestService.create(payload);
-      messageApi.success("Tạo yêu cầu mua hàng thành công!");
+      message.success("Tạo yêu cầu mua hàng thành công!");
       // refresh list
       const res = await purchaseRequestService.getMyRequests();
       setRequests(Array.isArray(res) ? res : []);
@@ -203,12 +237,18 @@ const PurchaseRequestManagement = () => {
       form.resetFields();
     } catch (error) {
       console.error("Create purchase request error:", error);
-      if (error && error.message && error.message.includes("403")) {
-        messageApi.error(
+      // Try to get message from backend response first, then from error message
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Có lỗi xảy ra khi tạo yêu cầu!";
+
+      if (errorMessage.includes("403")) {
+        message.error(
           "Bạn không có quyền để tạo yêu cầu. Tài khoản cần có vai trò 'Quản lý kỹ thuật' hoặc hãy đăng nhập lại."
         );
       } else {
-        messageApi.error(error?.message || "Có lỗi xảy ra khi tạo yêu cầu!");
+        message.error(errorMessage);
       }
     } finally {
       setLoading(false);
@@ -228,12 +268,12 @@ const PurchaseRequestManagement = () => {
         setLoading(true);
         try {
           await purchaseRequestService.approve(record.requestId);
-          messageApi.success("Duyệt yêu cầu thành công");
+          message.success("Duyệt yêu cầu thành công");
           const res = await purchaseRequestService.getMyRequests();
           setRequests(Array.isArray(res) ? res : []);
         } catch (err) {
           console.error("Approve error", err);
-          messageApi.error(err?.message || "Không thể duyệt yêu cầu");
+          message.error(err?.message || "Không thể duyệt yêu cầu");
         } finally {
           setLoading(false);
         }
@@ -267,12 +307,12 @@ const PurchaseRequestManagement = () => {
           await purchaseRequestService.reject(record.requestId, {
             reason: reason || undefined,
           });
-          messageApi.success("Từ chối yêu cầu thành công");
+          message.success("Từ chối yêu cầu thành công");
           const res = await purchaseRequestService.getMyRequests();
           setRequests(Array.isArray(res) ? res : []);
         } catch (err) {
           console.error("Reject error", err);
-          messageApi.error(err?.message || "Không thể từ chối yêu cầu");
+          message.error(err?.message || "Không thể từ chối yêu cầu");
         } finally {
           setLoading(false);
         }
@@ -415,8 +455,6 @@ const PurchaseRequestManagement = () => {
 
   return (
     <div className={styles.container}>
-      {messageContextHolder}
-
       {/* Main Content - Only Request List */}
       {RequestListTable}
 

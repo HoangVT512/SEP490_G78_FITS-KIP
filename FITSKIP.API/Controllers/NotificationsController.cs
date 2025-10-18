@@ -92,6 +92,45 @@ namespace FITSKIP.API.Controllers
         }
 
         /// <summary>
+        /// Get unread notification count for the current user
+        /// </summary>
+        [HttpGet("unread-count")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<int>>> GetUnreadCount()
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new ApiResponse<int>
+                    {
+                        Success = false,
+                        Message = "User not authenticated"
+                    });
+                }
+
+                var notifications = await _notificationService.GetUserNotificationsAsync(userId, unreadOnly: true);
+                var count = notifications.Count();
+
+                return Ok(new ApiResponse<int>
+                {
+                    Success = true,
+                    Message = "Unread notification count retrieved successfully",
+                    Data = count
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<int>
+                {
+                    Success = false,
+                    Message = $"Internal server error: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
         /// Get a specific notification by ID
         /// </summary>
         [HttpGet("{id}")]
@@ -361,6 +400,44 @@ namespace FITSKIP.API.Controllers
                 {
                     Success = true,
                     Message = "Broadcast notification sent successfully",
+                    Data = true
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = $"Internal server error: {ex.Message}"
+                });
+            }
+        }
+
+        /// <summary>
+        /// Delete all read notifications for the current user
+        /// </summary>
+        [HttpDelete("delete-all-read")]
+        [Authorize]
+        public async Task<ActionResult<ApiResponse<bool>>> DeleteAllReadNotifications()
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new ApiResponse<bool>
+                    {
+                        Success = false,
+                        Message = "User not authenticated"
+                    });
+                }
+
+                await _notificationService.DeleteAllReadNotificationsAsync(userId);
+
+                return Ok(new ApiResponse<bool>
+                {
+                    Success = true,
+                    Message = "All read notifications deleted successfully",
                     Data = true
                 });
             }

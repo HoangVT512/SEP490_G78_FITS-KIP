@@ -64,6 +64,15 @@ public class PurchaseRequestRepository : IPurchaseRequestRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<PurchaseRequest?> GetByPartIdAndStatusAsync(int partId, string status, CancellationToken cancellationToken = default)
+    {
+        return await _context.PurchaseRequests
+            .Include(pr => pr.Part)
+            .Include(pr => pr.RequestedByNavigation)
+            .Where(pr => pr.PartId == partId && pr.Status == status && pr.Status != "Deleted")
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<PurchaseRequest> CreateAsync(PurchaseRequest purchaseRequest, CancellationToken cancellationToken = default)
     {
         await _context.PurchaseRequests.AddAsync(purchaseRequest, cancellationToken);

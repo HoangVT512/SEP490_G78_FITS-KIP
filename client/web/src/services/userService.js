@@ -234,6 +234,17 @@ export const userService = {
       throw new Error("Không thể lấy danh sách quản lý.");
     }
   },
+
+  // Get active team leads by line
+  getActiveTeamLeadsByLine: async (lineId) => {
+    try {
+      const response = await apiRequest(`/Users/active-team-leads/${lineId}`);
+      return response;
+    } catch (error) {
+      console.error("Lấy team lead theo line lỗi:", error);
+      throw error;
+    }
+  },
 };
 
 export default userService;

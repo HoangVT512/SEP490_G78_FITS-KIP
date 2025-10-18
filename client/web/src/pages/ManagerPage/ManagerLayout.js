@@ -33,6 +33,7 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import signalRService from "../../services/signalRService";
+import * as notificationService from "../../services/notificationService";
 import styles from "../../styles/pages/ManagerLayout.module.css";
 
 // Import manager pages
@@ -71,20 +72,8 @@ const ManagerLayout = () => {
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(
-          `${process.env.REACT_APP_API_BASE_URL}/Notifications/unread-count`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.ok) {
-          const result = await response.json();
-          setNotificationCount(result.data || 0);
-        }
+        const count = await notificationService.getUnreadCount();
+        setNotificationCount(count);
       } catch (error) {
         console.error("Error fetching unread count:", error);
       }
@@ -328,18 +317,18 @@ const ManagerLayout = () => {
       label: "Thông tin cá nhân",
       onClick: () => navigate("/profile"),
     },
-    {
-      key: "edit-profile",
-      icon: <EditOutlined />,
-      label: "Chỉnh sửa thông tin",
-      onClick: () => navigate("/profile/edit"),
-    },
-    {
-      key: "change-password",
-      icon: <SafetyOutlined />,
-      label: "Đổi mật khẩu",
-      onClick: () => navigate("/profile/change-password"),
-    },
+    // {
+    //   key: "edit-profile",
+    //   icon: <EditOutlined />,
+    //   label: "Chỉnh sửa thông tin",
+    //   onClick: () => navigate("/profile/edit"),
+    // },
+    // {
+    //   key: "change-password",
+    //   icon: <SafetyOutlined />,
+    //   label: "Đổi mật khẩu",
+    //   onClick: () => navigate("/profile/change-password"),
+    // },
     {
       type: "divider",
     },
@@ -497,8 +486,10 @@ const ManagerLayout = () => {
                   onClick={() => {
                     // Mở drawer notifications
                     setNotificationDrawerOpen(true);
-                    // Reset notification count khi click
-                    setNotificationCount(0);
+                    // Refresh unread count from server
+                    notificationService.getUnreadCount().then((count) => {
+                      setNotificationCount(count);
+                    });
                   }}
                 />
               </Badge>
@@ -535,7 +526,7 @@ const ManagerLayout = () => {
         <Drawer
           title="Thông báo"
           placement="right"
-          width={600}
+          width={720}
           onClose={() => setNotificationDrawerOpen(false)}
           open={notificationDrawerOpen}
           styles={{ body: { padding: 0 } }}

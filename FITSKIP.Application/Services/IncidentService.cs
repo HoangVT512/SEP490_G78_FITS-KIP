@@ -43,16 +43,19 @@ public class IncidentService : IIncidentService
             throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId} hoặc thiết bị đã bị vô hiệu hóa");
         }
 
-        // Validate start time
-        if (request.StartTime > DateTime.Now)
+        // Validate issue is provided
+        if (string.IsNullOrWhiteSpace(request.Issue))
         {
-            throw new InvalidOperationException("Thời gian bắt đầu không thể trong tương lai");
+            throw new InvalidOperationException("Vấn đề không được để trống");
         }
+
+        // Set StartTime to now if not provided
+        var startTime = request.StartTime ?? DateTime.Now;
 
         // Validate end time if provided
         if (request.EndTime.HasValue)
         {
-            if (request.EndTime.Value <= request.StartTime)
+            if (request.EndTime.Value <= startTime)
             {
                 throw new InvalidOperationException("Thời gian kết thúc phải sau thời gian bắt đầu");
             }
@@ -67,9 +70,9 @@ public class IncidentService : IIncidentService
         decimal? duration = null;
         if (request.EndTime.HasValue)
         {
-            var timeSpan = request.EndTime.Value - request.StartTime;
+            var timeSpan = request.EndTime.Value - startTime;
             var durationMinutes = timeSpan.TotalMinutes;
-            
+
             // Đảm bảo Duration luôn dương và ít nhất 1 phút
             duration = Math.Max(1, (decimal)durationMinutes);
         }
@@ -77,14 +80,16 @@ public class IncidentService : IIncidentService
         var incident = new IncidentHistory
         {
             EquipmentId = request.EquipmentId,
-            StartTime = request.StartTime,
+            StartTime = startTime,
             EndTime = request.EndTime,
             Duration = duration,
-            TypeId = request.TypeId,
+            TypeId = request.TypeId, // Có thể null
             Issue = request.Issue?.Trim(),
             Reason = request.Reason?.Trim(),
             Solution = request.Solution?.Trim(),
-            CreatedDate = DateTime.UtcNow
+            Status = "Chờ xử lý",
+            CreatedDate = DateTime.Now,
+            ReportedByUserId = request.ReportedByUserId
         };
 
         return await _incidentRepository.CreateAsync(incident, cancellationToken);
@@ -131,7 +136,7 @@ public class IncidentService : IIncidentService
         {
             var timeSpan = request.EndTime.Value - request.StartTime;
             var durationMinutes = timeSpan.TotalMinutes;
-            
+
             // Đảm bảo Duration luôn dương và ít nhất 1 phút
             duration = Math.Max(1, (decimal)durationMinutes);
         }
@@ -140,10 +145,28 @@ public class IncidentService : IIncidentService
         existingIncident.StartTime = request.StartTime;
         existingIncident.EndTime = request.EndTime;
         existingIncident.Duration = duration;
-        existingIncident.TypeId = request.TypeId;
+
+        // Update TypeId only if provided
+        if (request.TypeId.HasValue && request.TypeId > 0)
+        {
+            existingIncident.TypeId = request.TypeId;
+        }
+
+        // Update ReportedByUserId if provided
+        if (!string.IsNullOrEmpty(request.ReportedByUserId))
+        {
+            existingIncident.ReportedByUserId = request.ReportedByUserId;
+        }
+
         existingIncident.Issue = request.Issue?.Trim();
         existingIncident.Reason = request.Reason?.Trim();
         existingIncident.Solution = request.Solution?.Trim();
+
+        // Update status if provided
+        if (!string.IsNullOrEmpty(request.Status))
+        {
+            existingIncident.Status = request.Status;
+        }
 
         return await _incidentRepository.UpdateAsync(existingIncident, cancellationToken);
     }
@@ -220,9 +243,10 @@ public class IncidentService : IIncidentService
         // Group by line
         var downtimeByLines = incidents
             .Where(i => i.Equipment?.Stage?.Line != null)
-            .GroupBy(i => new { 
-                LineId = i.Equipment!.Stage!.Line!.LineId, 
-                LineName = i.Equipment.Stage.Line.LineName 
+            .GroupBy(i => new
+            {
+                LineId = i.Equipment!.Stage!.Line!.LineId,
+                LineName = i.Equipment.Stage.Line.LineName
             })
             .Select(g => new DowntimeByLineDTO
             {
@@ -236,9 +260,10 @@ public class IncidentService : IIncidentService
         // Group by stop type
         var incidentsByStopType = incidents
             .Where(i => i.Type != null)
-            .GroupBy(i => new { 
-                TypeId = i.TypeId ?? 0, 
-                TypeName = i.Type!.TypeName ?? "Unknown" 
+            .GroupBy(i => new
+            {
+                TypeId = i.TypeId ?? 0,
+                TypeName = i.Type!.TypeName ?? "Unknown"
             })
             .Select(g => new IncidentByStopTypeDTO
             {
@@ -255,8 +280,8 @@ public class IncidentService : IIncidentService
 
         foreach (var shift in shifts)
         {
-            var shiftIncidents = incidents.Where(i => 
-                i.StartTime.HasValue && 
+            var shiftIncidents = incidents.Where(i =>
+                i.StartTime.HasValue &&
                 IsTimeInShift(i.StartTime.Value.TimeOfDay, shift.StartTime, shift.EndTime)
             ).ToList();
 
@@ -280,10 +305,23 @@ public class IncidentService : IIncidentService
         };
     }
 
+    public async Task<IReadOnlyList<dynamic>> GetStopTypesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var stopTypes = await _incidentRepository.GetStopTypesAsync(cancellationToken);
+            return stopTypes;
+        }
+        catch (Exception)
+        {
+            return new List<dynamic>();
+        }
+    }
+
     private static bool IsTimeInShift(TimeSpan time, TimeOnly shiftStart, TimeOnly shiftEnd)
     {
         var timeOnly = TimeOnly.FromTimeSpan(time);
-        
+
         if (shiftStart <= shiftEnd)
         {
             // Normal shift (e.g., 06:00 - 14:00)

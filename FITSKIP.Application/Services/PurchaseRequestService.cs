@@ -61,6 +61,20 @@ public class PurchaseRequestService : IPurchaseRequestService
             throw new InvalidOperationException("Không tìm thấy người dùng");
         }
 
+        // Check if there's already a pending request for this part
+        var existingPendingRequest = await _purchaseRequestRepository.GetByPartIdAndStatusAsync(
+            request.PartId,
+            "Chờ duyệt",
+            cancellationToken
+        );
+
+        if (existingPendingRequest != null)
+        {
+            throw new InvalidOperationException(
+                $"Phụ tùng này đã có yêu cầu đang chờ duyệt (REQ{existingPendingRequest.RequestId.ToString().PadLeft(3, '0')}). Vui lòng chờ hoàn thành yêu cầu này trước khi tạo yêu cầu mới!"
+            );
+        }
+
         // Validate spare part exists
         //var sparePartExists = await _sparePartRepository.ExistsAsync(request.PartId, cancellationToken);
         //if (!sparePartExists)
@@ -74,7 +88,7 @@ public class PurchaseRequestService : IPurchaseRequestService
             RequestedBy = userId,
             Quantity = request.Quantity,
             Reason = request.Reason,
-            Status = "Pending" // Default status
+            Status = "Chờ duyệt" // Default status
         };
 
         var createdRequest = await _purchaseRequestRepository.CreateAsync(purchaseRequest, cancellationToken);
@@ -126,7 +140,7 @@ public class PurchaseRequestService : IPurchaseRequestService
         }
 
         // Only allow update if status is Pending
-        if (existingRequest.Status != "Pending")
+        if (existingRequest.Status != "Chờ duyệt")
         {
             throw new InvalidOperationException($"Không thể cập nhật yêu cầu đã {existingRequest.Status}");
         }
@@ -164,7 +178,7 @@ public class PurchaseRequestService : IPurchaseRequestService
         }
 
         // Only allow deletion if status is Pending
-        if (existingRequest.Status != "Pending")
+        if (existingRequest.Status != "Chờ duyệt")
         {
             throw new InvalidOperationException($"Không thể xóa yêu cầu đã {existingRequest.Status}");
         }
@@ -191,12 +205,12 @@ public class PurchaseRequestService : IPurchaseRequestService
         }
 
         // Only allow approval if status is Pending
-        if (existingRequest.Status != "Pending")
+        if (existingRequest.Status != "Chờ duyệt")
         {
             throw new InvalidOperationException($"Không thể duyệt yêu cầu đã {existingRequest.Status}");
         }
 
-        existingRequest.Status = "Approved";
+        existingRequest.Status = "Đã duyệt";
         existingRequest.ApprovedBy = managerId;
         existingRequest.ApprovedAt = DateTime.UtcNow;
         existingRequest.RejectedBy = null;
@@ -246,12 +260,12 @@ public class PurchaseRequestService : IPurchaseRequestService
         }
 
         // Only allow rejection if status is Pending
-        if (existingRequest.Status != "Pending")
+        if (existingRequest.Status != "Chờ duyệt")
         {
             throw new InvalidOperationException($"Không thể từ chối yêu cầu đã {existingRequest.Status}");
         }
 
-        existingRequest.Status = "Rejected";
+        existingRequest.Status = "Từ chối";
         existingRequest.RejectedBy = managerId;
         existingRequest.RejectedAt = DateTime.UtcNow;
         existingRequest.ApprovedBy = null;

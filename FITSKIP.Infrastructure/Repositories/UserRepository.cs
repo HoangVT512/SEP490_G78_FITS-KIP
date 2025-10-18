@@ -207,11 +207,10 @@ public class UserRepository : IUserRepository
 
     public Task<User?> GetUserByIdAsync(string id, CancellationToken cancellationToken = default)
     {
-        var existingUser = db.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
-        if (existingUser == null)
-        {
-            throw new ArgumentException("A user with the same ID does not exist.");
-        }
+        var existingUser = db.Users
+            .Include(u => u.UserLines)
+            .ThenInclude(ul => ul.Line)
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
         return existingUser;
     }
 
@@ -494,7 +493,7 @@ public class UserRepository : IUserRepository
     {
         try
         {
-            Console.WriteLine($"GetUsersByRoleAsync called with roleName: {roleName}");
+            Console.WriteLine($"GetUsersByRoleAsync được gọi với roleName: {roleName}");
 
             // Get users by RoleId instead of role name
             // Note: Removed IsActive filter to include all managers
@@ -503,13 +502,39 @@ public class UserRepository : IUserRepository
                 .Where(u => u.Role != null && u.Role.Name == roleName)
                 .ToListAsync(cancellationToken);
 
-            Console.WriteLine($"Found {users.Count} users with role {roleName}");
+            Console.WriteLine($"Đã tìm thấy {users.Count} users với role {roleName}");
 
             return users;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error in GetUsersByRoleAsync: {ex.Message}");
+            Console.WriteLine($"Lỗi trong GetUsersByRoleAsync: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            return new List<User>();
+        }
+    }
+
+    public async Task<IReadOnlyList<User>> GetActiveTeamLeadsByLineAsync(int lineId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            Console.WriteLine($"GetActiveTeamLeadsByLineAsync được gọi với lineId: {lineId}");
+
+            var users = await db.Users
+                .Include(u => u.Role)
+                .Include(u => u.UserLines)
+                .Include(u => u.Department)
+                .Where(u => u.Role != null && u.Role.Name == "Tổ trưởng" && u.IsActive == true)
+                .Where(u => u.UserLines.Any(ul => ul.LineId == lineId))
+                .ToListAsync(cancellationToken);
+
+            Console.WriteLine($"Đã tìm thấy {users.Count} team leads hoạt động cho line {lineId}");
+
+            return users;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Lỗi trong GetActiveTeamLeadsByLineAsync: {ex.Message}");
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
             return new List<User>();
         }

@@ -61,7 +61,7 @@ namespace FITSKIP.API
             // Add DbContext with support for test database selection
             var connectionStringName = builder.Environment.IsEnvironment("Testing") ? "TestConnection" : "DefaultConnection";
             var connectionString = builder.Configuration.GetConnectionString(connectionStringName);
-            
+
             builder.Services.AddDbContext<FITSKIP.Infrastructure.DbContexts.FitskipDbContext>(options =>
                 options.UseSqlServer(connectionString));
 
@@ -293,8 +293,10 @@ namespace FITSKIP.API
 
             app.MapControllers();
 
-            // Map SignalR Hub
-            app.MapHub<FITSKIP.API.Hubs.NotificationHub>("/hubs/notifications");
+            // Map SignalR Hub with proper configuration
+            app.MapHub<FITSKIP.API.Hubs.NotificationHub>("/hubs/notifications")
+                .RequireAuthorization() // Require authentication
+                .WithDisplayName("Notification Hub");
 
             // Seed data before starting the app (skip for Testing environment)
             using (var scope = app.Services.CreateScope())

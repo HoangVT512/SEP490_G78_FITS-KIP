@@ -111,6 +111,15 @@ public class AuthsController : ControllerBase
                 return Unauthorized(new { message = "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên." });
             }
 
+            // Get user's lines
+            var userLines = user.UserLines?.Select(ul => new
+            {
+                userLineId = ul.UserLineId,
+                lineId = ul.LineId,
+                lineName = ul.Line?.LineName,
+                createdAt = ul.CreatedAt
+            }).ToList();
+
             return Ok(new
             {
                 id = user.Id,
@@ -122,7 +131,8 @@ public class AuthsController : ControllerBase
                 emailConfirmed = user.EmailConfirmed,
                 phoneNumber = user.PhoneNumber,
                 phoneNumberConfirmed = user.PhoneNumberConfirmed,
-                roles = roles
+                roles = roles,
+                userLines = userLines
             });
         }
         catch (Exception ex)
