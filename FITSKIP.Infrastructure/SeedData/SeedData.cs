@@ -722,6 +722,13 @@ namespace FITSKIP.Infrastructure.SeedData
 
                     var finalDuration = Math.Max(1, (decimal)durationMinutes);
 
+                    // Random AssignedTo từ các user ID có sẵn
+                    var users = await context.Users.ToListAsync();
+                    var assignedToUser = users.Any() ? users[random.Next(users.Count)] : null;
+
+                    // Random IsTechSupport (50% cơ hội)
+                    var isTechSupport = random.Next(0, 2) == 1;
+
                     var incident = new IncidentHistory
                     {
                         EquipmentId = selectedEquipment.EquipmentId,
@@ -733,7 +740,9 @@ namespace FITSKIP.Infrastructure.SeedData
                         Issue = GetRandomIssue(selectedStopType.TypeName ?? "", random),
                         Reason = GetRandomReason(selectedStopType.TypeName ?? "", random),
                         Solution = GetRandomSolution(selectedStopType.TypeName ?? "", random),
-                        CreatedDate = startTime.AddMinutes(random.Next(1, 15))
+                        CreatedDate = startTime.AddMinutes(random.Next(1, 15)),
+                        AssignedTo = assignedToUser?.Id,
+                        IsTechSupport = isTechSupport
                     };
 
                     incidents.Add(incident);

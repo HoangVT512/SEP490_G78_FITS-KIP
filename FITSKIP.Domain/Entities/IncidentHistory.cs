@@ -31,6 +31,10 @@ public partial class IncidentHistory
 
     public int? SlotId { get; set; }
 
+    public string? AssignedTo { get; set; }
+
+    public bool IsTechSupport { get; set; } = false;
+
     public virtual Equipment? Equipment { get; set; }
 
     public virtual StopType? Type { get; set; }

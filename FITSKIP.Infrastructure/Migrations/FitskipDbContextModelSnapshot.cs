@@ -118,6 +118,9 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IncidentId"));
 
+                    b.Property<string>("AssignedTo")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedDate")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime")
@@ -132,6 +135,9 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<int?>("EquipmentId")
                         .HasColumnType("int")
                         .HasColumnName("EquipmentID");
+
+                    b.Property<bool>("IsTechSupport")
+                        .HasColumnType("bit");
 
                     b.Property<string>("Issue")
                         .HasMaxLength(500)

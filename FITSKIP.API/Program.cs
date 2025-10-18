@@ -302,7 +302,18 @@ namespace FITSKIP.API
             using (var scope = app.Services.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<FitskipDbContext>();
-                await SeedData.SeedAllData(context);
+                try
+                {
+                    // Apply migrations
+                    await context.Database.MigrateAsync();
+                    // Seed data
+                    await SeedData.SeedAllData(context);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error during migration/seeding: {ex.Message}");
+                    throw;
+                }
             }
 
             app.Run();
