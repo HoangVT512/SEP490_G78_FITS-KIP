@@ -331,9 +331,17 @@ const IncidentManagement = () => {
     setIncidentForms([...incidentForms, { id: newId, status: "Chờ xử lý" }]);
     message.info({
       content:
-        "Một bản ghi sự cố khác đã được thêm bên dưới. Vui lòng điền thông tin.",
+        "Một bản ghi sự cố khác đã được thêm bên dưới.",
       duration: 3,
     });
+
+    // Scroll to the bottom of the modal after a short delay to show the new form
+    setTimeout(() => {
+      const modalContent = document.querySelector(".ant-modal-body");
+      if (modalContent) {
+        modalContent.scrollTop = modalContent.scrollHeight;
+      }
+    }, 100);
   };
 
   const removeIncidentForm = (idToRemove) => {
