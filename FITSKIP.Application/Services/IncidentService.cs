@@ -11,17 +11,23 @@ public class IncidentService : IIncidentService
     private readonly IEquipmentRepository _equipmentRepository;
     private readonly ILineRepository _lineRepository;
     private readonly IShiftRepository _shiftRepository;
+    private readonly INotificationService _notificationService;
+    private readonly IUserService _userService;
 
     public IncidentService(
         IIncidentRepository incidentRepository,
         IEquipmentRepository equipmentRepository,
         ILineRepository lineRepository,
-        IShiftRepository shiftRepository)
+        IShiftRepository shiftRepository,
+        INotificationService notificationService,
+        IUserService userService)
     {
         _incidentRepository = incidentRepository;
         _equipmentRepository = equipmentRepository;
         _lineRepository = lineRepository;
         _shiftRepository = shiftRepository;
+        _notificationService = notificationService;
+        _userService = userService;
     }
 
     public Task<IReadOnlyList<IncidentHistory>> GetIncidentsAsync(CancellationToken cancellationToken = default)
@@ -88,7 +94,12 @@ public class IncidentService : IIncidentService
             ReportedByUserId = request.ReportedByUserId
         };
 
-        return await _incidentRepository.CreateAsync(incident, cancellationToken);
+        var createdIncident = await _incidentRepository.CreateAsync(incident, cancellationToken);
+
+        // Send notification to Technical Managers
+        await SendIncidentNotificationToTechnicalManagersAsync(createdIncident, equipment, cancellationToken);
+
+        return createdIncident;
     }
 
     public async Task<BulkIncidentResponse> CreateBulkIncidentsAsync(CreateBulkIncidentRequest request, CancellationToken cancellationToken = default)
@@ -174,6 +185,9 @@ public class IncidentService : IIncidentService
 
                 var createdIncident = await _incidentRepository.CreateAsync(incident, cancellationToken);
                 response.SuccessCount++;
+
+                // Send notification to Technical Managers for each incident
+                await SendIncidentNotificationToTechnicalManagersAsync(createdIncident, equipment, cancellationToken);
 
                 // Map to DTO for response
                 response.SuccessfulIncidents.Add(new IncidentHistoryDTO
@@ -445,6 +459,43 @@ public class IncidentService : IIncidentService
         {
             // Night shift crossing midnight (e.g., 22:00 - 06:00)
             return timeOnly >= shiftStart || timeOnly < shiftEnd;
+        }
+    }
+
+    private async Task SendIncidentNotificationToTechnicalManagersAsync(IncidentHistory incident, Equipment equipment, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Get all Technical Managers
+            var technicalManagers = await _userService.GetUsersByRoleAsync("Quản lý kỹ thuật", cancellationToken);
+
+            // Create notification record in database for each Technical Manager
+            foreach (var manager in technicalManagers)
+            {
+                if (!string.IsNullOrEmpty(manager.Id))
+                {
+                    await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+                    {
+                        UserId = manager.Id,
+                        Title = "Sự cố mới được báo cáo",
+                        Message = $"Có sự cố mới tại thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode}) - Mã sự cố: {incident.IncidentId}"
+                    });
+                }
+            }
+
+            // Send ONE real-time notification to Technical Managers group
+            await _notificationService.SendNotificationToGroupAsync(
+                "TechnicalManagers",
+                "Sự cố mới được báo cáo",
+                $"Có sự cố mới tại thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode}) - Mã sự cố: {incident.IncidentId}",
+                "warning"
+            );
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the incident creation
+            // You might want to add logging here
+            Console.WriteLine($"Error sending incident notification: {ex.Message}");
         }
     }
 }
