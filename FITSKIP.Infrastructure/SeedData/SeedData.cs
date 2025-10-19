@@ -231,6 +231,24 @@ namespace FITSKIP.Infrastructure.SeedData
                 };
                 technician2.PasswordHash = _passwordHasher.HashPassword(technician2, "123456");
                 users.Add(technician2);
+
+                // Additional Team Leader - Tổ trưởng (Hoàng)
+                var teamLeader2 = new User
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    UserName = "TT002",
+                    NormalizedUserName = "TT002",
+                    Email = "hoangdz512@gmail.com",
+                    NormalizedEmail = "HOANGDZ512@GMAIL.COM",
+                    EmailConfirmed = true,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    ConcurrencyStamp = Guid.NewGuid().ToString(),
+                    FullName = "Vũ Tuấn Hoàng",
+                    EmployeeCode = "TT002",
+                    PhoneNumber = "0912345678"
+                };
+                teamLeader2.PasswordHash = _passwordHasher.HashPassword(teamLeader2, "123456");
+                users.Add(teamLeader2);
                 await context.Users.AddRangeAsync(users);
                 await context.SaveChangesAsync();
             }

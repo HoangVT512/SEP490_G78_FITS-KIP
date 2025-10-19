@@ -238,15 +238,12 @@ public class UserRepository : IUserRepository
         var normalizedEmail = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
         var normalizedPhone = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
 
-        // Determine desired UserName: priority -> explicit request.UserName, then request.EmployeeCode, then keep existing
+        // Username is auto-generated from EmployeeCode or kept as existing
+        // Cannot be changed during update
         string? desiredUserName = null;
-        if (!string.IsNullOrWhiteSpace(request.UserName))
+        if (!string.IsNullOrWhiteSpace(request.EmployeeCode))
         {
-            desiredUserName = request.UserName.Trim();
-        }
-        else if (!string.IsNullOrWhiteSpace(request.EmployeeCode))
-        {
-            // If user didn't explicitly set UserName, prefer EmployeeCode as username when provided
+            // If EmployeeCode is provided, use it as username
             desiredUserName = request.EmployeeCode.Trim();
         }
         else
