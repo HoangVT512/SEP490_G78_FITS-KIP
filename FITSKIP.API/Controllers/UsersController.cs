@@ -167,8 +167,8 @@ public class UsersController : ControllerBase
             }
 
             // Basic validation - UserName is now auto-generated from EmployeeCode
-            var userName = string.IsNullOrEmpty(request.UserName) ? request.EmployeeCode : request.UserName;
-            
+            var userName = request.EmployeeCode;
+
             // Validation 1: Check if username already exists (will be EmployeeCode)
             if (!string.IsNullOrEmpty(userName))
             {

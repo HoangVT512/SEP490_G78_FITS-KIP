@@ -316,12 +316,7 @@ public class UserRepository : IUserRepository
                 // Check if department already has a different manager
                 if (deptToManage.ManagerId != null && deptToManage.ManagerId != id)
                 {
-                    // Unset the other manager
-                    var otherManagerDept = await db.Departments.FirstOrDefaultAsync(d => d.ManagerId == deptToManage.ManagerId, cancellationToken);
-                    if (otherManagerDept != null)
-                    {
-                        otherManagerDept.ManagerId = null;
-                    }
+                    throw new ArgumentException($"Phòng ban '{deptToManage.DepartmentName}' đã có quản lý. Không thể thêm quản lý mới.");
                 }
 
                 // Unset previous manager if any (if user was managing a different department)
@@ -606,7 +601,7 @@ public class UserRepository : IUserRepository
     {
         // Create the user entity from request
         // Auto-set UserName from EmployeeCode if not provided
-        var userName = string.IsNullOrEmpty(request.UserName) ? request.EmployeeCode : request.UserName;
+        var userName = request.EmployeeCode;
 
         // Normalize input: convert empty or whitespace email/phone to null to avoid DB storing empty strings
         var normalizedEmail = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
@@ -621,8 +616,8 @@ public class UserRepository : IUserRepository
             PhoneNumber = normalizedPhone
         };
 
-        // Create user using existing method with default password if not provided
-        var password = string.IsNullOrEmpty(request.Password) ? "123456" : request.Password;
+        // Create user using existing method with default password
+        var password = "123456";
         var createdUser = await CreateUserAsync(user, password, request.RoleIds, cancellationToken);
 
         // TH1: Nếu có DepartmentId nhưng KHÔNG có LineIds -> set user.DepartmentId trực tiếp
@@ -670,6 +665,33 @@ public class UserRepository : IUserRepository
                     }
                 }
                 await db.SaveChangesAsync(cancellationToken);
+            }
+        }
+
+        // Nếu role là "Quản lý" và có DepartmentId, set user làm manager của department đó
+        if (request.RoleIds != null && request.RoleIds.Length > 0 && request.DepartmentId.HasValue)
+        {
+            var roleId = request.RoleIds[0];
+            var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == roleId || r.Name == roleId, cancellationToken);
+            if (role != null && role.Name == "Quản lý")
+            {
+                var departmentToManage = await db.Departments.FirstOrDefaultAsync(d => d.DepartmentId == request.DepartmentId.Value, cancellationToken);
+                if (departmentToManage != null)
+                {
+                    // Kiểm tra nếu department đã có manager
+                    if (departmentToManage.ManagerId != null)
+                    {
+                        throw new ArgumentException($"Phòng ban '{departmentToManage.DepartmentName}' đã có quản lý. Không thể thêm quản lý mới.");
+                    }
+
+                    // Set user làm manager của department
+                    departmentToManage.ManagerId = createdUser.Id;
+
+                    // Clear DepartmentId vì manager relationship riêng biệt
+                    createdUser.DepartmentId = null;
+
+                    await db.SaveChangesAsync(cancellationToken);
+                }
             }
         }
 
