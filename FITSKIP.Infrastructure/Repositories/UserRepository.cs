@@ -640,6 +640,9 @@ public class UserRepository : IUserRepository
             // TH2: Có LineIds -> assign qua UserLine (DepartmentId sẽ được suy ra từ Line)
             else
             {
+                // Đảm bảo DepartmentId = null khi assign qua UserLines
+                createdUser.DepartmentId = null;
+
                 foreach (var lineId in request.LineIds)
                 {
                     var line = await db.Lines.FirstOrDefaultAsync(l => l.LineId == lineId, cancellationToken);
