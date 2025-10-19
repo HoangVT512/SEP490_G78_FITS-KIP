@@ -98,4 +98,17 @@ public class LineRepository : ILineRepository
 
         return line;
     }
+
+    public async Task RemoveUserLinesForLineAsync(int lineId, CancellationToken cancellationToken = default)
+    {
+        var userLines = await _context.UserLines
+            .Where(ul => ul.LineId == lineId)
+            .ToListAsync(cancellationToken);
+
+        if (userLines.Any())
+        {
+            _context.UserLines.RemoveRange(userLines);
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+    }
 }

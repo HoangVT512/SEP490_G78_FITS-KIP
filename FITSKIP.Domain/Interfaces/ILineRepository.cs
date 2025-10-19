@@ -11,4 +11,5 @@ public interface ILineRepository
     Task<IReadOnlyList<Line>> GetByDepartmentIdAsync(int departmentId, CancellationToken cancellationToken = default);
     Task<bool> HasDependenciesAsync(int lineId, CancellationToken cancellationToken = default);
     Task<Line?> ToggleLineStatusAsync(int id, CancellationToken cancellationToken = default);
+    Task RemoveUserLinesForLineAsync(int lineId, CancellationToken cancellationToken = default);
 }
