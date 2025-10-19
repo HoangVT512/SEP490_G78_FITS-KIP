@@ -1,18 +1,205 @@
+/* Inventory Management Styles */
+
 .container {
   padding: 24px;
+  background: #f5f7fa;
+  min-height: 100vh;
 }
 
+/* Statistics Row */
 .statsRow {
   margin-bottom: 24px;
 }
 
+.statsCard {
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+  transition: all 0.3s ease;
+}
+
+.statsCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #d9d9d9;
+}
+
+/* Table Card */
 .tableCard {
-  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px 0 rgba(0, 0, 0, 0.02);
+  background: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 8px;
+  border: 1px solid #e8e8e8;
+}
+
+.tableCard :global(.ant-card-head) {
+  background: white;
+  border-bottom: 2px solid #f0f0f0;
+  padding: 16px 24px;
+}
+
+.tableCard :global(.ant-card-head .ant-card-head-wrapper) {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Header Title */
+.tableCard :global(.ant-card-title) {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f1f1f;
+  margin: 0;
+}
+
+/* Table Styling */
+.tableCard :global(.ant-table) {
+  font-size: 14px;
+}
+
+.tableCard :global(.ant-table-thead > tr > th) {
+  background: #f5f7fa;
+  font-weight: 600;
+  color: #1f1f1f;
+  border-bottom: 2px solid #e8e8e8;
+}
+
+.tableCard :global(.ant-table-tbody > tr) {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tableCard :global(.ant-table-tbody > tr:hover) {
+  background: #fafbfc;
+}
+
+.tableCard :global(.ant-table-cell) {
+  padding: 12px 16px;
+  color: #595959;
+}
+
+/* Tag Styling */
+.tableCard :global(.ant-tag) {
+  border-radius: 4px;
+  font-weight: 500;
+  padding: 4px 12px;
+}
+
+.tableCard :global(.ant-tag-success) {
+  background: #f6ffed;
+  border-color: #b7eb8f;
+  color: #52c41a;
+}
+
+.tableCard :global(.ant-tag-warning) {
+  background: #fffbe6;
+  border-color: #ffe58f;
+  color: #faad14;
+}
+
+.tableCard :global(.ant-tag-error) {
+  background: #fff1f0;
+  border-color: #ffccc7;
+  color: #ff4d4f;
+}
+
+/* Button Styling */
+.tableCard :global(.ant-btn-primary) {
+  background: #334766;
+  border-color: #334766;
+  font-weight: 500;
+}
+
+.tableCard :global(.ant-btn-primary:hover) {
+  background: #475a7a;
+  border-color: #475a7a;
+}
+
+.tableCard :global(.ant-btn-default) {
+  border-color: #d9d9d9;
+  color: #595959;
+  font-weight: 500;
+}
+
+.tableCard :global(.ant-btn-default:hover) {
+  color: #334766;
+  border-color: #334766;
+}
+
+/* Search and Filter Section */
+.tableCard :global(.ant-input-affix-wrapper) {
+  border-color: #d9d9d9;
+  border-radius: 6px;
+}
+
+.tableCard :global(.ant-input-affix-wrapper:focus-within) {
+  border-color: #334766;
+  box-shadow: 0 0 0 2px rgba(51, 71, 102, 0.1);
+}
+
+.tableCard :global(.ant-select-selector) {
+  border-color: #d9d9d9;
+  border-radius: 6px;
+}
+
+.tableCard :global(.ant-select-focused .ant-select-selector) {
+  border-color: #334766;
+  box-shadow: 0 0 0 2px rgba(51, 71, 102, 0.1);
+}
+
+/* Action Dropdown */
+.tableCard :global(.ant-dropdown-menu-item) {
+  color: #595959;
+}
+
+.tableCard :global(.ant-dropdown-menu-item:hover) {
+  color: #334766;
+  background: #f5f7fa;
+}
+
+.tableCard :global(.ant-dropdown-menu-item-danger) {
+  color: #ff4d4f;
+}
+
+/* Modal Styling */
+.tableCard :global(.ant-modal-header) {
+  background: white;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tableCard :global(.ant-modal-title) {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f1f1f;
+}
+
+.tableCard :global(.ant-form-item-label > label) {
+  color: #1f1f1f;
+  font-weight: 500;
+}
+
+.tableCard :global(.ant-form-item-label > label::after) {
+  margin: 0 8px;
+}
+
+/* Empty State */
+.tableCard :global(.ant-empty-description) {
+  color: #8c8c8c;
 }
 
 /* Responsive styles */
 @media (max-width: 768px) {
   .container {
     padding: 16px;
+  }
+
+  .statsCard {
+    margin-bottom: 12px;
+  }
+
+  .tableCard :global(.ant-table) {
+    font-size: 12px;
+  }
+
+  .tableCard :global(.ant-table-cell) {
+    padding: 8px 12px;
   }
 }

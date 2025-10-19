@@ -36,7 +36,9 @@ const { Search } = Input;
 const InventoryManagement = () => {
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [editingRecord, setEditingRecord] = useState(null);
+  const [viewingRecord, setViewingRecord] = useState(null);
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -167,14 +169,17 @@ const InventoryManagement = () => {
       render: (_, record) => {
         const menuItems = [
           {
+            key: "view",
+            label: "Xem chi tiết",
+            onClick: () => handleView(record),
+          },
+          {
             key: "edit",
-            icon: <EditOutlined />,
             label: "Sửa",
             onClick: () => handleEdit(record),
           },
           {
             key: "delete",
-            icon: <DeleteOutlined />,
             label: record.isActive ? "Xóa" : "Khôi phục",
             danger: record.isActive,
             onClick: () => handleDelete(record),
@@ -198,6 +203,11 @@ const InventoryManagement = () => {
     setEditingRecord(null);
     form.resetFields();
     setIsModalVisible(true);
+  };
+
+  const handleView = (record) => {
+    setViewingRecord(record);
+    setDetailModalVisible(true);
   };
 
   const handleEdit = (record) => {
@@ -441,42 +451,58 @@ const InventoryManagement = () => {
       {/* Statistics */}
       <Row gutter={[16, 16]} className={styles.statsRow}>
         <Col xs={24} sm={12} lg={6}>
-          <Card variant="borderless">
+          <Card className={styles.statsCard}>
             <Statistic
               title="Tổng phụ tùng"
               value={stats.total}
               prefix={<InboxOutlined />}
-              valueStyle={{ color: "#1890ff" }}
+              valueStyle={{
+                color: "#1890ff",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card variant="borderless">
+          <Card className={styles.statsCard}>
             <Statistic
               title="Đủ hàng"
               value={stats.inStock}
               prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: "#52c41a" }}
+              valueStyle={{
+                color: "#52c41a",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card variant="borderless">
+          <Card className={styles.statsCard}>
             <Statistic
               title="Sắp hết"
               value={stats.lowStock}
               prefix={<WarningOutlined />}
-              valueStyle={{ color: "#faad14" }}
+              valueStyle={{
+                color: "#faad14",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card variant="borderless">
+          <Card className={styles.statsCard}>
             <Statistic
               title="Hết hàng"
               value={stats.outOfStock}
               prefix={<WarningOutlined />}
-              valueStyle={{ color: "#ff4d4f" }}
+              valueStyle={{
+                color: "#ff4d4f",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
             />
           </Card>
         </Col>
@@ -485,20 +511,29 @@ const InventoryManagement = () => {
       {/* Main Table */}
       <Card
         title="Danh sách phụ tùng"
-        variant="borderless"
         className={styles.tableCard}
         extra={
-          <div style={{ display: "flex", gap: 8 }}>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <Button
               type="default"
               onClick={() => {
                 setMinValue(5);
                 setShowMinModal(true);
               }}
+              style={{ borderRadius: "6px", fontWeight: "500" }}
             >
               Điều chỉnh SL tối thiểu
             </Button>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
+            <Button
+              type="primary"
+              onClick={handleAdd}
+              style={{
+                backgroundColor: "#1890ff",
+                borderColor: "#1890ff",
+                borderRadius: "6px",
+                fontWeight: "500",
+              }}
+            >
               Thêm phụ tùng
             </Button>
           </div>
@@ -509,14 +544,14 @@ const InventoryManagement = () => {
             <Col xs={24} sm={12} md={8}>
               <Search
                 placeholder="Tìm theo mã hoặc tên phụ tùng"
-                prefix={<SearchOutlined />}
                 onChange={(e) => setSearchText(e.target.value)}
                 allowClear
+                style={{ borderRadius: "6px" }}
               />
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Select
-                style={{ width: "100%" }}
+                style={{ width: "100%", borderRadius: "6px" }}
                 placeholder="Lọc theo trạng thái"
                 value={filterStatus}
                 onChange={setFilterStatus}
@@ -529,7 +564,7 @@ const InventoryManagement = () => {
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Select
-                style={{ width: "100%" }}
+                style={{ width: "100%", borderRadius: "6px" }}
                 placeholder="Lọc theo trạng thái hoạt động"
                 value={filterActive}
                 onChange={setFilterActive}
@@ -550,8 +585,10 @@ const InventoryManagement = () => {
             pagination={{
               pageSize: 10,
               showSizeChanger: true,
-              showTotal: (total) => `Tổng ${total} phụ tùng`,
+              showTotal: (total) => `Tổng cộng ${total} phụ tùng`,
+              style: { marginTop: "16px" },
             }}
+            style={{ borderRadius: "6px" }}
           />
         </Space>
       </Card>
@@ -565,7 +602,7 @@ const InventoryManagement = () => {
           form.resetFields();
         }}
         footer={null}
-        width={700}
+        width={900}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Row gutter={16}>
@@ -705,7 +742,15 @@ const InventoryManagement = () => {
               >
                 Hủy
               </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                style={{
+                  backgroundColor: "#1890ff",
+                  borderColor: "#1890ff",
+                }}
+              >
                 {editingRecord ? "Cập nhật" : "Thêm mới"}
               </Button>
             </Space>
@@ -737,6 +782,10 @@ const InventoryManagement = () => {
               <Button
                 type="primary"
                 loading={savingMin}
+                style={{
+                  backgroundColor: "#1890ff",
+                  borderColor: "#1890ff",
+                }}
                 onClick={async () => {
                   try {
                     setSavingMin(true);
@@ -772,6 +821,138 @@ const InventoryManagement = () => {
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Detail Modal */}
+      <Modal
+        title="Chi tiết phụ tùng"
+        open={detailModalVisible}
+        onCancel={() => {
+          setDetailModalVisible(false);
+          setViewingRecord(null);
+        }}
+        footer={[
+          <Button key="close" onClick={() => setDetailModalVisible(false)}>
+            Đóng
+          </Button>,
+          <Button
+            key="edit"
+            type="primary"
+            style={{
+              backgroundColor: "#1890ff",
+              borderColor: "#1890ff",
+            }}
+            onClick={() => {
+              setDetailModalVisible(false);
+              handleEdit(viewingRecord);
+            }}
+          >
+            Chỉnh sửa
+          </Button>,
+        ]}
+        width={700}
+      >
+        {viewingRecord && (
+          <div style={{ padding: "16px 0" }}>
+            <Row gutter={[16, 24]}>
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Mã phụ tùng:</strong>
+                </div>
+                <div style={{ fontSize: 16 }}>{viewingRecord.partNumber}</div>
+              </Col>
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Tên phụ tùng:</strong>
+                </div>
+                <div style={{ fontSize: 16 }}>{viewingRecord.partName}</div>
+              </Col>
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Số lượng hiện tại:</strong>
+                </div>
+                <div style={{ fontSize: 16, color: "#1890ff" }}>
+                  {viewingRecord.quantity ?? 0} cái
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Số lượng tối thiểu:</strong>
+                </div>
+                <div style={{ fontSize: 16 }}>
+                  {viewingRecord.minQuantity ?? 0} cái
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Vị trí:</strong>
+                </div>
+                <div style={{ fontSize: 16 }}>
+                  {viewingRecord.location || "Chưa xác định"}
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Trạng thái:</strong>
+                </div>
+                <div>
+                  {(() => {
+                    let color = "success";
+                    let displayStatus = viewingRecord.status;
+                    const q = viewingRecord.quantity ?? 0;
+                    const minQ = viewingRecord.minQuantity ?? 5;
+
+                    if (viewingRecord.status) {
+                      switch (viewingRecord.status) {
+                        case "Đủ hàng":
+                        case "Available":
+                          color = "success";
+                          displayStatus = "Đủ hàng";
+                          break;
+                        case "Sắp hết":
+                        case "Low Stock":
+                          color = "warning";
+                          displayStatus = "Sắp hết";
+                          break;
+                        case "Hết hàng":
+                        case "Out of Stock":
+                          color = "error";
+                          displayStatus = "Hết hàng";
+                          break;
+                        default:
+                          color = "default";
+                          displayStatus = viewingRecord.status;
+                      }
+                    } else {
+                      if (q === 0) {
+                        color = "error";
+                        displayStatus = "Hết hàng";
+                      } else if (q <= minQ) {
+                        color = "warning";
+                        displayStatus = "Sắp hết";
+                      } else {
+                        color = "success";
+                        displayStatus = "Đủ hàng";
+                      }
+                    }
+
+                    return <Tag color={color}>{displayStatus}</Tag>;
+                  })()}
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Trạng thái hoạt động:</strong>
+                </div>
+                <div>
+                  <Tag color={viewingRecord.isActive ? "green" : "red"}>
+                    {viewingRecord.isActive ? "Đang sử dụng" : "Đã xóa"}
+                  </Tag>
+                </div>
+              </Col>
+            </Row>
+          </div>
+        )}
       </Modal>
     </div>
   );
