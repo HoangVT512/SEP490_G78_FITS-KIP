@@ -728,4 +728,23 @@ public class UserRepository : IUserRepository
     {
         return await db.Users.FirstOrDefaultAsync(u => u.EmployeeCode == employeeCode, cancellationToken);
     }
+
+    public async Task<bool> ResetPasswordAsync(string userId, string newPassword, CancellationToken cancellationToken = default)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user == null)
+        {
+            return false;
+        }
+
+        // Use UserManager to hash and set the new password
+        var removeResult = await userManager.RemovePasswordAsync(user);
+        if (!removeResult.Succeeded)
+        {
+            return false;
+        }
+
+        var addResult = await userManager.AddPasswordAsync(user, newPassword);
+        return addResult.Succeeded;
+    }
 }

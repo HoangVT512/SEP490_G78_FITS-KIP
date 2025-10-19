@@ -941,6 +941,42 @@ const UserManagement = ({ showHeader = true }) => {
     setFilteredLines([]);
   };
 
+  const handleResetPassword = () => {
+    if (!editingUser) {
+      message.warning("Không thể đặt lại mật khẩu khi tạo người dùng mới");
+      return;
+    }
+
+    Modal.confirm({
+      title: "Xác nhận đặt lại mật khẩu",
+      content: `Bạn có chắc chắn muốn đặt lại mật khẩu của người dùng "${editingUser.fullName}" về mặc định (123456)?`,
+      okText: "Đặt lại",
+      cancelText: "Hủy",
+      okButtonProps: {
+        danger: true,
+      },
+      onOk: async () => {
+        setLoading(true);
+        try {
+          await userService.resetPassword(editingUser.id);
+          message.success({
+            content: "Đặt lại mật khẩu thành công. Mật khẩu mới là: 123456",
+            placement: "topRight",
+            duration: 4,
+          });
+        } catch (error) {
+          message.error({
+            content: error.message || "Không thể đặt lại mật khẩu",
+            placement: "topRight",
+            duration: 3,
+          });
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+  };
+
   const content = (
     <div className={styles.userManagementContainer}>
       <Card className={styles.userManagementCard}>
@@ -1179,6 +1215,50 @@ const UserManagement = ({ showHeader = true }) => {
         centered
         okText={editingUser ? "Cập nhật" : "Tạo mới"}
         cancelText="Hủy"
+        footer={[
+          editingUser && (
+            <Button
+              key="reset-password"
+              danger
+              onClick={handleResetPassword}
+              style={{
+                float: "left",
+                height: "40px",
+                fontSize: "16px",
+                minWidth: "140px",
+              }}
+            >
+              Đặt lại mật khẩu
+            </Button>
+          ),
+          <Button
+            key="cancel"
+            onClick={handleModalCancel}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            onClick={handleModalOk}
+            loading={loading}
+            style={{
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              height: "40px",
+              fontSize: "16px",
+              fontWeight: "500",
+              minWidth: "120px",
+            }}
+          >
+            {editingUser ? "Cập nhật" : "Tạo mới"}
+          </Button>,
+        ]}
         okButtonProps={{
           style: {
             backgroundColor: "#334766",

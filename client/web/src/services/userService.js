@@ -245,6 +245,19 @@ export const userService = {
       throw error;
     }
   },
+
+  // Reset user password to default (123456)
+  resetPassword: async (id) => {
+    try {
+      return await apiRequest(`/Users/${id}/reset-password`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+    } catch (error) {
+      console.error("Error resetting user password:", error);
+      throw new Error("Không thể đặt lại mật khẩu người dùng.");
+    }
+  },
 };
 
 export default userService;

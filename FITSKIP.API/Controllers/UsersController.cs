@@ -665,4 +665,34 @@ public class UsersController : ControllerBase
             return StatusCode(500, $"Lỗi: {ex.Message}");
         }
     }
+
+    // POST: https://localhost:7003/api/Users/{id}/reset-password
+    [HttpPost]
+    [Route("{id}/reset-password")]
+    public async Task<IActionResult> ResetPassword(string id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var user = await userService.GetUserByIdAsync(id, cancellationToken);
+            if (user == null)
+            {
+                return NotFound(new { success = false, message = "Người dùng không tồn tại" });
+            }
+
+            // Reset password to default (123456)
+            const string defaultPassword = "123456";
+            var result = await userService.ResetPasswordAsync(id, defaultPassword, cancellationToken);
+
+            if (!result)
+            {
+                return BadRequest(new { success = false, message = "Không thể đặt lại mật khẩu" });
+            }
+
+            return Ok(new { success = true, message = "Đặt lại mật khẩu thành công. Mật khẩu mới là: 123456" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = $"Lỗi: {ex.Message}" });
+        }
+    }
 }

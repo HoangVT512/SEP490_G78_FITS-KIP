@@ -44,6 +44,8 @@ public class UserService : IUserService
     public Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default) => userRepository.GetByEmailAsync(email, cancellationToken);
 
     public Task<User?> GetByEmployeeCodeAsync(string employeeCode, CancellationToken cancellationToken = default) => userRepository.GetByEmployeeCodeAsync(employeeCode, cancellationToken);
+
+    public Task<bool> ResetPasswordAsync(string userId, string newPassword, CancellationToken cancellationToken = default) => userRepository.ResetPasswordAsync(userId, newPassword, cancellationToken);
 }
 
 
