@@ -51,7 +51,6 @@ public class StageService : IStageService
         {
             StageName = normalizedStageName, // Sử dụng tên đã chuẩn hóa
             LineId = request.LineId,
-            IsActive = request.IsActive
         };
 
         return await _stageRepository.CreateAsync(stage, cancellationToken);

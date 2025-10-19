@@ -45,7 +45,6 @@ public class DepartmentService : IDepartmentService
         var entity = new Department
         {
             DepartmentName = request.DepartmentName,
-            ManagerId = request.ManagerId,
             Description = request.Description
         };
         var created = await repository.CreateAsync(entity, cancellationToken);
@@ -66,7 +65,6 @@ public class DepartmentService : IDepartmentService
         }
 
         entity.DepartmentName = request.DepartmentName;
-        entity.ManagerId = request.ManagerId;
         entity.Description = request.Description;
         entity.IsActive = request.IsActive;
         var updated = await repository.UpdateAsync(entity, cancellationToken);

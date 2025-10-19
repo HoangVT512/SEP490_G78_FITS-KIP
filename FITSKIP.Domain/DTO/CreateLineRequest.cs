@@ -10,6 +10,4 @@ public class CreateLineRequest
 
     [Required(ErrorMessage = "Phòng ban là bắt buộc")]
     public int DepartmentId { get; set; }
-
-    public bool IsActive { get; set; } = true;
 }
