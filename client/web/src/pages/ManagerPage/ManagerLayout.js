@@ -531,7 +531,12 @@ const ManagerLayout = () => {
           open={notificationDrawerOpen}
           styles={{ body: { padding: 0 } }}
         >
-          <NotificationsList onClose={() => setNotificationDrawerOpen(false)} />
+          <NotificationsList
+            onClose={() => setNotificationDrawerOpen(false)}
+            onNotificationCountChange={(newCount) =>
+              setNotificationCount(newCount)
+            }
+          />
         </Drawer>
       </AntLayout>
     </App>

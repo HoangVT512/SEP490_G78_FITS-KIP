@@ -385,7 +385,12 @@ const TechnicianManagerLayout = () => {
         width={720}
         styles={{ body: { padding: 0 } }}
       >
-        <NotificationsList onClose={() => setNotificationDrawerOpen(false)} />
+        <NotificationsList
+          onClose={() => setNotificationDrawerOpen(false)}
+          onNotificationCountChange={(newCount) =>
+            setNotificationCount(newCount)
+          }
+        />
       </Drawer>
     </AntLayout>
   );

@@ -28,7 +28,7 @@ dayjs.locale("vi");
 
 const { Title, Text, Paragraph } = Typography;
 
-const NotificationsList = ({ onClose }) => {
+const NotificationsList = ({ onClose, onNotificationCountChange }) => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -52,7 +52,12 @@ const NotificationsList = ({ onClose }) => {
     try {
       await notificationService.markNotificationAsRead(notificationId);
       message.success("Đã đánh dấu đã đọc");
-      fetchNotifications(); // Refresh list
+      await fetchNotifications(); // Refresh list
+      // Update badge count in parent
+      if (onNotificationCountChange) {
+        const count = await notificationService.getUnreadCount();
+        onNotificationCountChange(count);
+      }
     } catch (error) {
       console.error("Error marking as read:", error);
       message.error("Lỗi khi đánh dấu đã đọc");
@@ -64,7 +69,12 @@ const NotificationsList = ({ onClose }) => {
     try {
       await notificationService.markAllNotificationsAsRead();
       message.success("Đã đánh dấu tất cả đã đọc");
-      fetchNotifications();
+      await fetchNotifications();
+      // Update badge count in parent
+      if (onNotificationCountChange) {
+        const count = await notificationService.getUnreadCount();
+        onNotificationCountChange(count);
+      }
     } catch (error) {
       console.error("Error marking all as read:", error);
       message.error("Lỗi khi đánh dấu tất cả đã đọc");
