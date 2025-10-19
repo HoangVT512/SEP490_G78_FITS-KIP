@@ -564,12 +564,7 @@ const PurchaseApproval = () => {
           <Form.Item style={{ marginBottom: 0, marginTop: 16 }}>
             <Space style={{ width: "100%", justifyContent: "flex-end" }}>
               <Button onClick={() => setRejectModalVisible(false)}>Hủy</Button>
-              <Button
-                type="primary"
-                danger
-                htmlType="submit"
-                loading={loading}
-              >
+              <Button type="primary" danger htmlType="submit" loading={loading}>
                 Xác nhận từ chối
               </Button>
             </Space>
