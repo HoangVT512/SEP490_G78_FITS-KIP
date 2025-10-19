@@ -14,6 +14,7 @@ import {
   Descriptions,
   Select,
   Dropdown,
+  Statistic,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -21,6 +22,10 @@ import {
   EyeOutlined,
   SearchOutlined,
   DownOutlined,
+  InboxOutlined,
+  ClockCircleOutlined,
+  CheckOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styles from "../../styles/pages/PurchaseApproval.module.css";
@@ -42,6 +47,13 @@ const PurchaseApproval = () => {
   const [filterStatus, setFilterStatus] = useState("Chờ duyệt");
 
   const [requests, setRequests] = useState([]);
+
+  const stats = {
+    total: requests.length,
+    pending: requests.filter((r) => r.status === "Chờ duyệt").length,
+    approved: requests.filter((r) => r.status === "Đã duyệt").length,
+    rejected: requests.filter((r) => r.status === "Từ chối").length,
+  };
 
   // load requests from backend
   // centralized loader so all refreshes behave the same
@@ -195,7 +207,7 @@ const PurchaseApproval = () => {
             placement="bottomRight"
             trigger={["click"]}
           >
-            <Button type="link" size="small" icon={<EyeOutlined />} />
+            <Button type="link" size="small" icon={<DownOutlined />} />
           </Dropdown>
         );
       },
@@ -261,6 +273,66 @@ const PurchaseApproval = () => {
 
   return (
     <div className={styles.container}>
+      {/* Statistics */}
+      <Row gutter={[16, 16]} className={styles.statsRow}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.statsCard}>
+            <Statistic
+              title="Tổng yêu cầu"
+              value={stats.total}
+              prefix={<InboxOutlined />}
+              valueStyle={{
+                color: "#283652",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.statsCard}>
+            <Statistic
+              title="Chờ duyệt"
+              value={stats.pending}
+              prefix={<ClockCircleOutlined />}
+              valueStyle={{
+                color: "#faad14",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.statsCard}>
+            <Statistic
+              title="Đã duyệt"
+              value={stats.approved}
+              prefix={<CheckOutlined />}
+              valueStyle={{
+                color: "#52c41a",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.statsCard}>
+            <Statistic
+              title="Từ chối"
+              value={stats.rejected}
+              prefix={<CloseOutlined />}
+              valueStyle={{
+                color: "#ff4d4f",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
       <Card title="Danh sách yêu cầu mua hàng" bordered={false}>
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
           <Row gutter={16}>
@@ -270,11 +342,12 @@ const PurchaseApproval = () => {
                 prefix={<SearchOutlined />}
                 onChange={(e) => setSearchText(e.target.value)}
                 allowClear
+                style={{ borderRadius: "6px" }}
               />
             </Col>
             <Col xs={24} sm={12} md={8}>
               <Select
-                style={{ width: "100%" }}
+                style={{ width: "100%", borderRadius: "6px" }}
                 placeholder="Lọc theo trạng thái"
                 value={filterStatus}
                 onChange={setFilterStatus}
@@ -298,6 +371,7 @@ const PurchaseApproval = () => {
               showSizeChanger: true,
               showTotal: (total) => `Tổng ${total} yêu cầu`,
             }}
+            style={{ borderRadius: "6px" }}
           />
         </Space>
       </Card>
@@ -325,6 +399,10 @@ const PurchaseApproval = () => {
                 </Button>
                 <Button
                   type="primary"
+                  style={{
+                    backgroundColor: "#283652",
+                    borderColor: "#283652",
+                  }}
                   onClick={() => {
                     setDetailModalVisible(false);
                     handleApproveClick(selectedRequest);
@@ -336,10 +414,19 @@ const PurchaseApproval = () => {
             )}
           </Space>
         }
-        width={800}
+        width={650}
+        style={{ top: 20 }}
+        bodyStyle={{ padding: 12 }}
       >
         {selectedRequest && (
-          <Descriptions bordered column={2}>
+          <Descriptions
+            bordered={false}
+            size="small"
+            column={1}
+            layout="horizontal"
+            labelStyle={{ fontWeight: 600, width: 140, fontSize: "15px" }}
+            contentStyle={{ fontSize: "15px" }}
+          >
             <Descriptions.Item label="Mã yêu cầu" span={1}>
               REQ{String(selectedRequest.requestId).padStart(3, "0")}
             </Descriptions.Item>
@@ -368,7 +455,7 @@ const PurchaseApproval = () => {
             <Descriptions.Item label="Người yêu cầu" span={1}>
               {selectedRequest.requestedBy}
             </Descriptions.Item>
-            <Descriptions.Item label="Lý do yêu cầu" span={2}>
+            <Descriptions.Item label="Lý do yêu cầu" span={1}>
               {selectedRequest.reason || "-"}
             </Descriptions.Item>
             {selectedRequest.approvedBy && (
@@ -392,7 +479,7 @@ const PurchaseApproval = () => {
               </>
             )}
             {selectedRequest.approvalNotes && (
-              <Descriptions.Item label="Ghi chú" span={2}>
+              <Descriptions.Item label="Ghi chú" span={1}>
                 {selectedRequest.approvalNotes}
               </Descriptions.Item>
             )}
@@ -407,19 +494,38 @@ const PurchaseApproval = () => {
         onCancel={() => setApproveModalVisible(false)}
         footer={null}
         width={600}
+        style={{ top: 20 }}
+        bodyStyle={{ padding: 12 }}
       >
-        <Form form={form} layout="vertical" onFinish={handleApprove}>
-          <Form.Item name="notes" label="Ghi chú (tùy chọn)">
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleApprove}
+          labelCol={{ style: { fontSize: "15px", fontWeight: 600 } }}
+        >
+          <Form.Item
+            name="notes"
+            label="Ghi chú (tùy chọn)"
+            style={{ marginBottom: 16 }}
+          >
             <TextArea
-              rows={4}
+              rows={3}
               placeholder="Nhập ghi chú về quyết định duyệt..."
             />
           </Form.Item>
 
-          <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
+          <Form.Item style={{ marginBottom: 0, marginTop: 16 }}>
             <Space style={{ width: "100%", justifyContent: "flex-end" }}>
               <Button onClick={() => setApproveModalVisible(false)}>Hủy</Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                style={{
+                  backgroundColor: "#283652",
+                  borderColor: "#283652",
+                }}
+              >
                 Xác nhận duyệt
               </Button>
             </Space>
@@ -434,23 +540,36 @@ const PurchaseApproval = () => {
         onCancel={() => setRejectModalVisible(false)}
         footer={null}
         width={600}
+        style={{ top: 20 }}
+        bodyStyle={{ padding: 12 }}
       >
-        <Form form={form} layout="vertical" onFinish={handleReject}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleReject}
+          labelCol={{ style: { fontSize: "15px", fontWeight: 600 } }}
+        >
           <Form.Item
             name="reason"
             label="Lý do từ chối"
-            rules={[{ required: true, message: "Vui lòng nhập lý do từ chối" }]}
+            rules={[]}
+            style={{ marginBottom: 16 }}
           >
             <TextArea
-              rows={4}
-              placeholder="Nhập lý do từ chối yêu cầu mua hàng..."
+              rows={3}
+              placeholder="Nhập lý do từ chối yêu cầu mua hàng... (tùy chọn)"
             />
           </Form.Item>
 
-          <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
+          <Form.Item style={{ marginBottom: 0, marginTop: 16 }}>
             <Space style={{ width: "100%", justifyContent: "flex-end" }}>
               <Button onClick={() => setRejectModalVisible(false)}>Hủy</Button>
-              <Button type="primary" danger htmlType="submit" loading={loading}>
+              <Button
+                type="primary"
+                danger
+                htmlType="submit"
+                loading={loading}
+              >
                 Xác nhận từ chối
               </Button>
             </Space>
