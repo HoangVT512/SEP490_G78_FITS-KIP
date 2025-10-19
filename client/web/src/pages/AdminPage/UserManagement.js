@@ -866,8 +866,9 @@ const UserManagement = ({ showHeader = true }) => {
       }
 
       if (editingUser) {
+        // When updating an existing user, do NOT overwrite userName.
+        // userName is generated from employeeCode only when creating a user.
         await userService.updateUser(editingUser.id, {
-          userName: values.email,
           email: values.email,
           fullName: values.fullName,
           employeeCode: values.employeeCode,
