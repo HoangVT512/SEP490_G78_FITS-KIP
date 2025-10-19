@@ -6,5 +6,4 @@ public interface IShiftRepository
 {
     Task<IReadOnlyList<Shift>> GetAllAsync(CancellationToken cancellationToken = default);
     Task<Shift?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<ShiftSlot>> GetAllSlotsAsync(CancellationToken cancellationToken = default);
 }

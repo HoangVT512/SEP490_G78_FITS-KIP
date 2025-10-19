@@ -23,6 +23,8 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
     public virtual DbSet<IncidentHistory> IncidentHistories { get; set; }
 
+    public virtual DbSet<IncidentShift> IncidentShifts { get; set; }
+
     public virtual DbSet<Line> Lines { get; set; }
 
     public virtual DbSet<Notification> Notifications { get; set; }
@@ -38,8 +40,6 @@ public partial class FitskipDbContext : IdentityDbContext<User>
     public virtual DbSet<ReplacementHistory> ReplacementHistories { get; set; }
 
     public virtual DbSet<Shift> Shifts { get; set; }
-
-    public virtual DbSet<ShiftSlot> ShiftSlots { get; set; }
 
     public virtual DbSet<SparePart> SpareParts { get; set; }
 
@@ -139,13 +139,12 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.Duration).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.EndTime).HasColumnType("datetime");
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
-            entity.Property(e => e.SlotId).HasColumnName("SlotID");
             entity.Property(e => e.StartTime).HasColumnType("datetime");
             entity.Property(e => e.TypeId).HasColumnName("TypeID");
             entity.Property(e => e.Issue).HasMaxLength(500);
             entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
 
-            // Equipment, Type, and Slot relationships - no reverse collections
+            // Equipment, Type relationships - no reverse collections
             entity.HasOne(d => d.Equipment).WithMany()
                 .HasForeignKey(d => d.EquipmentId)
                 .HasConstraintName("FK__IncidentH__Equip__7B5B524B");
@@ -154,9 +153,11 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .HasForeignKey(d => d.TypeId)
                 .HasConstraintName("FK__IncidentH__TypeI__7F2BE32F");
 
-            entity.HasOne(d => d.Slot).WithMany()
-                .HasForeignKey(d => d.SlotId)
-                .HasConstraintName("FK__IncidentH__SlotI__8A2B4C5D");
+            // Relationship to IncidentShift
+            entity.HasMany(d => d.IncidentShifts)
+                .WithOne(e => e.Incident)
+                .HasForeignKey(e => e.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Line>(entity =>
@@ -220,7 +221,7 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
             entity.Property(e => e.OutputId).HasColumnName("OutputID");
             entity.Property(e => e.LineId).HasColumnName("LineID");
-            entity.Property(e => e.ShiftSlotId).HasColumnName("ShiftSlotID");
+            entity.Property(e => e.ShiftId).HasColumnName("ShiftID");
             entity.Property(e => e.TargetQuantity).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.IdealCycleTime).HasColumnType("decimal(10, 4)");
 
@@ -229,11 +230,11 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Productio__LineI__08B54D69");
 
-            // ShiftSlot relationship - no reverse collection to prevent ShiftId shadow property
-            entity.HasOne(d => d.ShiftSlot).WithMany()
-                .HasForeignKey(d => d.ShiftSlotId)
+            // Shift relationship
+            entity.HasOne(d => d.Shift).WithMany()
+                .HasForeignKey(d => d.ShiftId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Productio__ShiftSlot__0A9D95DB");
+                .HasConstraintName("FK__Productio__ShiftID__0A9D95DB");
         });
 
         modelBuilder.Entity<PurchaseRequest>(entity =>
@@ -307,25 +308,6 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
             entity.Property(e => e.ShiftId).HasColumnName("ShiftID");
             entity.Property(e => e.ShiftName).HasMaxLength(50);
-
-            // Ignore ProductionOutputs collection to prevent shadow ShiftId
-            entity.Ignore(e => e.ProductionOutputs);
-        });
-
-        modelBuilder.Entity<ShiftSlot>(entity =>
-        {
-            entity.HasKey(e => e.SlotId).HasName("PK__ShiftSlo__0A124A4FF4CC8D65");
-
-            entity.Property(e => e.SlotId).HasColumnName("SlotID");
-            entity.Property(e => e.ShiftId).HasColumnName("ShiftID");
-
-            entity.HasOne(d => d.Shift).WithMany(p => p.ShiftSlots)
-                .HasForeignKey(d => d.ShiftId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__ShiftSlot__Shift__76969D2E");
-
-            // Ignore ProductionOutputs collection - already handled in ProductionOutput config
-            entity.Ignore(e => e.ProductionOutputs);
         });
 
         modelBuilder.Entity<SparePart>(entity =>
@@ -404,6 +386,29 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .HasForeignKey(d => d.UserId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_Notifications_Users_UserId");
+        });
+
+        modelBuilder.Entity<IncidentShift>(entity =>
+        {
+            entity.HasKey(e => e.IncidentShiftId).HasName("PK__IncidentShift__IncidentShiftID");
+
+            entity.ToTable("IncidentShifts");
+
+            entity.Property(e => e.IncidentShiftId).HasColumnName("IncidentShiftID");
+            entity.Property(e => e.IncidentId).HasColumnName("IncidentID");
+            entity.Property(e => e.ShiftId).HasColumnName("ShiftID");
+            entity.Property(e => e.StartTime).HasColumnType("datetime");
+            entity.Property(e => e.EndTime).HasColumnType("datetime");
+
+            entity.HasOne(d => d.Incident).WithMany(p => p.IncidentShifts)
+                .HasForeignKey(d => d.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_IncidentShift_IncidentHistory_IncidentID");
+
+            entity.HasOne(d => d.Shift).WithMany(p => p.IncidentShifts)
+                .HasForeignKey(d => d.ShiftId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_IncidentShift_Shifts_ShiftID");
         });
 
         OnModelCreatingPartial(modelBuilder);

@@ -13,7 +13,5 @@ public partial class Shift
 
     public TimeOnly EndTime { get; set; }
 
-    public virtual ICollection<ProductionOutput> ProductionOutputs { get; set; } = new List<ProductionOutput>();
-
-    public virtual ICollection<ShiftSlot> ShiftSlots { get; set; } = new List<ShiftSlot>();
+    public virtual ICollection<IncidentShift> IncidentShifts { get; set; } = new List<IncidentShift>();
 }

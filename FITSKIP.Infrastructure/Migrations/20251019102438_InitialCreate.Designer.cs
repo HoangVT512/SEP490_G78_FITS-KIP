@@ -4,6 +4,7 @@ using FITSKIP.Infrastructure.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    partial class FitskipDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251019102438_InitialCreate")]
+    partial class InitialCreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -183,9 +186,6 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IncidentShiftId"));
 
-                    b.Property<DateTime?>("EndTime")
-                        .HasColumnType("datetime");
-
                     b.Property<int>("IncidentId")
                         .HasColumnType("int")
                         .HasColumnName("IncidentID");
@@ -193,9 +193,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<int>("ShiftId")
                         .HasColumnType("int")
                         .HasColumnName("ShiftID");
-
-                    b.Property<DateTime>("StartTime")
-                        .HasColumnType("datetime");
 
                     b.HasKey("IncidentShiftId")
                         .HasName("PK__IncidentShift__IncidentShiftID");

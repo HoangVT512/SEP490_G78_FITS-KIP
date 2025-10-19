@@ -94,27 +94,6 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ShiftSlots",
-                columns: table => new
-                {
-                    SlotID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ShiftID = table.Column<int>(type: "int", nullable: false),
-                    SlotStartTime = table.Column<TimeOnly>(type: "time", nullable: false),
-                    SlotEndTime = table.Column<TimeOnly>(type: "time", nullable: false),
-                    Duration = table.Column<int>(type: "int", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK__ShiftSlo__0A124A4FF4CC8D65", x => x.SlotID);
-                    table.ForeignKey(
-                        name: "FK__ShiftSlot__Shift__76969D2E",
-                        column: x => x.ShiftID,
-                        principalTable: "Shifts",
-                        principalColumn: "ShiftID");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "AspNetUsers",
                 columns: table => new
                 {
@@ -263,7 +242,7 @@ namespace FITSKIP.Infrastructure.Migrations
                     OutputID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     LineID = table.Column<int>(type: "int", nullable: false),
-                    ShiftSlotID = table.Column<int>(type: "int", nullable: false),
+                    ShiftID = table.Column<int>(type: "int", nullable: false),
                     Date = table.Column<DateOnly>(type: "date", nullable: false),
                     TargetQuantity = table.Column<decimal>(type: "decimal(10,2)", nullable: false),
                     PlannedProductionTime = table.Column<int>(type: "int", nullable: false),
@@ -281,10 +260,10 @@ namespace FITSKIP.Infrastructure.Migrations
                         principalTable: "Lines",
                         principalColumn: "LineID");
                     table.ForeignKey(
-                        name: "FK__Productio__ShiftSlot__0A9D95DB",
-                        column: x => x.ShiftSlotID,
-                        principalTable: "ShiftSlots",
-                        principalColumn: "SlotID");
+                        name: "FK__Productio__ShiftID__0A9D95DB",
+                        column: x => x.ShiftID,
+                        principalTable: "Shifts",
+                        principalColumn: "ShiftID");
                 });
 
             migrationBuilder.CreateTable(
@@ -375,7 +354,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
                     ReportedByUserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
-                    SlotID = table.Column<int>(type: "int", nullable: true),
                     AssignedTo = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     IsTechSupport = table.Column<bool>(type: "bit", nullable: false)
                 },
@@ -392,11 +370,6 @@ namespace FITSKIP.Infrastructure.Migrations
                         column: x => x.EquipmentID,
                         principalTable: "Equipment",
                         principalColumn: "EquipmentID");
-                    table.ForeignKey(
-                        name: "FK__IncidentH__SlotI__8A2B4C5D",
-                        column: x => x.SlotID,
-                        principalTable: "ShiftSlots",
-                        principalColumn: "SlotID");
                     table.ForeignKey(
                         name: "FK__IncidentH__TypeI__7F2BE32F",
                         column: x => x.TypeID,
@@ -465,6 +438,31 @@ namespace FITSKIP.Infrastructure.Migrations
                         column: x => x.ReplacedBy,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "IncidentShifts",
+                columns: table => new
+                {
+                    IncidentShiftID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IncidentID = table.Column<int>(type: "int", nullable: false),
+                    ShiftID = table.Column<int>(type: "int", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__IncidentShift__IncidentShiftID", x => x.IncidentShiftID);
+                    table.ForeignKey(
+                        name: "FK_IncidentShift_IncidentHistory_IncidentID",
+                        column: x => x.IncidentID,
+                        principalTable: "IncidentHistory",
+                        principalColumn: "IncidentID",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_IncidentShift_Shifts_ShiftID",
+                        column: x => x.ShiftID,
+                        principalTable: "Shifts",
+                        principalColumn: "ShiftID");
                 });
 
             migrationBuilder.CreateTable(
@@ -544,14 +542,19 @@ namespace FITSKIP.Infrastructure.Migrations
                 column: "ReportedByUserId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_IncidentHistory_SlotID",
-                table: "IncidentHistory",
-                column: "SlotID");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_IncidentHistory_TypeID",
                 table: "IncidentHistory",
                 column: "TypeID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_IncidentShifts_IncidentID",
+                table: "IncidentShifts",
+                column: "IncidentID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_IncidentShifts_ShiftID",
+                table: "IncidentShifts",
+                column: "ShiftID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Lines_DepartmentID",
@@ -584,9 +587,9 @@ namespace FITSKIP.Infrastructure.Migrations
                 column: "LineID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ProductionOutputs_ShiftSlotID",
+                name: "IX_ProductionOutputs_ShiftID",
                 table: "ProductionOutputs",
-                column: "ShiftSlotID");
+                column: "ShiftID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PurchaseRequests_ApprovedBy",
@@ -622,11 +625,6 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "IX_ReplacementHistories_ReplacedBy",
                 table: "ReplacementHistories",
                 column: "ReplacedBy");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_ShiftSlots_ShiftID",
-                table: "ShiftSlots",
-                column: "ShiftID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Stages_LineID",
@@ -667,7 +665,7 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "AspNetRoleClaims");
 
             migrationBuilder.DropTable(
-                name: "IncidentHistory");
+                name: "IncidentShifts");
 
             migrationBuilder.DropTable(
                 name: "MaintenanceChecklistItems");
@@ -688,22 +686,22 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "UserLines");
 
             migrationBuilder.DropTable(
-                name: "StopType");
+                name: "IncidentHistory");
 
             migrationBuilder.DropTable(
                 name: "MaintenancePlans");
 
             migrationBuilder.DropTable(
-                name: "ShiftSlots");
+                name: "Shifts");
 
             migrationBuilder.DropTable(
                 name: "SpareParts");
 
             migrationBuilder.DropTable(
-                name: "Equipment");
+                name: "StopType");
 
             migrationBuilder.DropTable(
-                name: "Shifts");
+                name: "Equipment");
 
             migrationBuilder.DropTable(
                 name: "Stages");

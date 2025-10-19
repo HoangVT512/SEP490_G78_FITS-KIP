@@ -73,9 +73,6 @@ public class IncidentService : IIncidentService
             duration = Math.Max(1, (decimal)durationMinutes);
         }
 
-        // Find appropriate slot for the incident
-        var slotId = await FindSlotForIncidentAsync(startTime, request.EndTime, cancellationToken);
-
         var incident = new IncidentHistory
         {
             EquipmentId = request.EquipmentId,
@@ -88,8 +85,7 @@ public class IncidentService : IIncidentService
             Solution = request.Solution?.Trim(),
             Status = request.EndTime.HasValue ? "Hoàn thành" : "Chờ xử lý",
             CreatedDate = DateTime.Now,
-            ReportedByUserId = request.ReportedByUserId,
-            SlotId = slotId
+            ReportedByUserId = request.ReportedByUserId
         };
 
         return await _incidentRepository.CreateAsync(incident, cancellationToken);
@@ -161,9 +157,6 @@ public class IncidentService : IIncidentService
                     duration = Math.Max(1, (decimal)durationMinutes);
                 }
 
-                // Find appropriate slot for the incident
-                var slotId = await FindSlotForIncidentAsync(startTime, incidentRequest.EndTime, cancellationToken);
-
                 var incident = new IncidentHistory
                 {
                     EquipmentId = incidentRequest.EquipmentId,
@@ -176,13 +169,12 @@ public class IncidentService : IIncidentService
                     Solution = incidentRequest.Solution?.Trim(),
                     Status = incidentRequest.EndTime.HasValue ? "Hoàn thành" : "Chờ xử lý",
                     CreatedDate = DateTime.Now,
-                    ReportedByUserId = incidentRequest.ReportedByUserId,
-                    SlotId = slotId
+                    ReportedByUserId = incidentRequest.ReportedByUserId
                 };
 
                 var createdIncident = await _incidentRepository.CreateAsync(incident, cancellationToken);
                 response.SuccessCount++;
-                
+
                 // Map to DTO for response
                 response.SuccessfulIncidents.Add(new IncidentHistoryDTO
                 {
@@ -263,14 +255,10 @@ public class IncidentService : IIncidentService
             duration = Math.Max(1, (decimal)durationMinutes);
         }
 
-        // Find appropriate slot for the incident
-        var slotId = await FindSlotForIncidentAsync(request.StartTime, request.EndTime, cancellationToken);
-
         existingIncident.EquipmentId = request.EquipmentId;
         existingIncident.StartTime = request.StartTime;
         existingIncident.EndTime = request.EndTime;
         existingIncident.Duration = duration;
-        existingIncident.SlotId = slotId;
 
         // Update TypeId only if provided
         if (request.TypeId.HasValue && request.TypeId > 0)
@@ -457,44 +445,6 @@ public class IncidentService : IIncidentService
         {
             // Night shift crossing midnight (e.g., 22:00 - 06:00)
             return timeOnly >= shiftStart || timeOnly < shiftEnd;
-        }
-    }
-
-    private async Task<int?> FindSlotForIncidentAsync(DateTime startTime, DateTime? endTime, CancellationToken cancellationToken = default)
-    {
-        var slots = await _shiftRepository.GetAllSlotsAsync(cancellationToken);
-        var startTimeOfDay = TimeOnly.FromDateTime(startTime);
-
-        // If no end time, find slot that contains the start time
-        if (!endTime.HasValue)
-        {
-            var slotForStartTime = slots.FirstOrDefault(slot =>
-                IsTimeInSlot(startTimeOfDay, slot.SlotStartTime, slot.SlotEndTime));
-
-            return slotForStartTime?.SlotId;
-        }
-
-        // If both start and end time exist, find slot that contains the entire incident period
-        var endTimeOfDay = TimeOnly.FromDateTime(endTime.Value);
-
-        var slotForIncident = slots.FirstOrDefault(slot =>
-            slot.SlotStartTime <= startTimeOfDay &&
-            endTimeOfDay <= slot.SlotEndTime);
-
-        return slotForIncident?.SlotId;
-    }
-
-    private static bool IsTimeInSlot(TimeOnly time, TimeOnly slotStart, TimeOnly slotEnd)
-    {
-        if (slotStart <= slotEnd)
-        {
-            // Normal slot (e.g., 06:00 - 07:00)
-            return time >= slotStart && time < slotEnd;
-        }
-        else
-        {
-            // Slot crossing midnight (e.g., 22:00 - 01:00)
-            return time >= slotStart || time < slotEnd;
         }
     }
 }

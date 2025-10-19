@@ -22,7 +22,8 @@ public class IncidentRepository : IIncidentRepository
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
             .Include(i => i.ReportedByUser)
-            .Include(i => i.Slot)
+            .Include(i => i.IncidentShifts)
+                .ThenInclude(ishft => ishft.Shift)
             .OrderByDescending(i => i.CreatedDate)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -36,7 +37,8 @@ public class IncidentRepository : IIncidentRepository
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
             .Include(i => i.ReportedByUser)
-            .Include(i => i.Slot)
+            .Include(i => i.IncidentShifts)
+                .ThenInclude(ishft => ishft.Shift)
             .FirstOrDefaultAsync(i => i.IncidentId == id, cancellationToken);
     }
 
@@ -69,7 +71,7 @@ public class IncidentRepository : IIncidentRepository
             .LoadAsync(cancellationToken);
 
         await _context.Entry(incident)
-            .Reference(i => i.Slot)
+            .Collection(i => i.IncidentShifts)
             .LoadAsync(cancellationToken);
 
         return incident;
@@ -104,7 +106,7 @@ public class IncidentRepository : IIncidentRepository
             .LoadAsync(cancellationToken);
 
         await _context.Entry(incident)
-            .Reference(i => i.Slot)
+            .Collection(i => i.IncidentShifts)
             .LoadAsync(cancellationToken);
 
         return incident;
@@ -128,7 +130,7 @@ public class IncidentRepository : IIncidentRepository
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
-            .Include(i => i.Slot)
+            .Include(i => i.IncidentShifts)
             .Where(i => i.StartTime >= startDate && i.StartTime <= endDate)
             .OrderByDescending(i => i.CreatedDate)
             .AsNoTracking()
@@ -142,7 +144,7 @@ public class IncidentRepository : IIncidentRepository
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
-            .Include(i => i.Slot)
+            .Include(i => i.IncidentShifts)
             .Where(i => i.Equipment != null &&
                        i.Equipment.Stage != null &&
                        i.Equipment.Stage.Line != null &&

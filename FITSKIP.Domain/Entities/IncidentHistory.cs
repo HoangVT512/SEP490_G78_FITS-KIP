@@ -29,8 +29,6 @@ public partial class IncidentHistory
 
     public string? ReportedByUserId { get; set; }
 
-    public int? SlotId { get; set; }
-
     public string? AssignedTo { get; set; }
 
     public bool IsTechSupport { get; set; } = false;
@@ -41,5 +39,5 @@ public partial class IncidentHistory
 
     public virtual User? ReportedByUser { get; set; }
 
-    public virtual ShiftSlot? Slot { get; set; }
+    public virtual ICollection<IncidentShift> IncidentShifts { get; set; } = new List<IncidentShift>();
 }
