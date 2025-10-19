@@ -347,8 +347,8 @@ public class UserRepository : IUserRepository
                 // Set user as manager of the new department
                 deptToManage.ManagerId = id;
 
-                // Clear DepartmentId since manager relationship is separate
-                existingUser.DepartmentId = null;
+                // Also set DepartmentId for the manager so they have access to department data
+                existingUser.DepartmentId = request.DepartmentId.Value;
             }
             else
             {
@@ -708,8 +708,8 @@ public class UserRepository : IUserRepository
                     // Set user làm manager của department
                     departmentToManage.ManagerId = createdUser.Id;
 
-                    // Clear DepartmentId vì manager relationship riêng biệt
-                    createdUser.DepartmentId = null;
+                    // Also set DepartmentId for the manager so they have access to department data
+                    createdUser.DepartmentId = request.DepartmentId.Value;
 
                     await db.SaveChangesAsync(cancellationToken);
                 }
