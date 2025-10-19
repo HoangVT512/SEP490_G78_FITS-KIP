@@ -266,15 +266,33 @@ public class UserRepository : IUserRepository
             }
         }
 
+        // Capture original contact values before applying updates so we can
+        // detect changes and reset confirmation flags appropriately.
+        var originalEmail = existingUser.Email;
+        var originalPhone = existingUser.PhoneNumber;
+
         // Update user properties using EF Core directly
         existingUser.UserName = desiredUserName;
-        existingUser.Email = normalizedEmail;
         existingUser.NormalizedUserName = normalizedUserName;
-        existingUser.NormalizedEmail = normalizedEmail?.ToUpperInvariant();
         existingUser.FullName = request.FullName;
         existingUser.EmployeeCode = request.EmployeeCode;
-        existingUser.PhoneNumber = normalizedPhone;
         existingUser.IsActive = request.IsActive;
+
+        // Apply normalized contact values
+        existingUser.Email = normalizedEmail;
+        existingUser.NormalizedEmail = normalizedEmail?.ToUpperInvariant();
+        existingUser.PhoneNumber = normalizedPhone;
+
+        // Reset EmailConfirmed and PhoneNumberConfirmed if email or phone number is changed
+        // Compare against the original values captured above (before we overwrote them)
+        if (!string.Equals(originalEmail, normalizedEmail, StringComparison.Ordinal))
+        {
+            existingUser.EmailConfirmed = false;
+        }
+        if (!string.Equals(originalPhone, normalizedPhone, StringComparison.Ordinal))
+        {
+            existingUser.PhoneNumberConfirmed = false;
+        }
 
         // Update role if provided (Now using RoleId in User entity)
         if (request.RoleIds != null && request.RoleIds.Length > 0)
