@@ -26,6 +26,7 @@ import {
   InboxOutlined,
   CheckCircleOutlined,
   DownOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import styles from "../../styles/pages/InventoryManagement.module.css";
 import { sparePartService } from "../../services/sparePartService";
@@ -170,16 +171,19 @@ const InventoryManagement = () => {
         const menuItems = [
           {
             key: "view",
+            icon: <EyeOutlined />,
             label: "Xem chi tiết",
             onClick: () => handleView(record),
           },
           {
             key: "edit",
+            icon: <EditOutlined />,
             label: "Sửa",
             onClick: () => handleEdit(record),
           },
           {
             key: "delete",
+            icon: <DeleteOutlined />,
             label: record.isActive ? "Xóa" : "Khôi phục",
             danger: record.isActive,
             onClick: () => handleDelete(record),
@@ -457,7 +461,7 @@ const InventoryManagement = () => {
               value={stats.total}
               prefix={<InboxOutlined />}
               valueStyle={{
-                color: "#1890ff",
+                color: "#283652",
                 fontSize: "28px",
                 fontWeight: "600",
               }}
@@ -515,12 +519,17 @@ const InventoryManagement = () => {
         extra={
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
             <Button
-              type="default"
+              type="primary"
               onClick={() => {
                 setMinValue(5);
                 setShowMinModal(true);
               }}
-              style={{ borderRadius: "6px", fontWeight: "500" }}
+              style={{
+                backgroundColor: "#283652",
+                borderColor: "#283652",
+                borderRadius: "6px",
+                fontWeight: "500",
+              }}
             >
               Điều chỉnh SL tối thiểu
             </Button>
@@ -528,8 +537,8 @@ const InventoryManagement = () => {
               type="primary"
               onClick={handleAdd}
               style={{
-                backgroundColor: "#1890ff",
-                borderColor: "#1890ff",
+                backgroundColor: "#283652",
+                borderColor: "#283652",
                 borderRadius: "6px",
                 fontWeight: "500",
               }}
@@ -602,7 +611,8 @@ const InventoryManagement = () => {
           form.resetFields();
         }}
         footer={null}
-        width={900}
+        width={1200}
+        style={{ top: 20 }}
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Row gutter={16}>
@@ -747,8 +757,8 @@ const InventoryManagement = () => {
                 htmlType="submit"
                 loading={loading}
                 style={{
-                  backgroundColor: "#1890ff",
-                  borderColor: "#1890ff",
+                  backgroundColor: "#283652",
+                  borderColor: "#283652",
                 }}
               >
                 {editingRecord ? "Cập nhật" : "Thêm mới"}
@@ -764,7 +774,8 @@ const InventoryManagement = () => {
         open={showMinModal}
         onCancel={() => setShowMinModal(false)}
         footer={null}
-        width={500}
+        width={700}
+        style={{ top: 20 }}
       >
         <Form layout="vertical">
           <Form.Item label="Áp dụng số lượng tối thiểu cho tất cả phụ tùng">
@@ -783,8 +794,8 @@ const InventoryManagement = () => {
                 type="primary"
                 loading={savingMin}
                 style={{
-                  backgroundColor: "#1890ff",
-                  borderColor: "#1890ff",
+                  backgroundColor: "#283652",
+                  borderColor: "#283652",
                 }}
                 onClick={async () => {
                   try {
@@ -839,8 +850,8 @@ const InventoryManagement = () => {
             key="edit"
             type="primary"
             style={{
-              backgroundColor: "#1890ff",
-              borderColor: "#1890ff",
+              backgroundColor: "#283652",
+              borderColor: "#283652",
             }}
             onClick={() => {
               setDetailModalVisible(false);
@@ -850,7 +861,8 @@ const InventoryManagement = () => {
             Chỉnh sửa
           </Button>,
         ]}
-        width={700}
+        width={1000}
+        style={{ top: 20 }}
       >
         {viewingRecord && (
           <div style={{ padding: "16px 0" }}>
@@ -871,7 +883,7 @@ const InventoryManagement = () => {
                 <div style={{ marginBottom: 8 }}>
                   <strong>Số lượng hiện tại:</strong>
                 </div>
-                <div style={{ fontSize: 16, color: "#1890ff" }}>
+                <div style={{ fontSize: 16, color: "#283652" }}>
                   {viewingRecord.quantity ?? 0} cái
                 </div>
               </Col>
