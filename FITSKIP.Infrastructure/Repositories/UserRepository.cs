@@ -744,4 +744,13 @@ public class UserRepository : IUserRepository
         var addResult = await userManager.AddPasswordAsync(user, newPassword);
         return addResult.Succeeded;
     }
+
+    public async Task<IReadOnlyList<UserLine>> GetUserLinesAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await db.UserLines
+            .Include(ul => ul.Line)
+            .Where(ul => ul.UserId == userId)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
 }

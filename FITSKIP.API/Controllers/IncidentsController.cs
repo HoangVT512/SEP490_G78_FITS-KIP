@@ -443,4 +443,58 @@ public class IncidentsController : ControllerBase
             return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi lấy danh sách ca sự cố", details = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Phân công kỹ thuật viên cho sự cố
+    /// </summary>
+    [HttpPut("{id}/assign-technician")]
+    public async Task<IActionResult> AssignTechnician(int id, [FromBody] AssignTechnicianRequest request)
+    {
+        try
+        {
+            if (id <= 0)
+            {
+                return BadRequest(new { success = false, message = "ID sự cố không hợp lệ" });
+            }
+
+            if (request == null || string.IsNullOrEmpty(request.TechnicianId))
+            {
+                return BadRequest(new { success = false, message = "ID kỹ thuật viên là bắt buộc" });
+            }
+
+            var result = await _incidentService.AssignTechnicianAsync(id, request.TechnicianId, request.UpdateStatus);
+            if (!result)
+            {
+                return NotFound(new { success = false, message = "Không tìm thấy sự cố để phân công" });
+            }
+
+            return Ok(new { success = true, message = request.UpdateStatus ? "Phân công kỹ thuật viên và cập nhật trạng thái thành công" : "Phân công kỹ thuật viên thành công" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi phân công kỹ thuật viên", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lấy danh sách sự cố theo các line được phân công cho user (dành cho Team Leader)
+    /// </summary>
+    [HttpGet("user/{userId}/lines")]
+    public async Task<IActionResult> GetIncidentsByUserLines(string userId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest(new { success = false, message = "User ID là bắt buộc" });
+            }
+
+            var incidents = await _incidentService.GetIncidentsByUserLinesAsync(userId);
+            return Ok(new { success = true, data = incidents });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi lấy danh sách sự cố theo line của user", details = ex.Message });
+        }
+    }
 }

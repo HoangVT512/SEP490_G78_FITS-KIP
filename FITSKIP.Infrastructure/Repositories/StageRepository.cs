@@ -114,4 +114,14 @@ public class StageRepository : IStageRepository
 
         return false;
     }
+
+    public async Task<IReadOnlyList<Stage>> GetStagesByUserLinesAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Stages
+            .Include(s => s.Line)
+            .ThenInclude(l => l.Department)
+            .Where(s => s.Line != null && s.Line.UserLines.Any(ul => ul.UserId == userId))
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
 }

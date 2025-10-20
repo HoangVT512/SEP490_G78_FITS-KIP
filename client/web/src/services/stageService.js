@@ -77,4 +77,13 @@ export const stageService = {
       throw error;
     }
   },
+
+  async getStagesByUserLines(userId) {
+    try {
+      return await apiRequest(`/Stages/user/${encodeURIComponent(userId)}/lines`);
+    } catch (error) {
+      console.error("Get stages by user lines error:", error);
+      throw error;
+    }
+  },
 };

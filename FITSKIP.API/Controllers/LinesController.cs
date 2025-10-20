@@ -147,4 +147,26 @@ public class LinesController : ControllerBase
             return BadRequest(new { success = false, message = "Có lỗi xảy ra khi thay đổi trạng thái chuyền sản xuất", details = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Lấy danh sách chuyền sản xuất mà user được phân công
+    /// </summary>
+    [HttpGet("user/{userId}")]
+    public async Task<IActionResult> GetLinesByUser(string userId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest(new { success = false, message = "ID người dùng không hợp lệ" });
+            }
+
+            var lines = await _lineService.GetLinesByUserAsync(userId);
+            return Ok(new { success = true, data = lines, message = $"Lấy danh sách {lines.Count} chuyền sản xuất của user thành công" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi lấy danh sách chuyền sản xuất của user", details = ex.Message });
+        }
+    }
 }

@@ -99,6 +99,16 @@ public class LineRepository : ILineRepository
         return line;
     }
 
+    public async Task<IReadOnlyList<Line>> GetLinesByUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Lines
+            .Include(l => l.Department)
+            .Include(l => l.Stages)
+            .Where(l => l.UserLines.Any(ul => ul.UserId == userId))
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task RemoveUserLinesForLineAsync(int lineId, CancellationToken cancellationToken = default)
     {
         var line = await _context.Lines.FirstOrDefaultAsync(l => l.LineId == lineId, cancellationToken);

@@ -92,4 +92,14 @@ export const equipmentService = {
       throw new Error(error.message || "Tạo mã QR thất bại");
     }
   },
+
+  async getEquipmentsByUserLines(userId) {
+    try {
+      const response = await apiRequest(`/Equipments/user/${encodeURIComponent(userId)}/lines`);
+      return response.data || response;
+    } catch (error) {
+      console.error("Get equipments by user lines error:", error);
+      throw error;
+    }
+  },
 };

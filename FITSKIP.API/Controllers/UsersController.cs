@@ -695,4 +695,20 @@ public class UsersController : ControllerBase
             return StatusCode(500, new { success = false, message = $"Lỗi: {ex.Message}" });
         }
     }
+
+    // GET: https://localhost:7003/api/Users/{userId}/lines
+    [HttpGet]
+    [Route("{userId}/lines")]
+    public async Task<IActionResult> GetUserLines(string userId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var userLines = await userService.GetUserLinesAsync(userId, cancellationToken);
+            return Ok(userLines);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = $"Lỗi: {ex.Message}" });
+        }
+    }
 }

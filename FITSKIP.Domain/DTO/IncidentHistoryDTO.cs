@@ -131,4 +131,12 @@ namespace FITSKIP.Domain.DTO
         public decimal TotalDowntime { get; set; }
         public int IncidentCount { get; set; }
     }
+
+    public class AssignTechnicianRequest
+    {
+        [Required(ErrorMessage = "ID kỹ thuật viên là bắt buộc")]
+        public string TechnicianId { get; set; } = string.Empty;
+
+        public bool UpdateStatus { get; set; } = false;
+    }
 }

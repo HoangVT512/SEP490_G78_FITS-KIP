@@ -42,6 +42,7 @@ import {
   InfoCircleOutlined,
   TeamOutlined,
   FileExcelOutlined,
+  ToolOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import * as utcPlugin from "dayjs/plugin/utc";
@@ -55,6 +56,7 @@ import { lineService } from "../../services/lineService";
 import { stageService } from "../../services/stageService";
 import { stopTypeService } from "../../services/stopTypeService";
 import { userService } from "../../services/userService";
+import { authService } from "../../services/authService";
 import { useAuth } from "../../contexts/AuthContext";
 import * as XLSX from "xlsx";
 
@@ -88,10 +90,14 @@ const IncidentManagement = () => {
   const [selectedEquipment, setSelectedEquipment] = useState(null);
   const [currentReporter, setCurrentReporter] = useState(null);
   const [teamLeads, setTeamLeads] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
+  // const [userLines, setUserLines] = useState([]); // No longer needed - filtering done in backend
   const [incidentShifts, setIncidentShifts] = useState([]);
   const [selectedRowKeys, setSelectedRowKeys] = useState([]);
   const [selectedRows, setSelectedRows] = useState([]);
   const [formChanged, setFormChanged] = useState(false);
+  // Keep previous endTime to restore if user cancels clearing it
+  const [previousEndTime, setPreviousEndTime] = useState(null);
 
   const searchInput = useRef(null);
 
@@ -154,16 +160,17 @@ const IncidentManagement = () => {
   });
 
   useEffect(() => {
-    fetchIncidents();
     fetchEquipments();
     fetchLines();
     fetchStages();
     fetchStopTypes();
+    fetchAllUsers();
+    fetchIncidents();
   }, []);
 
   useEffect(() => {
     handleFilter();
-  }, [searchText, filterStatus, filterPriority, incidents, teamLeads]);
+  }, [searchText, filterStatus, filterPriority, incidents]);
 
   useEffect(() => {
     if (formModalVisible && (selectedEquipment || currentUser)) {
@@ -173,7 +180,17 @@ const IncidentManagement = () => {
 
   const fetchEquipments = async () => {
     try {
-      const response = await equipmentService.getEquipments();
+      const isAdmin = authService.isAdmin();
+      let response;
+
+      if (isAdmin) {
+        // Admin sees all equipments
+        response = await equipmentService.getEquipments();
+      } else {
+        // Team Leader sees only equipments from their assigned lines
+        response = await equipmentService.getEquipmentsByUserLines(currentUser.id);
+      }
+
       const data = Array.isArray(response) ? response : response?.data || [];
       setEquipments(data);
     } catch (error) {
@@ -184,7 +201,17 @@ const IncidentManagement = () => {
 
   const fetchLines = async () => {
     try {
-      const response = await lineService.getLines();
+      const isAdmin = authService.isAdmin();
+      let response;
+
+      if (isAdmin) {
+        // Admin sees all lines
+        response = await lineService.getLines();
+      } else {
+        // Team Leader sees only lines they are assigned to
+        response = await lineService.getLinesByUser(currentUser.id);
+      }
+
       const data = Array.isArray(response) ? response : response?.data || [];
       setLines(data);
     } catch (error) {
@@ -195,7 +222,17 @@ const IncidentManagement = () => {
 
   const fetchStages = async () => {
     try {
-      const response = await stageService.getStages();
+      const isAdmin = authService.isAdmin();
+      let response;
+
+      if (isAdmin) {
+        // Admin sees all stages
+        response = await stageService.getStages();
+      } else {
+        // Team Leader sees only stages from their assigned lines
+        response = await stageService.getStagesByUserLines(currentUser.id);
+      }
+
       const data = Array.isArray(response) ? response : response?.data || [];
       setStages(data);
     } catch (error) {
@@ -246,6 +283,27 @@ const IncidentManagement = () => {
     }
   };
 
+  const fetchAllUsers = async () => {
+    try {
+      const res = await userService.getUsers();
+      const users = Array.isArray(res) ? res : res?.data || [];
+      setAllUsers(users);
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách người dùng:", error);
+      // don't block UI if users cannot be loaded
+      setAllUsers([]);
+    }
+  };
+
+  const fetchUserLines = async () => {
+    try {
+      const data = await userService.getUserLines(currentUser.id);
+      setUserLines(data);
+    } catch (error) {
+      console.error("fetchUserLines error", error);
+    }
+  };
+
   const fetchIncidentShifts = async (incidentId) => {
     try {
       const response = await incidentService.getIncidentShifts(incidentId);
@@ -260,7 +318,19 @@ const IncidentManagement = () => {
   const fetchIncidents = async () => {
     setLoading(true);
     try {
-      const res = await incidentService.getAll();
+      let res;
+
+      // Check if user is admin
+      const isAdmin = authService.isAdmin();
+
+      if (isAdmin) {
+        // Admin sees all incidents
+        res = await incidentService.getAll();
+      } else {
+        // Team Leader sees only incidents from their assigned lines
+        res = await incidentService.getIncidentsByUserLines(currentUser.id);
+      }
+
       // backend returns { success, data }
       const items = Array.isArray(res) ? res : res?.data || [];
       // Normalize to frontend shape
@@ -506,6 +576,9 @@ const IncidentManagement = () => {
       status: hasEndTime ? "Hoàn thành" : "Chờ xử lý",
     });
 
+    // store previous endTime so we can restore if user cancels clearing it
+    setPreviousEndTime(hasEndTime ? dayjs(record.resolveDate) : null);
+
     setFormModalVisible(true);
   };
 
@@ -622,6 +695,9 @@ const IncidentManagement = () => {
   const handleViewDetail = (record) => {
     setSelectedIncident(record);
     fetchIncidentShifts(record.id);
+    // Ensure we have latest user/team lead lists for name resolution
+    fetchAllUsers();
+    fetchTeamLeads();
     setDetailModalVisible(true);
   };
 
@@ -630,9 +706,39 @@ const IncidentManagement = () => {
       setLoading(true);
 
       if (isEditMode) {
-        // Edit mode - single incident (existing logic)
+        // Edit mode - determine status with business rules
         const hasEndTime = values.endTime && dayjs(values.endTime).isValid();
-        const status = hasEndTime ? "Hoàn thành" : "Chờ xử lý";
+
+        let status;
+        if (hasEndTime) {
+          status = "Hoàn thành";
+        } else {
+          // If user explicitly provided a status in the form, respect it
+          if (values.status !== undefined && values.status !== null) {
+            status = values.status;
+          } else {
+            // Determine based on tech support flag and assigned person
+            const isSupport = values.isTechSupport !== undefined
+              ? values.isTechSupport
+              : selectedIncident?.isTechSupport;
+            // Try to read assigned value from form (if exists) or from selectedIncident
+            const assigned = values.assignedTo !== undefined
+              ? values.assignedTo
+              : (selectedIncident?.assignedTo || selectedIncident?.assignedToName || null);
+
+            // Rules:
+            // - If it's a tech-support issue and someone is assigned => Đang xử lý
+            // - If it's NOT tech-support and no one is assigned => Chờ xử lý
+            // - Otherwise preserve existing status (if any), fallback to Chờ xử lý
+            if (isSupport && assigned) {
+              status = "Đang xử lý";
+            } else if (!isSupport && (!assigned || assigned === null || assigned === "")) {
+              status = "Chờ xử lý";
+            } else {
+              status = selectedIncident?.status || "Chờ xử lý";
+            }
+          }
+        }
 
         const formEquipmentId = form.getFieldValue("equipmentId");
         const finalEquipmentId =
@@ -790,6 +896,65 @@ const IncidentManagement = () => {
     }
   };
 
+  // Handler for endTime DatePicker changes in the edit form.
+  // If user clears the endTime for a previously completed incident, ask for confirmation.
+  const handleEndTimeChange = (value) => {
+    try {
+      const currentlyCompleted = selectedIncident?.resolveDate && dayjs(selectedIncident.resolveDate).isValid();
+
+      // User cleared the endTime (value === null)
+      if (!value && currentlyCompleted) {
+        Modal.confirm({
+          title: "Xác nhận xóa thời gian kết thúc",
+          content:
+            "Sự cố này đã được đánh dấu là 'Hoàn thành'. Bạn có chắc chắn muốn xóa thời gian kết thúc? Việc này có thể thay đổi trạng thái sự cố.",
+          okText: "Xóa",
+          cancelText: "Hủy",
+          onOk() {
+            // User confirmed: clear the form field (it is already null), update status preview according to business rules
+            // Derive new status based on isTechSupport and assignedTo
+            const isTech = form.getFieldValue("isTechSupport");
+            const assigned = form.getFieldValue("assignedTo") || selectedIncident?.assignedTo;
+            let derivedStatus = "Chờ xử lý";
+            if (isTech) {
+              derivedStatus = assigned ? "Đang xử lý" : "Chờ xử lý";
+            } else {
+              derivedStatus = assigned ? (selectedIncident?.status || "Chờ xử lý") : "Chờ xử lý";
+            }
+            form.setFieldsValue({ status: derivedStatus });
+            setPreviousEndTime(null);
+            setFormChanged(true);
+          },
+          onCancel() {
+            // Restore previous endTime in the form
+            if (previousEndTime) {
+              form.setFieldsValue({ endTime: previousEndTime });
+            }
+          },
+        });
+      } else {
+        // Normal change (set or modify endTime) -> update status preview
+        if (value && dayjs(value).isValid()) {
+          form.setFieldsValue({ status: "Hoàn thành" });
+        } else {
+          // value is null but not previously completed: derive status conservatively
+          const isTech = form.getFieldValue("isTechSupport");
+          const assigned = form.getFieldValue("assignedTo") || selectedIncident?.assignedTo;
+          if (isTech) {
+            form.setFieldsValue({ status: assigned ? "Đang xử lý" : "Chờ xử lý" });
+          } else {
+            form.setFieldsValue({ status: assigned ? (selectedIncident?.status || "Chờ xử lý") : "Chờ xử lý" });
+          }
+        }
+        // update stored previousEndTime
+        setPreviousEndTime(value && dayjs(value).isValid() ? value : null);
+        setFormChanged(true);
+      }
+    } catch (e) {
+      console.error("handleEndTimeChange error", e);
+    }
+  };
+
   const getPriorityColor = (priority) => {
     switch (priority) {
       case "Cao":
@@ -839,7 +1004,56 @@ const IncidentManagement = () => {
         tl.userId === reporterId ||
         tl.userID === reporterId
     );
-    return teamLead ? teamLead.fullName || teamLead.userName : reporterId;
+    if (teamLead) return teamLead.fullName || teamLead.userName;
+    // fallback to all users list
+    const user = allUsers.find(u => (u.id || u.userId || u.userID) === reporterId);
+    return user ? (user.fullName || user.name || user.userName || user.username) : reporterId;
+  };
+
+  const getAssignedToName = (assignedToIdOrName) => {
+    if (assignedToIdOrName == null) return null;
+
+    // If API already provides a readable name, prefer it — but avoid treating UUIDs as names.
+    if (typeof assignedToIdOrName === 'string') {
+      const trimmed = assignedToIdOrName.trim();
+      // UUID regex (v4 format) — if it matches, treat as an id, not a name
+      const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+      if (uuidRegex.test(trimmed)) {
+        // it's an id-like string, continue to lookup
+      } else {
+        // Heuristic: if string contains a space (likely a full name) or non-hex letters with spaces, consider it a name
+        if (trimmed.includes(" ")) return trimmed;
+      }
+    }
+
+    // Normalize to string for comparisons
+    const target = String(assignedToIdOrName);
+
+    // Try to find in allUsers by common id fields (compare as strings)
+    const user = allUsers.find(u => {
+      const candidate = String(u.id || u.userId || u.userID || "");
+      return candidate && candidate === target;
+    });
+    if (user) return user.fullName || user.name || user.userName || user.username;
+
+    // Try to find by matching username/fullName fields too
+    const userByName = allUsers.find(u => {
+      const fullname = (u.fullName || u.name || u.userName || u.username || "").toString();
+      return fullname && fullname === target;
+    });
+    if (userByName) return userByName.fullName || userByName.name || userByName.userName || userByName.username;
+
+    // Try teamLeads as a final fallback (compare as strings)
+    const tl = teamLeads.find(
+      (t) => {
+        const cand = String(t.id || t.userId || t.userID || "");
+        return cand && cand === target;
+      }
+    );
+    if (tl) return tl.fullName || tl.userName;
+
+    // Nothing matched; return original value (may be null/empty)
+    return assignedToIdOrName;
   };
 
   const columns = [
@@ -1158,7 +1372,7 @@ const IncidentManagement = () => {
               type="dashed"
               icon={<FileExcelOutlined />}
               onClick={exportToExcel}
-              //style={{ backgroundColor: "#52c41a", borderColor: "#52c41a", color: "white" }}
+            //style={{ backgroundColor: "#52c41a", borderColor: "#52c41a", color: "white" }}
             >
               Xuất Excel
             </Button>
@@ -1396,6 +1610,26 @@ const IncidentManagement = () => {
                           : "-"}
                       </div>
                     </Col>
+                    {selectedIncident.isTechSupport && (
+                      <>
+                        <Col span={8}>
+                          <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                            Hỗ trợ kỹ thuật
+                          </div>
+                          <Tag color="blue" icon={<ToolOutlined />} style={{ fontSize: "13px" }}>
+                            Yêu cầu hỗ trợ
+                          </Tag>
+                        </Col>
+                        <Col span={8}>
+                          <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                            Người đảm nhiệm
+                          </div>
+                          <div style={{ fontSize: "14px", fontWeight: 600 }}>
+                            {getAssignedToName(selectedIncident.assignedTo) || "Chưa phân công"}
+                          </div>
+                        </Col>
+                      </>
+                    )}
                   </Row>
                 </Card>
               </Col>
@@ -1842,63 +2076,83 @@ const IncidentManagement = () => {
 
                       <Col span={12}>
                         <Form.Item
+                          label="Thiết bị"
                           name={`equipmentId_${incidentForm.id}`}
-                          hidden
                         >
-                          <Input />
-                        </Form.Item>
-                        <Form.Item label="Thiết bị">
-                          <Input
-                            disabled
-                            value={
-                              selectedEquipment
-                                ? `${selectedEquipment.equipmentName}${selectedEquipment.equipmentCode
-                                  ? ` (${selectedEquipment.equipmentCode})`
-                                  : ""
-                                }`
-                                : ""
-                            }
+                          <Select
                             placeholder="-- Chọn --"
-                          />
+                            showSearch
+                            allowClear
+                            optionFilterProp="children"
+                            onChange={(value) => {
+                              const equipment = equipments.find(e => e.equipmentId === value);
+                              if (equipment) {
+                                setSelectedEquipment(equipment);
+                                form.setFieldsValue({
+                                  [`equipmentCode_${incidentForm.id}`]: equipment.equipmentCode,
+                                  [`lineId_${incidentForm.id}`]: equipment.lineId,
+                                  [`stageId_${incidentForm.id}`]: equipment.stageId,
+                                });
+                              } else {
+                                setSelectedEquipment(null);
+                              }
+                            }}
+                          >
+                            {equipments.map((equipment) => (
+                              <Option
+                                key={equipment.equipmentId}
+                                value={equipment.equipmentId}
+                              >
+                                {equipment.equipmentName} ({equipment.equipmentCode})
+                              </Option>
+                            ))}
+                          </Select>
                         </Form.Item>
                       </Col>
 
                       <Col span={12}>
-                        <Form.Item name={`lineId_${incidentForm.id}`} hidden>
-                          <Input />
-                        </Form.Item>
-                        <Form.Item label="Dây chuyền">
-                          <Input
-                            disabled
-                            value={
-                              selectedEquipment
-                                ? lines.find(
-                                  (l) => l.lineId === selectedEquipment.lineId
-                                )?.lineName || ""
-                                : ""
-                            }
+                        <Form.Item
+                          label="Công đoạn"
+                          name={`stageId_${incidentForm.id}`}
+                        >
+                          <Select
                             placeholder="-- Chọn --"
-                          />
+                            showSearch
+                            allowClear
+                            optionFilterProp="children"
+                          >
+                            {stages.map((stage) => (
+                              <Option
+                                key={stage.stageId}
+                                value={stage.stageId}
+                              >
+                                {stage.stageName}
+                              </Option>
+                            ))}
+                          </Select>
                         </Form.Item>
                       </Col>
 
                       <Col span={12}>
-                        <Form.Item name={`stageId_${incidentForm.id}`} hidden>
-                          <Input />
-                        </Form.Item>
-                        <Form.Item label="Công đoạn">
-                          <Input
-                            disabled
-                            value={
-                              selectedEquipment
-                                ? stages.find(
-                                  (s) =>
-                                    s.stageId === selectedEquipment.stageId
-                                )?.stageName || ""
-                                : ""
-                            }
+                        <Form.Item
+                          label="Dây chuyền"
+                          name={`lineId_${incidentForm.id}`}
+                        >
+                          <Select
                             placeholder="-- Chọn --"
-                          />
+                            showSearch
+                            allowClear
+                            optionFilterProp="children"
+                          >
+                            {lines.map((line) => (
+                              <Option
+                                key={line.lineId}
+                                value={line.lineId}
+                              >
+                                {line.lineName}
+                              </Option>
+                            ))}
+                          </Select>
                         </Form.Item>
                       </Col>
 
@@ -1982,7 +2236,11 @@ const IncidentManagement = () => {
 
                       <Col span={12}>
                         <Form.Item label="Trạng thái">
-                          <Input disabled value={incidentForm.status} />
+                          <Select value={incidentForm.status} disabled>
+                            <Option value="Chờ xử lý">Chờ xử lý</Option>
+                            <Option value="Đang xử lý">Đang xử lý</Option>
+                            <Option value="Hoàn thành">Hoàn thành</Option>
+                          </Select>
                         </Form.Item>
                       </Col>
 
@@ -2032,7 +2290,7 @@ const IncidentManagement = () => {
                           valuePropName="checked"
                           style={{ marginTop: "30px" }}
                         >
-                          <Checkbox 
+                          <Checkbox
                             disabled={form.getFieldValue(`endTime_${incidentForm.id}`) && dayjs(form.getFieldValue(`endTime_${incidentForm.id}`)).isValid()}
                           >
                             Cần hỗ trợ kỹ thuật
@@ -2154,63 +2412,85 @@ const IncidentManagement = () => {
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  {/* hidden equipmentId so form submission includes the id */}
-                  <Form.Item name="equipmentId" hidden>
-                    <Input />
-                  </Form.Item>
-                  <Form.Item label="Thiết bị">
-                    <Input
-                      disabled
-                      value={
-                        selectedEquipment
-                          ? `${selectedEquipment.equipmentName}${selectedEquipment.equipmentCode
-                            ? ` (${selectedEquipment.equipmentCode})`
-                            : ""
-                          }`
-                          : ""
-                      }
+                  <Form.Item
+                    label="Thiết bị"
+                    name="equipmentId"
+                  >
+                    <Select
                       placeholder="-- Chọn --"
-                    />
+                      showSearch
+                      allowClear
+                      optionFilterProp="children"
+                      onChange={(value) => {
+                        const equipment = equipments.find(e => e.equipmentId === value);
+                        if (equipment) {
+                          setSelectedEquipment(equipment);
+                          form.setFieldsValue({
+                            equipmentCode: equipment.equipmentCode,
+                            lineId: equipment.lineId,
+                            stageId: equipment.stageId,
+                          });
+                        } else {
+                          setSelectedEquipment(null);
+                          form.setFieldsValue({ equipmentId: null });
+                        }
+                      }}
+                    >
+                      {equipments.map((equipment) => (
+                        <Option
+                          key={equipment.equipmentId}
+                          value={equipment.equipmentId}
+                        >
+                          {equipment.equipmentName} ({equipment.equipmentCode})
+                        </Option>
+                      ))}
+                    </Select>
                   </Form.Item>
                 </Col>
+
                 <Col span={12}>
-                  <Form.Item name="lineId" hidden>
-                    <Input />
-                  </Form.Item>
-                  <Form.Item label="Dây chuyền">
-                    <Input
-                      disabled
-                      value={
-                        selectedEquipment
-                          ? lines.find(
-                            (l) => l.lineId === selectedEquipment.lineId
-                          )?.lineName || ""
-                          : lines.find(
-                            (l) => l.lineId === form.getFieldValue("lineId")
-                          )?.lineName || ""
-                      }
+                  <Form.Item
+                    label="Công đoạn"
+                    name="stageId"
+                  >
+                    <Select
                       placeholder="-- Chọn --"
-                    />
+                      showSearch
+                      allowClear
+                      optionFilterProp="children"
+                    >
+                      {stages.map((stage) => (
+                        <Option
+                          key={stage.stageId}
+                          value={stage.stageId}
+                        >
+                          {stage.stageName}
+                        </Option>
+                      ))}
+                    </Select>
                   </Form.Item>
                 </Col>
+
                 <Col span={12}>
-                  <Form.Item name="stageId" hidden>
-                    <Input />
-                  </Form.Item>
-                  <Form.Item label="Công đoạn">
-                    <Input
-                      disabled
-                      value={
-                        selectedEquipment
-                          ? stages.find(
-                            (s) => s.stageId === selectedEquipment.stageId
-                          )?.stageName || ""
-                          : stages.find(
-                            (s) => s.stageId === form.getFieldValue("stageId")
-                          )?.stageName || ""
-                      }
+                  <Form.Item
+                    label="Dây chuyền"
+                    name="lineId"
+                  >
+                    <Select
                       placeholder="-- Chọn --"
-                    />
+                      showSearch
+                      allowClear
+                      optionFilterProp="children"
+                    >
+                      {lines.map((line) => (
+                        <Option
+                          key={line.lineId}
+                          value={line.lineId}
+                        >
+                          {line.lineName}
+                        </Option>
+                      ))}
+                    </Select>
                   </Form.Item>
                 </Col>
 
@@ -2272,14 +2552,7 @@ const IncidentManagement = () => {
                       format="DD/MM/YYYY HH:mm:ss"
                       placeholder="Chọn thời gian kết thúc"
                       style={{ width: "100%" }}
-                      onChange={(value) => {
-                        const hasEndTime = value && dayjs(value).isValid();
-                        const status = hasEndTime ? "Hoàn thành" : "Chờ xử lý";
-                        form.setFieldsValue({ status });
-                        if (!isEditMode) {
-                          setCreateStatus(status);
-                        }
-                      }}
+                      onChange={(value) => handleEndTimeChange(value)}
                     />
                   </Form.Item>
                 </Col>
@@ -2296,17 +2569,16 @@ const IncidentManagement = () => {
                         },
                       ]}
                     >
-                      <Select placeholder="Chọn trạng thái" disabled>
+                      <Select placeholder="Chọn trạng thái">
                         <Option value="Chờ xử lý">Chờ xử lý</Option>
                         <Option value="Đang xử lý">Đang xử lý</Option>
                         <Option value="Hoàn thành">Hoàn thành</Option>
-                        <Option value="Hủy">Hủy</Option>
                       </Select>
                     </Form.Item>
                   )}
                   {!isEditMode && (
                     <Form.Item label="Trạng thái">
-                      <Input disabled value={createStatus} />
+                      <Input value={createStatus} />
                     </Form.Item>
                   )}
                 </Col>
@@ -2354,7 +2626,7 @@ const IncidentManagement = () => {
                     valuePropName="checked"
                     style={{ marginTop: "30px" }}
                   >
-                    <Checkbox 
+                    <Checkbox
                       disabled={isEditMode && selectedIncident?.resolveDate && dayjs(selectedIncident.resolveDate).isValid()}
                     >
                       Cần hỗ trợ kỹ thuật

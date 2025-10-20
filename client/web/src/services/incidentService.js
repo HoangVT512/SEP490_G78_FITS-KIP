@@ -64,4 +64,19 @@ export const incidentService = {
     });
     return res?.data || res;
   },
+
+  async assignTechnician(incidentId, technicianId, updateStatus = false) {
+    const res = await apiRequest(`/Incidents/${encodeURIComponent(incidentId)}/assign-technician`, {
+      method: "PUT",
+      body: JSON.stringify({ technicianId, updateStatus }),
+    });
+    return res?.data || res;
+  },
+
+  async getIncidentsByUserLines(userId) {
+    const res = await apiRequest(`/Incidents/user/${encodeURIComponent(userId)}/lines`, {
+      method: "GET",
+    });
+    return res?.data || res;
+  }
 };

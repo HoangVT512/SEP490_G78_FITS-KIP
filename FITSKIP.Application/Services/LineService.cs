@@ -111,4 +111,9 @@ public class LineService : ILineService
     {
         return _lineRepository.ToggleLineStatusAsync(id, cancellationToken);
     }
+
+    public Task<IReadOnlyList<Line>> GetLinesByUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return _lineRepository.GetLinesByUserAsync(userId, cancellationToken);
+    }
 }

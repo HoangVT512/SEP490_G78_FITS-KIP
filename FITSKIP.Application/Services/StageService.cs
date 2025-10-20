@@ -111,4 +111,9 @@ public class StageService : IStageService
     {
         return _stageRepository.GetByLineIdAsync(lineId, cancellationToken);
     }
+
+    public Task<IReadOnlyList<Stage>> GetStagesByUserLinesAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return _stageRepository.GetStagesByUserLinesAsync(userId, cancellationToken);
+    }
 }

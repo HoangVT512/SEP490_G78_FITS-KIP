@@ -258,6 +258,16 @@ export const userService = {
       throw new Error("Không thể đặt lại mật khẩu người dùng.");
     }
   },
+
+  // Get user lines by user ID
+  getUserLines: async (userId) => {
+    try {
+      return await apiRequest(`/Users/${userId}/lines`);
+    } catch (error) {
+      console.error("Lỗi tải danh sách dây chuyền của người dùng:", error);
+      throw new Error("Không thể tải danh sách dây chuyền của người dùng.");
+    }
+  },
 };
 
 export default userService;

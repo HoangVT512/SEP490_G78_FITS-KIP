@@ -419,7 +419,8 @@ public class EquipmentsController : ControllerBase
                 return Unauthorized(ApiResponse.ErrorResponse("Không thể xác thực người dùng"));
             }
 
-            var equipments = await _equipmentService.GetEquipmentsByTeamLeaderAsync(userId);
+            //var equipments = await _equipmentService.GetEquipmentsByTeamLeaderAsync(userId);
+            var equipments = await _equipmentService.GetEquipmentsByUserLinesAsync(userId);
             return Ok(ApiResponse<IReadOnlyList<EquipmentDTO>>.SuccessResponse(
                 equipments,
                 $"Lấy danh sách {equipments.Count} thiết bị quản lý thành công"
@@ -430,6 +431,46 @@ public class EquipmentsController : ControllerBase
             _logger.LogError(ex, "Lỗi khi lấy danh sách thiết bị của tổ trưởng");
             return StatusCode(500, ApiResponse.ErrorResponse(
                 "Có lỗi xảy ra khi lấy danh sách thiết bị",
+                new List<string> { ex.Message }
+            ));
+        }
+    }
+
+    /// <summary>
+    /// Lấy danh sách thiết bị theo các line mà user được phân công
+    /// </summary>
+    /// <param name="userId">ID của user</param>
+    /// <returns>Danh sách thiết bị thuộc các line của user</returns>
+    /// <response code="200">Trả về danh sách thiết bị thành công</response>
+    /// <response code="400">ID user không hợp lệ</response>
+    /// <response code="500">Lỗi server nội bộ</response>
+    [HttpGet("user/{userId}/lines")]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<EquipmentDTO>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetEquipmentsByUserLines(string userId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest(ApiResponse.ErrorResponse(
+                    "ID người dùng không hợp lệ",
+                    new List<string> { "ID không được để trống" }
+                ));
+            }
+
+            var equipments = await _equipmentService.GetEquipmentsByUserLinesAsync(userId);
+            return Ok(ApiResponse<IReadOnlyList<EquipmentDTO>>.SuccessResponse(
+                equipments,
+                $"Lấy danh sách {equipments.Count} thiết bị theo line của user thành công"
+            ));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi lấy danh sách thiết bị theo line của user: {UserId}", userId);
+            return StatusCode(500, ApiResponse.ErrorResponse(
+                "Có lỗi xảy ra khi lấy danh sách thiết bị theo line của user",
                 new List<string> { ex.Message }
             ));
         }

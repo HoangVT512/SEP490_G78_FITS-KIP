@@ -14,5 +14,7 @@ namespace FITSKIP.Application.Interfaces
         Task<DowntimeStatsDTO> GetDowntimeStatsAsync(string period, DateTime? startDate = null, DateTime? endDate = null, int? lineId = null, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<dynamic>> GetStopTypesAsync(CancellationToken cancellationToken = default);
         Task<IReadOnlyList<IncidentShift>> GetIncidentShiftsAsync(int incidentId, CancellationToken cancellationToken = default);
+        Task<bool> AssignTechnicianAsync(int incidentId, string technicianId, bool updateStatus = false, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<IncidentHistory>> GetIncidentsByUserLinesAsync(string userId, CancellationToken cancellationToken = default);
     }
 }

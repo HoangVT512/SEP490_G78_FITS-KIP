@@ -11,17 +11,20 @@ public class IncidentService : IIncidentService
     private readonly IEquipmentRepository _equipmentRepository;
     private readonly ILineRepository _lineRepository;
     private readonly IShiftRepository _shiftRepository;
+    private readonly IUserRepository _userRepository;
 
     public IncidentService(
         IIncidentRepository incidentRepository,
         IEquipmentRepository equipmentRepository,
         ILineRepository lineRepository,
-        IShiftRepository shiftRepository)
+        IShiftRepository shiftRepository,
+        IUserRepository userRepository)
     {
         _incidentRepository = incidentRepository;
         _equipmentRepository = equipmentRepository;
         _lineRepository = lineRepository;
         _shiftRepository = shiftRepository;
+        _userRepository = userRepository;
     }
 
     public Task<IReadOnlyList<IncidentHistory>> GetIncidentsAsync(CancellationToken cancellationToken = default)
@@ -523,5 +526,39 @@ public class IncidentService : IIncidentService
     public async Task<IReadOnlyList<IncidentShift>> GetIncidentShiftsAsync(int incidentId, CancellationToken cancellationToken = default)
     {
         return await _incidentRepository.GetIncidentShiftsAsync(incidentId, cancellationToken);
+    }
+
+    public async Task<bool> AssignTechnicianAsync(int incidentId, string technicianId, bool updateStatus = false, CancellationToken cancellationToken = default)
+    {
+        var incident = await _incidentRepository.GetByIdAsync(incidentId, cancellationToken);
+        if (incident == null)
+        {
+            return false;
+        }
+
+        // Update the AssignedTo field with the technician ID
+        incident.AssignedTo = technicianId;
+
+        // Update status if requested
+        if (updateStatus && incident.Status == "Chờ xử lý")
+        {
+            incident.Status = "Đang xử lý";
+        }
+
+        await _incidentRepository.UpdateAsync(incident, cancellationToken);
+        return true;
+    }
+
+    public async Task<IReadOnlyList<IncidentHistory>> GetIncidentsByUserLinesAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        // Get user's assigned lines
+        var userLines = await _userRepository.GetUserLinesAsync(userId, cancellationToken);
+        var lineIds = userLines.Select(ul => ul.LineId).ToList();
+
+        // Get all incidents and filter by line IDs
+        var allIncidents = await _incidentRepository.GetAllAsync(cancellationToken);
+        var filteredIncidents = allIncidents.Where(i => i.Equipment != null && i.Equipment.Stage != null && i.Equipment.Stage.LineId.HasValue && lineIds.Contains(i.Equipment.Stage.LineId.Value)).ToList();
+
+        return filteredIncidents.AsReadOnly();
     }
 }
