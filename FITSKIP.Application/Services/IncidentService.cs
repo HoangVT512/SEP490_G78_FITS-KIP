@@ -296,7 +296,19 @@ public class IncidentService : IIncidentService
             existingIncident.Status = request.Status;
         }
 
-        return await _incidentRepository.UpdateAsync(existingIncident, cancellationToken);
+        var updatedIncident = await _incidentRepository.UpdateAsync(existingIncident, cancellationToken);
+
+        // Gửi notification cho quản lý kỹ thuật nếu status là "Chờ xử lý" và istechsupport là true
+        if (updatedIncident != null && updatedIncident.Status == "Chờ xử lý" && updatedIncident.IsTechSupport)
+        {
+            var updatedEquipment = await _equipmentRepository.GetByIdAsync(updatedIncident.EquipmentId ?? 0, cancellationToken);
+            if (updatedEquipment != null)
+            {
+                await SendIncidentNotificationToTechnicalManagersAsync(updatedIncident, updatedEquipment, cancellationToken);
+            }
+        }
+
+        return updatedIncident;
     }
 
     public Task<bool> DeleteIncidentAsync(int id, CancellationToken cancellationToken = default)
@@ -466,6 +478,12 @@ public class IncidentService : IIncidentService
     {
         try
         {
+            // Chỉ gửi notification khi status là "Chờ xử lý" và istechsupport là true
+            if (incident.Status != "Chờ xử lý" || !incident.IsTechSupport)
+            {
+                return;
+            }
+
             // Get all Technical Managers
             var technicalManagers = await _userService.GetUsersByRoleAsync("Quản lý kỹ thuật", cancellationToken);
 
@@ -477,8 +495,8 @@ public class IncidentService : IIncidentService
                     await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
                     {
                         UserId = manager.Id,
-                        Title = "Sự cố mới được báo cáo",
-                        Message = $"Có sự cố mới tại thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode}) - Mã sự cố: {incident.IncidentId}"
+                        Title = "Sự cố cần hỗ trợ kỹ thuật",
+                        Message = $"Có sự cố mới cần hỗ trợ kỹ thuật tại thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode}) - Mã sự cố: {incident.IncidentId}"
                     });
                 }
             }
@@ -486,8 +504,8 @@ public class IncidentService : IIncidentService
             // Send ONE real-time notification to Technical Managers group
             await _notificationService.SendNotificationToGroupAsync(
                 "TechnicalManagers",
-                "Sự cố mới được báo cáo",
-                $"Có sự cố mới tại thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode}) - Mã sự cố: {incident.IncidentId}",
+                "Sự cố cần hỗ trợ kỹ thuật",
+                $"Có sự cố mới cần hỗ trợ kỹ thuật tại thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode}) - Mã sự cố: {incident.IncidentId}",
                 "warning"
             );
         }
