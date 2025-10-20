@@ -163,4 +163,14 @@ public class IncidentRepository : IIncidentRepository
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<IncidentShift>> GetIncidentShiftsAsync(int incidentId, CancellationToken cancellationToken = default)
+    {
+        return await _context.IncidentShifts
+            .Include(ishft => ishft.Shift)
+            .Where(ishft => ishft.IncidentId == incidentId)
+            .OrderBy(ishft => ishft.StartTime)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
 }

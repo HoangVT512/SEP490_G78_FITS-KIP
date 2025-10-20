@@ -447,7 +447,9 @@ namespace FITSKIP.Infrastructure.Migrations
                     IncidentShiftID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     IncidentID = table.Column<int>(type: "int", nullable: false),
-                    ShiftID = table.Column<int>(type: "int", nullable: false)
+                    ShiftID = table.Column<int>(type: "int", nullable: false),
+                    StartTime = table.Column<DateTime>(type: "datetime", nullable: false),
+                    EndTime = table.Column<DateTime>(type: "datetime", nullable: true)
                 },
                 constraints: table =>
                 {

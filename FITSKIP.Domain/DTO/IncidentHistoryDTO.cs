@@ -18,6 +18,7 @@ namespace FITSKIP.Domain.DTO
         public string? Solution { get; set; }
         public string? Issue { get; set; }
         public DateTime CreatedDate { get; set; }
+        public bool IsTechSupport { get; set; }
     }
 
     public class CreateIncidentRequest
@@ -41,6 +42,8 @@ namespace FITSKIP.Domain.DTO
         public string? Solution { get; set; } // Optional - có thể null
 
         public string? ReportedByUserId { get; set; }
+
+        public bool IsTechSupport { get; set; } = false;
     }
 
     public class CreateBulkIncidentRequest
@@ -91,6 +94,8 @@ namespace FITSKIP.Domain.DTO
         public string? Status { get; set; }
 
         public string? ReportedByUserId { get; set; }
+
+        public bool IsTechSupport { get; set; } = false;
     }
 
     public class DowntimeStatsDTO

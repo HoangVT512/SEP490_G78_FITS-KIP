@@ -79,16 +79,27 @@ public class IncidentService : IIncidentService
             StartTime = startTime,
             EndTime = request.EndTime,
             Duration = duration,
-            TypeId = request.TypeId, // Có thể null
+            TypeId = request.TypeId, /* Lines 82-83 omitted */
             Issue = request.Issue?.Trim(),
             Reason = request.Reason?.Trim(),
             Solution = request.Solution?.Trim(),
             Status = request.EndTime.HasValue ? "Hoàn thành" : "Chờ xử lý",
             CreatedDate = DateTime.Now,
-            ReportedByUserId = request.ReportedByUserId
+            ReportedByUserId = request.ReportedByUserId,
+            IsTechSupport = request.IsTechSupport
         };
 
-        return await _incidentRepository.CreateAsync(incident, cancellationToken);
+        var createdIncident = await _incidentRepository.CreateAsync(incident, cancellationToken);
+
+        // Tự động tạo IncidentShift records nếu có endtime
+        if (request.EndTime.HasValue)
+        {
+            await CreateIncidentShiftsAsync(createdIncident, cancellationToken);
+            // Save changes after creating incident shifts
+            await _incidentRepository.UpdateAsync(createdIncident, cancellationToken);
+        }
+
+        return createdIncident;
     }
 
     public async Task<BulkIncidentResponse> CreateBulkIncidentsAsync(CreateBulkIncidentRequest request, CancellationToken cancellationToken = default)
@@ -169,30 +180,43 @@ public class IncidentService : IIncidentService
                     Solution = incidentRequest.Solution?.Trim(),
                     Status = incidentRequest.EndTime.HasValue ? "Hoàn thành" : "Chờ xử lý",
                     CreatedDate = DateTime.Now,
-                    ReportedByUserId = incidentRequest.ReportedByUserId
+                    ReportedByUserId = incidentRequest.ReportedByUserId,
+                    IsTechSupport = incidentRequest.IsTechSupport
                 };
 
                 var createdIncident = await _incidentRepository.CreateAsync(incident, cancellationToken);
+
+                // Tự động tạo IncidentShift records nếu có endtime
+                if (incidentRequest.EndTime.HasValue)
+                {
+                    await CreateIncidentShiftsAsync(createdIncident, cancellationToken);
+                    // Save changes after creating incident shifts
+                    createdIncident = await _incidentRepository.UpdateAsync(createdIncident, cancellationToken);
+                }
+
                 response.SuccessCount++;
 
                 // Map to DTO for response
-                response.SuccessfulIncidents.Add(new IncidentHistoryDTO
+                if (createdIncident != null)
                 {
-                    IncidentId = createdIncident.IncidentId,
-                    EquipmentId = createdIncident.EquipmentId ?? 0,
-                    EquipmentName = createdIncident.Equipment?.EquipmentName,
-                    EquipmentCode = createdIncident.Equipment?.EquipmentCode,
-                    LineName = createdIncident.Equipment?.Stage?.Line?.LineName,
-                    StartTime = createdIncident.StartTime,
-                    EndTime = createdIncident.EndTime,
-                    Duration = createdIncident.Duration,
-                    TypeId = createdIncident.TypeId,
-                    TypeName = createdIncident.Type?.TypeName,
-                    Reason = createdIncident.Reason,
-                    Solution = createdIncident.Solution,
-                    Issue = createdIncident.Issue,
-                    CreatedDate = createdIncident.CreatedDate
-                });
+                    response.SuccessfulIncidents.Add(new IncidentHistoryDTO
+                    {
+                        IncidentId = createdIncident.IncidentId,
+                        EquipmentId = createdIncident.EquipmentId ?? 0,
+                        EquipmentName = createdIncident.Equipment?.EquipmentName,
+                        EquipmentCode = createdIncident.Equipment?.EquipmentCode,
+                        LineName = createdIncident.Equipment?.Stage?.Line?.LineName,
+                        StartTime = createdIncident.StartTime,
+                        EndTime = createdIncident.EndTime,
+                        Duration = createdIncident.Duration,
+                        TypeId = createdIncident.TypeId,
+                        TypeName = createdIncident.Type?.TypeName,
+                        Reason = createdIncident.Reason,
+                        Solution = createdIncident.Solution,
+                        Issue = createdIncident.Issue,
+                        CreatedDate = createdIncident.CreatedDate
+                    });
+                }
             }
             catch (Exception ex)
             {
@@ -266,11 +290,8 @@ public class IncidentService : IIncidentService
             existingIncident.TypeId = request.TypeId;
         }
 
-        // Update ReportedByUserId if provided
-        if (!string.IsNullOrEmpty(request.ReportedByUserId))
-        {
-            existingIncident.ReportedByUserId = request.ReportedByUserId;
-        }
+        // Update ReportedByUserId (can be null)
+        existingIncident.ReportedByUserId = request.ReportedByUserId;
 
         existingIncident.Issue = request.Issue?.Trim();
         existingIncident.Reason = request.Reason?.Trim(); // Có thể null
@@ -282,7 +303,21 @@ public class IncidentService : IIncidentService
             existingIncident.Status = request.Status;
         }
 
-        return await _incidentRepository.UpdateAsync(existingIncident, cancellationToken);
+        existingIncident.IsTechSupport = request.IsTechSupport;
+
+        var updatedIncident = await _incidentRepository.UpdateAsync(existingIncident, cancellationToken);
+
+        // Tự động tạo IncidentShift records nếu có endtime và chưa có IncidentShift nào
+        if (request.EndTime.HasValue && updatedIncident != null)
+        {
+            // Clear existing incident shifts if any
+            updatedIncident.IncidentShifts.Clear();
+            await CreateIncidentShiftsAsync(updatedIncident, cancellationToken);
+            // Save changes after creating incident shifts
+            updatedIncident = await _incidentRepository.UpdateAsync(updatedIncident, cancellationToken);
+        }
+
+        return updatedIncident;
     }
 
     public Task<bool> DeleteIncidentAsync(int id, CancellationToken cancellationToken = default)
@@ -446,5 +481,47 @@ public class IncidentService : IIncidentService
             // Night shift crossing midnight (e.g., 22:00 - 06:00)
             return timeOnly >= shiftStart || timeOnly < shiftEnd;
         }
+    }
+
+    private async Task CreateIncidentShiftsAsync(IncidentHistory incident, CancellationToken cancellationToken = default)
+    {
+        if (!incident.EndTime.HasValue || !incident.StartTime.HasValue)
+            return;
+
+        // Get all shifts
+        var shifts = await _shiftRepository.GetAllAsync(cancellationToken);
+        
+        foreach (var shift in shifts)
+        {
+            // Calculate shift start and end datetime for the incident date
+            var incidentDate = incident.StartTime.Value.Date;
+            var shiftStartDateTime = incidentDate.Add(shift.StartTime.ToTimeSpan());
+            var shiftEndDateTime = shift.StartTime <= shift.EndTime 
+                ? incidentDate.Add(shift.EndTime.ToTimeSpan())  // Normal shift
+                : incidentDate.AddDays(1).Add(shift.EndTime.ToTimeSpan());  // Night shift crossing midnight
+            
+            // Calculate overlap between incident and shift
+            var overlapStart = incident.StartTime.Value > shiftStartDateTime ? incident.StartTime.Value : shiftStartDateTime;
+            var overlapEnd = incident.EndTime.Value < shiftEndDateTime ? incident.EndTime.Value : shiftEndDateTime;
+            
+            // Only create IncidentShift if there is actual overlap
+            if (overlapStart < overlapEnd)
+            {
+                var incidentShift = new IncidentShift
+                {
+                    IncidentId = incident.IncidentId,
+                    ShiftId = shift.ShiftId,
+                    StartTime = overlapStart,
+                    EndTime = overlapEnd
+                };
+                
+                incident.IncidentShifts.Add(incidentShift);
+            }
+        }
+    }
+
+    public async Task<IReadOnlyList<IncidentShift>> GetIncidentShiftsAsync(int incidentId, CancellationToken cancellationToken = default)
+    {
+        return await _incidentRepository.GetIncidentShiftsAsync(incidentId, cancellationToken);
     }
 }

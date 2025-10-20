@@ -52,7 +52,6 @@ public class LineService : ILineService
         {
             LineName = normalizedLineName, // Sử dụng tên đã chuẩn hóa
             DepartmentId = request.DepartmentId,
-            IsActive = request.IsActive
         };
 
         return await _lineRepository.CreateAsync(line, cancellationToken);

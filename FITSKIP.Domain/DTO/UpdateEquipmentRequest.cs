@@ -21,8 +21,5 @@ public class UpdateEquipmentRequest
 
     public int? StageId { get; set; }
 
-    [StringLength(500, ErrorMessage = "Vấn đề không được vượt quá 500 ký tự")]
-    public string? Issue { get; set; }
-
     public bool IsActive { get; set; } = true;
 }

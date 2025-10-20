@@ -57,4 +57,11 @@ export const incidentService = {
     );
     return res?.data || res;
   },
+
+  async getIncidentShifts(incidentId) {
+    const res = await apiRequest(`/Incidents/${encodeURIComponent(incidentId)}/shifts`, {
+      method: "GET",
+    });
+    return res?.data || res;
+  },
 };

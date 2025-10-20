@@ -421,4 +421,26 @@ public class IncidentsController : ControllerBase
             return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi lấy thống kê thời gian dừng", details = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Lấy danh sách IncidentShifts theo Incident ID
+    /// </summary>
+    [HttpGet("{id}/shifts")]
+    public async Task<IActionResult> GetIncidentShifts(int id)
+    {
+        try
+        {
+            if (id <= 0)
+            {
+                return BadRequest(new { success = false, message = "ID sự cố không hợp lệ" });
+            }
+
+            var shifts = await _incidentService.GetIncidentShiftsAsync(id);
+            return Ok(new { success = true, data = shifts });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi lấy danh sách ca sự cố", details = ex.Message });
+        }
+    }
 }

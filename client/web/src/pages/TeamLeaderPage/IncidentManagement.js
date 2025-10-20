@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Card,
   Table,
@@ -22,6 +22,7 @@ import {
   Upload,
   Alert,
   Dropdown,
+  Checkbox,
 } from "antd";
 import {
   PlusOutlined,
@@ -38,6 +39,9 @@ import {
   UploadOutlined,
   FilterOutlined,
   DownOutlined,
+  InfoCircleOutlined,
+  TeamOutlined,
+  FileExcelOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import * as utcPlugin from "dayjs/plugin/utc";
@@ -52,6 +56,7 @@ import { stageService } from "../../services/stageService";
 import { stopTypeService } from "../../services/stopTypeService";
 import { userService } from "../../services/userService";
 import { useAuth } from "../../contexts/AuthContext";
+import * as XLSX from "xlsx";
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -83,6 +88,70 @@ const IncidentManagement = () => {
   const [selectedEquipment, setSelectedEquipment] = useState(null);
   const [currentReporter, setCurrentReporter] = useState(null);
   const [teamLeads, setTeamLeads] = useState([]);
+  const [incidentShifts, setIncidentShifts] = useState([]);
+  const [selectedRowKeys, setSelectedRowKeys] = useState([]);
+  const [selectedRows, setSelectedRows] = useState([]);
+  const [formChanged, setFormChanged] = useState(false);
+
+  const searchInput = useRef(null);
+
+  const getColumnSearchProps = (dataIndex, placeholderText = "") => ({
+    filterDropdown: ({
+      setSelectedKeys,
+      selectedKeys,
+      confirm,
+      clearFilters,
+      close,
+    }) => (
+      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
+        <Input
+          ref={searchInput}
+          placeholder={placeholderText || `Tìm ${dataIndex}`}
+          value={selectedKeys[0]}
+          onChange={(e) =>
+            setSelectedKeys(e.target.value ? [e.target.value] : [])
+          }
+          onPressEnter={() => confirm()}
+          style={{ marginBottom: 8, display: "block" }}
+        />
+        <Space>
+          <Button
+            type="primary"
+            onClick={() => confirm()}
+            icon={<SearchOutlined />}
+            size="small"
+            style={{ width: 90 }}
+          >
+            Tìm kiếm
+          </Button>
+          <Button
+            onClick={() => clearFilters && clearFilters()}
+            size="small"
+            style={{ width: 90 }}
+          >
+            Đặt lại
+          </Button>
+          <Button type="link" size="small" onClick={() => close()}>
+            Đóng
+          </Button>
+        </Space>
+      </div>
+    ),
+    filterIcon: (filtered) => (
+      <SearchOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
+    ),
+    onFilter: (value, record) => {
+      const text = record[dataIndex];
+      return text ? text.toString().toLowerCase().includes(value.toLowerCase()) : false;
+    },
+    filterDropdownProps: {
+      onOpenChange(open) {
+        if (open) {
+          setTimeout(() => searchInput.current?.select(), 100);
+        }
+      },
+    },
+  });
 
   useEffect(() => {
     fetchIncidents();
@@ -174,6 +243,17 @@ const IncidentManagement = () => {
       console.error("Lỗi khi tải danh sách tổ trưởng:", error);
       message.error("Không thể tải danh sách tổ trưởng");
       setTeamLeads([]);
+    }
+  };
+
+  const fetchIncidentShifts = async (incidentId) => {
+    try {
+      const response = await incidentService.getIncidentShifts(incidentId);
+      const data = Array.isArray(response) ? response : response?.data || [];
+      setIncidentShifts(data);
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách ca sự cố:", error);
+      setIncidentShifts([]);
     }
   };
 
@@ -272,6 +352,7 @@ const IncidentManagement = () => {
           startSlotTime:
             it.slot?.slotStartTime || it.slot?.SlotStartTime || null,
           endSlotTime: it.slot?.slotEndTime || it.slot?.SlotEndTime || null,
+          isTechSupport: it.isTechSupport || false,
         };
       });
       setIncidents(mapped);
@@ -307,6 +388,15 @@ const IncidentManagement = () => {
       filtered = filtered.filter((inc) => inc.priority === filterPriority);
     }
 
+    // Sort by reportDate descending (newest first)
+    filtered.sort((a, b) => dayjs(b.reportDate).valueOf() - dayjs(a.reportDate).valueOf());
+
+    // Add rowIndex for display
+    filtered = filtered.map((item, index) => ({
+      ...item,
+      rowIndex: index + 1
+    }));
+
     setFilteredIncidents(filtered);
   };
 
@@ -316,13 +406,9 @@ const IncidentManagement = () => {
     setSelectedEquipment(null); // Reset selected equipment
     setCreateStatus("Chờ xử lý"); // Reset status for create mode
     setIncidentForms([{ id: 1, status: "Chờ xử lý" }]); // Reset to single form
+    setFormChanged(false); // Reset form changed state
     form.resetFields();
-    // Auto-fill reporter with current user ID (can be changed to other team leads)
-    form.setFieldsValue({
-      //reporter: currentUser?.id || currentUser?.userId || currentUser?.userID || null,
-      reporter:
-        currentUser?.fullName || currentUser?.userName || "Không xác định",
-    });
+    // No longer auto-fill reporter - user must select manually
     setFormModalVisible(true);
   };
 
@@ -351,29 +437,38 @@ const IncidentManagement = () => {
     setIncidentForms(incidentForms.filter((f) => f.id !== idToRemove));
   };
 
-  const getCurrentTimeSlot = () => {
+  const getCurrentShift = () => {
     const now = dayjs();
-    const currentHour = now.hour();
-    const currentMinute = now.minute();
+    const currentTime = now.format('HH:mm');
 
-    // Round to nearest 30-minute slot
-    let startMinute = currentMinute < 30 ? 0 : 30;
-    let endMinute = startMinute === 0 ? 30 : 0;
-    let endHour = startMinute === 0 ? currentHour : currentHour + 1;
+    // Hardcoded shifts based on the provided data
+    const shifts = [
+      { shiftId: 1, shiftName: 'Ca sáng', startTime: '06:00', endTime: '14:00' },
+      { shiftId: 2, shiftName: 'Ca chiều', startTime: '14:00', endTime: '22:00' },
+      { shiftId: 3, shiftName: 'Ca đêm', startTime: '22:00', endTime: '06:00' }
+    ];
 
-    const startTime = `${String(currentHour).padStart(2, "0")}:${String(
-      startMinute
-    ).padStart(2, "0")}`;
-    const endTime = `${String(endHour).padStart(2, "0")}:${String(
-      endMinute
-    ).padStart(2, "0")}`;
+    for (const shift of shifts) {
+      if (shift.shiftId === 3) {
+        // Night shift: 22:00 to 06:00 (next day)
+        if (currentTime >= '22:00' || currentTime < '06:00') {
+          return shift;
+        }
+      } else {
+        // Normal shifts
+        if (currentTime >= shift.startTime && currentTime < shift.endTime) {
+          return shift;
+        }
+      }
+    }
 
-    return { startTime, endTime };
+    return null; // No current shift
   };
 
   const handleEditIncident = (record) => {
     setIsEditMode(true);
     setSelectedIncident(record);
+    setFormChanged(false); // Reset form changed state
 
     // Find the equipment to pre-select it
     const equipment = equipments.find(
@@ -401,6 +496,7 @@ const IncidentManagement = () => {
       startTime: record.reportDate ? dayjs(record.reportDate) : null,
       endTime: record.resolveDate ? dayjs(record.resolveDate) : null,
       reporter: record.reportedByUserId || record.reporterId || null, // Use user ID for editing
+      isTechSupport: record.isTechSupport || false,
     });
 
     // Set status based on presence of endTime
@@ -409,6 +505,7 @@ const IncidentManagement = () => {
     form.setFieldsValue({
       status: hasEndTime ? "Hoàn thành" : "Chờ xử lý",
     });
+
     setFormModalVisible(true);
   };
 
@@ -426,8 +523,105 @@ const IncidentManagement = () => {
     }
   };
 
+  const handleBulkDelete = async () => {
+    if (selectedRows.length === 0) {
+      message.warning("Vui lòng chọn ít nhất một sự cố để xóa!");
+      return;
+    }
+
+    Modal.confirm({
+      title: "Xóa nhiều sự cố",
+      content: `Bạn có chắc chắn muốn xóa ${selectedRows.length} sự cố đã chọn?`,
+      okText: "Xóa",
+      cancelText: "Hủy",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          setLoading(true);
+          // Delete each selected incident
+          for (const incident of selectedRows) {
+            await incidentService.delete(incident.id);
+          }
+          message.success(`Đã xóa thành công ${selectedRows.length} sự cố!`);
+          setSelectedRowKeys([]);
+          setSelectedRows([]);
+          fetchIncidents();
+        } catch (error) {
+          console.error("Lỗi khi xóa nhiều sự cố:", error);
+          const errMsg = error?.message || error?.data?.message || "Xóa thất bại!";
+          message.error(errMsg);
+          setLoading(false);
+        }
+      },
+    });
+  };
+
+  const exportToExcel = () => {
+    try {
+      // Prepare data for export
+      const exportData = filteredIncidents.map((incident, index) => ({
+        'STT': index + 1,
+        'Mã sự cố': incident.id,
+        'Thiết bị': `${incident.equipmentName}${incident.equipmentCode ? ` (${incident.equipmentCode})` : ''}`,
+        'Dây chuyền': incident.lineName || '',
+        'Công đoạn': incident.stageName || '',
+        'Loại dừng': incident.category || '',
+        'Vấn đề': incident.issue || '',
+        'Ngày báo cáo': incident.reportDate ? dayjs(incident.reportDate).format('DD/MM/YYYY') : '',
+        'Giờ bắt đầu': incident.reportDate ? dayjs(incident.reportDate).format('HH:mm') : '',
+        'Giờ kết thúc': incident.resolveDate ? dayjs(incident.resolveDate).format('HH:mm') : '',
+        'Thời lượng (phút)': incident.downtime ? incident.downtime.toFixed(2) : '',
+        'Trạng thái': incident.status || '',
+        'Người báo cáo': incident.reporter || '',
+        'Cần hỗ trợ kỹ thuật': incident.isTechSupport ? 'Có' : 'Không',
+        'Nguyên nhân': incident.reason || '',
+        'Giải pháp': incident.solution || '',
+      }));
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+
+      // Set column widths
+      const colWidths = [
+        { wch: 5 },  // STT
+        { wch: 10 }, // Mã sự cố
+        { wch: 25 }, // Thiết bị
+        { wch: 15 }, // Dây chuyền
+        { wch: 15 }, // Công đoạn
+        { wch: 15 }, // Loại dừng
+        { wch: 30 }, // Vấn đề
+        { wch: 12 }, // Ngày báo cáo
+        { wch: 10 }, // Giờ bắt đầu
+        { wch: 10 }, // Giờ kết thúc
+        { wch: 15 }, // Thời lượng
+        { wch: 12 }, // Trạng thái
+        { wch: 20 }, // Người báo cáo
+        { wch: 18 }, // Cần hỗ trợ kỹ thuật
+        { wch: 30 }, // Nguyên nhân
+        { wch: 30 }, // Giải pháp
+      ];
+      ws['!cols'] = colWidths;
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Báo cáo sự cố');
+
+      // Generate filename with current date
+      const fileName = `BaoCaoSuCo_${dayjs().format('YYYY-MM-DD')}.xlsx`;
+
+      // Save file
+      XLSX.writeFile(wb, fileName);
+
+      message.success('Xuất file Excel thành công!');
+    } catch (error) {
+      console.error('Lỗi khi xuất Excel:', error);
+      message.error('Xuất file Excel thất bại!');
+    }
+  };
+
   const handleViewDetail = (record) => {
     setSelectedIncident(record);
+    fetchIncidentShifts(record.id);
     setDetailModalVisible(true);
   };
 
@@ -459,8 +653,8 @@ const IncidentManagement = () => {
           startTime: values.startTime
             ? dayjs(values.startTime).format("YYYY-MM-DDTHH:mm:ss.SSS")
             : dayjs(selectedIncident.reportDate).format(
-                "YYYY-MM-DDTHH:mm:ss.SSS"
-              ),
+              "YYYY-MM-DDTHH:mm:ss.SSS"
+            ),
           endTime: values.endTime
             ? dayjs(values.endTime).format("YYYY-MM-DDTHH:mm:ss.SSS")
             : null,
@@ -484,8 +678,8 @@ const IncidentManagement = () => {
                 : values.solution
               : selectedIncident.solution,
           status: status,
-          reportedByUserId:
-            values.reporter || selectedIncident.reportedByUserId || null,
+          ...(values.reporter !== undefined ? { reportedByUserId: values.reporter } : {}),
+          isTechSupport: values.isTechSupport || false,
         };
 
         const id =
@@ -511,6 +705,7 @@ const IncidentManagement = () => {
           const reason = form.getFieldValue(`reason_${formId}`);
           const solution = form.getFieldValue(`solution_${formId}`);
           const reporter = form.getFieldValue(`reporter_${formId}`);
+          const isTechSupport = form.getFieldValue(`isTechSupport_${formId}`) || false;
 
           // Validate required fields
           if (!equipmentId) {
@@ -533,12 +728,6 @@ const IncidentManagement = () => {
             return;
           }
 
-          if (!reporter) {
-            message.error(`Sự cố No.${formId}: Vui lòng chọn người báo cáo!`);
-            setLoading(false);
-            return;
-          }
-
           // Determine status
           const hasEndTime = endTime && dayjs(endTime).isValid();
           const status = hasEndTime ? "Hoàn thành" : "Chờ xử lý";
@@ -557,12 +746,8 @@ const IncidentManagement = () => {
             reason: reason || null,
             solution: solution || null,
             status: status,
-            reportedByUserId:
-              reporter ||
-              currentUser?.id ||
-              currentUser?.userId ||
-              currentUser?.userID ||
-              null,
+            reportedByUserId: reporter, // Must be selected by user, no fallback to currentUser
+            isTechSupport: isTechSupport,
           };
 
           incidentsToCreate.push(payload);
@@ -660,8 +845,8 @@ const IncidentManagement = () => {
   const columns = [
     {
       title: "#",
-      dataIndex: "id",
-      key: "id",
+      dataIndex: "rowIndex",
+      key: "rowIndex",
       width: 100,
       fixed: "left",
       render: (text) => <span style={{ fontWeight: 500 }}>{text}</span>,
@@ -674,11 +859,11 @@ const IncidentManagement = () => {
       ellipsis: {
         showTitle: false,
       },
+      ...getColumnSearchProps("equipmentName", "Tìm thiết bị"),
       render: (text, record) => (
         <Tooltip
-          title={`${text}${
-            record.equipmentCode ? ` (${record.equipmentCode})` : ""
-          }`}
+          title={`${text}${record.equipmentCode ? ` (${record.equipmentCode})` : ""
+            }`}
         >
           <div>
             <div style={{ fontWeight: 500 }}>{text}</div>
@@ -699,6 +884,7 @@ const IncidentManagement = () => {
       ellipsis: {
         showTitle: false,
       },
+      ...getColumnSearchProps("lineName", "Tìm dây chuyền"),
       render: (text) => (
         <Tooltip title={text}>
           <Tag color="purple">{text}</Tag>
@@ -713,6 +899,7 @@ const IncidentManagement = () => {
       ellipsis: {
         showTitle: false,
       },
+      ...getColumnSearchProps("stageName", "Tìm công đoạn"),
       render: (text) => (
         <Tooltip title={text || " "}>
           <Tag color="blue">{text || " "}</Tag>
@@ -727,25 +914,12 @@ const IncidentManagement = () => {
       ellipsis: {
         showTitle: false,
       },
+      ...getColumnSearchProps("issue", "Tìm vấn đề"),
       render: (text) => (
         <Tooltip title={text || " "}>
           <span>{text || " "}</span>
         </Tooltip>
       ),
-    },
-    {
-      title: "Khung giờ BD",
-      dataIndex: "startSlotTime",
-      key: "startSlotTime",
-      width: 130,
-      render: (time) => (time ? time.toString().substring(0, 5) : "-"),
-    },
-    {
-      title: "Khung giờ KT",
-      dataIndex: "endSlotTime",
-      key: "endSlotTime",
-      width: 130,
-      render: (time) => (time ? time.toString().substring(0, 5) : "-"),
     },
     {
       title: "Ngày",
@@ -790,6 +964,23 @@ const IncidentManagement = () => {
       ellipsis: {
         showTitle: false,
       },
+      filters: stopTypes.map((stopType) => ({
+        text: stopType.typeName || stopType.stopTypeName,
+        value: stopType.typeName || stopType.stopTypeName,
+      })),
+      onFilter: (value, record) => {
+        const stopType = stopTypes.find(st =>
+          st.stopTypeId === record.typeId ||
+          st.typeId === record.typeId ||
+          st.typeName === record.category ||
+          st.stopTypeName === record.category
+        );
+        const stopTypeName = stopType?.typeName || stopType?.stopTypeName || record.category || "";
+        return stopTypeName === value;
+      },
+      filterIcon: (filtered) => (
+        <FilterOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
+      ),
       render: (text) => (
         <Tooltip title={text || " "}>
           {/* <Tag color="orange">{text || "Chưa phân loại"}</Tag> */}
@@ -903,7 +1094,7 @@ const IncidentManagement = () => {
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} className={styles.statsRow}>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Statistic
               title="Tổng sự cố"
               value={stats.total}
@@ -913,7 +1104,7 @@ const IncidentManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Statistic
               title="Chờ xử lý"
               value={stats.pending}
@@ -923,7 +1114,7 @@ const IncidentManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Statistic
               title="Đang xử lý"
               value={stats.inProgress}
@@ -933,7 +1124,7 @@ const IncidentManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Statistic
               title="Thời gian chết"
               value={stats.totalDowntime}
@@ -963,12 +1154,29 @@ const IncidentManagement = () => {
             >
               Báo cáo sự cố
             </Button>
+            <Button
+              type="dashed"
+              icon={<FileExcelOutlined />}
+              onClick={exportToExcel}
+              //style={{ backgroundColor: "#52c41a", borderColor: "#52c41a", color: "white" }}
+            >
+              Xuất Excel
+            </Button>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              onClick={handleBulkDelete}
+              disabled={selectedRowKeys.length === 0}
+              style={{ backgroundColor: selectedRowKeys.length === 0 ? "#f5f5f5" : "#ff4d4f", color: selectedRowKeys.length === 0 ? "rgba(0,0,0,0.25)" : "white", borderColor: selectedRowKeys.length === 0 ? "#d9d9d9" : "#ff4d4f" }}
+            >
+              Xóa đã chọn ({selectedRowKeys.length})
+            </Button>
             <Button icon={<ReloadOutlined />} onClick={fetchIncidents}>
               Làm mới
             </Button>
           </Space>
         }
-        bordered={false}
+        variant="borderless"
         className={styles.tableCard}
       >
         {/* Filters */}
@@ -1015,6 +1223,13 @@ const IncidentManagement = () => {
           rowKey="id"
           loading={loading}
           scroll={{ x: "max-content" }}
+          rowSelection={{
+            selectedRowKeys,
+            onChange: (selectedRowKeys, selectedRows) => {
+              setSelectedRowKeys(selectedRowKeys);
+              setSelectedRows(selectedRows);
+            },
+          }}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -1050,173 +1265,55 @@ const IncidentManagement = () => {
             Chỉnh sửa
           </Button>,
         ]}
-        width={900}
+        width={1200}
+        style={{ top: 20 }}
+        styles={{
+          body: {
+            maxHeight: "calc(100vh - 200px)",
+            overflowY: "auto",
+            padding: "20px 24px",
+          }
+        }}
       >
         {selectedIncident && (
           <div className={styles.detailContent}>
-            <Row gutter={[16, 16]}>
-              {/* Main Information Card */}
+            <Row gutter={[24, 24]}>
+              {/* Incident Header */}
               <Col span={24}>
-                <Card size="small">
-                  <Row gutter={[16, 16]}>
-                    {/* Row 1: Mã sự cố */}
-                    <Col span={24}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                          marginBottom: 6,
-                          fontWeight: 600,
-                        }}
-                      >
-                        Mã sự cố
-                      </div>
-                      <div
-                        style={{
-                          fontWeight: 700,
-                          fontSize: "18px",
-                          color: "#334766",
-                        }}
-                      >
+                <Card
+                  size="small"
+                  variant="outlined"
+                  style={{
+                    background: "#334766",
+                    color: "white",
+                    border: "none",
+                  }}
+                >
+                  <Row gutter={[16, 8]} align="middle">
+                    <Col span={18}>
+                      <div style={{ fontSize: "24px", fontWeight: 700, marginBottom: "4px" }}>
                         #{selectedIncident.id}
                       </div>
-                    </Col>
-
-                    {/* Row 2: Thiết bị */}
-                    {selectedIncident.equipmentName && (
-                      <Col span={24}>
-                        <div
-                          style={{
-                            fontSize: 13,
-                            color: "#666",
-                            marginBottom: 6,
-                            fontWeight: 600,
-                          }}
-                        >
-                          Thiết bị
-                        </div>
-                        <div style={{ fontWeight: 600, fontSize: "14px" }}>
-                          {selectedIncident.equipmentName}
-                          {selectedIncident.equipmentCode && (
-                            <span style={{ color: "#999", marginLeft: 8 }}>
-                              ({selectedIncident.equipmentCode})
-                            </span>
-                          )}
-                        </div>
-                      </Col>
-                    )}
-
-                    {/* Row 3: Slot Time Info (Khung giờ BD, Khung giờ KT) */}
-                    <Col span={12}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                          marginBottom: 6,
-                          fontWeight: 600,
-                        }}
-                      >
-                        Khung giờ BD
-                      </div>
-                      <div style={{ fontSize: "13px" }}>
-                        {selectedIncident.startSlotTime
-                          ? selectedIncident.startSlotTime
-                              .toString()
-                              .substring(0, 5)
-                          : "-"}
+                      <div style={{ fontSize: "14px", opacity: 0.9 }}>
+                        {selectedIncident.equipmentName}
+                        {selectedIncident.equipmentCode && (
+                          <span style={{ marginLeft: "8px" }}>
+                            ({selectedIncident.equipmentCode})
+                          </span>
+                        )}
                       </div>
                     </Col>
-                    <Col span={12}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                          marginBottom: 6,
-                          fontWeight: 600,
-                        }}
-                      >
-                        Khung giờ KT
-                      </div>
-                      <div style={{ fontSize: "13px" }}>
-                        {selectedIncident.endSlotTime
-                          ? selectedIncident.endSlotTime
-                              .toString()
-                              .substring(0, 5)
-                          : "-"}
-                      </div>
-                    </Col>
-
-                    {/* Row 4: Time Info (StartTime, EndTime, Duration) */}
-                    <Col span={8}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                          marginBottom: 6,
-                          fontWeight: 600,
-                        }}
-                      >
-                        Thời gian bắt đầu
-                      </div>
-                      <div style={{ fontSize: "13px" }}>
-                        {selectedIncident.reportDate
-                          ? dayjs(selectedIncident.reportDate).format(
-                              "DD/MM/YYYY HH:mm:ss"
-                            )
-                          : "-"}
-                      </div>
-                    </Col>
-                    <Col span={8}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                          marginBottom: 6,
-                          fontWeight: 600,
-                        }}
-                      >
-                        Thời gian kết thúc
-                      </div>
-                      <div style={{ fontSize: "13px" }}>
-                        {selectedIncident.resolveDate
-                          ? dayjs(selectedIncident.resolveDate).format(
-                              "DD/MM/YYYY HH:mm:ss"
-                            )
-                          : "-"}
-                      </div>
-                    </Col>
-                    <Col span={8}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                          marginBottom: 6,
-                          fontWeight: 600,
-                        }}
-                      >
-                        Thời lượng (phút)
-                      </div>
-                      <div style={{ fontSize: "13px", fontWeight: 600 }}>
-                        {selectedIncident.downtime.toFixed(2) || "-"}
-                      </div>
-                    </Col>
-
-                    {/* Row 5: Status, StopType */}
-                    <Col span={12}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                          marginBottom: 6,
-                          fontWeight: 600,
-                        }}
-                      >
-                        Trạng thái
-                      </div>
+                    <Col span={6} style={{ textAlign: "right" }}>
                       {selectedIncident.status ? (
                         <Tag
                           icon={getStatusIcon(selectedIncident.status)}
                           color={getStatusColor(selectedIncident.status)}
+                          style={{
+                            fontSize: "14px",
+                            padding: "6px 12px",
+                            borderRadius: "20px",
+                            fontWeight: 600,
+                          }}
                         >
                           {selectedIncident.status}
                         </Tag>
@@ -1224,107 +1321,58 @@ const IncidentManagement = () => {
                         <span>-</span>
                       )}
                     </Col>
-                    <Col span={12}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                          marginBottom: 6,
-                          fontWeight: 600,
-                        }}
-                      >
+                  </Row>
+                </Card>
+              </Col>
+
+              {/* Equipment & Process Information */}
+              <Col span={24}>
+                <Card size="small" title={<><InfoCircleOutlined /> Thông tin thiết bị & quy trình</>} variant="outlined">
+                  <Row gutter={[16, 16]}>
+                    <Col span={8}>
+                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                        Thiết bị
+                      </div>
+                      <div style={{ fontWeight: 600, fontSize: "14px" }}>
+                        {selectedIncident.equipmentName}
+                        {selectedIncident.equipmentCode && (
+                          <span style={{ color: "#999", marginLeft: 8 }}>
+                            ({selectedIncident.equipmentCode})
+                          </span>
+                        )}
+                      </div>
+                    </Col>
+                    <Col span={8}>
+                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                        Dây chuyền
+                      </div>
+                      <div style={{ fontSize: "14px" }}>
+                        {selectedIncident.lineName || "-"}
+                      </div>
+                    </Col>
+                    <Col span={8}>
+                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                        Công đoạn
+                      </div>
+                      <div style={{ fontSize: "14px" }}>
+                        {selectedIncident.stageName || "-"}
+                      </div>
+                    </Col>
+                    <Col span={8}>
+                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
                         Loại dừng
                       </div>
                       {selectedIncident.category ? (
-                        <Tag color="orange">{selectedIncident.category}</Tag>
+                        <Tag color="orange" style={{ fontSize: "13px" }}>{selectedIncident.category}</Tag>
                       ) : (
-                        <span>-</span>
+                        <span style={{ fontSize: "14px" }}>-</span>
                       )}
                     </Col>
-
-                    {/* Row 6: Issue (Vấn đề) */}
-                    <Col span={24}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                          marginBottom: 6,
-                          fontWeight: 600,
-                        }}
-                      >
-                        Vấn đề
-                      </div>
-                      <div style={{ fontSize: "14px", lineHeight: 1.6 }}>
-                        {selectedIncident.issue || "-"}
-                      </div>
-                    </Col>
-
-                    {/* Row 7: Reason (Nguyên nhân) */}
-                    <Col span={24}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                          marginBottom: 6,
-                          fontWeight: 600,
-                        }}
-                      >
-                        Nguyên nhân
-                      </div>
-                      <div style={{ fontSize: "14px", lineHeight: 1.6 }}>
-                        {selectedIncident.reason || "-"}
-                      </div>
-                    </Col>
-
-                    {/* Row 8: Solution (Giải pháp) */}
-                    <Col span={24}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                          marginBottom: 6,
-                          fontWeight: 600,
-                        }}
-                      >
-                        Giải pháp
-                      </div>
-                      <div style={{ fontSize: "14px", lineHeight: 1.6 }}>
-                        {selectedIncident.solution || "-"}
-                      </div>
-                    </Col>
-
-                    {/* Row 9: CreatedDate, ReportedByUserId */}
-                    <Col span={12}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                          marginBottom: 6,
-                          fontWeight: 600,
-                        }}
-                      >
-                        Ngày tạo
-                      </div>
-                      <div style={{ fontSize: "13px" }}>
-                        {selectedIncident.reportDate
-                          ? dayjs(selectedIncident.reportDate).format(
-                              "DD/MM/YYYY"
-                            )
-                          : "-"}
-                      </div>
-                    </Col>
-                    <Col span={12}>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          color: "#666",
-                          marginBottom: 6,
-                          fontWeight: 600,
-                        }}
-                      >
+                    <Col span={8}>
+                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
                         Người báo cáo
                       </div>
-                      <div style={{ fontSize: "13px" }}>
+                      <div style={{ fontSize: "14px" }}>
                         {(() => {
                           const reporterUser = teamLeads.find(
                             (tl) =>
@@ -1338,9 +1386,206 @@ const IncidentManagement = () => {
                         })()}
                       </div>
                     </Col>
+                    <Col span={8}>
+                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                        Ngày tạo
+                      </div>
+                      <div style={{ fontSize: "14px" }}>
+                        {selectedIncident.reportDate
+                          ? dayjs(selectedIncident.reportDate).format("DD/MM/YYYY")
+                          : "-"}
+                      </div>
+                    </Col>
                   </Row>
                 </Card>
               </Col>
+
+              {/* Time Information */}
+              <Col span={24}>
+                <Card size="small" title={<><ClockCircleOutlined /> Thông tin thời gian</>} variant="outlined">
+                  <Row gutter={[16, 16]}>
+                    <Col span={8}>
+                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                        Thời gian bắt đầu
+                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: 500 }}>
+                        {selectedIncident.reportDate
+                          ? dayjs(selectedIncident.reportDate).format("DD/MM/YYYY HH:mm:ss")
+                          : "-"}
+                      </div>
+                    </Col>
+                    <Col span={8}>
+                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                        Thời gian kết thúc
+                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: 500 }}>
+                        {selectedIncident.resolveDate
+                          ? dayjs(selectedIncident.resolveDate).format("DD/MM/YYYY HH:mm:ss")
+                          : "-"}
+                      </div>
+                    </Col>
+                    <Col span={8}>
+                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                        Thời lượng (phút)
+                      </div>
+                      <div style={{ fontSize: "16px", fontWeight: 700, color: selectedIncident.downtime > 5 ? "red" : "#1890ff" }}>
+                        {selectedIncident.downtime ? selectedIncident.downtime.toFixed(2) : "-"}
+                      </div>
+                    </Col>
+                  </Row>
+                </Card>
+              </Col>
+
+              {/* Incident Details */}
+              <Col span={24}>
+                <Card size="small" title={<><FileTextOutlined /> Chi tiết sự cố</>} variant="outlined">
+                  <Row gutter={[16, 16]}>
+                    <Col span={24}>
+                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                        Vấn đề
+                      </div>
+                      <div style={{
+                        fontSize: "14px",
+                        lineHeight: 1.6,
+                        padding: "12px",
+                        backgroundColor: "#fafafa",
+                        borderRadius: "6px",
+                        border: "1px solid #f0f0f0"
+                      }}>
+                        {selectedIncident.issue || "Không có mô tả"}
+                      </div>
+                    </Col>
+                    <Col span={24}>
+                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                        Nguyên nhân
+                      </div>
+                      <div style={{
+                        fontSize: "14px",
+                        lineHeight: 1.6,
+                        padding: "12px",
+                        backgroundColor: "#fafafa",
+                        borderRadius: "6px",
+                        border: "1px solid #f0f0f0"
+                      }}>
+                        {selectedIncident.reason || "Chưa xác định"}
+                      </div>
+                    </Col>
+                    <Col span={24}>
+                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                        Giải pháp
+                      </div>
+                      <div style={{
+                        fontSize: "14px",
+                        lineHeight: 1.6,
+                        padding: "12px",
+                        backgroundColor: "#fafafa",
+                        borderRadius: "6px",
+                        border: "1px solid #f0f0f0"
+                      }}>
+                        {selectedIncident.solution || "Chưa có giải pháp"}
+                      </div>
+                    </Col>
+                  </Row>
+                </Card>
+              </Col>
+
+              {/* Incident Shifts Table */}
+              {incidentShifts.length > 0 && (
+                <Col span={24}>
+                  <Card size="small" title={<><TeamOutlined /> Chi tiết theo ca</>} variant="outlined">
+                    <Table
+                      dataSource={incidentShifts.map((shift, index) => ({
+                        key: shift.incidentShiftId,
+                        index: index + 1,
+                        shiftName: shift.shift?.shiftName || "N/A",
+                        shiftStartTime: shift.shift?.startTime || "-",
+                        shiftEndTime: shift.shift?.endTime || "-",
+                        duration: shift.startTime && shift.endTime
+                          ? dayjs(shift.endTime).diff(dayjs(shift.startTime), "minute", true)
+                          : "-",
+                        shiftDuration: shift.shift?.startTime && shift.shift?.endTime
+                          ? (() => {
+                            const start = dayjs(shift.shift.startTime, "HH:mm:ss.SSSSSSS");
+                            let end = dayjs(shift.shift.endTime, "HH:mm:ss.SSSSSSS");
+                            // Handle night shift (end time is next day)
+                            if (end.isBefore(start)) {
+                              end = end.add(1, 'day');
+                            }
+                            return end.diff(start, "minute", true);
+                          })()
+                          : "-",
+                      }))}
+                      columns={[
+                        {
+                          title: "#",
+                          dataIndex: "index",
+                          key: "index",
+                          width: 60,
+                          align: "center",
+                        },
+                        {
+                          title: "Ca",
+                          dataIndex: "shiftName",
+                          key: "shiftName",
+                          width: 120,
+                          align: "center",
+                          render: (text) => (
+                            <Tag style={{ fontWeight: 600 }}>
+                              {text}
+                            </Tag>
+                          ),
+                        },
+                        {
+                          title: "Ca giờ BD",
+                          dataIndex: "shiftStartTime",
+                          key: "shiftStartTime",
+                          align: "center",
+                          render: (text) => {
+                            return text && text !== "-" ? (
+                              <span style={{ fontWeight: 600 }}>
+                                {dayjs(`1970-01-01T${text}`).format("HH:mm")}
+                              </span>
+                            ) : (
+                              text
+                            );
+                          },
+                        },
+                        {
+                          title: "Ca giờ KT",
+                          dataIndex: "shiftEndTime",
+                          key: "shiftEndTime",
+                          align: "center",
+                          render: (text) => {
+                            return text && text !== "-" ? (
+                              <span style={{ fontWeight: 600 }}>
+                                {dayjs(`1970-01-01T${text}`).format("HH:mm")}
+                              </span>
+                            ) : (
+                              text
+                            );
+                          },
+                        },
+                        {
+                          title: "Thời lượng (phút)",
+                          dataIndex: "duration",
+                          key: "duration",
+                          width: 130,
+                          align: "center",
+                          render: (val) => val !== "-" ? (
+                            <span style={{ fontWeight: 600 }}>
+                              {val.toFixed(2)}
+                            </span>
+                          ) : val,
+                        },
+                      ]}
+                      pagination={false}
+                      size="small"
+                      bordered
+                      style={{ marginTop: "8px" }}
+                    />
+                  </Card>
+                </Col>
+              )}
             </Row>
           </div>
         )}
@@ -1383,6 +1628,7 @@ const IncidentManagement = () => {
           setFormModalVisible(false);
           setSelectedEquipment(null); // Reset selected equipment when closing modal
           setIncidentForms([{ id: 1, status: "Chờ xử lý" }]); // Reset forms
+          setFormChanged(false); // Reset form changed state
           form.resetFields();
         }}
         footer={
@@ -1401,6 +1647,7 @@ const IncidentManagement = () => {
                   setFormModalVisible(false);
                   setSelectedEquipment(null);
                   setIncidentForms([{ id: 1, status: "Chờ xử lý" }]);
+                  setFormChanged(false); // Reset form changed state
                   form.resetFields();
                 }}
                 style={{ minWidth: "120px" }}
@@ -1413,9 +1660,10 @@ const IncidentManagement = () => {
                 htmlType="submit"
                 loading={loading}
                 onClick={() => form.submit()}
+                disabled={isEditMode && !formChanged}
                 style={{
-                  backgroundColor: "#334766",
-                  borderColor: "#334766",
+                  backgroundColor: (!isEditMode || formChanged) ? "#334766" : "#d9d9d9",
+                  borderColor: (!isEditMode || formChanged) ? "#334766" : "#d9d9d9",
                   minWidth: "120px",
                 }}
               >
@@ -1426,26 +1674,29 @@ const IncidentManagement = () => {
         }
         width={1300}
         style={{ top: 20 }}
-        bodyStyle={{
-          maxHeight: "calc(100vh - 200px)",
-          overflowY: "auto",
-          overflowX: "hidden",
-          paddingBottom: "60px",
-          paddingLeft: "24px",
-          paddingRight: "24px",
+        styles={{
+          body: {
+            maxHeight: "calc(100vh - 200px)",
+            overflowY: "auto",
+            overflowX: "hidden",
+            paddingBottom: "60px",
+            paddingLeft: "24px",
+            paddingRight: "24px",
+          }
         }}
       >
         <Form
           form={form}
           layout="vertical"
           onFinish={handleFormSubmit}
+          onValuesChange={() => setFormChanged(true)}
           initialValues={{ status: "Chờ xử lý" }}
         >
           {!isEditMode ? (
             // Create mode - multiple incidents
             <>
               {incidentForms.map((incidentForm, index) => {
-                const timeSlot = getCurrentTimeSlot();
+                const currentShift = getCurrentShift();
                 return (
                   <div
                     key={incidentForm.id}
@@ -1487,7 +1738,7 @@ const IncidentManagement = () => {
                       {/* <span>Báo cáo sự cố</span> */}
                     </div>
 
-                    {/* Time Slot Display */}
+                    {/* Current Shift Display */}
                     <div
                       style={{
                         marginBottom: "20px",
@@ -1504,33 +1755,31 @@ const IncidentManagement = () => {
                         style={{ color: "#1890ff", fontSize: "16px" }}
                       />
                       <span style={{ color: "#666", marginRight: "8px" }}>
-                        Khung thời gian hiện tại:
+                        Ca hiện tại:
                       </span>
-                      <span
-                        style={{
-                          backgroundColor: "#e6f7ff",
-                          color: "#1890ff",
-                          padding: "4px 12px",
-                          borderRadius: "4px",
-                          fontWeight: 600,
-                          fontSize: "14px",
-                        }}
-                      >
-                        {timeSlot.startTime}
-                      </span>
-                      <span style={{ color: "#999", margin: "0 4px" }}>-</span>
-                      <span
-                        style={{
-                          backgroundColor: "#f6ffed",
-                          color: "#52c41a",
-                          padding: "4px 12px",
-                          borderRadius: "4px",
-                          fontWeight: 600,
-                          fontSize: "14px",
-                        }}
-                      >
-                        {timeSlot.endTime}
-                      </span>
+                      {currentShift ? (
+                        <>
+                          <span
+                            style={{
+                              backgroundColor: "#e6f7ff",
+                              color: "#1890ff",
+                              padding: "4px 12px",
+                              borderRadius: "4px",
+                              fontWeight: 600,
+                              fontSize: "14px",
+                            }}
+                          >
+                            {currentShift.shiftName}
+                          </span>
+                          <span style={{ color: "#999", margin: "0 4px" }}>
+                            ({currentShift.startTime} - {currentShift.endTime})
+                          </span>
+                        </>
+                      ) : (
+                        <span style={{ color: "#999", fontStyle: "italic" }}>
+                          Không có ca nào đang hoạt động
+                        </span>
+                      )}
                     </div>
 
                     {/* Form Fields */}
@@ -1603,11 +1852,10 @@ const IncidentManagement = () => {
                             disabled
                             value={
                               selectedEquipment
-                                ? `${selectedEquipment.equipmentName}${
-                                    selectedEquipment.equipmentCode
-                                      ? ` (${selectedEquipment.equipmentCode})`
-                                      : ""
-                                  }`
+                                ? `${selectedEquipment.equipmentName}${selectedEquipment.equipmentCode
+                                  ? ` (${selectedEquipment.equipmentCode})`
+                                  : ""
+                                }`
                                 : ""
                             }
                             placeholder="-- Chọn --"
@@ -1625,8 +1873,8 @@ const IncidentManagement = () => {
                             value={
                               selectedEquipment
                                 ? lines.find(
-                                    (l) => l.lineId === selectedEquipment.lineId
-                                  )?.lineName || ""
+                                  (l) => l.lineId === selectedEquipment.lineId
+                                )?.lineName || ""
                                 : ""
                             }
                             placeholder="-- Chọn --"
@@ -1644,9 +1892,9 @@ const IncidentManagement = () => {
                             value={
                               selectedEquipment
                                 ? stages.find(
-                                    (s) =>
-                                      s.stageId === selectedEquipment.stageId
-                                  )?.stageName || ""
+                                  (s) =>
+                                    s.stageId === selectedEquipment.stageId
+                                )?.stageName || ""
                                 : ""
                             }
                             placeholder="-- Chọn --"
@@ -1742,12 +1990,6 @@ const IncidentManagement = () => {
                         <Form.Item
                           label="Người báo cáo"
                           name={`reporter_${incidentForm.id}`}
-                          rules={[
-                            {
-                              required: true,
-                              message: "Vui lòng chọn người báo cáo!",
-                            },
-                          ]}
                         >
                           <Select
                             placeholder="Chọn người báo cáo"
@@ -1755,6 +1997,7 @@ const IncidentManagement = () => {
                             allowClear
                             optionFilterProp="children"
                           >
+                            <Option value={null}>Không có</Option>
                             {teamLeads.map((teamLead) => (
                               <Option
                                 key={
@@ -1775,14 +2018,26 @@ const IncidentManagement = () => {
                             ))}
                           </Select>
                         </Form.Item>
-                        <Col span={24}>
-                          <Alert
-                            type="info"
-                            message="Lưu ý: Mặc định là tài khoản hiện đang đăng nhập. Bạn có thể chọn tổ trưởng khác trong cùng dây chuyền để báo cáo sự cố."
-                            showIcon
-                            style={{ marginBottom: 16 }}
-                          />
-                        </Col>
+                        <Alert
+                          type="info"
+                          message="Vui lòng chọn người báo cáo từ danh sách tổ trưởng."
+                          showIcon
+                          style={{ marginBottom: 16 }}
+                        />
+                      </Col>
+
+                      <Col span={12}>
+                        <Form.Item
+                          name={`isTechSupport_${incidentForm.id}`}
+                          valuePropName="checked"
+                          style={{ marginTop: "30px" }}
+                        >
+                          <Checkbox 
+                            disabled={form.getFieldValue(`endTime_${incidentForm.id}`) && dayjs(form.getFieldValue(`endTime_${incidentForm.id}`)).isValid()}
+                          >
+                            Cần hỗ trợ kỹ thuật
+                          </Checkbox>
+                        </Form.Item>
                       </Col>
 
                       <Col span={24}>
@@ -1866,7 +2121,7 @@ const IncidentManagement = () => {
                       showSearch
                       allowClear
                       optionFilterProp="children"
-                      onSearch={() => {}}
+                      onSearch={() => { }}
                       onChange={(value) => {
                         // value will be equipmentId (we store id as value but show code+name)
                         const equipment = equipments.find(
@@ -1908,11 +2163,10 @@ const IncidentManagement = () => {
                       disabled
                       value={
                         selectedEquipment
-                          ? `${selectedEquipment.equipmentName}${
-                              selectedEquipment.equipmentCode
-                                ? ` (${selectedEquipment.equipmentCode})`
-                                : ""
-                            }`
+                          ? `${selectedEquipment.equipmentName}${selectedEquipment.equipmentCode
+                            ? ` (${selectedEquipment.equipmentCode})`
+                            : ""
+                          }`
                           : ""
                       }
                       placeholder="-- Chọn --"
@@ -1929,11 +2183,11 @@ const IncidentManagement = () => {
                       value={
                         selectedEquipment
                           ? lines.find(
-                              (l) => l.lineId === selectedEquipment.lineId
-                            )?.lineName || ""
+                            (l) => l.lineId === selectedEquipment.lineId
+                          )?.lineName || ""
                           : lines.find(
-                              (l) => l.lineId === form.getFieldValue("lineId")
-                            )?.lineName || ""
+                            (l) => l.lineId === form.getFieldValue("lineId")
+                          )?.lineName || ""
                       }
                       placeholder="-- Chọn --"
                     />
@@ -1949,11 +2203,11 @@ const IncidentManagement = () => {
                       value={
                         selectedEquipment
                           ? stages.find(
-                              (s) => s.stageId === selectedEquipment.stageId
-                            )?.stageName || ""
+                            (s) => s.stageId === selectedEquipment.stageId
+                          )?.stageName || ""
                           : stages.find(
-                              (s) => s.stageId === form.getFieldValue("stageId")
-                            )?.stageName || ""
+                            (s) => s.stageId === form.getFieldValue("stageId")
+                          )?.stageName || ""
                       }
                       placeholder="-- Chọn --"
                     />
@@ -1971,7 +2225,7 @@ const IncidentManagement = () => {
                       showSearch
                       allowClear
                       optionFilterProp="children"
-                      onSearch={() => {}}
+                      onSearch={() => { }}
                       onChange={(value) => {
                         // value will be equipmentId (we store id as value but show code+name)
                         const stopType = stopTypes.find(
@@ -2061,20 +2315,15 @@ const IncidentManagement = () => {
                   <Form.Item
                     label="Người báo cáo"
                     name="reporter"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng chọn người báo cáo!",
-                      },
-                    ]}
                   >
                     <Select
                       placeholder="Chọn người báo cáo"
                       showSearch
                       allowClear
                       optionFilterProp="children"
-                      onSearch={() => {}}
+                      onSearch={() => { }}
                     >
+                      <Option value={null}>Không có</Option>
                       {teamLeads.map((teamLead) => (
                         <Option
                           key={
@@ -2091,15 +2340,26 @@ const IncidentManagement = () => {
                       ))}
                     </Select>
                   </Form.Item>
-                </Col>
-
-                <Col span={24}>
                   <Alert
                     type="info"
-                    message="Lưu ý: Mặc định là tài khoản hiện đang đăng nhập. Bạn có thể chọn tổ trưởng khác trong cùng dây chuyền để báo cáo sự cố."
+                    message="Bạn có thể chọn tổ trưởng khác để cập nhật người báo cáo, chọn 'Không có' để xóa người báo cáo, hoặc để trống nếu không muốn thay đổi."
                     showIcon
                     style={{ marginBottom: 16, marginTop: 8 }}
                   />
+                </Col>
+
+                <Col span={12}>
+                  <Form.Item
+                    name="isTechSupport"
+                    valuePropName="checked"
+                    style={{ marginTop: "30px" }}
+                  >
+                    <Checkbox 
+                      disabled={isEditMode && selectedIncident?.resolveDate && dayjs(selectedIncident.resolveDate).isValid()}
+                    >
+                      Cần hỗ trợ kỹ thuật
+                    </Checkbox>
+                  </Form.Item>
                 </Col>
 
                 <Col span={24}>
