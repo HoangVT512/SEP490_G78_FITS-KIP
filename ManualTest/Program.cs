@@ -6,10 +6,8 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        Console.WriteLine("🧪 MANUAL SERVICE TEST RUNNER");
-        Console.WriteLine("==============================");
-        Console.WriteLine("Chọn loại test để chạy:");
-        Console.WriteLine();
+        Console.WriteLine("MANUAL SERVICE TEST RUNNER");
+        Console.WriteLine("===========================");
 
         while (true)
         {
@@ -25,10 +23,10 @@ class Program
                     await RunAllServicesTests();
                     break;
                 case "0":
-                    Console.WriteLine("👋 Goodbye!");
+                    Console.WriteLine("Goodbye!");
                     return;
                 default:
-                    Console.WriteLine("❌ Invalid choice. Please try again.");
+                    Console.WriteLine("Invalid choice. Please try again.");
                     break;
             }
 
@@ -40,8 +38,8 @@ class Program
 
     static void ShowMainMenu()
     {
-        Console.WriteLine("📋 MAIN TEST MENU");
-        Console.WriteLine("=================");
+        Console.WriteLine("MAIN TEST MENU");
+        Console.WriteLine("===============");
         Console.WriteLine("1. Department Service Tests");
         Console.WriteLine("2. Run All Services Tests");
         Console.WriteLine("0. Exit");
@@ -51,8 +49,8 @@ class Program
 
     static async Task RunDepartmentServiceTests()
     {
-        Console.WriteLine("\n🏢 DEPARTMENT SERVICE TESTS");
-        Console.WriteLine("===========================");
+        Console.WriteLine("\nDEPARTMENT SERVICE TESTS");
+        Console.WriteLine("=========================");
         Console.WriteLine("Chọn loại test:");
         Console.WriteLine("1. Interactive Tests (Nhập dữ liệu thủ công)");
         Console.WriteLine("2. Automatic Tests (Chạy tất cả tests)");
@@ -70,12 +68,12 @@ class Program
                 await testRunner.RunInteractiveTests();
                 break;
             case "2":
-                await testRunner.RunAllTests();
+                Console.WriteLine("Automatic tests removed. Please use interactive tests.");
                 break;
             case "0":
                 return;
             default:
-                Console.WriteLine("❌ Invalid choice. Running interactive tests...");
+                Console.WriteLine("Invalid choice. Running interactive tests...");
                 await testRunner.RunInteractiveTests();
                 break;
         }
@@ -83,15 +81,15 @@ class Program
 
     static async Task RunAllServicesTests()
     {
-        Console.WriteLine("\n🚀 RUNNING ALL SERVICES TESTS");
-        Console.WriteLine("=============================");
+        Console.WriteLine("\nRUNNING ALL SERVICES TESTS");
+        Console.WriteLine("===========================");
         
         var departmentTest = new DepartmentServiceManualTest();
         
         Console.WriteLine("Running Department Service Tests...");
-        await departmentTest.RunAllTests();
+        await departmentTest.RunInteractiveTests();
         
-        Console.WriteLine("\n✅ All service tests completed!");
+        Console.WriteLine("\nAll service tests completed!");
         Console.WriteLine("Note: Other services will be implemented in future updates.");
     }
 }
