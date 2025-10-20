@@ -12,19 +12,25 @@ public class IncidentService : IIncidentService
     private readonly ILineRepository _lineRepository;
     private readonly IShiftRepository _shiftRepository;
     private readonly IUserRepository _userRepository;
+    private readonly INotificationService _notificationService;
+    private readonly IUserService _userService;
 
     public IncidentService(
         IIncidentRepository incidentRepository,
         IEquipmentRepository equipmentRepository,
         ILineRepository lineRepository,
         IShiftRepository shiftRepository,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        INotificationService notificationService,
+        IUserService userService)
     {
         _incidentRepository = incidentRepository;
         _equipmentRepository = equipmentRepository;
         _lineRepository = lineRepository;
         _shiftRepository = shiftRepository;
         _userRepository = userRepository;
+        _notificationService = notificationService;
+        _userService = userService;
     }
 
     public Task<IReadOnlyList<IncidentHistory>> GetIncidentsAsync(CancellationToken cancellationToken = default)
@@ -101,6 +107,9 @@ public class IncidentService : IIncidentService
             // Save changes after creating incident shifts
             await _incidentRepository.UpdateAsync(createdIncident, cancellationToken);
         }
+
+        // Send notification to Technical Managers
+        await SendIncidentNotificationToTechnicalManagersAsync(createdIncident, equipment, cancellationToken);
 
         return createdIncident;
     }
@@ -198,6 +207,9 @@ public class IncidentService : IIncidentService
                 }
 
                 response.SuccessCount++;
+
+                // Send notification to Technical Managers for each incident
+                await SendIncidentNotificationToTechnicalManagersAsync(createdIncident, equipment, cancellationToken);
 
                 // Map to DTO for response
                 if (createdIncident != null)
@@ -310,7 +322,7 @@ public class IncidentService : IIncidentService
 
         var updatedIncident = await _incidentRepository.UpdateAsync(existingIncident, cancellationToken);
 
-        // Tự động tạo IncidentShift records nếu có endtime và chưa có IncidentShift nào
+        // Tự động tạo IncidentShift records nếu có endtime và đã có IncidentShift nào
         if (request.EndTime.HasValue && updatedIncident != null)
         {
             // Clear existing incident shifts if any
@@ -318,6 +330,16 @@ public class IncidentService : IIncidentService
             await CreateIncidentShiftsAsync(updatedIncident, cancellationToken);
             // Save changes after creating incident shifts
             updatedIncident = await _incidentRepository.UpdateAsync(updatedIncident, cancellationToken);
+        }
+
+        // Gửi notification cho quản lý kỹ thuật nếu status là "Chờ xử lý" và istechsupport là true
+        if (updatedIncident != null && updatedIncident.Status == "Chờ xử lý" && updatedIncident.IsTechSupport)
+        {
+            var updatedEquipment = await _equipmentRepository.GetByIdAsync(updatedIncident.EquipmentId ?? 0, cancellationToken);
+            if (updatedEquipment != null)
+            {
+                await SendIncidentNotificationToTechnicalManagersAsync(updatedIncident, updatedEquipment, cancellationToken);
+            }
         }
 
         return updatedIncident;
@@ -560,5 +582,48 @@ public class IncidentService : IIncidentService
         var filteredIncidents = allIncidents.Where(i => i.Equipment != null && i.Equipment.Stage != null && i.Equipment.Stage.LineId.HasValue && lineIds.Contains(i.Equipment.Stage.LineId.Value)).ToList();
 
         return filteredIncidents.AsReadOnly();
+    }
+
+    private async Task SendIncidentNotificationToTechnicalManagersAsync(IncidentHistory incident, Equipment equipment, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Chỉ gửi notification khi status là "Chờ xử lý" và istechsupport là true
+            if (incident.Status != "Chờ xử lý" || !incident.IsTechSupport)
+            {
+                return;
+            }
+
+            // Get all Technical Managers
+            var technicalManagers = await _userService.GetUsersByRoleAsync("Quản lý kỹ thuật", cancellationToken);
+
+            // Create notification record in database for each Technical Manager
+            foreach (var manager in technicalManagers)
+            {
+                if (!string.IsNullOrEmpty(manager.Id))
+                {
+                    await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+                    {
+                        UserId = manager.Id,
+                        Title = "Sự cố cần hỗ trợ kỹ thuật",
+                        Message = $"Có sự cố mới cần hỗ trợ kỹ thuật tại thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode}) - Mã sự cố: {incident.IncidentId}"
+                    });
+                }
+            }
+
+            // Send ONE real-time notification to Technical Managers group
+            await _notificationService.SendNotificationToGroupAsync(
+                "TechnicalManagers",
+                "Sự cố cần hỗ trợ kỹ thuật",
+                $"Có sự cố mới cần hỗ trợ kỹ thuật tại thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode}) - Mã sự cố: {incident.IncidentId}",
+                "warning"
+            );
+        }
+        catch (Exception ex)
+        {
+            // Log error but don't fail the incident creation
+            // You might want to add logging here
+            Console.WriteLine($"Error sending incident notification: {ex.Message}");
+        }
     }
 }
