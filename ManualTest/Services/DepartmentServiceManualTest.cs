@@ -21,12 +21,8 @@ public class DepartmentServiceManualTest
     }
 
 
-    public async Task RunInteractiveTests()
+    public async Task RunTests()
     {
-        Console.WriteLine("INTERACTIVE DEPARTMENT SERVICE TEST");
-        Console.WriteLine("===================================");
-        Console.WriteLine("Chọn method để test manual:");
-        Console.WriteLine();
 
         while (true)
         {
@@ -42,19 +38,19 @@ public class DepartmentServiceManualTest
                     await TestGetActiveAsync();
                     break;
                 case "3":
-                    await TestGetByIdAsyncInteractive();
+                    await TestGetByIdAsync();
                     break;
                 case "4":
-                    await TestCreateAsyncInteractive();
+                    await TestCreateAsync();
                     break;
                 case "5":
-                    await TestUpdateAsyncInteractive();
+                    await TestUpdateAsync();
                     break;
                 case "6":
-                    await TestToggleStatusAsyncInteractive();
+                    await TestToggleStatusAsync();
                     break;
                 case "7":
-                    await TestDeleteAsyncInteractive();
+                    await TestDeleteAsync();
                     break;
                 case "8":
                     Console.WriteLine("All tests option removed. Please use individual test options.");
@@ -79,11 +75,11 @@ public class DepartmentServiceManualTest
         Console.WriteLine("=============================");
         Console.WriteLine("1. Test GetAllAsync");
         Console.WriteLine("2. Test GetActiveAsync");
-        Console.WriteLine("3. Test GetByIdAsync (Interactive)");
-        Console.WriteLine("4. Test CreateAsync (Interactive)");
-        Console.WriteLine("5. Test UpdateAsync (Interactive)");
-        Console.WriteLine("6. Test ToggleStatusAsync (Interactive)");
-        Console.WriteLine("7. Test DeleteAsync (Interactive)");
+        Console.WriteLine("3. Test GetByIdAsync ()");
+        Console.WriteLine("4. Test CreateAsync ()");
+        Console.WriteLine("5. Test UpdateAsync ()");
+        Console.WriteLine("6. Test ToggleStatusAsync ()");
+        Console.WriteLine("7. Test DeleteAsync ()");
         Console.WriteLine("8. Run All Tests");
         Console.WriteLine("0. Exit");
         Console.WriteLine();
@@ -135,9 +131,9 @@ public class DepartmentServiceManualTest
         }
     }
 
-    private async Task TestGetByIdAsyncInteractive()
+    private async Task TestGetByIdAsync()
     {
-        Console.WriteLine("\nTesting GetByIdAsync (Interactive)...");
+        Console.WriteLine("\nTesting GetByIdAsync ()...");
         Console.WriteLine("====================================");
 
         Console.Write("Enter Department ID to test: ");
@@ -175,9 +171,9 @@ public class DepartmentServiceManualTest
     }
 
 
-    private async Task TestCreateAsyncInteractive()
+    private async Task TestCreateAsync()
     {
-        Console.WriteLine("\nTesting CreateAsync (Interactive)...");
+        Console.WriteLine("\nTesting CreateAsync ()...");
         Console.WriteLine("===================================");
 
         Console.Write("Enter Department Name: ");
@@ -231,9 +227,9 @@ public class DepartmentServiceManualTest
     }
 
 
-    private async Task TestUpdateAsyncInteractive()
+    private async Task TestUpdateAsync()
     {
-        Console.WriteLine("\nTesting UpdateAsync (Interactive)...");
+        Console.WriteLine("\nTesting UpdateAsync ()...");
         Console.WriteLine("===================================");
 
         Console.Write("Enter Department ID to update: ");
@@ -312,9 +308,9 @@ public class DepartmentServiceManualTest
     }
 
 
-    private async Task TestToggleStatusAsyncInteractive()
+    private async Task TestToggleStatusAsync()
     {
-        Console.WriteLine("\nTesting ToggleStatusAsync (Interactive)...");
+        Console.WriteLine("\nTesting ToggleStatusAsync ()...");
         Console.WriteLine("=========================================");
 
         Console.Write("Enter Department ID to toggle status: ");
@@ -364,9 +360,9 @@ public class DepartmentServiceManualTest
     }
 
 
-    private async Task TestDeleteAsyncInteractive()
+    private async Task TestDeleteAsync()
     {
-        Console.WriteLine("\nTesting DeleteAsync (Interactive)...");
+        Console.WriteLine("\nTesting DeleteAsync ()...");
         Console.WriteLine("===================================");
 
         Console.Write("Enter Department ID to delete: ");
