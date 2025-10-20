@@ -83,6 +83,22 @@ namespace FITSKIP.API.Hubs
             await Clients.Group(groupName).SendAsync("DataUpdated", new { type, data, timestamp = DateTime.UtcNow });
             Console.WriteLine($"Sent data update to group {groupName}: {type}");
         }
+
+        // Join department-specific group for technical manager
+        public async Task JoinDepartmentGroup(int departmentId)
+        {
+            var groupName = $"TechnicalManagers_Department_{departmentId}";
+            await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+            Console.WriteLine($"Connection {Context.ConnectionId} joined group {groupName}");
+        }
+
+        // Leave department-specific group
+        public async Task LeaveDepartmentGroup(int departmentId)
+        {
+            var groupName = $"TechnicalManagers_Department_{departmentId}";
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
+            Console.WriteLine($"Connection {Context.ConnectionId} left group {groupName}");
+        }
     }
 }
 

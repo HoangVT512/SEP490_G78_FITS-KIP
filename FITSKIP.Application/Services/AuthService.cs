@@ -87,6 +87,7 @@ public class AuthService : IAuthService
                 LockoutEnabled = user.LockoutEnabled,
                 AccessFailedCount = user.AccessFailedCount,
                 IsActive = user.IsActive,
+                DepartmentId = user.DepartmentId,
                 Roles = roles.ToList()
             }
         };

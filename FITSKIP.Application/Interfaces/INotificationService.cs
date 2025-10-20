@@ -17,6 +17,10 @@ namespace FITSKIP.Application.Interfaces
         Task SendNotificationToUserAsync(string userId, string title, string message, string type = "info");
         Task SendNotificationToGroupAsync(string groupName, string title, string message, string type = "info");
         Task SendNotificationToAllAsync(string title, string message, string type = "info");
+
+        // Department-specific notification methods
+        Task SendIncidentNotificationToDepartmentAsync(int departmentId, string title, string message);
+        Task RefreshIncidentsForDepartmentAsync(int departmentId);
     }
 }
 

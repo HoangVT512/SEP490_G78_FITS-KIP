@@ -32,6 +32,8 @@ import {
 import dayjs from "dayjs";
 import { incidentService } from "../../services/incidentService";
 import { userService } from "../../services/userService";
+import signalRService from "../../services/signalRService";
+import { useAuth } from "../../contexts/AuthContext";
 
 const { Option } = Select;
 
@@ -47,6 +49,9 @@ const IncidentList = () => {
   const [technicians, setTechnicians] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [selectedTechnicianId, setSelectedTechnicianId] = useState(null);
+
+  // Get current user from auth context to filter by department
+  const { user: currentUser } = useAuth();
 
   const searchInput = useRef(null);
 
@@ -97,7 +102,9 @@ const IncidentList = () => {
     ),
     onFilter: (value, record) => {
       const text = record[dataIndex];
-      return text ? text.toString().toLowerCase().includes(value.toLowerCase()) : false;
+      return text
+        ? text.toString().toLowerCase().includes(value.toLowerCase())
+        : false;
     },
     filterDropdownProps: {
       onOpenChange(open) {
@@ -117,6 +124,40 @@ const IncidentList = () => {
     handleFilter();
   }, [searchText, filterStatus, incidents, activeTab]);
 
+  // Thêm useEffect để lắng nghe cập nhật dữ liệu real-time và thông báo
+  useEffect(() => {
+    // Lắng nghe thông báo toast khi có sự cố mới
+    const handleReceiveNotification = (notification) => {
+      console.log("📢 Received notification:", notification);
+      message.info({
+        content:
+          notification.Message ||
+          notification.message ||
+          "Có sự cố mới cần hỗ trợ kỹ thuật",
+        duration: 5,
+        icon: <WarningOutlined style={{ color: "#ff4d4f" }} />,
+      });
+    };
+
+    // Lắng nghe cập nhật dữ liệu (tự động refresh danh sách)
+    const handleDataUpdate = (data) => {
+      console.log("🔄 Data updated:", data);
+      if (data.type === "incident") {
+        console.log("Incident data updated, reloading incidents...");
+        fetchIncidents(); // Tải lại dữ liệu khi có thay đổi
+      }
+    };
+
+    // Đăng ký lắng nghe cả hai event
+    signalRService.onReceiveNotification(handleReceiveNotification);
+    signalRService.onDataUpdated(handleDataUpdate);
+
+    return () => {
+      signalRService.offReceiveNotification();
+      signalRService.offDataUpdated();
+    };
+  }, []);
+
   const fetchIncidents = async () => {
     setLoading(true);
     try {
@@ -125,10 +166,27 @@ const IncidentList = () => {
       const items = Array.isArray(res) ? res : res?.data || [];
 
       // Filter only incidents that need technical support
-      const techSupportIncidents = items.filter(item => item.isTechSupport === true);
+      const techSupportIncidents = items.filter(
+        (item) => item.isTechSupport === true
+      );
+
+      // Filter by current user's department
+      let departmentFilteredIncidents = techSupportIncidents;
+      if (currentUser?.departmentId) {
+        departmentFilteredIncidents = techSupportIncidents.filter((item) => {
+          const incidentDepartmentId =
+            item.equipment?.stage?.line?.departmentId;
+          return incidentDepartmentId === currentUser.departmentId;
+        });
+        console.log(
+          `✅ Filtered ${departmentFilteredIncidents.length} incidents for department ${currentUser.departmentId}`
+        );
+      } else {
+        console.warn("⚠️ Current user has no department assigned");
+      }
 
       // Normalize to frontend shape
-      const mapped = (techSupportIncidents || []).map((it) => {
+      const mapped = (departmentFilteredIncidents || []).map((it) => {
         // compute downtime in minutes if possible
         let downtime = 0;
         try {
@@ -233,10 +291,11 @@ const IncidentList = () => {
       setAllUsers(users);
 
       // Filter technicians (assuming role-based filtering or specific criteria)
-      const techUsers = users.filter(user =>
-        user.role === "Kỹ thuật viên" ||
-        user.roles?.includes("Kỹ thuật viên") ||
-        user.roleId === 3 // Assuming technician role ID
+      const techUsers = users.filter(
+        (user) =>
+          user.role === "Kỹ thuật viên" ||
+          user.roles?.includes("Kỹ thuật viên") ||
+          user.roleId === 3 // Assuming technician role ID
       );
       setTechnicians(techUsers);
     } catch (err) {
@@ -247,14 +306,26 @@ const IncidentList = () => {
 
   const getTechnicianName = (technicianId) => {
     if (!technicianId) return null;
-    const user = allUsers.find(u => (u.userId || u.id) === technicianId);
-    return user ? (user.fullName || user.name || user.username) : technicianId;
+    const user = allUsers.find((u) => (u.userId || u.id) === technicianId);
+    return user ? user.fullName || user.name || user.username : technicianId;
   };
 
-  const assignTechnician = async (incidentId, technicianId, updateStatus = false) => {
+  const assignTechnician = async (
+    incidentId,
+    technicianId,
+    updateStatus = false
+  ) => {
     try {
-      await incidentService.assignTechnician(incidentId, technicianId, updateStatus);
-      message.success(updateStatus ? "Đã phân công kỹ thuật viên và cập nhật trạng thái thành công" : "Đã phân công kỹ thuật viên thành công");
+      await incidentService.assignTechnician(
+        incidentId,
+        technicianId,
+        updateStatus
+      );
+      message.success(
+        updateStatus
+          ? "Đã phân công kỹ thuật viên và cập nhật trạng thái thành công"
+          : "Đã phân công kỹ thuật viên thành công"
+      );
       fetchIncidents(); // Refresh the list
       if (selectedIncident && selectedIncident.id === incidentId) {
         setSelectedTechnicianId(technicianId);
@@ -279,7 +350,9 @@ const IncidentList = () => {
 
     // Filter by tab first
     if (activeTab === "pending") {
-      filtered = filtered.filter((inc) => inc.status === "Chờ xử lý" || inc.status === "Đang xử lý");
+      filtered = filtered.filter(
+        (inc) => inc.status === "Chờ xử lý" || inc.status === "Đang xử lý"
+      );
     } else if (activeTab === "completed") {
       filtered = filtered.filter((inc) => inc.status === "Hoàn thành");
     }
@@ -301,12 +374,14 @@ const IncidentList = () => {
     }
 
     // Sort by reportDate descending (newest first)
-    filtered.sort((a, b) => dayjs(b.reportDate).valueOf() - dayjs(a.reportDate).valueOf());
+    filtered.sort(
+      (a, b) => dayjs(b.reportDate).valueOf() - dayjs(a.reportDate).valueOf()
+    );
 
     // Add rowIndex for display
     filtered = filtered.map((item, index) => ({
       ...item,
-      rowIndex: index + 1
+      rowIndex: index + 1,
     }));
 
     setFilteredIncidents(filtered);
@@ -366,7 +441,9 @@ const IncidentList = () => {
       ...getColumnSearchProps("equipmentName", "Tìm thiết bị"),
       render: (text, record) => (
         <Tooltip
-          title={`${text}${record.equipmentCode ? ` (${record.equipmentCode})` : ""}`}
+          title={`${text}${
+            record.equipmentCode ? ` (${record.equipmentCode})` : ""
+          }`}
         >
           <div>
             <div style={{ fontWeight: 500 }}>{text}</div>
@@ -439,20 +516,27 @@ const IncidentList = () => {
       render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
     },
     // Hide downtime column for pending/solving incidents
-    ...(activeTab === "completed" ? [{
-      title: "Thời lượng (phút)",
-      dataIndex: "downtime",
-      key: "downtime",
-      width: 120,
-      align: "center",
-      render: (val) => (
-        <span
-          style={{ color: val > 5 ? "#ff4d4f" : "#1890ff", fontWeight: 500 }}
-        >
-          {typeof val === "number" ? val.toFixed(2) : val}
-        </span>
-      ),
-    }] : []),
+    ...(activeTab === "completed"
+      ? [
+          {
+            title: "Thời lượng (phút)",
+            dataIndex: "downtime",
+            key: "downtime",
+            width: 120,
+            align: "center",
+            render: (val) => (
+              <span
+                style={{
+                  color: val > 5 ? "#ff4d4f" : "#1890ff",
+                  fontWeight: 500,
+                }}
+              >
+                {typeof val === "number" ? val.toFixed(2) : val}
+              </span>
+            ),
+          },
+        ]
+      : []),
     {
       title: "Trạng thái",
       dataIndex: "status",
@@ -471,9 +555,7 @@ const IncidentList = () => {
       width: 150,
       render: (assignedTo, record) => {
         const technicianName = getTechnicianName(assignedTo);
-        return (
-          <span>{technicianName || "-"}</span>
-        );
+        return <span>{technicianName || "-"}</span>;
       },
     },
     {
@@ -484,8 +566,8 @@ const IncidentList = () => {
       render: (_, record) => {
         const actionMenuItems = [
           {
-            key: 'view',
-            label: 'Xem chi tiết',
+            key: "view",
+            label: "Xem chi tiết",
             icon: <EyeOutlined />,
             onClick: () => handleViewDetail(record),
           },
@@ -494,7 +576,7 @@ const IncidentList = () => {
         return (
           <Dropdown
             menu={{ items: actionMenuItems }}
-            trigger={['click']}
+            trigger={["click"]}
             placement="bottomRight"
           >
             <Button type="text" icon={<DownOutlined />} />
@@ -509,7 +591,9 @@ const IncidentList = () => {
     let filteredIncidents = incidents;
 
     if (activeTab === "pending") {
-      filteredIncidents = incidents.filter((i) => i.status === "Chờ xử lý" || i.status === "Đang xử lý");
+      filteredIncidents = incidents.filter(
+        (i) => i.status === "Chờ xử lý" || i.status === "Đang xử lý"
+      );
     } else if (activeTab === "completed") {
       filteredIncidents = incidents.filter((i) => i.status === "Hoàn thành");
     }
@@ -517,8 +601,10 @@ const IncidentList = () => {
     return {
       total: filteredIncidents.length,
       pending: filteredIncidents.filter((i) => i.status === "Chờ xử lý").length,
-      inProgress: filteredIncidents.filter((i) => i.status === "Đang xử lý").length,
-      completed: filteredIncidents.filter((i) => i.status === "Hoàn thành").length,
+      inProgress: filteredIncidents.filter((i) => i.status === "Đang xử lý")
+        .length,
+      completed: filteredIncidents.filter((i) => i.status === "Hoàn thành")
+        .length,
       totalDowntime: filteredIncidents
         .reduce((sum, i) => sum + (i.downtime || 0), 0)
         .toFixed(2),
@@ -534,7 +620,13 @@ const IncidentList = () => {
       label: (
         <span>
           <ExclamationCircleOutlined />
-          Chờ xử lý ({incidents.filter(i => i.status === "Chờ xử lý" || i.status === "Đang xử lý").length})
+          Chờ xử lý (
+          {
+            incidents.filter(
+              (i) => i.status === "Chờ xử lý" || i.status === "Đang xử lý"
+            ).length
+          }
+          )
         </span>
       ),
       children: (
@@ -607,7 +699,8 @@ const IncidentList = () => {
       label: (
         <span>
           <CheckCircleOutlined />
-          Hoàn thành ({incidents.filter(i => i.status === "Hoàn thành").length})
+          Hoàn thành (
+          {incidents.filter((i) => i.status === "Hoàn thành").length})
         </span>
       ),
       children: (
@@ -684,7 +777,11 @@ const IncidentList = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card variant="borderless">
             <Statistic
-              title={activeTab === "pending" ? "Tổng sự cố chờ xử lý" : "Tổng sự cố hoàn thành"}
+              title={
+                activeTab === "pending"
+                  ? "Tổng sự cố chờ xử lý"
+                  : "Tổng sự cố hoàn thành"
+              }
               value={stats.total}
               prefix={<WarningOutlined />}
               valueStyle={{ color: "#1890ff" }}
@@ -777,7 +874,13 @@ const IncidentList = () => {
                 >
                   <Row gutter={[16, 8]} align="middle">
                     <Col span={18}>
-                      <div style={{ fontSize: "24px", fontWeight: 700, marginBottom: "4px" }}>
+                      <div
+                        style={{
+                          fontSize: "24px",
+                          fontWeight: 700,
+                          marginBottom: "4px",
+                        }}
+                      >
                         #{selectedIncident.id}
                       </div>
                       <div style={{ fontSize: "14px", opacity: 0.9 }}>
@@ -809,10 +912,21 @@ const IncidentList = () => {
 
               {/* Equipment & Process Information */}
               <Col span={24}>
-                <Card size="small" title="Thông tin thiết bị & quy trình" variant="outlined">
+                <Card
+                  size="small"
+                  title="Thông tin thiết bị & quy trình"
+                  variant="outlined"
+                >
                   <Row gutter={[16, 16]}>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Thiết bị
                       </div>
                       <div style={{ fontWeight: 600, fontSize: "14px" }}>
@@ -825,7 +939,14 @@ const IncidentList = () => {
                       </div>
                     </Col>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Dây chuyền
                       </div>
                       <div style={{ fontSize: "14px" }}>
@@ -833,7 +954,14 @@ const IncidentList = () => {
                       </div>
                     </Col>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Công đoạn
                       </div>
                       <div style={{ fontSize: "14px" }}>
@@ -841,17 +969,33 @@ const IncidentList = () => {
                       </div>
                     </Col>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Loại dừng
                       </div>
                       {selectedIncident.category ? (
-                        <Tag color="orange" style={{ fontSize: "13px" }}>{selectedIncident.category}</Tag>
+                        <Tag color="orange" style={{ fontSize: "13px" }}>
+                          {selectedIncident.category}
+                        </Tag>
                       ) : (
                         <span style={{ fontSize: "14px" }}>-</span>
                       )}
                     </Col>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Người báo cáo
                       </div>
                       <div style={{ fontSize: "14px" }}>
@@ -859,12 +1003,21 @@ const IncidentList = () => {
                       </div>
                     </Col>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Ngày tạo
                       </div>
                       <div style={{ fontSize: "14px" }}>
                         {selectedIncident.reportDate
-                          ? dayjs(selectedIncident.reportDate).format("DD/MM/YYYY")
+                          ? dayjs(selectedIncident.reportDate).format(
+                              "DD/MM/YYYY"
+                            )
                           : "-"}
                       </div>
                     </Col>
@@ -874,34 +1027,72 @@ const IncidentList = () => {
 
               {/* Time Information */}
               <Col span={24}>
-                <Card size="small" title="Thông tin thời gian" variant="outlined">
+                <Card
+                  size="small"
+                  title="Thông tin thời gian"
+                  variant="outlined"
+                >
                   <Row gutter={[16, 16]}>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Thời gian bắt đầu
                       </div>
                       <div style={{ fontSize: "14px", fontWeight: 500 }}>
                         {selectedIncident.reportDate
-                          ? dayjs(selectedIncident.reportDate).format("DD/MM/YYYY HH:mm:ss")
+                          ? dayjs(selectedIncident.reportDate).format(
+                              "DD/MM/YYYY HH:mm:ss"
+                            )
                           : "-"}
                       </div>
                     </Col>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Thời gian kết thúc
                       </div>
                       <div style={{ fontSize: "14px", fontWeight: 500 }}>
                         {selectedIncident.resolveDate
-                          ? dayjs(selectedIncident.resolveDate).format("DD/MM/YYYY HH:mm:ss")
+                          ? dayjs(selectedIncident.resolveDate).format(
+                              "DD/MM/YYYY HH:mm:ss"
+                            )
                           : "-"}
                       </div>
                     </Col>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Thời lượng (phút)
                       </div>
-                      <div style={{ fontSize: "16px", fontWeight: 700, color: selectedIncident.downtime > 5 ? "red" : "#1890ff" }}>
-                        {selectedIncident.downtime ? selectedIncident.downtime.toFixed(2) : "-"}
+                      <div
+                        style={{
+                          fontSize: "16px",
+                          fontWeight: 700,
+                          color:
+                            selectedIncident.downtime > 5 ? "red" : "#1890ff",
+                        }}
+                      >
+                        {selectedIncident.downtime
+                          ? selectedIncident.downtime.toFixed(2)
+                          : "-"}
                       </div>
                     </Col>
                   </Row>
@@ -910,20 +1101,39 @@ const IncidentList = () => {
 
               {/* Assignment Information */}
               <Col span={24}>
-                <Card size="small" title="Thông tin phân công" variant="outlined">
+                <Card
+                  size="small"
+                  title="Thông tin phân công"
+                  variant="outlined"
+                >
                   <Row gutter={[16, 16]}>
                     <Col span={24}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Người đảm nhiệm
                       </div>
                       <div style={{ fontSize: "14px", fontWeight: 500 }}>
-                        {getTechnicianName(selectedIncident.assignedTo) || "Chưa phân công"}
+                        {getTechnicianName(selectedIncident.assignedTo) ||
+                          "Chưa phân công"}
                       </div>
                     </Col>
                     {selectedIncident.status !== "Hoàn thành" && (
                       <>
                         <Col span={24}>
-                          <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                          <div
+                            style={{
+                              fontSize: "13px",
+                              color: "#666",
+                              marginBottom: "6px",
+                              fontWeight: 600,
+                            }}
+                          >
                             Chọn kỹ thuật viên
                           </div>
                           <Select
@@ -934,19 +1144,31 @@ const IncidentList = () => {
                             allowClear
                             showSearch
                             filterOption={(input, option) =>
-                              (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+                              (option?.children ?? "")
+                                .toLowerCase()
+                                .includes(input.toLowerCase())
                             }
                           >
-                            {technicians.map(tech => (
-                              <Option key={tech.userId || tech.id} value={tech.userId || tech.id}>
+                            {technicians.map((tech) => (
+                              <Option
+                                key={tech.userId || tech.id}
+                                value={tech.userId || tech.id}
+                              >
                                 {tech.fullName || tech.name || tech.username}
                               </Option>
                             ))}
                           </Select>
                         </Col>
                         <Col span={24}>
-                          <div style={{ fontSize: "12px", color: "#999", fontStyle: "italic" }}>
-                            * Chọn kỹ thuật viên và nhấn "Cập nhật" để phân công và chuyển trạng thái thành "Đang xử lý"
+                          <div
+                            style={{
+                              fontSize: "12px",
+                              color: "#999",
+                              fontStyle: "italic",
+                            }}
+                          >
+                            * Chọn kỹ thuật viên và nhấn "Cập nhật" để phân công
+                            và chuyển trạng thái thành "Đang xử lý"
                           </div>
                         </Col>
                       </>
@@ -960,47 +1182,74 @@ const IncidentList = () => {
                 <Card size="small" title="Chi tiết sự cố" variant="outlined">
                   <Row gutter={[16, 16]}>
                     <Col span={24}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Vấn đề
                       </div>
-                      <div style={{
-                        fontSize: "14px",
-                        lineHeight: 1.6,
-                        padding: "12px",
-                        backgroundColor: "#fafafa",
-                        borderRadius: "6px",
-                        border: "1px solid #f0f0f0"
-                      }}>
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          lineHeight: 1.6,
+                          padding: "12px",
+                          backgroundColor: "#fafafa",
+                          borderRadius: "6px",
+                          border: "1px solid #f0f0f0",
+                        }}
+                      >
                         {selectedIncident.issue || "Không có mô tả"}
                       </div>
                     </Col>
                     <Col span={24}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Nguyên nhân
                       </div>
-                      <div style={{
-                        fontSize: "14px",
-                        lineHeight: 1.6,
-                        padding: "12px",
-                        backgroundColor: "#fafafa",
-                        borderRadius: "6px",
-                        border: "1px solid #f0f0f0"
-                      }}>
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          lineHeight: 1.6,
+                          padding: "12px",
+                          backgroundColor: "#fafafa",
+                          borderRadius: "6px",
+                          border: "1px solid #f0f0f0",
+                        }}
+                      >
                         {selectedIncident.reason || "Chưa xác định"}
                       </div>
                     </Col>
                     <Col span={24}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Giải pháp
                       </div>
-                      <div style={{
-                        fontSize: "14px",
-                        lineHeight: 1.6,
-                        padding: "12px",
-                        backgroundColor: "#fafafa",
-                        borderRadius: "6px",
-                        border: "1px solid #f0f0f0"
-                      }}>
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          lineHeight: 1.6,
+                          padding: "12px",
+                          backgroundColor: "#fafafa",
+                          borderRadius: "6px",
+                          border: "1px solid #f0f0f0",
+                        }}
+                      >
                         {selectedIncident.solution || "Chưa có giải pháp"}
                       </div>
                     </Col>

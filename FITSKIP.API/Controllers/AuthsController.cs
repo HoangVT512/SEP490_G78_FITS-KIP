@@ -131,6 +131,7 @@ public class AuthsController : ControllerBase
                 emailConfirmed = user.EmailConfirmed,
                 phoneNumber = user.PhoneNumber,
                 phoneNumberConfirmed = user.PhoneNumberConfirmed,
+                departmentId = user.DepartmentId,
                 roles = roles,
                 userLines = userLines
             });

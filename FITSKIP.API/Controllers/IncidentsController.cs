@@ -2,6 +2,8 @@ using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using FITSKIP.API.Hubs;
 using System.Security.Claims;
 
 namespace FITSKIP.API.Controllers;
@@ -12,10 +14,12 @@ namespace FITSKIP.API.Controllers;
 public class IncidentsController : ControllerBase
 {
     private readonly IIncidentService _incidentService;
+    private readonly IHubContext<NotificationHub> _hubContext;
 
-    public IncidentsController(IIncidentService incidentService)
+    public IncidentsController(IIncidentService incidentService, IHubContext<NotificationHub> hubContext)
     {
         _incidentService = incidentService;
+        _hubContext = hubContext;
     }
 
     /// <summary>
@@ -28,6 +32,34 @@ public class IncidentsController : ControllerBase
         {
             var incidents = await _incidentService.GetIncidentsAsync();
             return Ok(new { success = true, data = incidents });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi lấy danh sách sự cố", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lấy danh sách sự cố theo department
+    /// </summary>
+    [HttpGet("by-department/{departmentId}")]
+    public async Task<IActionResult> GetIncidentsByDepartment(int departmentId)
+    {
+        try
+        {
+            if (departmentId <= 0)
+            {
+                return BadRequest(new { success = false, message = "Error: Department ID không hợp lệ" });
+            }
+
+            var incidents = await _incidentService.GetIncidentsAsync();
+
+            // Filter incidents by department
+            var departmentIncidents = incidents
+                .Where(i => i.Equipment?.Stage?.Line?.DepartmentId == departmentId)
+                .ToList();
+
+            return Ok(departmentIncidents);
         }
         catch (Exception ex)
         {
@@ -130,6 +162,8 @@ public class IncidentsController : ControllerBase
             }
 
             var incident = await _incidentService.CreateIncidentAsync(request);
+            // Note: Realtime notifications are already sent from IncidentService
+            // No need to send duplicate DataUpdated events here
             return CreatedAtAction(nameof(GetIncident), new { id = incident.IncidentId },
                 new { success = true, data = incident, message = "Tạo sự cố thành công" });
         }
@@ -175,7 +209,7 @@ public class IncidentsController : ControllerBase
             for (int i = 0; i < request.Incidents.Count; i++)
             {
                 var incident = request.Incidents[i];
-                
+
                 if (incident.EquipmentId <= 0)
                 {
                     return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Equipment ID phải lớn hơn 0" });
@@ -206,32 +240,32 @@ public class IncidentsController : ControllerBase
             }
 
             var result = await _incidentService.CreateBulkIncidentsAsync(request);
-            
+
             if (result.SuccessCount == 0)
             {
-                return BadRequest(new 
-                { 
-                    success = false, 
-                    message = "Không thể tạo sự cố nào", 
-                    data = result 
-                });
-            }
-            
-            if (result.FailureCount > 0)
-            {
-                return Ok(new 
-                { 
-                    success = true, 
-                    message = $"Đã tạo thành công {result.SuccessCount}/{result.TotalRequested} sự cố. {result.FailureCount} sự cố thất bại.", 
-                    data = result 
+                return BadRequest(new
+                {
+                    success = false,
+                    message = "Không thể tạo sự cố nào",
+                    data = result
                 });
             }
 
-            return Ok(new 
-            { 
-                success = true, 
-                message = $"Đã tạo thành công tất cả {result.SuccessCount} sự cố", 
-                data = result 
+            if (result.FailureCount > 0)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    message = $"Đã tạo thành công {result.SuccessCount}/{result.TotalRequested} sự cố. {result.FailureCount} sự cố thất bại.",
+                    data = result
+                });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = $"Đã tạo thành công tất cả {result.SuccessCount} sự cố",
+                data = result
             });
         }
         catch (InvalidOperationException ex)
@@ -308,6 +342,8 @@ public class IncidentsController : ControllerBase
             {
                 return NotFound(new { success = false, message = "Không tìm thấy sự cố để cập nhật" });
             }
+            // Note: Realtime notifications are already sent from IncidentService if status/IsTechSupport changed
+            // No need to send duplicate DataUpdated events here
             return Ok(new { success = true, data = incident, message = "Cập nhật sự cố thành công" });
         }
         catch (InvalidOperationException ex)
@@ -342,6 +378,9 @@ public class IncidentsController : ControllerBase
             {
                 return NotFound(new { success = false, message = "Không tìm thấy sự cố" });
             }
+            // Send real-time update to both groups
+            await _hubContext.Clients.Group("TechnicalManagers").SendAsync("DataUpdated", new { type = "incident", action = "deleted", incidentId = id });
+            await _hubContext.Clients.Group("TeamLeaders").SendAsync("DataUpdated", new { type = "incident", action = "deleted", incidentId = id });
             return Ok(new { success = true, data = true, message = "Xóa sự cố thành công" });
         }
         catch (Exception ex)
@@ -467,6 +506,10 @@ public class IncidentsController : ControllerBase
             {
                 return NotFound(new { success = false, message = "Không tìm thấy sự cố để phân công" });
             }
+
+            // Send real-time update to both groups
+            await _hubContext.Clients.Group("TechnicalManagers").SendAsync("DataUpdated", new { type = "incident", action = "assigned", incidentId = id });
+            await _hubContext.Clients.Group("TeamLeaders").SendAsync("DataUpdated", new { type = "incident", action = "assigned", incidentId = id });
 
             return Ok(new { success = true, message = request.UpdateStatus ? "Phân công kỹ thuật viên và cập nhật trạng thái thành công" : "Phân công kỹ thuật viên thành công" });
         }

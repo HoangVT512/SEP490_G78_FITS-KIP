@@ -318,6 +318,10 @@ public class IncidentService : IIncidentService
             existingIncident.Status = request.Status;
         }
 
+        // Track if status or IsTechSupport changed to "Chờ xử lý" + true (need notification)
+        var wasNotTechSupport = !existingIncident.IsTechSupport;
+        var wasNotPending = existingIncident.Status != "Chờ xử lý";
+
         existingIncident.IsTechSupport = request.IsTechSupport;
 
         var updatedIncident = await _incidentRepository.UpdateAsync(existingIncident, cancellationToken);
@@ -332,14 +336,25 @@ public class IncidentService : IIncidentService
             updatedIncident = await _incidentRepository.UpdateAsync(updatedIncident, cancellationToken);
         }
 
-        // Gửi notification cho quản lý kỹ thuật nếu status là "Chờ xử lý" và istechsupport là true
-        if (updatedIncident != null && updatedIncident.Status == "Chờ xử lý" && updatedIncident.IsTechSupport)
+        // Gửi notification CHỈ KHI status hoặc IsTechSupport THAY ĐỔI thành "Chờ xử lý" + true
+        // Tránh gửi duplicate notification khi update các field khác
+        var shouldSendNotification = updatedIncident != null
+            && updatedIncident.Status == "Chờ xử lý"
+            && updatedIncident.IsTechSupport
+            && (wasNotTechSupport || wasNotPending); // Only if changed TO this state
+
+        if (shouldSendNotification)
         {
             var updatedEquipment = await _equipmentRepository.GetByIdAsync(updatedIncident.EquipmentId ?? 0, cancellationToken);
             if (updatedEquipment != null)
             {
+                Console.WriteLine($"🔔 Update triggered notification - wasNotTechSupport: {wasNotTechSupport}, wasNotPending: {wasNotPending}");
                 await SendIncidentNotificationToTechnicalManagersAsync(updatedIncident, updatedEquipment, cancellationToken);
             }
+        }
+        else
+        {
+            Console.WriteLine($"⏭️ Skipping notification on update - Status: {updatedIncident?.Status}, IsTechSupport: {updatedIncident?.IsTechSupport}, Changed: {wasNotTechSupport || wasNotPending}");
         }
 
         return updatedIncident;
@@ -515,20 +530,20 @@ public class IncidentService : IIncidentService
 
         // Get all shifts
         var shifts = await _shiftRepository.GetAllAsync(cancellationToken);
-        
+
         foreach (var shift in shifts)
         {
             // Calculate shift start and end datetime for the incident date
             var incidentDate = incident.StartTime.Value.Date;
             var shiftStartDateTime = incidentDate.Add(shift.StartTime.ToTimeSpan());
-            var shiftEndDateTime = shift.StartTime <= shift.EndTime 
+            var shiftEndDateTime = shift.StartTime <= shift.EndTime
                 ? incidentDate.Add(shift.EndTime.ToTimeSpan())  // Normal shift
                 : incidentDate.AddDays(1).Add(shift.EndTime.ToTimeSpan());  // Night shift crossing midnight
-            
+
             // Calculate overlap between incident and shift
             var overlapStart = incident.StartTime.Value > shiftStartDateTime ? incident.StartTime.Value : shiftStartDateTime;
             var overlapEnd = incident.EndTime.Value < shiftEndDateTime ? incident.EndTime.Value : shiftEndDateTime;
-            
+
             // Only create IncidentShift if there is actual overlap
             if (overlapStart < overlapEnd)
             {
@@ -539,7 +554,7 @@ public class IncidentService : IIncidentService
                     StartTime = overlapStart,
                     EndTime = overlapEnd
                 };
-                
+
                 incident.IncidentShifts.Add(incidentShift);
             }
         }
@@ -588,20 +603,46 @@ public class IncidentService : IIncidentService
     {
         try
         {
+            Console.WriteLine($"📢 SendIncidentNotificationToTechnicalManagersAsync called for incident {incident.IncidentId}");
+            Console.WriteLine($"   Status: {incident.Status}, IsTechSupport: {incident.IsTechSupport}");
+
             // Chỉ gửi notification khi status là "Chờ xử lý" và istechsupport là true
             if (incident.Status != "Chờ xử lý" || !incident.IsTechSupport)
             {
+                Console.WriteLine($"   ❌ Skipping notification - Status: {incident.Status}, IsTechSupport: {incident.IsTechSupport}");
+                return;
+            }
+
+            // Get equipment's department
+            var department = equipment?.Stage?.Line?.Department;
+            Console.WriteLine($"   Equipment: {equipment?.EquipmentName} (ID: {equipment?.EquipmentId})");
+            Console.WriteLine($"   Stage: {equipment?.Stage?.StageName} (ID: {equipment?.Stage?.StageId})");
+            Console.WriteLine($"   Line: {equipment?.Stage?.Line?.LineName} (ID: {equipment?.Stage?.Line?.LineId})");
+            Console.WriteLine($"   Department: {department?.DepartmentName} (ID: {department?.DepartmentId})");
+
+            if (department == null || department.DepartmentId == 0)
+            {
+                Console.WriteLine($"⚠️ Warning: Could not determine department for equipment {equipment?.EquipmentId}");
                 return;
             }
 
             // Get all Technical Managers
-            var technicalManagers = await _userService.GetUsersByRoleAsync("Quản lý kỹ thuật", cancellationToken);
+            var allTechnicalManagers = await _userService.GetUsersByRoleAsync("Quản lý kỹ thuật", cancellationToken);
+            Console.WriteLine($"   Found {allTechnicalManagers.Count()} total Technical Managers");
 
-            // Create notification record in database for each Technical Manager
+            // ✅ FIX: Chỉ gửi notification cho Technical Managers thuộc ĐÚNG phòng ban
+            var technicalManagers = allTechnicalManagers
+                .Where(m => m.DepartmentId.HasValue && m.DepartmentId.Value == department.DepartmentId)
+                .ToList();
+
+            Console.WriteLine($"   ✅ Filtered to {technicalManagers.Count} Technical Managers in department {department.DepartmentId}");
+
+            // Create notification record in database for each Technical Manager in this department
             foreach (var manager in technicalManagers)
             {
                 if (!string.IsNullOrEmpty(manager.Id))
                 {
+                    Console.WriteLine($"   📝 Creating notification for manager: {manager.FullName} (ID: {manager.Id}, Dept: {manager.DepartmentId})");
                     await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
                     {
                         UserId = manager.Id,
@@ -611,19 +652,21 @@ public class IncidentService : IIncidentService
                 }
             }
 
-            // Send ONE real-time notification to Technical Managers group
+            // Send realtime notification to TechnicalManagers group (broadcast to all)
+            Console.WriteLine($"   🔔 Sending realtime notification to TechnicalManagers group");
             await _notificationService.SendNotificationToGroupAsync(
                 "TechnicalManagers",
                 "Sự cố cần hỗ trợ kỹ thuật",
                 $"Có sự cố mới cần hỗ trợ kỹ thuật tại thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode}) - Mã sự cố: {incident.IncidentId}",
-                "warning"
+                "incident"
             );
+            Console.WriteLine($"   ✅ Notification sent successfully");
         }
         catch (Exception ex)
         {
             // Log error but don't fail the incident creation
-            // You might want to add logging here
-            Console.WriteLine($"Error sending incident notification: {ex.Message}");
+            Console.WriteLine($"❌ Error sending incident notification: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
         }
     }
 }

@@ -124,6 +124,35 @@ namespace FITSKIP.Application.Services
             await _notificationRepository.DeleteAllReadByUserIdAsync(userId);
         }
 
+        // Department-specific notification methods
+        public async Task SendIncidentNotificationToDepartmentAsync(int departmentId, string title, string message)
+        {
+            var groupName = $"TechnicalManagers_Department_{departmentId}";
+            var notificationData = new
+            {
+                Title = title,
+                Message = message,
+                Type = "incident",
+                DepartmentId = departmentId,
+                Timestamp = DateTime.UtcNow
+            };
+
+            await _notificationHubService.SendToGroupAsync(groupName, notificationData);
+        }
+
+        public async Task RefreshIncidentsForDepartmentAsync(int departmentId)
+        {
+            var groupName = $"TechnicalManagers_Department_{departmentId}";
+            var refreshData = new
+            {
+                Type = "refresh",
+                DepartmentId = departmentId,
+                Timestamp = DateTime.UtcNow
+            };
+
+            await _notificationHubService.SendToGroupAsync(groupName, refreshData);
+        }
+
         private NotificationDTO MapToDTO(Notification notification)
         {
             return new NotificationDTO
