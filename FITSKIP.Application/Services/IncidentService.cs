@@ -88,7 +88,17 @@ public class IncidentService : IIncidentService
             ReportedByUserId = request.ReportedByUserId
         };
 
-        return await _incidentRepository.CreateAsync(incident, cancellationToken);
+        var createdIncident = await _incidentRepository.CreateAsync(incident, cancellationToken);
+
+        // Tự động tạo IncidentShift records nếu có endtime
+        if (request.EndTime.HasValue)
+        {
+            await CreateIncidentShiftsAsync(createdIncident, cancellationToken);
+            // Save changes after creating incident shifts
+            await _incidentRepository.UpdateAsync(createdIncident, cancellationToken);
+        }
+
+        return createdIncident;
     }
 
     public async Task<BulkIncidentResponse> CreateBulkIncidentsAsync(CreateBulkIncidentRequest request, CancellationToken cancellationToken = default)
@@ -173,26 +183,38 @@ public class IncidentService : IIncidentService
                 };
 
                 var createdIncident = await _incidentRepository.CreateAsync(incident, cancellationToken);
+
+                // Tự động tạo IncidentShift records nếu có endtime
+                if (incidentRequest.EndTime.HasValue)
+                {
+                    await CreateIncidentShiftsAsync(createdIncident, cancellationToken);
+                    // Save changes after creating incident shifts
+                    createdIncident = await _incidentRepository.UpdateAsync(createdIncident, cancellationToken);
+                }
+
                 response.SuccessCount++;
 
                 // Map to DTO for response
-                response.SuccessfulIncidents.Add(new IncidentHistoryDTO
+                if (createdIncident != null)
                 {
-                    IncidentId = createdIncident.IncidentId,
-                    EquipmentId = createdIncident.EquipmentId ?? 0,
-                    EquipmentName = createdIncident.Equipment?.EquipmentName,
-                    EquipmentCode = createdIncident.Equipment?.EquipmentCode,
-                    LineName = createdIncident.Equipment?.Stage?.Line?.LineName,
-                    StartTime = createdIncident.StartTime,
-                    EndTime = createdIncident.EndTime,
-                    Duration = createdIncident.Duration,
-                    TypeId = createdIncident.TypeId,
-                    TypeName = createdIncident.Type?.TypeName,
-                    Reason = createdIncident.Reason,
-                    Solution = createdIncident.Solution,
-                    Issue = createdIncident.Issue,
-                    CreatedDate = createdIncident.CreatedDate
-                });
+                    response.SuccessfulIncidents.Add(new IncidentHistoryDTO
+                    {
+                        IncidentId = createdIncident.IncidentId,
+                        EquipmentId = createdIncident.EquipmentId ?? 0,
+                        EquipmentName = createdIncident.Equipment?.EquipmentName,
+                        EquipmentCode = createdIncident.Equipment?.EquipmentCode,
+                        LineName = createdIncident.Equipment?.Stage?.Line?.LineName,
+                        StartTime = createdIncident.StartTime,
+                        EndTime = createdIncident.EndTime,
+                        Duration = createdIncident.Duration,
+                        TypeId = createdIncident.TypeId,
+                        TypeName = createdIncident.Type?.TypeName,
+                        Reason = createdIncident.Reason,
+                        Solution = createdIncident.Solution,
+                        Issue = createdIncident.Issue,
+                        CreatedDate = createdIncident.CreatedDate
+                    });
+                }
             }
             catch (Exception ex)
             {
@@ -282,7 +304,19 @@ public class IncidentService : IIncidentService
             existingIncident.Status = request.Status;
         }
 
-        return await _incidentRepository.UpdateAsync(existingIncident, cancellationToken);
+        var updatedIncident = await _incidentRepository.UpdateAsync(existingIncident, cancellationToken);
+
+        // Tự động tạo IncidentShift records nếu có endtime và chưa có IncidentShift nào
+        if (request.EndTime.HasValue && updatedIncident != null)
+        {
+            // Clear existing incident shifts if any
+            updatedIncident.IncidentShifts.Clear();
+            await CreateIncidentShiftsAsync(updatedIncident, cancellationToken);
+            // Save changes after creating incident shifts
+            updatedIncident = await _incidentRepository.UpdateAsync(updatedIncident, cancellationToken);
+        }
+
+        return updatedIncident;
     }
 
     public Task<bool> DeleteIncidentAsync(int id, CancellationToken cancellationToken = default)
@@ -446,5 +480,92 @@ public class IncidentService : IIncidentService
             // Night shift crossing midnight (e.g., 22:00 - 06:00)
             return timeOnly >= shiftStart || timeOnly < shiftEnd;
         }
+    }
+
+    private async Task CreateIncidentShiftsAsync(IncidentHistory incident, CancellationToken cancellationToken = default)
+    {
+        if (!incident.EndTime.HasValue || !incident.StartTime.HasValue)
+            return;
+
+        // Get all shifts
+        var shifts = await _shiftRepository.GetAllAsync(cancellationToken);
+        
+        // Find shifts that overlap with incident time range
+        var incidentStartTime = incident.StartTime.Value.TimeOfDay;
+        var incidentEndTime = incident.EndTime.Value.TimeOfDay;
+        
+        foreach (var shift in shifts)
+        {
+            // Check if incident overlaps with this shift
+            if (IsTimeInShift(incidentStartTime, shift.StartTime, shift.EndTime) ||
+                IsTimeInShift(incidentEndTime, shift.StartTime, shift.EndTime) ||
+                IsIncidentSpanningShift(incidentStartTime, incidentEndTime, shift.StartTime, shift.EndTime))
+            {
+                // Calculate the actual start and end time for this shift
+                var shiftStartDateTime = CalculateShiftStartDateTime(incident.StartTime.Value, shift.StartTime);
+                var shiftEndDateTime = CalculateShiftEndDateTime(incident.EndTime.Value, shift.EndTime);
+                
+                // Ensure the incident shift times are within the incident bounds
+                var incidentShiftStart = shiftStartDateTime > incident.StartTime.Value ? shiftStartDateTime : incident.StartTime.Value;
+                var incidentShiftEnd = shiftEndDateTime < incident.EndTime.Value ? shiftEndDateTime : incident.EndTime.Value;
+                
+                var incidentShift = new IncidentShift
+                {
+                    IncidentId = incident.IncidentId,
+                    ShiftId = shift.ShiftId,
+                    StartTime = incidentShiftStart,
+                    EndTime = incidentShiftEnd
+                };
+                
+                incident.IncidentShifts.Add(incidentShift);
+            }
+        }
+    }
+
+    private static bool IsIncidentSpanningShift(TimeSpan incidentStart, TimeSpan incidentEnd, TimeOnly shiftStart, TimeOnly shiftEnd)
+    {
+        var incidentStartTime = TimeOnly.FromTimeSpan(incidentStart);
+        var incidentEndTime = TimeOnly.FromTimeSpan(incidentEnd);
+        
+        if (shiftStart <= shiftEnd)
+        {
+            // Normal shift - incident spans if it starts before shift and ends after shift
+            return incidentStartTime < shiftStart && incidentEndTime > shiftEnd;
+        }
+        else
+        {
+            // Night shift crossing midnight
+            return (incidentStartTime < shiftStart && incidentEndTime > shiftEnd) ||
+                   (incidentStartTime < shiftStart && incidentEndTime < shiftEnd) ||
+                   (incidentStartTime > shiftStart && incidentEndTime > shiftEnd);
+        }
+    }
+
+    private static DateTime CalculateShiftStartDateTime(DateTime incidentStart, TimeOnly shiftStart)
+    {
+        var incidentDate = incidentStart.Date;
+        var shiftStartDateTime = incidentDate.Add(shiftStart.ToTimeSpan());
+        
+        // If shift starts after incident start time, use incident start time
+        if (shiftStartDateTime > incidentStart)
+        {
+            return incidentStart;
+        }
+        
+        return shiftStartDateTime;
+    }
+
+    private static DateTime CalculateShiftEndDateTime(DateTime incidentEnd, TimeOnly shiftEnd)
+    {
+        var incidentDate = incidentEnd.Date;
+        var shiftEndDateTime = incidentDate.Add(shiftEnd.ToTimeSpan());
+        
+        // If shift ends before incident end time, use incident end time
+        if (shiftEndDateTime < incidentEnd)
+        {
+            return incidentEnd;
+        }
+        
+        return shiftEndDateTime;
     }
 }
