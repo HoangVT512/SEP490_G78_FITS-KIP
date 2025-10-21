@@ -17,6 +17,7 @@
     "@emotion/react": "^11.14.0",
     "@microsoft/signalr": "^9.0.6",
     "antd": "^5.27.4",
+    "axios": "^1.12.2",
     "bcryptjs": "^3.0.2",
     "body-parser": "^2.2.0",
     "cors": "^2.8.5",

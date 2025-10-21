@@ -36,6 +36,7 @@ import ProductionManagement from "./ProductionManagement";
 import ReplacementComponents from "./ReplacementComponents";
 import IncidentManagement from "./IncidentManagement";
 import EFormSystem from "./EFormSystem";
+import FactoryMap from "./FactoryMap";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -69,6 +70,8 @@ const TeamLeaderLayout = () => {
       setSelectedKey("replacement");
     } else if (path.includes("/incidents")) {
       setSelectedKey("incidents");
+    } else if (path.includes("/factory-map")) {
+      setSelectedKey("factory-map");
     } else if (path.includes("/line-monitoring")) {
       setSelectedKey("line-monitoring");
     } else if (path.includes("/reports")) {
@@ -102,6 +105,8 @@ const TeamLeaderLayout = () => {
       return <ReplacementComponents />;
     } else if (path.includes("/incidents")) {
       return <IncidentManagement />;
+    } else if (path.includes("/factory-map")) {
+      return <FactoryMap />;
     } else if (path === "/team-leader" || path.includes("/dashboard")) {
       return <TeamLeaderDashboard />;
     }
@@ -117,13 +122,18 @@ const TeamLeaderLayout = () => {
       label: "Tổng quan",
     },
     {
-      key: "EFormProductionInput",
+      key: "factory-map",
       icon: <AppstoreOutlined />,
+      label: "Sơ đồ nhà máy",
+    },
+    {
+      key: "EFormProductionInput",
+      icon: <EditOutlined />,
       label: "E-Form Nhập liệu sản lượng",
     },
     {
       key: "production",
-      icon: <AppstoreOutlined />,
+      icon: <BarChartOutlined />,
       label: "Quản lý sản xuất",
     },
     {
@@ -153,6 +163,9 @@ const TeamLeaderLayout = () => {
     switch (key) {
       case "dashboard":
         navigate("/team-leader/dashboard");
+        break;
+      case "factory-map":
+        navigate("/team-leader/factory-map");
         break;
       case "EFormProductionInput":
         navigate("/team-leader/EFormProductionInput");

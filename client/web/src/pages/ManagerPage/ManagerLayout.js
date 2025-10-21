@@ -47,6 +47,7 @@ import ProductionManagement from "./ProductionManagement";
 import ProductionDetailReport from "./ProductionDetailReport";
 import ManagerIncidentList from "./ManagerIncidentList";
 import NotificationsList from "./NotificationsList";
+import FactoryMap from "./FactoryMap";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -106,10 +107,11 @@ const ManagerLayout = () => {
 
           // Hiển thị message toast (LUÔN LUÔN hiển thị)
           antdMessage.success({
-            content: `🔔 ${notificationData.title ||
+            content: `🔔 ${
+              notificationData.title ||
               notificationData.message ||
               "Bạn có thông báo mới"
-              }`,
+            }`,
             duration: 5,
           });
 
@@ -142,10 +144,11 @@ const ManagerLayout = () => {
 
           // Hiển thị message toast
           antdMessage.info({
-            content: `📢 ${broadcastData.title ||
+            content: `📢 ${
+              broadcastData.title ||
               broadcastData.message ||
               "Thông báo hệ thống mới"
-              }`,
+            }`,
             duration: 5,
           });
 
@@ -203,6 +206,8 @@ const ManagerLayout = () => {
       setSelectedKey("production-management");
     } else if (path.includes("/production-report")) {
       setSelectedKey("production-report");
+    } else if (path.includes("/factory-map")) {
+      setSelectedKey("factory-map");
     } else if (path.includes("/incidents")) {
       setSelectedKey("incidents");
     } else {
@@ -228,6 +233,8 @@ const ManagerLayout = () => {
       return <ProductionManagement />;
     } else if (path.includes("/production-report")) {
       return <ProductionDetailReport />;
+    } else if (path.includes("/factory-map")) {
+      return <FactoryMap />;
     } else if (path.includes("/incidents")) {
       return <ManagerIncidentList />;
     } else if (path === "/manager" || path.includes("/dashboard")) {
@@ -243,6 +250,11 @@ const ManagerLayout = () => {
       key: "dashboard",
       icon: <DashboardOutlined />,
       label: "Tổng quan",
+    },
+    {
+      key: "factory-map",
+      icon: <FundOutlined />,
+      label: "Sơ đồ nhà máy",
     },
     {
       key: "purchase-approval",
@@ -291,6 +303,9 @@ const ManagerLayout = () => {
     switch (key) {
       case "dashboard":
         navigate("/manager/dashboard");
+        break;
+      case "factory-map":
+        navigate("/manager/factory-map");
         break;
       case "purchase-approval":
         navigate("/manager/purchase-approval");
