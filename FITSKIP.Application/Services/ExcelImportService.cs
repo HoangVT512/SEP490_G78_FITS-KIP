@@ -45,7 +45,7 @@ namespace FITSKIP.Application.Services
 
                         users.Add(new CreateUserRequest
                         {
-                            UserName = email,
+                            UserName = employeeCode,
                             Email = email,
                             Password = password,
                             FullName = fullName,
