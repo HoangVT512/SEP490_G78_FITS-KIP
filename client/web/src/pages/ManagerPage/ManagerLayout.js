@@ -41,6 +41,7 @@ import ManagerDashboard from "./ManagerDashboard";
 import PurchaseApproval from "./PurchaseApproval";
 import MaintenanceReports from "./MaintenanceReports";
 import ReplacementHistory from "./ReplacementHistory";
+import DisplayScreenReplaceItem from "./DisplayScreenReplaceItem";
 import InventoryDashboard from "./InventoryDashboard";
 import ProductionManagement from "./ProductionManagement";
 import ProductionDetailReport from "./ProductionDetailReport";
@@ -105,11 +106,10 @@ const ManagerLayout = () => {
 
           // Hiển thị message toast (LUÔN LUÔN hiển thị)
           antdMessage.success({
-            content: `🔔 ${
-              notificationData.title ||
+            content: `🔔 ${notificationData.title ||
               notificationData.message ||
               "Bạn có thông báo mới"
-            }`,
+              }`,
             duration: 5,
           });
 
@@ -142,11 +142,10 @@ const ManagerLayout = () => {
 
           // Hiển thị message toast
           antdMessage.info({
-            content: `📢 ${
-              broadcastData.title ||
+            content: `📢 ${broadcastData.title ||
               broadcastData.message ||
               "Thông báo hệ thống mới"
-            }`,
+              }`,
             duration: 5,
           });
 
@@ -194,6 +193,8 @@ const ManagerLayout = () => {
       setSelectedKey("purchase-approval");
     } else if (path.includes("/maintenance-reports")) {
       setSelectedKey("maintenance-reports");
+    } else if (path.includes("/DisplayScreenReplaceItem")) {
+      setSelectedKey("DisplayScreenReplaceItem");
     } else if (path.includes("/replacement-history")) {
       setSelectedKey("replacement-history");
     } else if (path.includes("/inventory-dashboard")) {
@@ -217,6 +218,8 @@ const ManagerLayout = () => {
       return <PurchaseApproval />;
     } else if (path.includes("/maintenance-reports")) {
       return <MaintenanceReports />;
+    } else if (path.includes("/DisplayScreenReplaceItem")) {
+      return <DisplayScreenReplaceItem />;
     } else if (path.includes("/replacement-history")) {
       return <ReplacementHistory />;
     } else if (path.includes("/inventory-dashboard")) {
@@ -250,6 +253,11 @@ const ManagerLayout = () => {
       key: "maintenance-reports",
       icon: <ToolOutlined />,
       label: "Báo cáo bảo trì",
+    },
+    {
+      key: "DisplayScreenReplaceItem",
+      icon: <SwapOutlined />,
+      label: "Thay thế linh kiện",
     },
     {
       key: "replacement-history",
@@ -289,6 +297,9 @@ const ManagerLayout = () => {
         break;
       case "maintenance-reports":
         navigate("/manager/maintenance-reports");
+        break;
+      case "DisplayScreenReplaceItem":
+        navigate("/manager/DisplayScreenReplaceItem");
         break;
       case "replacement-history":
         navigate("/manager/replacement-history");

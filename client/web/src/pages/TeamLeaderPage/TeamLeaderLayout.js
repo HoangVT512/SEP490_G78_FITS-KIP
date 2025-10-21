@@ -35,6 +35,7 @@ import TeamLeaderEquipment from "./TeamLeaderEquipment";
 import ProductionManagement from "./ProductionManagement";
 import ReplacementComponents from "./ReplacementComponents";
 import IncidentManagement from "./IncidentManagement";
+import EFormSystem from "./EFormSystem";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -60,6 +61,8 @@ const TeamLeaderLayout = () => {
     const path = location.pathname;
     if (path.includes("/equipment")) {
       setSelectedKey("equipment");
+    } else if (path.includes("/EFormProductionInput")) {
+      setSelectedKey("EFormProductionInput");
     } else if (path.includes("/production")) {
       setSelectedKey("production");
     } else if (path.includes("/replacement")) {
@@ -93,6 +96,8 @@ const TeamLeaderLayout = () => {
       return <TeamLeaderEquipment />;
     } else if (path.includes("/production")) {
       return <ProductionManagement />;
+    } else if (path.includes("/EFormProductionInput")) {
+      return <EFormSystem />;
     } else if (path.includes("/replacement")) {
       return <ReplacementComponents />;
     } else if (path.includes("/incidents")) {
@@ -110,6 +115,11 @@ const TeamLeaderLayout = () => {
       key: "dashboard",
       icon: <DashboardOutlined />,
       label: "Tổng quan",
+    },
+    {
+      key: "EFormProductionInput",
+      icon: <AppstoreOutlined />,
+      label: "E-Form Nhập liệu sản lượng",
     },
     {
       key: "production",
@@ -143,6 +153,9 @@ const TeamLeaderLayout = () => {
     switch (key) {
       case "dashboard":
         navigate("/team-leader/dashboard");
+        break;
+      case "EFormProductionInput":
+        navigate("/team-leader/EFormProductionInput");
         break;
       case "production":
         navigate("/team-leader/production");
