@@ -315,9 +315,18 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.HasKey(e => e.PartId).HasName("PK__SparePar__7C3F0D30890EDD23");
 
             entity.Property(e => e.PartId).HasColumnName("PartID");
-            entity.Property(e => e.Location).HasMaxLength(100);
-            entity.Property(e => e.PartName).HasMaxLength(100);
             entity.Property(e => e.PartNumber).HasMaxLength(50);
+            entity.Property(e => e.PartName).HasMaxLength(100);
+            entity.Property(e => e.PartType).HasMaxLength(100);
+            entity.Property(e => e.Material).HasMaxLength(100);
+            entity.Property(e => e.Specifications).HasMaxLength(255);
+            entity.Property(e => e.Supplier).HasMaxLength(150);
+            entity.Property(e => e.PurchasePrice).HasColumnType("decimal(12, 2)");
+            entity.Property(e => e.Location).HasMaxLength(100);
+            entity.Property(e => e.Warehouse).HasMaxLength(100);
+            entity.Property(e => e.UoM).HasMaxLength(20);
+            entity.Property(e => e.ReplacementCycle).HasMaxLength(50);
+            entity.Property(e => e.DateAdded).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.Status)
                 .HasMaxLength(50)
                 .HasDefaultValue("Available");

@@ -659,6 +659,219 @@ namespace FITSKIP.Infrastructure.SeedData
             }
         }
 
+        public static async Task SeedSpareParts(FitskipDbContext context)
+        {
+            if (!await context.SpareParts.AnyAsync())
+            {
+                var spareParts = new List<SparePart>
+                {
+                    new SparePart
+                    {
+                        PartNumber = "SP001",
+                        PartName = "Dây chuyền truyền động",
+                        PartType = "Cơ khí",
+                        Material = "Thép không gỉ",
+                        Specifications = "Chiều dài 1500mm, Đường kính 50mm",
+                        Supplier = "Công ty Cơ khí Việt",
+                        PurchasePrice = 125.50m,
+                        Quantity = 15,
+                        MinQuantity = 5,
+                        Location = "Kệ A1",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "12 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-6),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP001_datasheet.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP002",
+                        PartName = "Đầu cảm biến",
+                        PartType = "Điện tử",
+                        Material = "Nhôm",
+                        Specifications = "Loại cảm biến quang học, Đầu ra: 4-20mA",
+                        Supplier = "Công ty Siemens Việt Nam",
+                        PurchasePrice = 89.75m,
+                        Quantity = 8,
+                        MinQuantity = 3,
+                        Location = "Kệ B2",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "24 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-4),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP002_manual.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP003",
+                        PartName = "Động cơ điện",
+                        PartType = "Điện",
+                        Material = "Đồng, Thép",
+                        Specifications = "Công suất 2.2kW, Tốc độ 1500 RPM, 3 pha",
+                        Supplier = "ABB Việt Nam",
+                        PurchasePrice = 350.00m,
+                        Quantity = 4,
+                        MinQuantity = 2,
+                        Location = "Kệ C1",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "36 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-8),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP003_spec.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP004",
+                        PartName = "Silinder thủy lực",
+                        PartType = "Cơ khí",
+                        Material = "Thép cán lạnh",
+                        Specifications = "Đường kính 63mm, Hành trình 500mm",
+                        Supplier = "Bosch Rexroth",
+                        PurchasePrice = 215.25m,
+                        Quantity = 6,
+                        MinQuantity = 2,
+                        Location = "Kệ D3",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "18 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-3),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP004_drawing.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP005",
+                        PartName = "Bộ lọc dầu",
+                        PartType = "Cơ khí",
+                        Material = "Giấy lọc, Nhôm",
+                        Specifications = "Kích thước 120x80mm, Đường kính ngoài 100mm",
+                        Supplier = "Mann Filter",
+                        PurchasePrice = 45.00m,
+                        Quantity = 25,
+                        MinQuantity = 10,
+                        Location = "Kệ E2",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "6 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-2),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP005_spec.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP006",
+                        PartName = "Van điều khiển pneumatic",
+                        PartType = "Điều khiển",
+                        Material = "Hợp kim nhôm",
+                        Specifications = "5/3 van, Nguồn 4-8 bar",
+                        Supplier = "Festo Vietnam",
+                        PurchasePrice = 178.50m,
+                        Quantity = 7,
+                        MinQuantity = 3,
+                        Location = "Kệ F1",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "24 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-5),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP006_catalog.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP007",
+                        PartName = "Dây đai tan curoa",
+                        PartType = "Truyền động",
+                        Material = "Cao su reinforce",
+                        Specifications = "Rộng 50mm, Chiều dài 2000mm",
+                        Supplier = "Gates Corporation",
+                        PurchasePrice = 65.75m,
+                        Quantity = 18,
+                        MinQuantity = 8,
+                        Location = "Kệ A2",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "12 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-1),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP007_technical.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP008",
+                        PartName = "Vòng bi chuyên dụng",
+                        PartType = "Cơ khí",
+                        Material = "Thép carbon",
+                        Specifications = "Bạc vòng bi: 30mm, Đường kính ngoài: 72mm",
+                        Supplier = "SKF Việt Nam",
+                        PurchasePrice = 52.30m,
+                        Quantity = 12,
+                        MinQuantity = 4,
+                        Location = "Kệ B1",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "8 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-7),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP008_spec.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP009",
+                        PartName = "Bộ niêm phong cơ học",
+                        PartType = "Cơ khí",
+                        Material = "Graphite, Carbon, PTFE",
+                        Specifications = "Đường kính: 50mm, Chiều cao: 20mm",
+                        Supplier = "John Crane",
+                        PurchasePrice = 95.00m,
+                        Quantity = 5,
+                        MinQuantity = 2,
+                        Location = "Kệ C2",
+                        Warehouse = "Kho chính",
+                        UoM = "Bộ",
+                        ReplacementCycle = "36 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-9),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP009_guide.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP010",
+                        PartName = "Relay điều khiển",
+                        PartType = "Điện",
+                        Material = "Hợp kim, Đồng",
+                        Specifications = "24VDC, 8A",
+                        Supplier = "Schneider Electric",
+                        PurchasePrice = 28.50m,
+                        Quantity = 32,
+                        MinQuantity = 15,
+                        Location = "Kệ E1",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "60 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-11),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP010_datasheet.pdf",
+                        IsActive = true
+                    }
+                };
+
+                await context.SpareParts.AddRangeAsync(spareParts);
+                await context.SaveChangesAsync();
+            }
+        }
+
         public static async Task SeedIncidentHistories(FitskipDbContext context)
         {
             if (!await context.IncidentHistories.AnyAsync())
@@ -911,6 +1124,7 @@ namespace FITSKIP.Infrastructure.SeedData
             await SeedStages(context);
             await SeedEquipment(context);
             await SeedShifts(context);
+            await SeedSpareParts(context);
             await SeedIncidentHistories(context);
         }
     }
