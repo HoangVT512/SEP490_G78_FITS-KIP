@@ -613,49 +613,43 @@ public class IncidentService : IIncidentService
                 return;
             }
 
-            // Get equipment's department
+            // Get equipment's information for notification message
             var department = equipment?.Stage?.Line?.Department;
             Console.WriteLine($"   Equipment: {equipment?.EquipmentName} (ID: {equipment?.EquipmentId})");
             Console.WriteLine($"   Stage: {equipment?.Stage?.StageName} (ID: {equipment?.Stage?.StageId})");
             Console.WriteLine($"   Line: {equipment?.Stage?.Line?.LineName} (ID: {equipment?.Stage?.Line?.LineId})");
             Console.WriteLine($"   Department: {department?.DepartmentName} (ID: {department?.DepartmentId})");
 
-            if (department == null || department.DepartmentId == 0)
-            {
-                Console.WriteLine($"⚠️ Warning: Could not determine department for equipment {equipment?.EquipmentId}");
-                return;
-            }
-
-            // Get all Technical Managers
+            // Get all Technical Managers in the company
             var allTechnicalManagers = await _userService.GetUsersByRoleAsync("Quản lý kỹ thuật", cancellationToken);
-            Console.WriteLine($"   Found {allTechnicalManagers.Count()} total Technical Managers");
+            Console.WriteLine($"   Found {allTechnicalManagers.Count()} total Technical Managers in company");
 
-            // ✅ FIX: Chỉ gửi notification cho Technical Managers thuộc ĐÚNG phòng ban
-            var technicalManagers = allTechnicalManagers
-                .Where(m => m.DepartmentId.HasValue && m.DepartmentId.Value == department.DepartmentId)
-                .ToList();
+            // ✅ FIXED: Send notification to ALL Technical Managers regardless of their assigned department
+            // Quản lý kỹ thuật sẽ nhận thông báo từ TẤT CẢ các sự cố có IsTechSupport = true
+            // bất kể phòng ban hoặc dù không gắn với phòng ban nào cả (DepartmentId = null)
+            var technicalManagers = allTechnicalManagers.ToList();
 
-            Console.WriteLine($"   ✅ Filtered to {technicalManagers.Count} Technical Managers in department {department.DepartmentId}");
+            Console.WriteLine($"   ✅ Sending notifications to {technicalManagers.Count} Technical Managers across all departments");
 
-            // Create notification record in database for each Technical Manager in this department
+            // Create notification record in database for each Technical Manager in company
             foreach (var manager in technicalManagers)
             {
                 if (!string.IsNullOrEmpty(manager.Id))
                 {
-                    Console.WriteLine($"   📝 Creating notification for manager: {manager.FullName} (ID: {manager.Id}, Dept: {manager.DepartmentId})");
+                    Console.WriteLine($"   📝 Creating notification for manager: {manager.FullName} (ID: {manager.Id}, Dept: {manager.DepartmentId ?? 0})");
                     await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
                     {
                         UserId = manager.Id,
                         Title = "Sự cố cần hỗ trợ kỹ thuật",
-                        Message = $"Có sự cố mới cần hỗ trợ kỹ thuật tại thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode}) - Mã sự cố: {incident.IncidentId}"
+                        Message = $"Có sự cố mới cần hỗ trợ kỹ thuật tại thiết bị {equipment?.EquipmentName} ({equipment?.EquipmentCode}) ở {department?.DepartmentName ?? "Chưa xác định"} - Mã sự cố: {incident.IncidentId}"
                     });
 
-                    // ✅ FIX: Gửi realtime notification CHỈ cho manager này (không broadcast)
+                    // Send realtime notification to each Technical Manager
                     Console.WriteLine($"   🔔 Sending realtime notification to manager: {manager.FullName}");
                     await _notificationService.SendNotificationToUserAsync(
                         manager.Id,
                         "Sự cố cần hỗ trợ kỹ thuật",
-                        $"Có sự cố mới cần hỗ trợ kỹ thuật tại thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode}) - Mã sự cố: {incident.IncidentId}",
+                        $"Có sự cố mới cần hỗ trợ kỹ thuật tại thiết bị {equipment?.EquipmentName} ({equipment?.EquipmentCode}) ở {department?.DepartmentName ?? "Chưa xác định"} - Mã sự cố: {incident.IncidentId}",
                         "incident"
                     );
                 }

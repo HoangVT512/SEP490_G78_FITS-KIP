@@ -170,24 +170,12 @@ const IncidentList = () => {
         (item) => item.isTechSupport === true
       );
 
-      // Filter by current user's department
-      let departmentFilteredIncidents = [];
-      if (currentUser?.departmentId) {
-        departmentFilteredIncidents = techSupportIncidents.filter((item) => {
-          const incidentDepartmentId =
-            item.equipment?.stage?.line?.departmentId;
-          return incidentDepartmentId === currentUser.departmentId;
-        });
-        console.log(
-          `✅ Filtered ${departmentFilteredIncidents.length} incidents for department ${currentUser.departmentId}`
-        );
-      } else {
-        console.warn(
-          "⚠️ Current user has no department assigned - showing NO incidents"
-        );
-        // If user has no department, show NO incidents (empty array)
-        departmentFilteredIncidents = [];
-      }
+      // For Technical Manager: Show ALL tech support incidents from all departments
+      // (no department filtering needed for technical managers)
+      let departmentFilteredIncidents = techSupportIncidents;
+      console.log(
+        `✅ Showing ${departmentFilteredIncidents.length} incidents for Technical Manager (all departments)`
+      );
 
       // Normalize to frontend shape
       const mapped = (departmentFilteredIncidents || []).map((it) => {
