@@ -89,6 +89,8 @@ const UserManagement = ({ showHeader = true }) => {
   const [filteredLines, setFilteredLines] = useState([]);
   const [isManagementRoleSelected, setIsManagementRoleSelected] =
     useState(false);
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const [disableLineSelection, setDisableLineSelection] = useState(false);
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
   const [importing, setImporting] = useState(false);
   const [showArchive, setShowArchive] = useState(() => {
@@ -357,6 +359,28 @@ const UserManagement = ({ showHeader = true }) => {
               .filter((id) => id !== null)
           : [];
 
+        // Check if user is admin
+        const isAdmin = user.roles && user.roles.includes("Quản trị viên");
+        setIsAdminUser(isAdmin);
+
+        // Check if user role is NOT Team Leader - only Team Leader can select lines
+        const isTeamLeader =
+          user.roles &&
+          user.roles.some((roleName) => {
+            const normalizedRole = (roleName || "").trim().toLowerCase();
+            return ["tổ trưởng", "team leader"].includes(normalizedRole);
+          });
+        // Disable line selection if user is NOT Team Leader
+        setDisableLineSelection(!isTeamLeader);
+
+        // If Manager, clear lineIds
+        const isManager =
+          user.roles &&
+          user.roles.some((roleName) => {
+            const normalizedRole = (roleName || "").trim().toLowerCase();
+            return ["quản lý", "manager"].includes(normalizedRole);
+          });
+
         form.setFieldsValue({
           ...user,
           // Make email/phone empty if they're null or contain placeholder like 'N/A'
@@ -372,7 +396,7 @@ const UserManagement = ({ showHeader = true }) => {
               : "",
           roleIds: userRoleIds.length > 0 ? userRoleIds[0] : null,
           departmentId: user.departmentId,
-          lineIds: user.lineIds || [],
+          lineIds: isManager ? [] : user.lineIds || [],
           status: user.status === "active" ? "true" : "false",
         });
 
@@ -383,21 +407,6 @@ const UserManagement = ({ showHeader = true }) => {
             (line) => line.departmentId === user.departmentId
           );
           setFilteredLines(deptLines);
-
-          // Check if user is management and auto-select all lines
-          const selectedRole = roles.find((r) => r.id === userRoleIds[0]);
-          const isManagement =
-            selectedRole &&
-            ((selectedRole.name || "").trim().toLowerCase() === "quản lý" ||
-              (selectedRole.name || "").trim().toLowerCase() === "manager");
-
-          if (isManagement) {
-            const allLineIds = deptLines.map((line) => line.lineId);
-            form.setFieldsValue({
-              ...form.getFieldsValue(),
-              lineIds: allLineIds,
-            });
-          }
         } else {
           setFilteredLines([]);
         }
@@ -904,6 +913,7 @@ const UserManagement = ({ showHeader = true }) => {
       }
       setIsModalVisible(false);
       setEditingUser(null);
+      setIsAdminUser(false);
       form.resetFields();
       // Ensure management-role flag is cleared after creating/updating
       setIsManagementRoleSelected(false);
@@ -934,6 +944,8 @@ const UserManagement = ({ showHeader = true }) => {
   const handleModalCancel = () => {
     setIsModalVisible(false);
     setEditingUser(null);
+    setIsAdminUser(false);
+    setDisableLineSelection(false);
     form.resetFields();
     // Reset management-role flag to avoid stale state when reopening modal
     setIsManagementRoleSelected(false);
@@ -1035,6 +1047,7 @@ const UserManagement = ({ showHeader = true }) => {
                   form.resetFields();
                   // Reset management-role flag when opening Add User modal
                   setIsManagementRoleSelected(false);
+                  setDisableLineSelection(true); // Default: disable line selection for new users
                   setSelectedDepartmentId(null);
                   setFilteredLines([]);
                   setIsModalVisible(true);
@@ -1290,20 +1303,24 @@ const UserManagement = ({ showHeader = true }) => {
             if (changedValues.roleIds !== undefined) {
               const roleId = changedValues.roleIds;
               const selectedRole = roles.find((r) => r.id === roleId);
+
+              // Check if the selected role is Team Leader (Tổ trưởng)
+              const isTeamLeader =
+                selectedRole &&
+                (selectedRole.name || "").trim().toLowerCase() === "tổ trưởng";
+
+              // Check if it's a management role (Manager)
               const isManagement =
                 selectedRole &&
                 ((selectedRole.name || "").trim().toLowerCase() === "quản lý" ||
                   (selectedRole.name || "").trim().toLowerCase() === "manager");
+
+              // Update line selection restrictions: only Team Leader can select lines
+              setDisableLineSelection(!isTeamLeader);
               setIsManagementRoleSelected(!!isManagement);
-              if (isManagement && selectedDepartmentId) {
-                // Auto-select all lines for management role in selected department
-                const deptLines = lines.filter(
-                  (line) => line.departmentId === selectedDepartmentId
-                );
-                const allLineIds = deptLines.map((line) => line.lineId);
-                form.setFieldsValue({ lineIds: allLineIds });
-              } else if (!isManagement) {
-                // Clear line selection when no longer management
+
+              // Only clear line selection when adding new user (not editing)
+              if (!editingUser) {
                 form.setFieldsValue({ lineIds: [] });
               }
             }
@@ -1331,41 +1348,6 @@ const UserManagement = ({ showHeader = true }) => {
                 }}
               />
             )}
-            <Alert
-              message={
-                <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                  📱 Định dạng số điện thoại Việt Nam
-                </span>
-              }
-              description={
-                <div style={{ fontSize: "13px" }}>
-                  <p style={{ marginBottom: "8px", marginTop: "0px" }}>
-                    Số điện thoại phải gồm 10 chữ số bắt đầu từ số 0, với các
-                    đầu số hợp lệ:
-                  </p>
-                  <ul style={{ paddingLeft: "20px", marginBottom: "8px" }}>
-                    <li>
-                      <strong>Viettel:</strong> 03, 08, 09, 016, 017, 018, 019
-                    </li>
-                    <li>
-                      <strong>Vinaphone:</strong> 02, 04, 05, 07, 014, 015
-                    </li>
-                    <li>
-                      <strong>MobiFone:</strong> 01, 06, 09, 012, 013
-                    </li>
-                  </ul>
-                  <p style={{ marginBottom: "0px", color: "#ff4d4f" }}>
-                    ✓ Ví dụ: 0912345678, 0987654321
-                  </p>
-                </div>
-              }
-              type="warning"
-              style={{
-                backgroundColor: "#fffbe6",
-                border: "1px solid #ffe58f",
-                marginBottom: "12px",
-              }}
-            />
             {!editingUser && (
               <Alert
                 message={
@@ -1584,6 +1566,8 @@ const UserManagement = ({ showHeader = true }) => {
                 <Select
                   mode="multiple"
                   placeholder={(() => {
+                    if (disableLineSelection)
+                      return "Không thể chọn dây chuyền cho vai trò này";
                     if (!selectedDepartmentId)
                       return "Bạn cần chọn phòng ban trước";
                     if (filteredLines.length === 0)
@@ -1592,9 +1576,16 @@ const UserManagement = ({ showHeader = true }) => {
                   })()}
                   size="large"
                   loading={!lines || lines.length === 0}
-                  disabled={(() => {
-                    return !selectedDepartmentId || filteredLines.length === 0;
-                  })()}
+                  disabled={
+                    disableLineSelection ||
+                    !selectedDepartmentId ||
+                    filteredLines.length === 0
+                  }
+                  title={
+                    disableLineSelection
+                      ? "Không thể chọn dây chuyền cho vai trò: Quản lý, Quản lý kỹ thuật, Kỹ thuật viên, Quản trị viên"
+                      : ""
+                  }
                   allowClear
                   maxTagCount={2}
                   maxTagPlaceholder={(omittedValues) =>
@@ -1606,6 +1597,19 @@ const UserManagement = ({ showHeader = true }) => {
                     option.children.toLowerCase().includes(input.toLowerCase())
                   }
                   notFoundContent={(() => {
+                    if (disableLineSelection) {
+                      return (
+                        <div
+                          style={{
+                            textAlign: "center",
+                            color: "#ff4d4f",
+                            padding: "8px",
+                          }}
+                        >
+                          Không thể chọn dây chuyền cho vai trò này
+                        </div>
+                      );
+                    }
                     if (!selectedDepartmentId) {
                       return (
                         <div
@@ -1667,6 +1671,12 @@ const UserManagement = ({ showHeader = true }) => {
                   size="large"
                   loading={roles.length === 0}
                   allowClear
+                  disabled={isAdminUser}
+                  title={
+                    isAdminUser
+                      ? "Không thể thay đổi vai trò của Quản trị viên"
+                      : ""
+                  }
                 >
                   {roles &&
                     roles.map((role) => (
