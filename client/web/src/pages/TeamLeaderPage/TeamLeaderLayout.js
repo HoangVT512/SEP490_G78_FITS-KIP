@@ -37,6 +37,7 @@ import ReplacementComponents from "./ReplacementComponents";
 import IncidentManagement from "./IncidentManagement";
 import EFormSystem from "./EFormSystem";
 import FactoryMap from "./FactoryMap";
+import OEEDashboard from "./OEEDashboard";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -72,6 +73,8 @@ const TeamLeaderLayout = () => {
       setSelectedKey("incidents");
     } else if (path.includes("/factory-map")) {
       setSelectedKey("factory-map");
+    } else if (path.includes("/oee-dashboard")) {
+      setSelectedKey("oee-dashboard");
     } else if (path.includes("/line-monitoring")) {
       setSelectedKey("line-monitoring");
     } else if (path.includes("/reports")) {
@@ -107,6 +110,8 @@ const TeamLeaderLayout = () => {
       return <IncidentManagement />;
     } else if (path.includes("/factory-map")) {
       return <FactoryMap />;
+    } else if (path.includes("/oee-dashboard")) {
+      return <OEEDashboard />;
     } else if (path === "/team-leader" || path.includes("/dashboard")) {
       return <TeamLeaderDashboard />;
     }
@@ -125,6 +130,11 @@ const TeamLeaderLayout = () => {
       key: "factory-map",
       icon: <AppstoreOutlined />,
       label: "Sơ đồ nhà máy",
+    },
+    {
+      key: "oee-dashboard",
+      icon: <BarChartOutlined />,
+      label: "Biểu đồ OEE",
     },
     {
       key: "EFormProductionInput",
@@ -166,6 +176,9 @@ const TeamLeaderLayout = () => {
         break;
       case "factory-map":
         navigate("/team-leader/factory-map");
+        break;
+      case "oee-dashboard":
+        navigate("/team-leader/oee-dashboard");
         break;
       case "EFormProductionInput":
         navigate("/team-leader/EFormProductionInput");

@@ -48,6 +48,7 @@ import ProductionDetailReport from "./ProductionDetailReport";
 import ManagerIncidentList from "./ManagerIncidentList";
 import NotificationsList from "./NotificationsList";
 import FactoryMap from "./FactoryMap";
+import OEEDashboard from "./OEEDashboard";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -208,6 +209,8 @@ const ManagerLayout = () => {
       setSelectedKey("production-report");
     } else if (path.includes("/factory-map")) {
       setSelectedKey("factory-map");
+    } else if (path.includes("/oee-dashboard")) {
+      setSelectedKey("oee-dashboard");
     } else if (path.includes("/incidents")) {
       setSelectedKey("incidents");
     } else {
@@ -235,6 +238,8 @@ const ManagerLayout = () => {
       return <ProductionDetailReport />;
     } else if (path.includes("/factory-map")) {
       return <FactoryMap />;
+    } else if (path.includes("/oee-dashboard")) {
+      return <OEEDashboard />;
     } else if (path.includes("/incidents")) {
       return <ManagerIncidentList />;
     } else if (path === "/manager" || path.includes("/dashboard")) {
@@ -255,6 +260,11 @@ const ManagerLayout = () => {
       key: "factory-map",
       icon: <FundOutlined />,
       label: "Sơ đồ nhà máy",
+    },
+    {
+      key: "oee-dashboard",
+      icon: <FundOutlined />,
+      label: "Biểu đồ OEE",
     },
     {
       key: "purchase-approval",
@@ -306,6 +316,9 @@ const ManagerLayout = () => {
         break;
       case "factory-map":
         navigate("/manager/factory-map");
+        break;
+      case "oee-dashboard":
+        navigate("/manager/oee-dashboard");
         break;
       case "purchase-approval":
         navigate("/manager/purchase-approval");
