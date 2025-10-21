@@ -17,9 +17,18 @@ namespace FITSKIP.API.Services
 
         public async Task SendToUserAsync(string userId, object data)
         {
-            _logger.LogInformation($"Sending notification to user: {userId}");
+            _logger.LogInformation($"📤 Sending notification to user: {userId}");
+            _logger.LogInformation($"   Data: {System.Text.Json.JsonSerializer.Serialize(data)}");
+
+            // Send both ReceiveNotification (for toast) and DataUpdated (for refresh)
             await _hubContext.Clients.Group($"user_{userId}")
                 .SendAsync("ReceiveNotification", data);
+            _logger.LogInformation($"   ✅ Sent ReceiveNotification event to user {userId}");
+
+            // Also send DataUpdated for auto-refresh
+            await _hubContext.Clients.Group($"user_{userId}")
+                .SendAsync("DataUpdated", new { type = "incident", action = "created", data = data });
+            _logger.LogInformation($"   ✅ Sent DataUpdated event to user {userId}");
         }
 
         public async Task SendToGroupAsync(string groupName, object data)

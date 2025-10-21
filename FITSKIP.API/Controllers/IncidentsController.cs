@@ -378,8 +378,9 @@ public class IncidentsController : ControllerBase
             {
                 return NotFound(new { success = false, message = "Không tìm thấy sự cố" });
             }
-            // Send real-time update to both groups
-            await _hubContext.Clients.Group("TechnicalManagers").SendAsync("DataUpdated", new { type = "incident", action = "deleted", incidentId = id });
+            // Note: Real-time updates are handled by frontend filtering based on user's department
+            // Removed broadcast to avoid sending notifications to all Technical Managers regardless of department
+            // await _hubContext.Clients.Group("TechnicalManagers").SendAsync("DataUpdated", new { type = "incident", action = "deleted", incidentId = id });
             await _hubContext.Clients.Group("TeamLeaders").SendAsync("DataUpdated", new { type = "incident", action = "deleted", incidentId = id });
             return Ok(new { success = true, data = true, message = "Xóa sự cố thành công" });
         }
@@ -507,8 +508,9 @@ public class IncidentsController : ControllerBase
                 return NotFound(new { success = false, message = "Không tìm thấy sự cố để phân công" });
             }
 
-            // Send real-time update to both groups
-            await _hubContext.Clients.Group("TechnicalManagers").SendAsync("DataUpdated", new { type = "incident", action = "assigned", incidentId = id });
+            // Note: Real-time updates are handled by frontend filtering based on user's department
+            // Removed broadcast to avoid sending notifications to all Technical Managers regardless of department
+            // await _hubContext.Clients.Group("TechnicalManagers").SendAsync("DataUpdated", new { type = "incident", action = "assigned", incidentId = id });
             await _hubContext.Clients.Group("TeamLeaders").SendAsync("DataUpdated", new { type = "incident", action = "assigned", incidentId = id });
 
             return Ok(new { success = true, message = request.UpdateStatus ? "Phân công kỹ thuật viên và cập nhật trạng thái thành công" : "Phân công kỹ thuật viên thành công" });

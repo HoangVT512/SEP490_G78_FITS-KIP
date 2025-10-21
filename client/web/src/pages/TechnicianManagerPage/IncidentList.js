@@ -171,7 +171,7 @@ const IncidentList = () => {
       );
 
       // Filter by current user's department
-      let departmentFilteredIncidents = techSupportIncidents;
+      let departmentFilteredIncidents = [];
       if (currentUser?.departmentId) {
         departmentFilteredIncidents = techSupportIncidents.filter((item) => {
           const incidentDepartmentId =
@@ -182,7 +182,11 @@ const IncidentList = () => {
           `✅ Filtered ${departmentFilteredIncidents.length} incidents for department ${currentUser.departmentId}`
         );
       } else {
-        console.warn("⚠️ Current user has no department assigned");
+        console.warn(
+          "⚠️ Current user has no department assigned - showing NO incidents"
+        );
+        // If user has no department, show NO incidents (empty array)
+        departmentFilteredIncidents = [];
       }
 
       // Normalize to frontend shape

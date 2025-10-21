@@ -649,18 +649,18 @@ public class IncidentService : IIncidentService
                         Title = "Sự cố cần hỗ trợ kỹ thuật",
                         Message = $"Có sự cố mới cần hỗ trợ kỹ thuật tại thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode}) - Mã sự cố: {incident.IncidentId}"
                     });
+
+                    // ✅ FIX: Gửi realtime notification CHỈ cho manager này (không broadcast)
+                    Console.WriteLine($"   🔔 Sending realtime notification to manager: {manager.FullName}");
+                    await _notificationService.SendNotificationToUserAsync(
+                        manager.Id,
+                        "Sự cố cần hỗ trợ kỹ thuật",
+                        $"Có sự cố mới cần hỗ trợ kỹ thuật tại thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode}) - Mã sự cố: {incident.IncidentId}",
+                        "incident"
+                    );
                 }
             }
-
-            // Send realtime notification to TechnicalManagers group (broadcast to all)
-            Console.WriteLine($"   🔔 Sending realtime notification to TechnicalManagers group");
-            await _notificationService.SendNotificationToGroupAsync(
-                "TechnicalManagers",
-                "Sự cố cần hỗ trợ kỹ thuật",
-                $"Có sự cố mới cần hỗ trợ kỹ thuật tại thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode}) - Mã sự cố: {incident.IncidentId}",
-                "incident"
-            );
-            Console.WriteLine($"   ✅ Notification sent successfully");
+            Console.WriteLine($"   ✅ Notifications sent successfully to {technicalManagers.Count} managers");
         }
         catch (Exception ex)
         {
