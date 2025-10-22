@@ -61,10 +61,16 @@ namespace FITSKIP.Infrastructure.Repositories
 
             try
             {
+                //var existingSpareParts = await _context.SpareParts
+                //    .FirstOrDefaultAsync(sp =>sp.PartId == sparePart.PartId, cancellationToken);
                 var existingPartNumber = await _context.SpareParts
                     .FirstOrDefaultAsync(sp => sp.PartNumber == sparePart.PartNumber && sp.PartId != sparePart.PartId, cancellationToken);
                 var existingPartName = await _context.SpareParts
                     .FirstOrDefaultAsync(sp => sp.PartName == sparePart.PartName && sp.PartId != sparePart.PartId, cancellationToken);
+                //if(existingSpareParts != null)
+                //{
+                //    throw new ArgumentException($"Phụ tùng với id {sparePart.PartId} không tồn tại");
+                //}
 
                 if (existingPartName != null)
                 {

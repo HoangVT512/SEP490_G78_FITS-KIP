@@ -104,31 +104,40 @@ public class UsersController : ControllerBase
     [Route("{id}")]
     public async Task<IActionResult> DeleteUser(string id, CancellationToken cancellationToken)
     {
-        var user = await userService.DeleteUserAsync(id, cancellationToken);
-        if (user == null)
+        try
         {
-            return NotFound();
+
+
+            var user = await userService.DeleteUserAsync(id, cancellationToken);
+            if (user == null)
+            {
+                return NotFound();
+            }
+            var response = new UserDTO
+            {
+                UserName = user.UserName,
+                NormalizedUserName = user.NormalizedUserName,
+                NormalizedEmail = user.NormalizedEmail,
+                Email = user.Email,
+                EmailConfirmed = user.EmailConfirmed,
+                PasswordHash = user.PasswordHash,
+                SecurityStamp = user.SecurityStamp,
+                ConcurrencyStamp = user.ConcurrencyStamp,
+                PhoneNumber = user.PhoneNumber,
+                PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+                TwoFactorEnabled = user.TwoFactorEnabled,
+                LockoutEnd = user.LockoutEnd,
+                LockoutEnabled = user.LockoutEnabled,
+                AccessFailedCount = user.AccessFailedCount,
+                FullName = user.FullName,
+                EmployeeCode = user.EmployeeCode,
+            };
+            return Ok(response);
         }
-        var response = new UserDTO
+        catch(Exception ex)
         {
-            UserName = user.UserName,
-            NormalizedUserName = user.NormalizedUserName,
-            NormalizedEmail = user.NormalizedEmail,
-            Email = user.Email,
-            EmailConfirmed = user.EmailConfirmed,
-            PasswordHash = user.PasswordHash,
-            SecurityStamp = user.SecurityStamp,
-            ConcurrencyStamp = user.ConcurrencyStamp,
-            PhoneNumber = user.PhoneNumber,
-            PhoneNumberConfirmed = user.PhoneNumberConfirmed,
-            TwoFactorEnabled = user.TwoFactorEnabled,
-            LockoutEnd = user.LockoutEnd,
-            LockoutEnabled = user.LockoutEnabled,
-            AccessFailedCount = user.AccessFailedCount,
-            FullName = user.FullName,
-            EmployeeCode = user.EmployeeCode,
-        };
-        return Ok(response);
+            return BadRequest(new { success = false, message = $"Error: {ex.Message}" });
+        }
     }
 
     // PUT: https://localhost:7003/api/Users/{id}

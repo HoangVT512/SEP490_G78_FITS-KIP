@@ -57,13 +57,6 @@ public class UserRepository : IUserRepository
             throw new ArgumentException("Họ tên là bắt buộc");
         }
 
-        // Validation: Check if username already exists
-        var existingUser = await db.Users.FirstOrDefaultAsync(u => u.UserName == user.UserName, cancellationToken);
-        if (existingUser != null)
-        {
-            throw new ArgumentException($"Tên đăng nhập '{user.UserName}' đã tồn tại trong hệ thống");
-        }
-
         // Validation: Check if email already exists (only when email is provided)
         if (!string.IsNullOrWhiteSpace(user.Email))
         {
@@ -156,12 +149,24 @@ public class UserRepository : IUserRepository
 
     public async Task<User?> DeleteUserAsync(string id, CancellationToken cancellationToken = default)
     {
-        var existingUser = await db.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        var existingUser = await db.Users
+            .Include(u => u.Role) // Include the Role navigation property
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+
         if (existingUser == null)
         {
-            return null;
+            throw new ArgumentException($"Không tồn tại user với ID {id} trong hệ thống");
         }
-        db.Users.Remove(existingUser);
+
+        // Check if the user has the "Quản lý" role
+        if (existingUser.Role != null && existingUser.Role.Name.Equals("Quản lý", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Không thể vô hiệu hóa người dùng có vai trò 'Quản lý'.");
+        }
+
+        // Deactivate the user
+        existingUser.IsActive = false;
+
         await db.SaveChangesAsync(cancellationToken);
         return existingUser;
     }
@@ -274,9 +279,69 @@ public class UserRepository : IUserRepository
 
         if (existingUser == null)
         {
-            return null;
+            throw new ArgumentException($"Không tồn tại user với ID {id} trong hệ thống");
+        }
+        // Validation: Check required fields
+        if (string.IsNullOrWhiteSpace(request.EmployeeCode))
+        {
+            throw new ArgumentException("Mã nhân viên là bắt buộc");
         }
 
+        if (string.IsNullOrWhiteSpace(request.FullName))
+        {
+            throw new ArgumentException("Họ tên là bắt buộc");
+        }
+
+        // Validation: Check if email already exists (only when email is provided)
+        if (!string.IsNullOrWhiteSpace(request.Email))
+        {
+            // Validate email format
+            if (!IsValidEmail(request.Email))
+            {
+                throw new ArgumentException("Email không hợp lệ");
+            }
+
+            var existingEmail = await db.Users.FirstOrDefaultAsync(u => u.Email == request.Email && u.Id != id, cancellationToken);
+            if (existingEmail != null)
+            {
+                throw new ArgumentException($"Email '{request.Email}' đã tồn tại trong hệ thống");
+            }
+        }
+        else
+        {
+            // Normalize blank emails to null so DB doesn't store empty string
+            request.Email = null;
+        }
+
+        // Validation: Check if employee code already exists
+        if (!string.IsNullOrEmpty(request.EmployeeCode))
+        {
+            var existingEmployeeCode = await db.Users.FirstOrDefaultAsync(u => u.EmployeeCode == request.EmployeeCode && u.Id != id, cancellationToken);
+            if (existingEmployeeCode != null)
+            {
+                throw new ArgumentException($"Mã nhân viên '{request.EmployeeCode}' đã tồn tại trong hệ thống");
+            }
+        }
+
+        // Validation: Check phone number (only when provided)
+        if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
+        {
+            // Validate phone number format
+            if (!IsValidVietnamPhoneNumber(request.PhoneNumber))
+            {
+                throw new ArgumentException("Số điện thoại không hợp lệ");
+            }
+
+            var existingPhone = await db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == request.PhoneNumber && u.Id != id, cancellationToken);
+            if (existingPhone != null)
+            {
+                throw new ArgumentException($"Số điện thoại '{request.PhoneNumber}' đã tồn tại trong hệ thống");
+            }
+        }
+        else
+        {
+            request.PhoneNumber = null;
+        }
         // Check if the current role is "Quản trị viên"
         if (existingUser.Role != null && existingUser.Role.Name.Equals("Quản trị viên", StringComparison.OrdinalIgnoreCase))
         {
@@ -326,23 +391,37 @@ public class UserRepository : IUserRepository
             // Check if the role is "Quản lý" and validate department manager assignment
             if (role.Name.Equals("Quản lý", StringComparison.OrdinalIgnoreCase) && request.DepartmentId.HasValue)
             {
-                var department = await db.Departments.FirstOrDefaultAsync(
+                var newDepartment = await db.Departments.FirstOrDefaultAsync(
                     d => d.DepartmentId == request.DepartmentId.Value,
                     cancellationToken);
 
-                if (department == null)
+                if (newDepartment == null)
                 {
                     throw new ArgumentException($"Phòng ban với ID '{request.DepartmentId}' không tồn tại.");
                 }
 
-                // Check if the department already has a manager
-                if (department.ManagerId != null && department.ManagerId != id)
+                // Check if the department already has a DIFFERENT manager
+                if (newDepartment.ManagerId != null && newDepartment.ManagerId != id)
                 {
-                    throw new ArgumentException($"Phòng ban '{department.DepartmentName}' đã có quản lý.");
+                    throw new ArgumentException($"Phòng ban '{newDepartment.DepartmentName}' đã có quản lý.");
                 }
 
-                // Assign the user as the manager of the department
-                department.ManagerId = id;
+                // Nếu đổi sang phòng ban mới (khác phòng ban hiện tại)
+                if (newDepartment.ManagerId != id)
+                {
+                    // Xóa ManagerId của phòng ban cũ
+                    var oldDepartment = await db.Departments
+                        .FirstOrDefaultAsync(d => d.ManagerId == id, cancellationToken);
+
+                    if (oldDepartment != null)
+                    {
+                        oldDepartment.ManagerId = null;
+                    }
+
+                    // Gán ManagerId mới
+                    newDepartment.ManagerId = id;
+                }
+                // Nếu newDepartment.ManagerId == id thì không làm gì (giữ nguyên)
             }
 
             existingUser.RoleId = role.Id;
@@ -605,19 +684,35 @@ public class UserRepository : IUserRepository
                         throw new ArgumentException($"Phòng ban '{departmentToManage.DepartmentName}' đã có quản lý. Không thể thêm quản lý mới.");
                     }
                 }
-            }
-
-            // Validate lines belong to the department
-            if (request.LineIds != null && request.LineIds.Length > 0 && request.DepartmentId.HasValue)
-            {
-                var invalidLines = await db.Lines
-                    .Where(line => request.LineIds.Contains(line.LineId) && line.DepartmentId != request.DepartmentId.Value)
-                    .ToListAsync(cancellationToken);
-
-                if (invalidLines.Any())
+                // Validate lines exist and belong to the correct department
+                if (request.LineIds != null && request.LineIds.Length > 0)
                 {
-                    var invalidLineIds = string.Join(", ", invalidLines.Select(line => line.LineId));
-                    throw new ArgumentException($"Các Line với ID '{invalidLineIds}' không thuộc Department '{request.DepartmentId}'.");
+                    // Check if all lines exist
+                    var existingLines = await db.Lines
+                        .Where(line => request.LineIds.Contains(line.LineId))
+                        .ToListAsync(cancellationToken);
+
+                    // Find non-existent lines
+                    var nonExistentLineIds = request.LineIds.Except(existingLines.Select(l => l.LineId)).ToList();
+                    if (nonExistentLineIds.Any())
+                    {
+                        var nonExistentIds = string.Join(", ", nonExistentLineIds);
+                        throw new ArgumentException($"Các Line với ID '{nonExistentIds}' không tồn tại trong hệ thống.");
+                    }
+
+                    // If department is specified, validate lines belong to that department
+                    if (request.DepartmentId.HasValue)
+                    {
+                        var invalidLines = existingLines
+                            .Where(line => line.DepartmentId != request.DepartmentId.Value)
+                            .ToList();
+
+                        if (invalidLines.Any())
+                        {
+                            var invalidLineIds = string.Join(", ", invalidLines.Select(line => $"{line.LineId} (thuộc PB: {line.DepartmentId})"));
+                            throw new ArgumentException($"Các Line [{invalidLineIds}] không thuộc Phòng ban (ID: {request.DepartmentId}).");
+                        }
+                    }
                 }
             }
 
