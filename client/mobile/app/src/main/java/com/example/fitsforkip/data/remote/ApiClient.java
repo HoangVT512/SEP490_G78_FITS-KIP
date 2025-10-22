@@ -5,9 +5,12 @@ import android.content.SharedPreferences;
 
 import com.example.fitsforkip.util.BooleanTypeAdapter;
 import com.example.fitsforkip.util.Constants;
+import com.example.fitsforkip.util.DateTypeAdapter;
+import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
+import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
 import okhttp3.Interceptor;
@@ -23,6 +26,15 @@ public class ApiClient {
     private static Retrofit retrofit = null;
     private static Retrofit authenticatedRetrofit = null;
 
+    private static Gson createGson() {
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        gsonBuilder.registerTypeAdapter(Boolean.class, new BooleanTypeAdapter());
+        gsonBuilder.registerTypeAdapter(boolean.class, new BooleanTypeAdapter());
+        // THÊM DateTypeAdapter
+        gsonBuilder.registerTypeAdapter(Date.class, new DateTypeAdapter());
+        return gsonBuilder.create();
+    }
+
     public static Retrofit getClient() {
         if (retrofit == null) {
             HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
@@ -35,14 +47,9 @@ public class ApiClient {
                     .writeTimeout(TIMEOUT, TimeUnit.SECONDS)
                     .build();
 
-            // Tạo Gson với BooleanTypeAdapter
-            GsonBuilder gsonBuilder = new GsonBuilder();
-            gsonBuilder.registerTypeAdapter(Boolean.class, new BooleanTypeAdapter());
-            gsonBuilder.registerTypeAdapter(boolean.class, new BooleanTypeAdapter());
-
             retrofit = new Retrofit.Builder()
                     .baseUrl(Constants.BASE_URL)
-                    .addConverterFactory(GsonConverterFactory.create(gsonBuilder.create()))
+                    .addConverterFactory(GsonConverterFactory.create(createGson()))
                     .client(client)
                     .build();
         }
@@ -80,14 +87,9 @@ public class ApiClient {
                     .writeTimeout(TIMEOUT, TimeUnit.SECONDS)
                     .build();
 
-            // Tạo Gson với BooleanTypeAdapter
-            GsonBuilder gsonBuilder = new GsonBuilder();
-            gsonBuilder.registerTypeAdapter(Boolean.class, new BooleanTypeAdapter());
-            gsonBuilder.registerTypeAdapter(boolean.class, new BooleanTypeAdapter());
-
             authenticatedRetrofit = new Retrofit.Builder()
                     .baseUrl(Constants.BASE_URL)
-                    .addConverterFactory(GsonConverterFactory.create(gsonBuilder.create()))
+                    .addConverterFactory(GsonConverterFactory.create(createGson()))
                     .client(client)
                     .build();
         }

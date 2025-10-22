@@ -1,55 +1,83 @@
 package com.example.fitsforkip.data.model;
 
-public class IncidentHistory {
-    private String qrCode;
-    private String equipmentCode;
-    private String equipmentName;
-    private String stage;
-    private String line;
-    private String issue;
-    private String startTime;
-    private String endTime;
-    private String duration;
-    private String issueType;
-    private boolean synced;
+import java.util.Date;
 
-    public IncidentHistory(String qrCode, String equipmentCode, String equipmentName, String stage, String line, String issue, String startTime, String endTime, String duration, String issueType, boolean synced) {
-        this.qrCode = qrCode;
-        this.equipmentCode = equipmentCode;
-        this.equipmentName = equipmentName;
-        this.stage = stage;
-        this.line = line;
-        this.issue = issue;
+public class IncidentHistory {
+    private int incidentId;
+    private Integer equipmentId;
+    private Date startTime;
+    private Date endTime;
+    private Double duration;
+    private Integer typeId;
+    private String reason;
+    private String solution;
+    private String issue;
+    private String status;
+    private Date createdDate;
+    private String reportedByUserId;
+    private String assignedTo;
+    private boolean isTechSupport;
+
+    // Constructors
+    public IncidentHistory() {}
+
+    public IncidentHistory(int incidentId, Integer equipmentId, Date startTime, Date endTime, Double duration, Integer typeId, String reason, String solution, String issue, String status, Date createdDate, String reportedByUserId, String assignedTo, boolean isTechSupport) {
+        this.incidentId = incidentId;
+        this.equipmentId = equipmentId;
         this.startTime = startTime;
         this.endTime = endTime;
         this.duration = duration;
-        this.issueType = issueType;
-        this.synced = synced;
+        this.typeId = typeId;
+        this.reason = reason;
+        this.solution = solution;
+        this.issue = issue;
+        this.status = status;
+        this.createdDate = createdDate;
+        this.reportedByUserId = reportedByUserId;
+        this.assignedTo = assignedTo;
+        this.isTechSupport = isTechSupport;
     }
 
-    // Getters
-    public String getQrCode() { return qrCode; }
-    public String getEquipmentCode() { return equipmentCode; }
-    public String getEquipmentName() { return equipmentName; }
-    public String getStage() { return stage; }
-    public String getLine() { return line; }
-    public String getIssue() { return issue; }
-    public String getStartTime() { return startTime; }
-    public String getEndTime() { return endTime; }
-    public String getDuration() { return duration; }
-    public String getIssueType() { return issueType; }
-    public boolean isSynced() { return synced; }
+    // Getters and setters
+    public int getIncidentId() { return incidentId; }
+    public void setIncidentId(int incidentId) { this.incidentId = incidentId; }
 
-    // Setters
-    public void setQrCode(String qrCode) { this.qrCode = qrCode; }
-    public void setEquipmentCode(String equipmentCode) { this.equipmentCode = equipmentCode; }
-    public void setEquipmentName(String equipmentName) { this.equipmentName = equipmentName; }
-    public void setStage(String stage) { this.stage = stage; }
-    public void setLine(String line) { this.line = line; }
+    public Integer getEquipmentId() { return equipmentId; }
+    public void setEquipmentId(Integer equipmentId) { this.equipmentId = equipmentId; }
+
+    public Date getStartTime() { return startTime; }
+    public void setStartTime(Date startTime) { this.startTime = startTime; }
+
+    public Date getEndTime() { return endTime; }
+    public void setEndTime(Date endTime) { this.endTime = endTime; }
+
+    public Double getDuration() { return duration; }
+    public void setDuration(Double duration) { this.duration = duration; }
+
+    public Integer getTypeId() { return typeId; }
+    public void setTypeId(Integer typeId) { this.typeId = typeId; }
+
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
+
+    public String getSolution() { return solution; }
+    public void setSolution(String solution) { this.solution = solution; }
+
+    public String getIssue() { return issue; }
     public void setIssue(String issue) { this.issue = issue; }
-    public void setStartTime(String startTime) { this.startTime = startTime; }
-    public void setEndTime(String endTime) { this.endTime = endTime; }
-    public void setDuration(String duration) { this.duration = duration; }
-    public void setIssueType(String issueType) { this.issueType = issueType; }
-    public void setSynced(boolean synced) { this.synced = synced; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
+    public Date getCreatedDate() { return createdDate; }
+    public void setCreatedDate(Date createdDate) { this.createdDate = createdDate; }
+
+    public String getReportedByUserId() { return reportedByUserId; }
+    public void setReportedByUserId(String reportedByUserId) { this.reportedByUserId = reportedByUserId; }
+
+    public String getAssignedTo() { return assignedTo; }
+    public void setAssignedTo(String assignedTo) { this.assignedTo = assignedTo; }
+
+    public boolean isTechSupport() { return isTechSupport; }
+    public void setTechSupport(boolean isTechSupport) { this.isTechSupport = isTechSupport; }
 }

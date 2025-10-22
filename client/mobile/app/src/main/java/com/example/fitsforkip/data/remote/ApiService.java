@@ -1,10 +1,13 @@
 package com.example.fitsforkip.data.remote;
 
 import com.example.fitsforkip.data.model.ApiResponse;
+import com.example.fitsforkip.data.model.CreateIncidentRequest;
 import com.example.fitsforkip.data.model.Equipment;
+import com.example.fitsforkip.data.model.IncidentHistory;
 import com.example.fitsforkip.data.model.Line;
 import com.example.fitsforkip.data.model.MobileLoginRequest;
 import com.example.fitsforkip.data.model.MobileLoginResponse;
+import com.example.fitsforkip.data.model.IncidentRequestWrapper;
 import java.util.List;
 import retrofit2.Call;
 import retrofit2.http.Body;
@@ -22,4 +25,7 @@ public interface ApiService {
 
     @GET("api/Equipments/by-line/{lineId}")
     Call<ApiResponse<List<Equipment>>> getEquipmentsByLine(@Header("Authorization") String authHeader, @Path("lineId") int lineId);
+
+    @POST("api/Incidents")
+    Call<ApiResponse<IncidentHistory>> createIncident(@Header("Authorization") String authHeader, @Body CreateIncidentRequest request);
 }

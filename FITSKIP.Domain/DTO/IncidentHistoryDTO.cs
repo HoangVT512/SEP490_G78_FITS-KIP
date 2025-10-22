@@ -23,7 +23,7 @@ namespace FITSKIP.Domain.DTO
 
     public class CreateIncidentRequest
     {
-        [Required(ErrorMessage = "Equipment ID is required")]
+        [Required(ErrorMessage = "ID thiết bị là bắt buộc")]
         public int EquipmentId { get; set; }
 
         public DateTime? StartTime { get; set; }

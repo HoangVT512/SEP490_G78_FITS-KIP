@@ -75,8 +75,9 @@ public class IncidentHistoryAdapter extends RecyclerView.Adapter<IncidentHistory
         // Map typeId to type name
         String typeName = getTypeName(incident.getTypeId());
         holder.tvIssueType.setText(typeName);
+
         holder.tvSynced.setText(incident.isSynced() ? "Đã đồng bộ" : "Chưa đồng bộ");
-        holder.tvSynced.setTextColor(incident.isSynced() ? holder.itemView.getContext().getColor(R.color.primary_color) : holder.itemView.getContext().getColor(android.R.color.holo_red_dark));
+        holder.tvSynced.setTextColor(incident.isSynced() ? holder.itemView.getContext().getColor(android.R.color.holo_green_dark) : holder.itemView.getContext().getColor(android.R.color.holo_red_dark));
 
         // Show tech support icon and label if isTechSupport is true
         if (incident.isTechSupport()) {

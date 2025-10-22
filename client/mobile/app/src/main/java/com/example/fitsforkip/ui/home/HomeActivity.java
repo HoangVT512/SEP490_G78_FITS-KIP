@@ -25,6 +25,7 @@ import com.example.fitsforkip.R;
 import com.example.fitsforkip.data.local.AppDatabase;
 import com.example.fitsforkip.data.local.AppDatabaseSingleton;
 import com.example.fitsforkip.data.local.IncidentHistoryEntity;
+import com.example.fitsforkip.data.model.IncidentRequestWrapper;
 import com.example.fitsforkip.ui.equipment.EquipmentListActivity;
 import com.example.fitsforkip.ui.incident.IncidentHistoryActivity;
 import com.example.fitsforkip.ui.login.LoginActivity;
@@ -45,6 +46,8 @@ import com.example.fitsforkip.data.model.Equipment;
 import com.example.fitsforkip.data.remote.ApiClient;
 import com.example.fitsforkip.data.remote.ApiService;
 import com.example.fitsforkip.data.model.ApiResponse;
+import com.example.fitsforkip.data.model.CreateIncidentRequest;
+import com.example.fitsforkip.data.model.IncidentHistory;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
@@ -413,7 +416,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
                                 // Calculate total time
                                 card.stopAndRemove();
                                 hideLoading();
-                                Toast.makeText(HomeActivity.this, "Đã ghi nhận thành công cho thiết bị " + currentDeviceCode, Toast.LENGTH_SHORT).show();
+                                //Toast.makeText(HomeActivity.this, "Đã ghi nhận thành công cho thiết bị " + currentDeviceCode, Toast.LENGTH_SHORT).show();
                             }, 2000); // Simulate 2s API call
                         })
                         .setNegativeButton("Hủy", null)
@@ -697,8 +700,16 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             new Thread(() -> {
                 AppDatabase db = AppDatabaseSingleton.getInstance(HomeActivity.this);
                 long id = db.incidentHistoryDao().insert(entity);
+                // SET incidentId cho entity sau khi insert
+                entity.setIncidentId((int)id);
+
                 // Log
-                android.util.Log.d("IncidentInsert", "Inserted incident: ID=" + id + ", EquipmentId=" + finalEquipmentId + ", Duration=" + durationMinutes + ", TypeId=" + typeId + ", Status=" + status + ", IsTechSupport=" + isTechSupport + ", Synced=" + false);
+                android.util.Log.d("Sự cố đã được thêm vào lịch sử", "Đã thêm sự cố: ID=" + id + ", EquipmentId=" + finalEquipmentId + ", Duration=" + durationMinutes + ", TypeId=" + typeId + ", Status=" + status + ", IsTechSupport=" + isTechSupport + ", Synced=" + false);
+
+                // Now upload to server
+                uploadIncidentToServer(entity, id);
+                // Log when upload to server is done
+                android.util.Log.d("Upload sự cố", "Đã upload sự cố với ID cục bộ=" + id);
             }).start();
 
             // Log or save the total time (placeholder)
@@ -708,6 +719,58 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             llDeviceCardsContainer.removeView(cardView);
             deviceCards.remove(deviceCode);
         }
+
+        private void uploadIncidentToServer(IncidentHistoryEntity entity, long localId) {
+            SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+            String token = prefs.getString("token", null);
+
+            if (token == null) {
+                android.util.Log.e("Upload sự cố", "Không tìm thấy token xác thực");
+                return;
+            }
+
+            CreateIncidentRequest request = new CreateIncidentRequest();
+            request.setEquipmentId(entity.getEquipmentId());
+            request.setStartTime(formatDate(entity.getStartTime()));
+            request.setEndTime(formatDate(entity.getEndTime()));
+            request.setDuration(entity.getDuration());
+            request.setTypeId(entity.getTypeId());
+            request.setReason(entity.getReason());
+            request.setSolution(entity.getSolution());
+            request.setIssue(entity.getIssue());
+            request.setStatus(entity.getStatus());
+            request.setCreatedDate(formatDate(entity.getCreatedDate()));
+            request.setReportedByUserId(entity.getReportedByUserId());
+            request.setTechSupport(entity.isTechSupport());
+
+            ApiService apiService = ApiClient.getClient().create(ApiService.class);
+            Call<ApiResponse<IncidentHistory>> call = apiService.createIncident("Bearer " + token, request);
+            call.enqueue(new Callback<ApiResponse<IncidentHistory>>() {
+                @Override
+                public void onResponse(Call<ApiResponse<IncidentHistory>> call, Response<ApiResponse<IncidentHistory>> response) {
+                    if (response.isSuccessful()) {
+                        // QUAN TRỌNG: Cập nhật synced bằng incidentId
+                        new Thread(() -> {
+                            AppDatabase db = AppDatabaseSingleton.getInstance(HomeActivity.this);
+                            // SỬ DỤNG localId thay vì entity.incidentId
+                            db.incidentHistoryDao().updateSyncedStatus((int)localId, true);
+                            android.util.Log.d("Upload sự cố", "Tải lên thành công, cập nhật đồng bộ cho ID=" + localId);
+                        }).start();
+                    } else {
+                        android.util.Log.e("Upload sự cố", "Upload lỗi: " + response.message());
+                    }
+                }
+
+                @Override
+                public void onFailure(Call<ApiResponse<IncidentHistory>> call, Throwable t) {
+                    android.util.Log.e("Upload sự cố", "Upload lỗi: " + t.getMessage(), t);
+                }
+            });
+        }
+
+        private String formatDate(Date date) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
+            return sdf.format(date);
+        }
     }
 }
-

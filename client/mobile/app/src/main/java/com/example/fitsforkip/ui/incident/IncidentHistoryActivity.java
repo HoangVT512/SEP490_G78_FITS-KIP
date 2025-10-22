@@ -22,6 +22,7 @@ import com.example.fitsforkip.data.local.AppDatabase;
 import com.example.fitsforkip.data.local.AppDatabaseSingleton;
 import com.example.fitsforkip.data.local.IncidentHistoryEntity;
 import com.example.fitsforkip.data.model.ApiResponse;
+import com.example.fitsforkip.data.model.CreateIncidentRequest;
 import com.example.fitsforkip.data.model.Equipment;
 import com.example.fitsforkip.data.model.IncidentHistory;
 import com.example.fitsforkip.data.remote.ApiClient;
@@ -31,8 +32,11 @@ import com.google.android.material.card.MaterialCardView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.Executors;
 
 import retrofit2.Call;
@@ -178,7 +182,8 @@ public class IncidentHistoryActivity extends AppCompatActivity {
         }
         Executors.newSingleThreadExecutor().execute(() -> {
             AppDatabase db = AppDatabaseSingleton.getInstance(this);
-            List<IncidentHistoryEntity> entities = db.incidentHistoryDao().getUnsyncedIncidentsByEquipmentIds(equipmentIds);
+            // LẤY TẤT CẢ INCIDENTS (cả synced và unsynced)
+            List<IncidentHistoryEntity> entities = db.incidentHistoryDao().getAllIncidentsByEquipmentIds(equipmentIds);
             runOnUiThread(() -> {
                 incidentList = entities;
                 adapter.setIncidentList(incidentList);
@@ -276,8 +281,92 @@ public class IncidentHistoryActivity extends AppCompatActivity {
         });
 
         fabUpload.setOnClickListener(v -> {
-            Toast.makeText(this, "Đang tải lên dữ liệu", Toast.LENGTH_SHORT).show();
+            uploadUnsyncedIncidents();
         });
+    }
+
+    private void uploadUnsyncedIncidents() {
+        if (incidentList.isEmpty()) {
+            Toast.makeText(this, "Không có sự cố nào để tải lên", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        String token = prefs.getString("token", null);
+
+        if (token == null) {
+            Toast.makeText(this, "Không tìm thấy token xác thực", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ApiService apiService = ApiClient.getClient().create(ApiService.class);
+
+        int uploadCount = 0;
+        for (IncidentHistoryEntity entity : incidentList) {
+            if (!entity.isSynced()) {
+                uploadCount++;
+
+                // LƯU incidentId trước khi gọi API
+                final int incidentId = entity.getIncidentId();
+
+                CreateIncidentRequest request = new CreateIncidentRequest();
+                request.setEquipmentId(entity.getEquipmentId());
+                request.setStartTime(formatDate(entity.getStartTime()));
+                request.setEndTime(formatDate(entity.getEndTime()));
+                request.setDuration(entity.getDuration());
+                request.setTypeId(entity.getTypeId());
+                request.setReason(entity.getReason());
+                request.setSolution(entity.getSolution());
+                request.setIssue(entity.getIssue());
+                request.setStatus(entity.getStatus());
+                request.setCreatedDate(formatDate(entity.getCreatedDate()));
+                request.setReportedByUserId(entity.getReportedByUserId());
+                request.setTechSupport(entity.isTechSupport());
+
+                Call<ApiResponse<IncidentHistory>> call = apiService.createIncident("Bearer " + token, request);
+                call.enqueue(new Callback<ApiResponse<IncidentHistory>>() {
+                    @Override
+                    public void onResponse(Call<ApiResponse<IncidentHistory>> call, Response<ApiResponse<IncidentHistory>> response) {
+                        if (response.isSuccessful()) {
+                            // SỬ DỤNG incidentId đã lưu
+                            Executors.newSingleThreadExecutor().execute(() -> {
+                                AppDatabase db = AppDatabaseSingleton.getInstance(IncidentHistoryActivity.this);
+                                db.incidentHistoryDao().updateSyncedStatus(incidentId, true);
+
+                                runOnUiThread(() -> {
+                                    loadIncidentData(); // reload data
+                                    android.util.Log.d("Upload", "Đã đồng bộ thành công ID=" + incidentId);
+                                });
+                            });
+                        } else {
+                            runOnUiThread(() -> {
+                                android.util.Log.e("Upload", "Lỗi server: " + response.code() + " - " + response.message());
+                                Toast.makeText(IncidentHistoryActivity.this, "Lỗi tải lên: " + response.message(), Toast.LENGTH_SHORT).show();
+                            });
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<ApiResponse<IncidentHistory>> call, Throwable t) {
+                        runOnUiThread(() -> {
+                            android.util.Log.e("Upload", "Lỗi mạng: " + t.getMessage(), t);
+                            Toast.makeText(IncidentHistoryActivity.this, "Lỗi mạng: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                });
+            }
+        }
+
+        if (uploadCount > 0) {
+            Toast.makeText(this, "Đang tải lên " + uploadCount + " sự cố chưa đồng bộ", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "Tất cả sự cố đã được đồng bộ", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private String formatDate(Date date) {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
+        return sdf.format(date);
     }
 
     private void onDeleteIncident(int position) {
