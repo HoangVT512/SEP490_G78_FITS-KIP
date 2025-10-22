@@ -49,6 +49,7 @@ import ManagerIncidentList from "./ManagerIncidentList";
 import NotificationsList from "./NotificationsList";
 import FactoryMap from "./FactoryMap";
 import OEEDashboard from "./OEEDashboard";
+import DowntimeChartDashboard from "./DowntimeChartDashboard";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -211,6 +212,8 @@ const ManagerLayout = () => {
       setSelectedKey("factory-map");
     } else if (path.includes("/oee-dashboard")) {
       setSelectedKey("oee-dashboard");
+    } else if (path.includes("/downtime-chart")) {
+      setSelectedKey("downtime-chart");
     } else if (path.includes("/incidents")) {
       setSelectedKey("incidents");
     } else {
@@ -240,6 +243,8 @@ const ManagerLayout = () => {
       return <FactoryMap />;
     } else if (path.includes("/oee-dashboard")) {
       return <OEEDashboard />;
+    } else if (path.includes("/downtime-chart")) {
+      return <DowntimeChartDashboard />;
     } else if (path.includes("/incidents")) {
       return <ManagerIncidentList />;
     } else if (path === "/manager" || path.includes("/dashboard")) {
@@ -265,6 +270,11 @@ const ManagerLayout = () => {
       key: "oee-dashboard",
       icon: <FundOutlined />,
       label: "Biểu đồ OEE",
+    },
+    {
+      key: "downtime-chart",
+      icon: <FundOutlined />,
+      label: "Biểu đồ thời gian ngừng",
     },
     {
       key: "purchase-approval",
@@ -319,6 +329,9 @@ const ManagerLayout = () => {
         break;
       case "oee-dashboard":
         navigate("/manager/oee-dashboard");
+        break;
+      case "downtime-chart":
+        navigate("/manager/downtime-chart");
         break;
       case "purchase-approval":
         navigate("/manager/purchase-approval");

@@ -43,6 +43,7 @@ import {
   TeamOutlined,
   FileExcelOutlined,
   ToolOutlined,
+  CalendarOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import * as utcPlugin from "dayjs/plugin/utc";
@@ -77,6 +78,7 @@ const IncidentManagement = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterPriority, setFilterPriority] = useState("all");
   const [createStatus, setCreateStatus] = useState("Chờ xử lý");
+  const [selectedDate, setSelectedDate] = useState(null);
   const [form] = Form.useForm();
   const [incidentForms, setIncidentForms] = useState([
     { id: 1, status: "Chờ xử lý" },
@@ -170,7 +172,7 @@ const IncidentManagement = () => {
 
   useEffect(() => {
     handleFilter();
-  }, [searchText, filterStatus, filterPriority, incidents]);
+  }, [searchText, filterStatus, filterPriority, selectedDate, incidents]);
 
   useEffect(() => {
     if (formModalVisible && (selectedEquipment || currentUser)) {
@@ -456,6 +458,16 @@ const IncidentManagement = () => {
 
     if (filterPriority !== "all") {
       filtered = filtered.filter((inc) => inc.priority === filterPriority);
+    }
+
+    // Filter by selected date
+    if (selectedDate) {
+      const selectedDateStr = selectedDate.format("YYYY-MM-DD");
+      filtered = filtered.filter((inc) => {
+        if (!inc.reportDate) return false;
+        const incidentDateStr = dayjs(inc.reportDate).format("YYYY-MM-DD");
+        return incidentDateStr === selectedDateStr;
+      });
     }
 
     // Sort by reportDate descending (newest first)
@@ -1140,6 +1152,61 @@ const IncidentManagement = () => {
       dataIndex: "reportDate",
       key: "reportDate",
       width: 150,
+      filterDropdown: ({
+        setSelectedKeys,
+        selectedKeys,
+        confirm,
+        clearFilters,
+        close,
+      }) => (
+        <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
+          <DatePicker
+            placeholder="Chọn ngày"
+            value={selectedDate}
+            onChange={(date) => {
+              setSelectedDate(date);
+              setSelectedKeys(date ? [date.format("YYYY-MM-DD")] : []);
+            }}
+            format="DD/MM/YYYY"
+            style={{ width: "100%", marginBottom: 8 }}
+            allowClear
+          />
+          <Space>
+            <Button
+              type="primary"
+              onClick={() => confirm()}
+              icon={<SearchOutlined />}
+              size="small"
+              style={{ width: 90 }}
+            >
+              Tìm kiếm
+            </Button>
+            <Button
+              onClick={() => {
+                clearFilters && clearFilters();
+                setSelectedDate(null);
+              }}
+              size="small"
+              style={{ width: 90 }}
+            >
+              Đặt lại
+            </Button>
+            <Button type="link" size="small" onClick={() => close()}>
+              Đóng
+            </Button>
+          </Space>
+        </div>
+      ),
+      filterIcon: (filtered) => (
+        <CalendarOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
+      ),
+      onFilter: (value, record) => {
+        if (!value) return true;
+        const recordDate = record.reportDate;
+        if (!recordDate) return false;
+        const recordDateStr = dayjs(recordDate).format("YYYY-MM-DD");
+        return recordDateStr === value;
+      },
       render: (d) => (d ? dayjs(d).format("DD/MM/YYYY") : "-"),
     },
     {
