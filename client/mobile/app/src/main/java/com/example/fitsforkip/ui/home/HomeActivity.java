@@ -22,6 +22,9 @@ import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
 import com.example.fitsforkip.R;
+import com.example.fitsforkip.data.local.AppDatabase;
+import com.example.fitsforkip.data.local.AppDatabaseSingleton;
+import com.example.fitsforkip.data.local.IncidentHistoryEntity;
 import com.example.fitsforkip.ui.equipment.EquipmentListActivity;
 import com.example.fitsforkip.ui.incident.IncidentHistoryActivity;
 import com.example.fitsforkip.ui.login.LoginActivity;
@@ -339,6 +342,10 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
                 hasRelevantOption = true;
                 type = "Phế phẩm";
                 problem = "";
+            } else if (option.equals("Đổi mã")) {
+                hasRelevantOption = true;
+                type = "Đổi mã";
+                problem = "";
             } else if (!option.equals("Cần hỗ trợ kỹ thuật") && !option.equals("Báo cáo sự cố")) {
                 // XỬ LÝ CÁC OPTIONS KHÁC TỪ EQUIPMENT ISSUES
                 hasRelevantOption = true;
@@ -419,7 +426,9 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
                         equipment.getEquipmentName(),
                         startTimeStr,
                         type,
-                        problem
+                        problem,
+                        selectedOptions, // Gửi selectedOptions vào đây
+                        equipment.getEquipmentId() // Lưu equipmentId trực tiếp
                 );
                 deviceCards.put(currentDeviceCode, newCard);
 
@@ -501,7 +510,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
                 if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
                     equipmentList = response.body().getData();
                     // Optionally, show a toast or log
-                    Toast.makeText(HomeActivity.this, "Đã tải danh sách thiết bị", Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(HomeActivity.this, "Đã tải danh sách thiết bị", Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(HomeActivity.this, "Không thể tải danh sách thiết bị", Toast.LENGTH_SHORT).show();
                 }
@@ -520,6 +529,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         String startTime;
         String type;
         String problem;
+        List<String> selectedOptions;
         long totalElapsed;
         long lastStartTime;
         boolean isTimerRunning;
@@ -528,13 +538,16 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         View cardView;
         TextView tvRunningTime;
         ImageButton btnToggleTimer;
+        int equipmentId; // Thêm trường equipmentId
 
-        DeviceCard(String deviceCode, String deviceName, String startTime, String type, String problem) {
+        DeviceCard(String deviceCode, String deviceName, String startTime, String type, String problem, List<String> selectedOptions, int equipmentId) {
             this.deviceCode = deviceCode;
             this.deviceName = deviceName;
             this.startTime = startTime;
             this.type = type;
             this.problem = problem;
+            this.selectedOptions = selectedOptions;
+            this.equipmentId = equipmentId;
             this.totalElapsed = 0;
             this.lastStartTime = 0;
             this.isTimerRunning = false;
@@ -625,6 +638,68 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             int minutes = (int) ((totalSeconds % 3600) / 60);
             int seconds = (int) (totalSeconds % 60);
             String totalTime = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+
+            // Calculate duration in minutes
+            double durationMinutes = totalElapsed / (1000.0 * 60.0);
+
+            // Determine typeId
+            int typeId; // default dung ngan
+            boolean isTechSupport;
+            if (selectedOptions.contains("Phế phẩm")) {
+                isTechSupport = false;
+                typeId = 3;
+            } else if (selectedOptions.contains("Đổi mã")) {
+                isTechSupport = false;
+                typeId = 4;
+            } else {
+                if (durationMinutes > 5) {
+                    typeId = 2; // dung dai
+                } else {
+                    typeId = 1;
+                }
+                if (selectedOptions.contains("Cần hỗ trợ kỹ thuật")) {
+                    isTechSupport = true;
+                } else {
+                    isTechSupport = false;
+                }
+            }
+
+            // Status: Hoàn thành since endTime is set
+            String status = "Hoàn thành";
+
+            // Use the stored equipmentId instead of searching again
+            int equipmentId = this.equipmentId;
+
+            // Create entity
+            Date startDate = new Date(); // Need to parse startTime, but for simplicity, use current - totalElapsed
+            Date endDate = new Date();
+            startDate.setTime(endDate.getTime() - totalElapsed);
+
+            IncidentHistoryEntity entity = new IncidentHistoryEntity(
+                equipmentId,
+                startDate,
+                endDate,
+                durationMinutes,
+                typeId,
+                "", // reason
+                "", // solution
+                problem,
+                status,
+                new Date(), // createdDate
+                employeeId, // reportedByUserId
+                "", // assignedTo
+                isTechSupport,
+                false // synced
+            );
+
+            // Insert to DB
+            int finalEquipmentId = equipmentId;
+            new Thread(() -> {
+                AppDatabase db = AppDatabaseSingleton.getInstance(HomeActivity.this);
+                long id = db.incidentHistoryDao().insert(entity);
+                // Log
+                android.util.Log.d("IncidentInsert", "Inserted incident: ID=" + id + ", EquipmentId=" + finalEquipmentId + ", Duration=" + durationMinutes + ", TypeId=" + typeId + ", Status=" + status + ", IsTechSupport=" + isTechSupport + ", Synced=" + false);
+            }).start();
 
             // Log or save the total time (placeholder)
             Toast.makeText(HomeActivity.this, "Thiết bị " + deviceCode + " tổng thời gian: " + totalTime, Toast.LENGTH_SHORT).show();

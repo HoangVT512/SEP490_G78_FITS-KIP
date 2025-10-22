@@ -103,4 +103,7 @@
 
     <!-- Item Incident History -->
     <string name="synced_label">Đồng bộ: </string>
+    <string name="unsynced">Chưa đồng bộ</string>
+    <string name="synced">Đã đồng bộ</string>
+    <string name="need_tech_support">Cần hỗ trợ kỹ thuật</string>
 </resources>
