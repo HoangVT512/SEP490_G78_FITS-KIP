@@ -45,11 +45,24 @@ public class IncidentService : IIncidentService
 
     public async Task<IncidentHistory> CreateIncidentAsync(CreateIncidentRequest request, CancellationToken cancellationToken = default)
     {
-        // Validate equipment exists and is active
-        var equipment = await _equipmentRepository.GetByIdAsync(request.EquipmentId, cancellationToken);
-        if (equipment == null || !equipment.IsActive)
+        // Validate equipment exists and is active if EquipmentId is provided
+        if (request.EquipmentId.HasValue)
         {
-            throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId} hoặc thiết bị đã bị vô hiệu hóa");
+            var validatedEquipment = await _equipmentRepository.GetByIdAsync(request.EquipmentId.Value, cancellationToken);
+            if (validatedEquipment == null || !validatedEquipment.IsActive)
+            {
+                throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId.Value} hoặc thiết bị đã bị vô hiệu hóa");
+            }
+        }
+
+        // Validate line exists and is active if LineId is provided
+        if (request.LineId.HasValue)
+        {
+            var line = await _lineRepository.GetByIdAsync(request.LineId.Value, cancellationToken);
+            if (line == null || !line.IsActive)
+            {
+                throw new InvalidOperationException($"Không tìm thấy dây chuyền với ID: {request.LineId.Value} hoặc dây chuyền đã bị vô hiệu hóa");
+            }
         }
 
         // Issue can be null or empty - no validation required
@@ -85,10 +98,11 @@ public class IncidentService : IIncidentService
         var incident = new IncidentHistory
         {
             EquipmentId = request.EquipmentId,
+            LineId = request.LineId,
             StartTime = startTime,
             EndTime = request.EndTime,
             Duration = duration,
-            TypeId = request.TypeId, /* Lines 82-83 omitted */
+            TypeId = request.TypeId,
             Issue = request.Issue?.Trim(),
             Reason = request.Reason?.Trim(),
             Solution = request.Solution?.Trim(),
@@ -109,6 +123,7 @@ public class IncidentService : IIncidentService
         }
 
         // Send notification to Technical Managers
+        var equipment = request.EquipmentId.HasValue ? await _equipmentRepository.GetByIdAsync(request.EquipmentId.Value, cancellationToken) : null;
         await SendIncidentNotificationToTechnicalManagersAsync(createdIncident, equipment, cancellationToken);
 
         return createdIncident;
@@ -126,18 +141,38 @@ public class IncidentService : IIncidentService
             var incidentRequest = request.Incidents[i];
             try
             {
-                // Validate equipment exists and is active
-                var equipment = await _equipmentRepository.GetByIdAsync(incidentRequest.EquipmentId, cancellationToken);
-                if (equipment == null || !equipment.IsActive)
+                // Validate equipment exists and is active if EquipmentId is provided
+                if (incidentRequest.EquipmentId.HasValue)
                 {
-                    response.FailureCount++;
-                    response.Errors.Add(new BulkIncidentError
+                    var validatedEquipment = await _equipmentRepository.GetByIdAsync(incidentRequest.EquipmentId.Value, cancellationToken);
+                    if (validatedEquipment == null || !validatedEquipment.IsActive)
                     {
-                        Index = i + 1,
-                        ErrorMessage = $"Không tìm thấy thiết bị với ID: {incidentRequest.EquipmentId} hoặc thiết bị đã bị vô hiệu hóa",
-                        FailedRequest = incidentRequest
-                    });
-                    continue;
+                        response.FailureCount++;
+                        response.Errors.Add(new BulkIncidentError
+                        {
+                            Index = i + 1,
+                            ErrorMessage = $"Không tìm thấy thiết bị với ID: {incidentRequest.EquipmentId.Value} hoặc thiết bị đã bị vô hiệu hóa",
+                            FailedRequest = incidentRequest
+                        });
+                        continue;
+                    }
+                }
+
+                // Validate line exists and is active if LineId is provided
+                if (incidentRequest.LineId.HasValue)
+                {
+                    var line = await _lineRepository.GetByIdAsync(incidentRequest.LineId.Value, cancellationToken);
+                    if (line == null || !line.IsActive)
+                    {
+                        response.FailureCount++;
+                        response.Errors.Add(new BulkIncidentError
+                        {
+                            Index = i + 1,
+                            ErrorMessage = $"Không tìm thấy dây chuyền với ID: {incidentRequest.LineId.Value} hoặc dây chuyền đã bị vô hiệu hóa",
+                            FailedRequest = incidentRequest
+                        });
+                        continue;
+                    }
                 }
 
                 // Set StartTime to now if not provided
@@ -183,6 +218,7 @@ public class IncidentService : IIncidentService
                 var incident = new IncidentHistory
                 {
                     EquipmentId = incidentRequest.EquipmentId,
+                    LineId = incidentRequest.LineId,
                     StartTime = startTime,
                     EndTime = incidentRequest.EndTime,
                     Duration = duration,
@@ -209,7 +245,11 @@ public class IncidentService : IIncidentService
                 response.SuccessCount++;
 
                 // Send notification to Technical Managers for each incident
-                await SendIncidentNotificationToTechnicalManagersAsync(createdIncident, equipment, cancellationToken);
+                var equipmentForNotification = incidentRequest.EquipmentId.HasValue ? await _equipmentRepository.GetByIdAsync(incidentRequest.EquipmentId.Value, cancellationToken) : null;
+                if (createdIncident != null)
+                {
+                    await SendIncidentNotificationToTechnicalManagersAsync(createdIncident, equipmentForNotification, cancellationToken);
+                }
 
                 // Map to DTO for response
                 if (createdIncident != null)
@@ -220,7 +260,8 @@ public class IncidentService : IIncidentService
                         EquipmentId = createdIncident.EquipmentId ?? 0,
                         EquipmentName = createdIncident.Equipment?.EquipmentName,
                         EquipmentCode = createdIncident.Equipment?.EquipmentCode,
-                        LineName = createdIncident.Equipment?.Stage?.Line?.LineName,
+                        LineId = createdIncident.LineId,
+                        LineName = createdIncident.Line?.LineName ?? createdIncident.Equipment?.Stage?.Line?.LineName,
                         StartTime = createdIncident.StartTime,
                         EndTime = createdIncident.EndTime,
                         Duration = createdIncident.Duration,
@@ -256,11 +297,24 @@ public class IncidentService : IIncidentService
             return null;
         }
 
-        // Validate equipment exists and is active
-        var equipment = await _equipmentRepository.GetByIdAsync(request.EquipmentId, cancellationToken);
-        if (equipment == null || !equipment.IsActive)
+        // Validate equipment exists and is active if EquipmentId is provided
+        if (request.EquipmentId.HasValue)
         {
-            throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId} hoặc thiết bị đã bị vô hiệu hóa");
+            var validatedEquipment = await _equipmentRepository.GetByIdAsync(request.EquipmentId.Value, cancellationToken);
+            if (validatedEquipment == null || !validatedEquipment.IsActive)
+            {
+                throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId.Value} hoặc thiết bị đã bị vô hiệu hóa");
+            }
+        }
+
+        // Validate line exists and is active if LineId is provided
+        if (request.LineId.HasValue)
+        {
+            var line = await _lineRepository.GetByIdAsync(request.LineId.Value, cancellationToken);
+            if (line == null || !line.IsActive)
+            {
+                throw new InvalidOperationException($"Không tìm thấy dây chuyền với ID: {request.LineId.Value} hoặc dây chuyền đã bị vô hiệu hóa");
+            }
         }
 
         // Validate start time
@@ -295,6 +349,7 @@ public class IncidentService : IIncidentService
         }
 
         existingIncident.EquipmentId = request.EquipmentId;
+        existingIncident.LineId = request.LineId;
         existingIncident.StartTime = request.StartTime;
         existingIncident.EndTime = request.EndTime;
         existingIncident.Duration = duration;
@@ -343,9 +398,9 @@ public class IncidentService : IIncidentService
             && updatedIncident.IsTechSupport
             && (wasNotTechSupport || wasNotPending); // Only if changed TO this state
 
-        if (shouldSendNotification)
+        if (shouldSendNotification && updatedIncident != null)
         {
-            var updatedEquipment = await _equipmentRepository.GetByIdAsync(updatedIncident.EquipmentId ?? 0, cancellationToken);
+            var updatedEquipment = updatedIncident.EquipmentId.HasValue ? await _equipmentRepository.GetByIdAsync(updatedIncident.EquipmentId.Value, cancellationToken) : null;
             if (updatedEquipment != null)
             {
                 Console.WriteLine($"🔔 Update triggered notification - wasNotTechSupport: {wasNotTechSupport}, wasNotPending: {wasNotPending}");
@@ -431,11 +486,11 @@ public class IncidentService : IIncidentService
 
         // Group by line
         var downtimeByLines = incidents
-            .Where(i => i.Equipment?.Stage?.Line != null)
+            .Where(i => i.Line != null || (i.Equipment?.Stage?.Line != null))
             .GroupBy(i => new
             {
-                LineId = i.Equipment!.Stage!.Line!.LineId,
-                LineName = i.Equipment.Stage.Line.LineName
+                LineId = i.LineId ?? i.Equipment?.Stage?.Line?.LineId ?? 0,
+                LineName = i.Line?.LineName ?? i.Equipment?.Stage?.Line?.LineName ?? "Unknown"
             })
             .Select(g => new DowntimeByLineDTO
             {
@@ -594,12 +649,17 @@ public class IncidentService : IIncidentService
 
         // Get all incidents and filter by line IDs
         var allIncidents = await _incidentRepository.GetAllAsync(cancellationToken);
-        var filteredIncidents = allIncidents.Where(i => i.Equipment != null && i.Equipment.Stage != null && i.Equipment.Stage.LineId.HasValue && lineIds.Contains(i.Equipment.Stage.LineId.Value)).ToList();
+        var filteredIncidents = allIncidents.Where(i =>
+            // Include incidents that have LineId directly
+            (i.LineId.HasValue && lineIds.Contains(i.LineId.Value)) ||
+            // Or incidents that have Equipment with Stage.LineId
+            (i.Equipment != null && i.Equipment.Stage != null && i.Equipment.Stage.LineId.HasValue && lineIds.Contains(i.Equipment.Stage.LineId.Value))
+        ).ToList();
 
         return filteredIncidents.AsReadOnly();
     }
 
-    private async Task SendIncidentNotificationToTechnicalManagersAsync(IncidentHistory incident, Equipment equipment, CancellationToken cancellationToken)
+    private async Task SendIncidentNotificationToTechnicalManagersAsync(IncidentHistory incident, Equipment? equipment, CancellationToken cancellationToken)
     {
         try
         {
@@ -615,10 +675,13 @@ public class IncidentService : IIncidentService
 
             // Get equipment's information for notification message
             var department = equipment?.Stage?.Line?.Department;
+            var line = equipment?.Stage?.Line ?? incident.Line; // Use direct Line if equipment is null
+            var departmentName = department?.DepartmentName ?? line?.Department?.DepartmentName ?? "Chưa xác định";
+
             Console.WriteLine($"   Equipment: {equipment?.EquipmentName} (ID: {equipment?.EquipmentId})");
             Console.WriteLine($"   Stage: {equipment?.Stage?.StageName} (ID: {equipment?.Stage?.StageId})");
-            Console.WriteLine($"   Line: {equipment?.Stage?.Line?.LineName} (ID: {equipment?.Stage?.Line?.LineId})");
-            Console.WriteLine($"   Department: {department?.DepartmentName} (ID: {department?.DepartmentId})");
+            Console.WriteLine($"   Line: {line?.LineName} (ID: {line?.LineId})");
+            Console.WriteLine($"   Department: {departmentName}");
 
             // Get all Technical Managers in the company
             var allTechnicalManagers = await _userService.GetUsersByRoleAsync("Quản lý kỹ thuật", cancellationToken);
@@ -641,7 +704,7 @@ public class IncidentService : IIncidentService
                     {
                         UserId = manager.Id,
                         Title = "Sự cố cần hỗ trợ kỹ thuật",
-                        Message = $"Có sự cố mới cần hỗ trợ kỹ thuật tại thiết bị {equipment?.EquipmentName} ({equipment?.EquipmentCode}) ở {department?.DepartmentName ?? "Chưa xác định"} - Mã sự cố: {incident.IncidentId}"
+                        Message = $"Có sự cố mới cần hỗ trợ kỹ thuật tại {(equipment != null ? $"thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode})" : $"dây chuyền {line?.LineName ?? "Chưa xác định"}")} ở {departmentName} - Mã sự cố: {incident.IncidentId}"
                     });
 
                     // Send realtime notification to each Technical Manager
@@ -649,7 +712,7 @@ public class IncidentService : IIncidentService
                     await _notificationService.SendNotificationToUserAsync(
                         manager.Id,
                         "Sự cố cần hỗ trợ kỹ thuật",
-                        $"Có sự cố mới cần hỗ trợ kỹ thuật tại thiết bị {equipment?.EquipmentName} ({equipment?.EquipmentCode}) ở {department?.DepartmentName ?? "Chưa xác định"} - Mã sự cố: {incident.IncidentId}",
+                        $"Có sự cố mới cần hỗ trợ kỹ thuật tại {(equipment != null ? $"thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode})" : $"dây chuyền {line?.LineName ?? "Chưa xác định"}")} ở {departmentName} - Mã sự cố: {incident.IncidentId}",
                         "incident"
                     );
                 }

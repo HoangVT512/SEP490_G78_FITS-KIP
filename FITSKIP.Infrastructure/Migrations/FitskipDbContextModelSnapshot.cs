@@ -143,6 +143,10 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<int?>("LineId")
+                        .HasColumnType("int")
+                        .HasColumnName("LineID");
+
                     b.Property<string>("Reason")
                         .HasColumnType("nvarchar(max)");
 
@@ -166,6 +170,8 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasName("PK__Incident__5F46CAB00C9D9F0A");
 
                     b.HasIndex("EquipmentId");
+
+                    b.HasIndex("LineId");
 
                     b.HasIndex("ReportedByUserId");
 
@@ -369,34 +375,43 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("OutputId"));
 
-                    b.Property<int>("ActualQuantity")
-                        .HasColumnType("int");
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("GETDATE()");
 
-                    b.Property<DateOnly>("Date")
-                        .HasColumnType("date");
-
-                    b.Property<int>("DowntimeMinutes")
-                        .HasColumnType("int");
-
-                    b.Property<int>("GoodQuantity")
-                        .HasColumnType("int");
-
-                    b.Property<decimal>("IdealCycleTime")
-                        .HasColumnType("decimal(10, 4)");
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("datetime");
 
                     b.Property<int>("LineId")
                         .HasColumnType("int")
                         .HasColumnName("LineID");
 
-                    b.Property<int>("PlannedProductionTime")
-                        .HasColumnType("int");
+                    b.Property<decimal?>("LoadingTime")
+                        .HasColumnType("decimal(10, 2)");
+
+                    b.Property<decimal?>("OEE")
+                        .HasColumnType("decimal(5, 2)");
+
+                    b.Property<string>("ResultAmount")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("ShiftId")
                         .HasColumnType("int")
                         .HasColumnName("ShiftID");
 
-                    b.Property<decimal>("TargetQuantity")
-                        .HasColumnType("decimal(10, 2)");
+                    b.Property<string>("SlotTime")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("TargetAmount")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime");
 
                     b.HasKey("OutputId")
                         .HasName("PK__Producti__CE7609460B69FF1F");
@@ -877,6 +892,11 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasForeignKey("EquipmentId")
                         .HasConstraintName("FK__IncidentH__Equip__7B5B524B");
 
+                    b.HasOne("FITSKIP.Domain.Entities.Line", "Line")
+                        .WithMany()
+                        .HasForeignKey("LineId")
+                        .HasConstraintName("FK__IncidentH__LineI__8C5B6A4C");
+
                     b.HasOne("FITSKIP.Domain.Entities.User", "ReportedByUser")
                         .WithMany()
                         .HasForeignKey("ReportedByUserId");
@@ -887,6 +907,8 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasConstraintName("FK__IncidentH__TypeI__7F2BE32F");
 
                     b.Navigation("Equipment");
+
+                    b.Navigation("Line");
 
                     b.Navigation("ReportedByUser");
 

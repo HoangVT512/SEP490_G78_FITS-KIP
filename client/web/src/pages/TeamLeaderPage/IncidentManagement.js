@@ -753,10 +753,7 @@ const IncidentManagement = () => {
         }
 
         const formEquipmentId = form.getFieldValue("equipmentId");
-        const finalEquipmentId =
-          formEquipmentId ||
-          selectedEquipment?.equipmentId ||
-          selectedIncident.equipmentId;
+        const finalEquipmentId = formEquipmentId !== undefined ? formEquipmentId : null; // Convert undefined to null for nullable field
 
         let typeId = values.typeId;
         if (!typeId && selectedIncident.category) {
@@ -768,6 +765,7 @@ const IncidentManagement = () => {
 
         const editPayload = {
           equipmentId: finalEquipmentId,
+          lineId: values.lineId !== undefined ? values.lineId : null, // Convert undefined to null for nullable field
           startTime: values.startTime
             ? dayjs(values.startTime).format("YYYY-MM-DDTHH:mm:ss.SSS")
             : dayjs(selectedIncident.reportDate).format(
@@ -816,6 +814,7 @@ const IncidentManagement = () => {
 
           // Get values for this specific form
           const equipmentId = form.getFieldValue(`equipmentId_${formId}`);
+          const lineId = form.getFieldValue(`lineId_${formId}`);
           const startTime = form.getFieldValue(`startTime_${formId}`);
           const endTime = form.getFieldValue(`endTime_${formId}`);
           const typeId = form.getFieldValue(`typeId_${formId}`);
@@ -826,11 +825,11 @@ const IncidentManagement = () => {
           const isTechSupport = form.getFieldValue(`isTechSupport_${formId}`) || false;
 
           // Validate required fields
-          if (!equipmentId) {
-            message.error(`Sự cố No.${formId}: Vui lòng chọn thiết bị!`);
-            setLoading(false);
-            return;
-          }
+          // if (!equipmentId) {
+          //   message.error(`Sự cố No.${formId}: Vui lòng chọn thiết bị!`);
+          //   setLoading(false);
+          //   return;
+          // }
 
           if (!typeId) {
             message.error(`Sự cố No.${formId}: Vui lòng chọn loại dừng!`);
@@ -853,6 +852,7 @@ const IncidentManagement = () => {
           // Build payload for this incident
           const payload = {
             equipmentId: equipmentId,
+            lineId: lineId,
             startTime: startTime
               ? dayjs(startTime).format("YYYY-MM-DDTHH:mm:ss.SSS")
               : null,
@@ -2097,12 +2097,12 @@ const IncidentManagement = () => {
                         <Form.Item
                           label="Mã thiết bị"
                           name={`equipmentCode_${incidentForm.id}`}
-                          rules={[
-                            {
-                              required: true,
-                              message: "Vui lòng chọn mã thiết bị!",
-                            },
-                          ]}
+                        // rules={[
+                        //   {
+                        //     required: true,
+                        //     message: "Vui lòng chọn mã thiết bị!",
+                        //   },
+                        // ]}
                         >
                           <Select
                             placeholder="Chọn hoặc tìm mã thiết bị"
@@ -2204,6 +2204,9 @@ const IncidentManagement = () => {
                         <Form.Item
                           label="Dây chuyền"
                           name={`lineId_${incidentForm.id}`}
+                          rules={[
+                            { required: true, message: "Vui lòng dây chuyền!" },
+                          ]}
                         >
                           <Select
                             placeholder="-- Chọn --"
@@ -2437,9 +2440,9 @@ const IncidentManagement = () => {
                   <Form.Item
                     label="Mã thiết bị"
                     name="equipmentCode"
-                    rules={[
-                      { required: true, message: "Vui lòng chọn mã thiết bị!" },
-                    ]}
+                  // rules={[
+                  //   { required: true, message: "Vui lòng chọn mã thiết bị!" },
+                  // ]}
                   >
                     <Select
                       placeholder="Chọn hoặc tìm mã thiết bị"
@@ -2542,6 +2545,9 @@ const IncidentManagement = () => {
                   <Form.Item
                     label="Dây chuyền"
                     name="lineId"
+                    rules={[
+                      { required: true, message: "Vui lòng chọn dây chuyền!" },
+                    ]}
                   >
                     <Select
                       placeholder="-- Chọn --"

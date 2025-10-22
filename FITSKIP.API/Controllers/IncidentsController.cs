@@ -135,9 +135,15 @@ public class IncidentsController : ControllerBase
             }
 
             // Additional business validation
-            if (request.EquipmentId <= 0)
+            // if (request.EquipmentId <= 0)
+            // {
+            //     return BadRequest(new { success = false, message = "Error: Equipment ID phải lớn hơn 0" });
+            // }
+
+            // Validate LineId if provided
+            if (request.LineId.HasValue && request.LineId.Value <= 0)
             {
-                return BadRequest(new { success = false, message = "Error: Equipment ID phải lớn hơn 0" });
+                return BadRequest(new { success = false, message = "Error: Line ID phải lớn hơn 0" });
             }
 
             // TypeId is optional on create; allow null (can be updated later)
@@ -210,9 +216,14 @@ public class IncidentsController : ControllerBase
             {
                 var incident = request.Incidents[i];
 
-                if (incident.EquipmentId <= 0)
+                // if (incident.EquipmentId <= 0)
+                // {
+                //     return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Equipment ID phải lớn hơn 0" });
+                // }
+
+                if (incident.LineId.HasValue && incident.LineId.Value <= 0)
                 {
-                    return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Equipment ID phải lớn hơn 0" });
+                    return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Line ID phải lớn hơn 0" });
                 }
 
                 if (incident.EndTime.HasValue && incident.StartTime.HasValue && incident.EndTime.Value <= incident.StartTime.Value)
@@ -312,9 +323,14 @@ public class IncidentsController : ControllerBase
             }
 
             // Additional business validation
-            if (request.EquipmentId <= 0)
+            // if (request.EquipmentId <= 0)
+            // {
+            //     return BadRequest(new { success = false, message = "ID thiết bị phải lớn hơn 0" });
+            // }
+
+            if (request.LineId.HasValue && request.LineId.Value <= 0)
             {
-                return BadRequest(new { success = false, message = "ID thiết bị phải lớn hơn 0" });
+                return BadRequest(new { success = false, message = "ID dây chuyền phải lớn hơn 0" });
             }
 
             if (request.TypeId.HasValue && request.TypeId <= 0)

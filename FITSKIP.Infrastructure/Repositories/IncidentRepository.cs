@@ -20,6 +20,7 @@ public class IncidentRepository : IIncidentRepository
             .Include(i => i.Equipment)
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
+            .Include(i => i.Line)
             .Include(i => i.Type)
             .Include(i => i.ReportedByUser)
             .Include(i => i.IncidentShifts)
@@ -35,6 +36,7 @@ public class IncidentRepository : IIncidentRepository
             .Include(i => i.Equipment)
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
+            .Include(i => i.Line)
             .Include(i => i.Type)
             .Include(i => i.ReportedByUser)
             .Include(i => i.IncidentShifts)
@@ -129,6 +131,7 @@ public class IncidentRepository : IIncidentRepository
             .Include(i => i.Equipment)
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
+            .Include(i => i.Line)
             .Include(i => i.Type)
             .Include(i => i.IncidentShifts)
             .Where(i => i.StartTime >= startDate && i.StartTime <= endDate)
@@ -143,14 +146,19 @@ public class IncidentRepository : IIncidentRepository
             .Include(i => i.Equipment)
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
+            .Include(i => i.Line)
             .Include(i => i.Type)
             .Include(i => i.IncidentShifts)
-            .Where(i => i.Equipment != null &&
-                       i.Equipment.Stage != null &&
-                       i.Equipment.Stage.Line != null &&
-                       i.Equipment.Stage.Line.LineId == lineId &&
-                       i.StartTime >= startDate &&
-                       i.StartTime <= endDate)
+            .Where(i =>
+                // Include incidents with direct LineId
+                (i.LineId == lineId) ||
+                // Or incidents with Equipment.Stage.LineId
+                (i.Equipment != null &&
+                 i.Equipment.Stage != null &&
+                 i.Equipment.Stage.Line != null &&
+                 i.Equipment.Stage.Line.LineId == lineId) &&
+                i.StartTime >= startDate &&
+                i.StartTime <= endDate)
             .OrderByDescending(i => i.CreatedDate)
             .AsNoTracking()
             .ToListAsync(cancellationToken);

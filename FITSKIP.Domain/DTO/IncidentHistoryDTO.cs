@@ -8,6 +8,7 @@ namespace FITSKIP.Domain.DTO
         public int EquipmentId { get; set; }
         public string? EquipmentName { get; set; }
         public string? EquipmentCode { get; set; }
+        public int? LineId { get; set; }
         public string? LineName { get; set; }
         public DateTime? StartTime { get; set; }
         public DateTime? EndTime { get; set; }
@@ -23,8 +24,10 @@ namespace FITSKIP.Domain.DTO
 
     public class CreateIncidentRequest
     {
-        [Required(ErrorMessage = "ID thiết bị là bắt buộc")]
-        public int EquipmentId { get; set; }
+        //[Required(ErrorMessage = "ID thiết bị là bắt buộc")]
+        public int? EquipmentId { get; set; }
+
+        public int? LineId { get; set; }
 
         public DateTime? StartTime { get; set; }
 
@@ -71,8 +74,10 @@ namespace FITSKIP.Domain.DTO
 
     public class UpdateIncidentRequest
     {
-        [Required(ErrorMessage = "ID thiết bị là bắt buộc")]
-        public int EquipmentId { get; set; }
+        //[Required(ErrorMessage = "ID thiết bị là bắt buộc")]
+        public int? EquipmentId { get; set; }
+
+        public int? LineId { get; set; }
 
         [Required(ErrorMessage = "Thời gian bắt đầu là bắt buộc")]
         public DateTime StartTime { get; set; }

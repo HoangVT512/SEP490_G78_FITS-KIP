@@ -336,14 +336,6 @@ namespace FITSKIP.Infrastructure.SeedData
                 {
                     new StopType
                     {
-                        TypeName = "Chuẩn bị sản xuất"
-                    },
-                    new StopType
-                    {
-                        TypeName = "Vệ sinh đầu/cuối ca"
-                    },
-                    new StopType
-                    {
                         TypeName = "Dừng ngắn"
                     },
                     new StopType
@@ -356,11 +348,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     },
                     new StopType
                     {
-                        TypeName = "Chờ vật tư"
-                    },
-                    new StopType
-                    {
-                        TypeName = "Mất điện"
+                        TypeName = "Vệ sinh đầu/cuối ca"
                     },
                     new StopType
                     {
@@ -878,30 +866,33 @@ namespace FITSKIP.Infrastructure.SeedData
             {
                 var equipment = await context.Equipment.ToListAsync();
                 var stopTypes = await context.StopTypes.ToListAsync();
+                var lines = await context.Lines.ToListAsync();
 
-                if (!equipment.Any() || !stopTypes.Any())
+                if (!equipment.Any() || !stopTypes.Any() || !lines.Any())
                     return;
 
                 var incidents = new List<IncidentHistory>();
                 var random = new Random();
 
-                // Tạo 15 incidents mẫu
-                for (int i = 0; i < 15; i++)
+                // Tạo 50 incidents mẫu với duration ≤ 60 phút
+                for (int i = 0; i < 50; i++)
                 {
-                    var selectedEquipment = equipment[random.Next(equipment.Count)];
                     var selectedStopType = stopTypes[random.Next(stopTypes.Count)];
+                    var selectedLine = lines[random.Next(lines.Count)];
 
-                    // Random thời gian trong 7 ngày qua
-                    var daysAgo = random.Next(0, 7);
+                    // Duration từ 5 phút đến 60 phút
+                    var durationMinutes = random.Next(5, 61);
+                    var finalDuration = (decimal)durationMinutes;
+
+                    // Random thời gian trong 30 ngày qua
+                    var daysAgo = random.Next(0, 30);
                     var incidentDate = DateTime.Now.AddDays(-daysAgo);
 
-                    // Random thời gian trong ngày
-                    var startHour = random.Next(6, 20);
+                    // Random thời gian trong ngày (6h-22h)
+                    var startHour = random.Next(6, 22);
                     var startMinute = random.Next(0, 60);
                     var startTime = new DateTime(incidentDate.Year, incidentDate.Month, incidentDate.Day, startHour, startMinute, 0);
 
-                    // Duration từ 5 phút đến 2 giờ (120 phút)
-                    var durationMinutes = random.Next(5, 121);
                     var endTime = startTime.AddMinutes(durationMinutes);
 
                     // Đảm bảo không vượt quá thời gian hiện tại
@@ -909,10 +900,8 @@ namespace FITSKIP.Infrastructure.SeedData
                     {
                         endTime = DateTime.Now;
                         var actualDuration = (endTime - startTime).TotalMinutes;
-                        durationMinutes = (int)Math.Max(1, actualDuration);
+                        finalDuration = (decimal)Math.Max(1, actualDuration);
                     }
-
-                    var finalDuration = Math.Max(1, (decimal)durationMinutes);
 
                     // Random AssignedTo từ các user ID có sẵn
                     var users = await context.Users.ToListAsync();
@@ -923,7 +912,6 @@ namespace FITSKIP.Infrastructure.SeedData
 
                     var incident = new IncidentHistory
                     {
-                        EquipmentId = selectedEquipment.EquipmentId,
                         StartTime = startTime,
                         EndTime = endTime,
                         Duration = finalDuration,
@@ -935,6 +923,21 @@ namespace FITSKIP.Infrastructure.SeedData
                         AssignedTo = assignedToUser?.Id,
                         IsTechSupport = isTechSupport
                     };
+
+                    // Logic cho EquipmentId và LineId dựa trên loại stop
+                    if (selectedStopType.TypeName == "Vệ sinh đầu/cuối ca" || selectedStopType.TypeName == "Đổi mã")
+                    {
+                        // Những loại này không cần EquipmentId nhưng cần LineId
+                        incident.EquipmentId = null;
+                        incident.LineId = selectedLine.LineId;
+                    }
+                    else
+                    {
+                        // Các loại khác cần EquipmentId
+                        var selectedEquipment = equipment[random.Next(equipment.Count)];
+                        incident.EquipmentId = selectedEquipment.EquipmentId;
+                        incident.LineId = null; // Có thể null cho các loại này
+                    }
 
                     incidents.Add(incident);
                 }
@@ -948,11 +951,6 @@ namespace FITSKIP.Infrastructure.SeedData
         {
             var issues = stopTypeName switch
             {
-                "Chuẩn bị sản xuất" => new[]
-                {
-                    "Chuẩn bị nguyên liệu đầu ca",
-                    "Họp đầu ca",
-                },
                 "Vệ sinh đầu/cuối ca" => new[]
                 {
                     "Vệ sinh máy đầu ca",
@@ -960,7 +958,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Dọn dẹp khu vực sản xuất",
                     "Kiểm tra vệ sinh"
                 },
-                "dừng ngắn" => new[]
+                "Dừng ngắn" => new[]
                 {
                     "Máy dừng hoạt động ngắn",
                     "Tạm dừng để điều chỉnh",
@@ -968,7 +966,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Tạm nghỉ giữa ca",
                     "Dừng để vệ sinh nhanh"
                 },
-                "dừng dài" => new[]
+                "Dừng dài" => new[]
                 {
                     "Máy hỏng nặng cần sửa chữa",
                     "Bảo trì định kỳ kéo dài",
@@ -976,7 +974,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Sự cố hệ thống điện",
                     "Vấn đề kỹ thuật nghiêm trọng"
                 },
-                "phế phẩm" => new[]
+                "Phế phẩm" => new[]
                 {
                     "Sản phẩm không đạt chất lượng",
                     "Lỗi lắp ráp",
@@ -984,18 +982,11 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Hỏng trong quá trình sản xuất",
                     "Không đạt tiêu chuẩn kỹ thuật"
                 },
-                "Chờ vật tư" => new[]
-                {
-                    "Thiếu nguyên liệu",
-                    "Chờ linh kiện"
-                },
-                "Mất điện" => new[]
-                {
-                    "Mất điện đột ngột",
-                },
                 "Đổi mã" => new[]
                 {
                     "Đổi mã sản phẩm",
+                    "Thay đổi model sản xuất",
+                    "Chuyển đổi dây chuyền"
                 },
                 _ => new[] { "Sự cố không xác định", "Cần kiểm tra thêm", "Vấn đề kỹ thuật" }
             };
@@ -1007,17 +998,13 @@ namespace FITSKIP.Infrastructure.SeedData
         {
             var reasons = stopTypeName switch
             {
-                "Chuẩn bị sản xuất" => new[]
-                {
-                    "",
-                },
                 "Vệ sinh đầu/cuối ca" => new[]
                 {
                     "Dọn dẹp sau sản xuất",
                     "Kiểm tra vệ sinh an toàn",
                     "Chuẩn bị cho ca tiếp theo"
                 },
-                "dừng ngắn" => new[]
+                "Dừng ngắn" => new[]
                 {
                     "Điều chỉnh thông số máy",
                     "Kiểm tra chất lượng nhanh",
@@ -1025,7 +1012,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Vệ sinh máy nhanh",
                     "Thay đổi setup sản phẩm"
                 },
-                "dừng dài" => new[]
+                "Dừng dài" => new[]
                 {
                     "Hỏng hóc nặng cần sửa chữa",
                     "Thiếu phụ tùng thay thế",
@@ -1033,7 +1020,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Sự cố hệ thống điện",
                     "Vấn đề kỹ thuật nghiêm trọng"
                 },
-                "phế phẩm" => new[]
+                "Phế phẩm" => new[]
                 {
                     "Nguyên liệu không đạt chất lượng",
                     "Lỗi vận hành của công nhân",
@@ -1041,17 +1028,11 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Thiếu kiểm soát chất lượng",
                     "Điều kiện môi trường sản xuất"
                 },
-                "Chờ vật tư" => new[]
-                {
-                    "",
-                },
-                "Mất điện" => new[]
-                {
-                    "",
-                },
                 "Đổi mã" => new[]
                 {
-                    "",
+                    "Yêu cầu thay đổi sản phẩm",
+                    "Đơn hàng mới",
+                    "Chuyển đổi model theo kế hoạch"
                 },
                 _ => new[] { "Chưa xác định nguyên nhân", "Đang điều tra", "Cần phân tích thêm" }
             };
@@ -1063,15 +1044,13 @@ namespace FITSKIP.Infrastructure.SeedData
         {
             var solutions = stopTypeName switch
             {
-                "Chuẩn bị sản xuất" => new[]
-                {
-                    "",
-                },
                 "Vệ sinh đầu/cuối ca" => new[]
                 {
-                    "",
+                    "Hoàn thành vệ sinh định kỳ",
+                    "Đảm bảo vệ sinh đạt chuẩn",
+                    "Chuẩn bị sẵn sàng cho sản xuất"
                 },
-                "dừng ngắn" => new[]
+                "Dừng ngắn" => new[]
                 {
                     "Điều chỉnh lại thông số",
                     "Hoàn thành kiểm tra nhanh",
@@ -1079,7 +1058,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Ghi nhận và theo dõi",
                     "Đào tạo lại quy trình"
                 },
-                "dừng dài" => new[]
+                "Dừng dài" => new[]
                 {
                     "Thay thế phụ tùng hỏng",
                     "Sửa chữa chuyên sâu",
@@ -1087,7 +1066,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Chuẩn bị máy dự phòng",
                     "Lên kế hoạch bảo trì"
                 },
-                "phế phẩm" => new[]
+                "Phế phẩm" => new[]
                 {
                     "Kiểm tra chất lượng nguyên liệu",
                     "Đào tạo lại công nhân",
@@ -1095,17 +1074,11 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Tăng cường kiểm soát chất lượng",
                     "Cải thiện quy trình sản xuất"
                 },
-                "Chờ vật tư" => new[]
-                {
-                    "",
-                },
-                "Mất điện" => new[]
-                {
-                    "",
-                },
                 "Đổi mã" => new[]
                 {
-                    "",
+                    "Hoàn thành chuyển đổi model",
+                    "Cập nhật thông số sản xuất",
+                    "Đào tạo công nhân về model mới"
                 },
                 _ => new[] { "Tiếp tục theo dõi", "Báo cáo cấp trên", "Cần hỗ trợ chuyên gia" }
             };

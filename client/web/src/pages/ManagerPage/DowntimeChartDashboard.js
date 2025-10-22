@@ -3,6 +3,7 @@ import { Card, Row, Col, Select, DatePicker, Tabs, Statistic, Progress, Space, T
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart, Area, AreaChart } from 'recharts';
 import { ArrowUpOutlined, ArrowDownOutlined, ThunderboltOutlined, ClockCircleOutlined, DashboardOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
+import { name } from 'dayjs/locale/vi';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -37,9 +38,7 @@ const DowntimeChartDashboard = () => {
                 dungDai: true,
                 phaPham: true,
                 dauCuoiCa: true,
-                doiMayThayDao: true,
-                tacDoThaoTac: true,
-                ngoaiRa: true,
+                doiMa: true,
                 oee: true,
                 mucTieu: true,
                 tyLeMat: true
@@ -54,12 +53,10 @@ const DowntimeChartDashboard = () => {
             initial[line.id] = {
                 'Thời gian hoạt động': true,
                 'Dừng ngắn': true,
-                'Dừng dài': true,
-                'Phá phẩm': true,
-                'Đầu cuối ca': true,
-                'Đổi mã thay dao': true,
-                'Tác độ thao tác': true,
-                'Ngoại ra': true
+                'Dừng Dài': true,
+                'Phế phẩm': true,
+                'Vệ sinh đầu/cuối ca': true,
+                'Đổi mã': true
             };
         });
         return initial;
@@ -90,12 +87,10 @@ const DowntimeChartDashboard = () => {
     const CustomLegend = ({ lineId }) => {
         const legendItems = [
             { key: 'dungNgan', name: 'Dừng ngắn', color: '#1890ff' },
-            { key: 'dungDai', name: 'Dừng dài', color: '#0050b3' },
-            { key: 'phaPham', name: 'Phá phẩm', color: '#8c8c8c' },
-            { key: 'dauCuoiCa', name: 'Đầu cuối ca', color: '#fa8c16' },
-            { key: 'doiMayThayDao', name: 'Đổi mã thay dao', color: '#e8e8e8' },
-            { key: 'tacDoThaoTac', name: 'Tác độ thao tác', color: '#95de64' },
-            { key: 'ngoaiRa', name: 'Ngoại ra', color: '#b37feb' },
+            { key: 'dungDai', name: 'Dừng Dài', color: '#0050b3' },
+            { key: 'phaPham', name: 'Phế phẩm', color: '#8c8c8c' },
+            { key: 'dauCuoiCa', name: 'Vệ sinh đầu/cuối ca', color: '#fa8c16' },
+            { key: 'doiMa', name: 'Đổi mã', color: '#e8e8e8' },
             { key: 'oee', name: 'OEE', color: 'white', border: '2px solid #000' },
             { key: 'mucTieu', name: 'Mục tiêu', color: 'transparent', border: '3px dashed #000' },
             { key: 'tyLeMat', name: 'Tỷ lệ mất mát', color: '#ff4d4f' }
@@ -139,10 +134,12 @@ const DowntimeChartDashboard = () => {
     // Custom Pie Legend Component
     const CustomPieLegend = ({ pieData, lineId }) => {
         const allLegendItems = [
-            ...pieData.map(item => ({ name: item.name, color: item.color })),
-            { name: 'Đổi mã thay dao', color: '#e8e8e8' },
-            { name: 'Tác độ thao tác', color: '#95de64' },
-            { name: 'Ngoại ra', color: '#b37feb' }
+            { name: 'Thời gian hoạt động', color: '#52c41a' },
+            { name: 'Dừng ngắn', color: '#1890ff' },
+            { name: 'Dừng Dài', color: '#0050b3' },
+            { name: 'Phế phẩm', color: '#8c8c8c' },
+            { name: 'Vệ sinh đầu/cuối ca', color: '#fa8c16' },
+            { name: 'Đổi mã', color: '#e8e8e8' }
         ];
 
         return (
@@ -182,17 +179,18 @@ const DowntimeChartDashboard = () => {
     const generatePieData = (lineId) => {
         const baseData = [
             { name: 'Thời gian hoạt động', value: 83.7, color: '#52c41a' },
-            { name: 'Dừng ngắn', value: 7.8, color: '#1890ff' },
-            { name: 'Dừng dài', value: 3.3, color: '#0050b3' },
-            { name: 'Phá phẩm', value: 1.6, color: '#8c8c8c' },
-            { name: 'Đầu cuối ca', value: 3.6, color: '#fa8c16' }
+            { name: 'Dừng ngắn', value: 25, color: '#1890ff' },
+            { name: 'Dừng Dài', value: 20, color: '#0050b3' },
+            { name: 'Phế phẩm', value: 15, color: '#8c8c8c' },
+            { name: 'Vệ sinh đầu/cuối ca', value: 25, color: '#fa8c16' },
+            { name: 'Đổi mã', value: 15, color: '#e8e8e8' }
         ];
 
         // Thay đổi nhẹ dữ liệu cho mỗi dây chuyền
         const variance = lineId.charCodeAt(lineId.length - 2) % 10;
         return baseData.map(item => ({
             ...item,
-            value: item.value + (Math.random() - 0.5) * variance
+            value: Math.max(5, item.value + (Math.random() - 0.5) * variance * 2) // Đảm bảo giá trị không âm
         }));
     };
 
@@ -212,9 +210,7 @@ const DowntimeChartDashboard = () => {
                 dungDai: 6 + Math.random() * 6 + variance,
                 phaPham: 3 + Math.random() * 7 + variance,
                 dauCuoiCa: 2 + Math.random() * 6 + variance,
-                doiMayThayDao: 1 + Math.random() * 4 + variance,
-                tacDoThaoTac: 0.5 + Math.random() * 2.5 + variance,
-                ngoaiRa: 0.3 + Math.random() * 1.7 + variance,
+                doiMa: 1 + Math.random() * 4 + variance,
                 oee: 85 + Math.random() * 10 + (variance - 2),
                 tyLeMat: 8 + Math.random() * 7 + variance,
                 mucTieu: 90
@@ -317,9 +313,17 @@ const DowntimeChartDashboard = () => {
         const pieData = generatePieData(line.id);
         const barData = generateBarData(line.id, selectedMonth);
 
+        // Tính toán trung bình OEE từ dữ liệu hàng ngày
         const avgOEE = (barData.reduce((sum, d) => sum + d.oee, 0) / barData.length).toFixed(1);
+
+        // Tính toán tỷ lệ mất mát trung bình từ dữ liệu hàng ngày
         const avgLoss = (barData.reduce((sum, d) => sum + d.tyLeMat, 0) / barData.length).toFixed(1);
-        const productivity = pieData.find(d => d.name === 'Thời gian hoạt động')?.value || 0;
+
+        // Tính toán thời gian hoạt động: trung bình của (100 - downtime hàng ngày)
+        // Giả sử downtime hàng ngày là tổng các loại downtime trong barData
+        const dailyDowntimes = barData.map(d => d.dungNgan + d.dungDai + d.phaPham + d.dauCuoiCa + d.doiMa);
+        const avgDailyProductivity = dailyDowntimes.reduce((sum, downtime) => sum + Math.max(0, 100 - downtime), 0) / dailyDowntimes.length;
+        const productivity = avgDailyProductivity.toFixed(1);
 
         // Lọc dữ liệu pie chart dựa trên visibility
         const filteredPieData = pieData.filter(item => pieVisibility[line.id][item.name]);
@@ -371,7 +375,7 @@ const DowntimeChartDashboard = () => {
                         >
                             <Statistic
                                 title={<span style={{ color: '#000', opacity: 0.7, fontSize: '16px' }}>Thời gian hoạt động</span>}
-                                value={productivity.toFixed(1)}
+                                value={productivity}
                                 suffix="%"
                                 valueStyle={{ color: '#000', fontSize: '24px', fontWeight: 'bold' }}
                                 //prefix={<ThunderboltOutlined style={{ color: '#1890ff' }} />}
@@ -509,11 +513,9 @@ const DowntimeChartDashboard = () => {
                                     <Tooltip content={<CustomTooltip />} />
                                     {barVisibility[line.id].dungNgan && <Bar yAxisId="left" dataKey="dungNgan" stackId="a" fill="#1890ff" name="Dừng ngắn" radius={[0, 0, 0, 0]} barSize={20} />}
                                     {barVisibility[line.id].dungDai && <Bar yAxisId="left" dataKey="dungDai" stackId="a" fill="#0050b3" name="Dừng dài" barSize={20} />}
-                                    {barVisibility[line.id].phaPham && <Bar yAxisId="left" dataKey="phaPham" stackId="a" fill="#8c8c8c" name="Phá phẩm" barSize={20} />}
-                                    {barVisibility[line.id].dauCuoiCa && <Bar yAxisId="left" dataKey="dauCuoiCa" stackId="a" fill="#fa8c16" name="Đầu cuối ca" barSize={20} />}
-                                    {barVisibility[line.id].doiMayThayDao && <Bar yAxisId="left" dataKey="doiMayThayDao" stackId="a" fill="#e8e8e8" name="Đổi mã thay dao" barSize={20} />}
-                                    {barVisibility[line.id].tacDoThaoTac && <Bar yAxisId="left" dataKey="tacDoThaoTac" stackId="a" fill="#95de64" name="Tác độ thao tác" barSize={20} />}
-                                    {barVisibility[line.id].ngoaiRa && <Bar yAxisId="left" dataKey="ngoaiRa" stackId="a" fill="#b37feb" name="Ngoại ra" radius={[4, 4, 0, 0]} barSize={20} />}
+                                    {barVisibility[line.id].phaPham && <Bar yAxisId="left" dataKey="phaPham" stackId="a" fill="#8c8c8c" name="Phế phẩm" barSize={20} />}
+                                    {barVisibility[line.id].dauCuoiCa && <Bar yAxisId="left" dataKey="dauCuoiCa" stackId="a" fill="#fa8c16" name="Vệ sinh dầu/cuối ca" barSize={20} />}
+                                    {barVisibility[line.id].doiMa && <Bar yAxisId="left" dataKey="doiMa" stackId="a" fill="#e8e8e8" name="Đổi mã" radius={[4, 4, 0, 0]} barSize={20} />}
                                     {barVisibility[line.id].oee && <Line
                                         yAxisId="right"
                                         type="monotone"

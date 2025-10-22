@@ -6,26 +6,18 @@ namespace FITSKIP.Domain.Entities;
 public partial class ProductionOutput
 {
     public int OutputId { get; set; }
-
     public int LineId { get; set; }
-
+    public DateTime Date { get; set; }
     public int ShiftId { get; set; }
+    public string SlotTime { get; set; } = null!;
+    public int? LoadingTime { get; set; }
+    public string? TargetAmount { get; set; } // "177/377" (sản phẩm tốt/tổng sản phẩm)
+    public string? ResultAmount { get; set; } // "150" (tổng sản phẩm thực tế)
+    public decimal? OEE { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 
-    public DateOnly Date { get; set; }
-
-    public decimal TargetQuantity { get; set; }
-
-    public int PlannedProductionTime { get; set; } // minutes
-
-    public int ActualQuantity { get; set; }
-
-    public int GoodQuantity { get; set; }
-
-    public int DowntimeMinutes { get; set; }
-
-    public decimal IdealCycleTime { get; set; }
-
+    // Navigation properties
     public virtual Line Line { get; set; } = null!;
-
     public virtual Shift Shift { get; set; } = null!;
 }
