@@ -16,6 +16,7 @@ public class AuthService : IAuthService
     private readonly IMemoryCache _memoryCache;
     private readonly IConfiguration _configuration;
     private readonly RoleManager<IdentityRole> _roleManager;
+    private readonly IUserService _userService;
 
     public AuthService(
         UserManager<User> userManager,
@@ -24,7 +25,8 @@ public class AuthService : IAuthService
         IEmailService emailService,
         IMemoryCache memoryCache,
         IConfiguration configuration,
-        RoleManager<IdentityRole> roleManager)
+        RoleManager<IdentityRole> roleManager,
+        IUserService userService)
     {
         _userManager = userManager;
         _signInManager = signInManager;
@@ -33,6 +35,7 @@ public class AuthService : IAuthService
         _memoryCache = memoryCache;
         _configuration = configuration;
         _roleManager = roleManager;
+        _userService = userService;
     }
 
     public async Task<LoginResponse> LoginAsync(LoginRequest request)
@@ -87,6 +90,7 @@ public class AuthService : IAuthService
                 LockoutEnabled = user.LockoutEnabled,
                 AccessFailedCount = user.AccessFailedCount,
                 IsActive = user.IsActive,
+                DepartmentId = user.DepartmentId,
                 Roles = roles.ToList()
             }
         };
@@ -283,6 +287,71 @@ public class AuthService : IAuthService
             Console.WriteLine($"VerifyEmail Error: {ex.Message}");
             return false;
         }
+    }
+
+    public async Task<MobileLoginResponse> MobileLoginAsync(MobileLoginRequest request)
+    {
+        // Find user by employee code
+        var user = await _userService.GetByEmployeeCodeAsync(request.EmployeeCode);
+
+        if (user == null)
+        {
+            throw new UnauthorizedAccessException("Mã nhân viên không tồn tại");
+        }
+
+        // Check if user account is active
+        if (!user.IsActive)
+        {
+            throw new UnauthorizedAccessException("Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.");
+        }
+
+        // Check if user is assigned to the specified line
+        var userLines = await _userService.GetUserLinesAsync(user.Id);
+        var isAssignedToLine = userLines.Any(ul => ul.LineId == request.LineId && ul.Line?.IsActive == true);
+
+        if (!isAssignedToLine)
+        {
+            throw new UnauthorizedAccessException("Bạn không được phân công vào dây chuyền này");
+        }
+
+        // Get the line information
+        var assignedLine = userLines.First(ul => ul.LineId == request.LineId).Line;
+        if (assignedLine == null)
+        {
+            throw new UnauthorizedAccessException("Không tìm thấy thông tin dây chuyền");
+        }
+
+        // Get user role from RoleId
+        var roleName = user.RoleId != null
+            ? (await _roleManager.FindByIdAsync(user.RoleId))?.Name
+            : null;
+        var roles = roleName != null ? new List<string> { roleName } : new List<string>();
+
+        // Generate JWT token
+        var token = await _jwtTokenService.GenerateTokenAsync(user, roles);
+
+        return new MobileLoginResponse
+        {
+            Token = token,
+            Expiration = DateTime.UtcNow.AddHours(1), // Should match JWT settings
+            User = new MobileUserDTO
+            {
+                Id = user.Id,
+                FullName = user.FullName,
+                EmployeeCode = user.EmployeeCode,
+                IsActive = user.IsActive,
+                Roles = roles.ToList(),
+                DepartmentId = user.DepartmentId,
+                DepartmentName = user.Department?.DepartmentName
+            },
+            Line = new MobileLineDTO
+            {
+                LineId = assignedLine.LineId,
+                LineName = assignedLine.LineName,
+                DepartmentId = assignedLine.DepartmentId,
+                IsActive = assignedLine.IsActive
+            }
+        };
     }
 
     private async Task<User?> FindUserByEmailOrEmployeeCodeAsync(string emailOrEmployeeCode)

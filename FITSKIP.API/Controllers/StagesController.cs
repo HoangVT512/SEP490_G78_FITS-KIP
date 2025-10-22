@@ -161,4 +161,26 @@ public class StagesController : ControllerBase
             return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi lấy danh sách giai đoạn theo dây chuyền", details = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Lấy danh sách giai đoạn theo các line mà user được phân công
+    /// </summary>
+    [HttpGet("user/{userId}/lines")]
+    public async Task<IActionResult> GetStagesByUserLines(string userId)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest(new { success = false, message = "ID người dùng không hợp lệ" });
+            }
+
+            var stages = await _stageService.GetStagesByUserLinesAsync(userId);
+            return Ok(new { success = true, data = stages, message = $"Lấy danh sách {stages.Count} giai đoạn theo line của user thành công" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi lấy danh sách giai đoạn theo line của user", details = ex.Message });
+        }
+    }
 }

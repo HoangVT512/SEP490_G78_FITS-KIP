@@ -1,0 +1,59 @@
+/* EFormSystem.css - Custom styles for EFormSystem component */
+
+.eform-table-row-even {
+  background-color: #fafafa !important;
+}
+
+.eform-table-row-odd {
+  background-color: #ffffff !important;
+}
+
+.eform-table-row-even:hover,
+.eform-table-row-odd:hover {
+  background-color: #f0f8ff !important;
+}
+
+.eform-shift-tabs .ant-tabs-nav {
+  justify-content: space-between !important;
+  width: 100% !important;
+}
+
+.eform-shift-tabs .ant-tabs-nav-list {
+  width: 100% !important;
+  justify-content: space-between !important;
+  gap: 24px !important;
+}
+
+.eform-shift-tabs .ant-tabs-tab {
+  flex: 1 !important;
+  text-align: center !important;
+  justify-content: center !important;
+  margin: 0 12px !important;
+}
+
+.eform-shift-tabs .ant-tabs-tab:first-child {
+  margin-left: 0 !important;
+}
+
+.eform-shift-tabs .ant-tabs-tab:last-child {
+  margin-right: 0 !important;
+}
+
+/* Force 2px border for Ant Table cells (header and body) only inside EFormSystem component */
+.eform-system-root .ant-table table {
+  border-collapse: collapse; /* avoid double borders */
+}
+
+.eform-system-root .ant-table thead th {
+  background-color: #CFCCD1 !important;
+}
+
+.eform-system-root .ant-table thead th,
+.eform-system-root .ant-table tbody td {
+  border: 2px solid #c0c0c0 !important;
+}
+
+/* Optional: make cell padding slightly smaller to accommodate thicker border */
+.eform-system-root .ant-table .ant-table-cell {
+  padding: 8px 12px !important;
+}

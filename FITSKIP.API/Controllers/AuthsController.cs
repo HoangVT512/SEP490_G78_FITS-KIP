@@ -21,8 +21,31 @@ public class AuthsController : ControllerBase
     }
 
     /// <summary>
-    /// Đăng nhập hệ thống
+    /// Đăng nhập mobile app (chỉ cần mã nhân viên + dây chuyền)
     /// </summary>
+    /// <param name="request">Thông tin đăng nhập mobile</param>
+    /// <returns>JWT token và thông tin user + line</returns>
+    [HttpPost("mobile-login")]
+    [AllowAnonymous]
+    public async Task<IActionResult> MobileLogin([FromBody] MobileLoginRequest request)
+    {
+        try
+        {
+            var response = await _authService.MobileLoginAsync(request);
+            return Ok(new { success = true, data = response, message = "Đăng nhập thành công" });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Đã có lỗi xảy ra trong quá trình đăng nhập", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Đăng nhập hệ thống</summary>
     /// <param name="request">Thông tin đăng nhập</param>
     /// <returns>JWT token và thông tin user</returns>
     [HttpPost("login")]
@@ -111,6 +134,15 @@ public class AuthsController : ControllerBase
                 return Unauthorized(new { message = "Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên." });
             }
 
+            // Get user's lines
+            var userLines = user.UserLines?.Select(ul => new
+            {
+                userLineId = ul.UserLineId,
+                lineId = ul.LineId,
+                lineName = ul.Line?.LineName,
+                createdAt = ul.CreatedAt
+            }).ToList();
+
             return Ok(new
             {
                 id = user.Id,
@@ -122,7 +154,9 @@ public class AuthsController : ControllerBase
                 emailConfirmed = user.EmailConfirmed,
                 phoneNumber = user.PhoneNumber,
                 phoneNumberConfirmed = user.PhoneNumberConfirmed,
-                roles = roles
+                departmentId = user.DepartmentId,
+                roles = roles,
+                userLines = userLines
             });
         }
         catch (Exception ex)

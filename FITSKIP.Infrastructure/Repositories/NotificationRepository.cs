@@ -105,6 +105,16 @@ namespace FITSKIP.Infrastructure.Repositories
             return true;
         }
 
+        public async Task DeleteAllReadByUserIdAsync(string userId)
+        {
+            var readNotifications = await _context.Notifications
+                .Where(n => n.UserId == userId && n.IsRead)
+                .ToListAsync();
+
+            _context.Notifications.RemoveRange(readNotifications);
+            await _context.SaveChangesAsync();
+        }
+
         public async Task<IEnumerable<Notification>> GetAllAsync()
         {
             return await _context.Notifications

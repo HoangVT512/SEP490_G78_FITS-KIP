@@ -191,9 +191,15 @@ public class EquipmentService : IEquipmentService
         return qrCode;
     }
 
-    public async Task<IReadOnlyList<EquipmentDTO>> GetEquipmentsByTeamLeaderAsync(string userId, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<EquipmentDTO>> GetEquipmentsByUserLinesAsync(string userId, CancellationToken cancellationToken = default)
     {
         var equipments = await _equipmentRepository.GetEquipmentsByTeamLeaderAsync(userId, cancellationToken);
+        return equipments.Select(e => EquipmentDTO.FromEntity(e)).ToList();
+    }
+
+    public async Task<IReadOnlyList<EquipmentDTO>> GetEquipmentsByLineAsync(int lineId, CancellationToken cancellationToken = default)
+    {
+        var equipments = await _equipmentRepository.GetByLineIdAsync(lineId, cancellationToken);
         return equipments.Select(e => EquipmentDTO.FromEntity(e)).ToList();
     }
 }

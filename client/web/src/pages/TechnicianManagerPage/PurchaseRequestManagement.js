@@ -14,6 +14,9 @@ import {
   DatePicker,
   Row,
   Col,
+  Dropdown,
+  Statistic,
+  Descriptions,
 } from "antd";
 import {
   PlusOutlined,
@@ -21,11 +24,17 @@ import {
   EyeOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
+  DownOutlined,
+  InboxOutlined,
+  ClockCircleOutlined,
+  CheckOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styles from "../../styles/pages/PurchaseRequestManagement.module.css";
 import { purchaseRequestService } from "../../services/purchaseRequestService";
 import { sparePartService } from "../../services/sparePartService";
+import signalRService from "../../services/signalRService";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -37,7 +46,6 @@ const PurchaseRequestManagement = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [form] = Form.useForm();
-  const [messageApi, messageContextHolder] = message.useMessage();
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
 
@@ -45,31 +53,58 @@ const PurchaseRequestManagement = () => {
 
   const [availableParts, setAvailableParts] = useState([]);
 
+  const stats = {
+    total: requests.length,
+    pending: requests.filter((req) => req.status === "Chờ duyệt").length,
+    approved: requests.filter((req) => req.status === "Đã duyệt").length,
+    rejected: requests.filter((req) => req.status === "Từ chối").length,
+  };
+
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const res = await purchaseRequestService.getMyRequests();
+      // res may be array or ApiResponse wrapper handled in service
+      setRequests(Array.isArray(res) ? res : []);
+      // Also load spare parts for the select
+      try {
+        const parts = await sparePartService.getAll();
+        // Filter only active parts (IsActive = true)
+        const activeParts = (Array.isArray(parts) ? parts : []).filter(
+          (part) => part.isActive !== false
+        );
+        setAvailableParts(activeParts);
+      } catch (e) {
+        console.warn("Could not load spare parts for select", e);
+      }
+    } catch (err) {
+      message.error("Không thể tải danh sách yêu cầu. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const res = await purchaseRequestService.getMyRequests();
-        if (!mounted) return;
-        // res may be array or ApiResponse wrapper handled in service
-        setRequests(Array.isArray(res) ? res : []);
-        // Also load spare parts for the select
-        try {
-          const parts = await sparePartService.getAll();
-          setAvailableParts(Array.isArray(parts) ? parts : []);
-        } catch (e) {
-          console.warn("Could not load spare parts for select", e);
-        }
-      } catch (err) {
-        messageApi.error("Không thể tải danh sách yêu cầu. Vui lòng thử lại.");
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    load();
+    loadData();
     return () => {
       mounted = false;
+    };
+  }, []);
+
+  // Thêm useEffect để lắng nghe cập nhật dữ liệu real-time
+  useEffect(() => {
+    const handleDataUpdate = (data) => {
+      if (data.type === "purchaseRequest") {
+        console.log("Purchase request data updated, reloading...");
+        loadData(); // Tải lại dữ liệu khi có thay đổi
+      }
+    };
+
+    signalRService.onDataUpdated(handleDataUpdate);
+
+    return () => {
+      signalRService.offDataUpdated();
     };
   }, []);
 
@@ -120,10 +155,10 @@ const PurchaseRequestManagement = () => {
       render: (status) => {
         let displayStatus;
         let color = "warning";
-        if (status === "Approved") {
+        if (status === "Đã duyệt") {
           displayStatus = "Đã duyệt";
           color = "success";
-        } else if (status === "Rejected") {
+        } else if (status === "Từ chối") {
           displayStatus = "Từ chối";
           color = "error";
         } else {
@@ -137,36 +172,27 @@ const PurchaseRequestManagement = () => {
       title: "Thao tác",
       key: "action",
       fixed: "right",
-      width: 180,
-      render: (_, record) => (
-        <Space>
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => handleViewDetail(record)}
+      width: 100,
+      render: (_, record) => {
+        const menuItems = [
+          {
+            key: "view",
+            icon: <EyeOutlined />,
+            label: "Chi tiết",
+            onClick: () => handleViewDetail(record),
+          },
+        ];
+
+        return (
+          <Dropdown
+            menu={{ items: menuItems }}
+            trigger={["click"]}
+            destroyOnHidden={true}
           >
-            Chi tiết
-          </Button>
-          {record.status === "Pending" && (
-            <>
-              <Button
-                type="primary"
-                icon={<CheckCircleOutlined />}
-                onClick={() => handleApprove(record)}
-              >
-                Duyệt
-              </Button>
-              <Button
-                danger
-                icon={<CloseCircleOutlined />}
-                onClick={() => handleReject(record)}
-              >
-                Từ chối
-              </Button>
-            </>
-          )}
-        </Space>
-      ),
+            <Button type="link" icon={<DownOutlined />} />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -183,19 +209,40 @@ const PurchaseRequestManagement = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // Backend expects { partId, quantity, reason }
-      const payload = {
-        // The Select now returns the partId as value
-        partId: values.partNumber || values.partId || null,
-        quantity: values.quantity,
-        reason: values.reason,
-      };
-      if (!payload.partId) {
+      // The Select now returns the partId as value
+      const partId = values.partNumber || values.partId || null;
+
+      if (!partId) {
         throw new Error("Phụ tùng không hợp lệ");
       }
 
+      // Check if there's already a pending request for this part
+      const pendingRequest = requests.find(
+        (req) => req.partId === partId && req.status === "Chờ duyệt"
+      );
+
+      if (pendingRequest) {
+        message.error(
+          `Phụ tùng này đã có yêu cầu đang chờ duyệt (REQ${String(
+            pendingRequest.requestId
+          ).padStart(
+            3,
+            "0"
+          )}). Vui lòng chờ hoàn thành yêu cầu này trước khi tạo yêu cầu mới!`
+        );
+        setLoading(false);
+        return;
+      }
+
+      // Backend expects { partId, quantity, reason }
+      const payload = {
+        partId: partId,
+        quantity: values.quantity,
+        reason: values.reason,
+      };
+
       await purchaseRequestService.create(payload);
-      messageApi.success("Tạo yêu cầu mua hàng thành công!");
+      message.success("Tạo yêu cầu mua hàng thành công!");
       // refresh list
       const res = await purchaseRequestService.getMyRequests();
       setRequests(Array.isArray(res) ? res : []);
@@ -203,12 +250,18 @@ const PurchaseRequestManagement = () => {
       form.resetFields();
     } catch (error) {
       console.error("Create purchase request error:", error);
-      if (error && error.message && error.message.includes("403")) {
-        messageApi.error(
+      // Try to get message from backend response first, then from error message
+      const errorMessage =
+        error?.response?.data?.message ||
+        error?.message ||
+        "Có lỗi xảy ra khi tạo yêu cầu!";
+
+      if (errorMessage.includes("403")) {
+        message.error(
           "Bạn không có quyền để tạo yêu cầu. Tài khoản cần có vai trò 'Quản lý kỹ thuật' hoặc hãy đăng nhập lại."
         );
       } else {
-        messageApi.error(error?.message || "Có lỗi xảy ra khi tạo yêu cầu!");
+        message.error(errorMessage);
       }
     } finally {
       setLoading(false);
@@ -228,12 +281,12 @@ const PurchaseRequestManagement = () => {
         setLoading(true);
         try {
           await purchaseRequestService.approve(record.requestId);
-          messageApi.success("Duyệt yêu cầu thành công");
+          message.success("Duyệt yêu cầu thành công");
           const res = await purchaseRequestService.getMyRequests();
           setRequests(Array.isArray(res) ? res : []);
         } catch (err) {
           console.error("Approve error", err);
-          messageApi.error(err?.message || "Không thể duyệt yêu cầu");
+          message.error(err?.message || "Không thể duyệt yêu cầu");
         } finally {
           setLoading(false);
         }
@@ -267,12 +320,12 @@ const PurchaseRequestManagement = () => {
           await purchaseRequestService.reject(record.requestId, {
             reason: reason || undefined,
           });
-          messageApi.success("Từ chối yêu cầu thành công");
+          message.success("Từ chối yêu cầu thành công");
           const res = await purchaseRequestService.getMyRequests();
           setRequests(Array.isArray(res) ? res : []);
         } catch (err) {
           console.error("Reject error", err);
-          messageApi.error(err?.message || "Không thể từ chối yêu cầu");
+          message.error(err?.message || "Không thể từ chối yêu cầu");
         } finally {
           setLoading(false);
         }
@@ -290,11 +343,17 @@ const PurchaseRequestManagement = () => {
   });
 
   const CreateRequestForm = (
-    <Form form={form} layout="vertical" onFinish={handleSubmit}>
+    <Form
+      form={form}
+      layout="vertical"
+      onFinish={handleSubmit}
+      labelCol={{ style: { fontSize: "15px", fontWeight: 600 } }}
+    >
       <Form.Item
         name="partNumber"
         label="Mã phụ tùng"
         rules={[{ required: true, message: "Vui lòng chọn phụ tùng" }]}
+        style={{ marginBottom: 16 }}
       >
         <Select
           placeholder="Chọn phụ tùng"
@@ -328,6 +387,7 @@ const PurchaseRequestManagement = () => {
           { required: true, message: "Vui lòng nhập số lượng" },
           { type: "number", min: 1, message: "Số lượng phải lớn hơn 0" },
         ]}
+        style={{ marginBottom: 16 }}
       >
         <InputNumber min={1} style={{ width: "100%" }} />
       </Form.Item>
@@ -335,9 +395,13 @@ const PurchaseRequestManagement = () => {
       <Form.Item
         name="reason"
         label="Lý do yêu cầu"
-        rules={[{ required: true, message: "Vui lòng nhập lý do" }]}
+        rules={[]}
+        style={{ marginBottom: 16 }}
       >
-        <TextArea rows={4} placeholder="Mô tả lý do cần mua phụ tùng..." />
+        <TextArea
+          rows={3}
+          placeholder="Mô tả lý do cần mua phụ tùng... (tùy chọn)"
+        />
       </Form.Item>
 
       <Form.Item style={{ marginBottom: 0 }}>
@@ -350,7 +414,15 @@ const PurchaseRequestManagement = () => {
           >
             Hủy
           </Button>
-          <Button type="primary" htmlType="submit" loading={loading}>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={loading}
+            style={{
+              backgroundColor: "#283652",
+              borderColor: "#283652",
+            }}
+          >
             Tạo yêu cầu
           </Button>
         </Space>
@@ -367,6 +439,12 @@ const PurchaseRequestManagement = () => {
           type="primary"
           icon={<PlusOutlined />}
           onClick={handleCreateRequest}
+          style={{
+            backgroundColor: "#283652",
+            borderColor: "#283652",
+            borderRadius: "6px",
+            fontWeight: "500",
+          }}
         >
           Tạo yêu cầu mới
         </Button>
@@ -380,11 +458,12 @@ const PurchaseRequestManagement = () => {
               prefix={<SearchOutlined />}
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
+              style={{ borderRadius: "6px" }}
             />
           </Col>
           <Col xs={24} sm={12} md={8}>
             <Select
-              style={{ width: "100%" }}
+              style={{ width: "100%", borderRadius: "6px" }}
               placeholder="Lọc theo trạng thái"
               value={filterStatus}
               onChange={setFilterStatus}
@@ -408,6 +487,7 @@ const PurchaseRequestManagement = () => {
             showSizeChanger: true,
             showTotal: (total) => `Tổng ${total} yêu cầu`,
           }}
+          style={{ borderRadius: "6px" }}
         />
       </Space>
     </Card>
@@ -415,7 +495,65 @@ const PurchaseRequestManagement = () => {
 
   return (
     <div className={styles.container}>
-      {messageContextHolder}
+      {/* Statistics */}
+      <Row gutter={[16, 16]} className={styles.statsRow}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.statsCard}>
+            <Statistic
+              title="Tổng yêu cầu"
+              value={stats.total}
+              prefix={<InboxOutlined />}
+              valueStyle={{
+                color: "#283652",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.statsCard}>
+            <Statistic
+              title="Chờ duyệt"
+              value={stats.pending}
+              prefix={<ClockCircleOutlined />}
+              valueStyle={{
+                color: "#faad14",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.statsCard}>
+            <Statistic
+              title="Đã duyệt"
+              value={stats.approved}
+              prefix={<CheckOutlined />}
+              valueStyle={{
+                color: "#52c41a",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.statsCard}>
+            <Statistic
+              title="Từ chối"
+              value={stats.rejected}
+              prefix={<CloseOutlined />}
+              valueStyle={{
+                color: "#ff4d4f",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
+            />
+          </Card>
+        </Col>
+      </Row>
 
       {/* Main Content - Only Request List */}
       {RequestListTable}
@@ -429,7 +567,8 @@ const PurchaseRequestManagement = () => {
           form.resetFields();
         }}
         footer={null}
-        width={600}
+        width={700}
+        style={{ top: 20 }}
       >
         {CreateRequestForm}
       </Modal>
@@ -446,115 +585,80 @@ const PurchaseRequestManagement = () => {
             Đóng
           </Button>,
         ]}
-        width={700}
+        width={650}
+        style={{ top: 20 }}
+        bodyStyle={{ padding: 12 }}
       >
         {selectedRequest && (
-          <div className={styles.detailContent}>
-            <Row gutter={[16, 16]}>
-              <Col span={12}>
-                <div className={styles.detailItem}>
-                  <strong>Mã phụ tùng:</strong>
-                  <span>{selectedRequest.partNumber}</span>
+          <Descriptions
+            bordered={false}
+            size="small"
+            column={1}
+            layout="horizontal"
+            labelStyle={{ fontWeight: 600, width: 160, fontSize: "15px" }}
+            contentStyle={{ fontSize: "15px" }}
+          >
+            <Descriptions.Item label="Mã phụ tùng">
+              {selectedRequest.partNumber}
+            </Descriptions.Item>
+            <Descriptions.Item label="Tên phụ tùng">
+              {selectedRequest.partName}
+            </Descriptions.Item>
+            <Descriptions.Item label="Số lượng">
+              {selectedRequest.quantity}
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              <Tag
+                color={
+                  selectedRequest.status === "Chờ duyệt"
+                    ? "warning"
+                    : selectedRequest.status === "Đã duyệt"
+                    ? "success"
+                    : "error"
+                }
+              >
+                {selectedRequest.status}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Người yêu cầu">
+              {selectedRequest.requestedByName}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày yêu cầu">
+              {dayjs(selectedRequest.requestDate).format("DD/MM/YYYY")}
+            </Descriptions.Item>
+            {selectedRequest.approvedBy && (
+              <>
+                <Descriptions.Item label="Người duyệt">
+                  {selectedRequest.approvedByName}
+                </Descriptions.Item>
+                <Descriptions.Item label="Ngày duyệt">
+                  {dayjs(selectedRequest.approvedDate).format("DD/MM/YYYY")}
+                </Descriptions.Item>
+              </>
+            )}
+            {selectedRequest.rejectedBy && (
+              <>
+                <Descriptions.Item label="Người từ chối">
+                  {selectedRequest.rejectedByName}
+                </Descriptions.Item>
+                <Descriptions.Item label="Ngày từ chối">
+                  {dayjs(selectedRequest.rejectedDate).format("DD/MM/YYYY")}
+                </Descriptions.Item>
+              </>
+            )}
+            <Descriptions.Item label="Lý do yêu cầu">
+              <div style={{ whiteSpace: "pre-wrap", margin: 0 }}>
+                {selectedRequest.reason}
+              </div>
+            </Descriptions.Item>
+            {selectedRequest.notes && (
+              <Descriptions.Item label="Ghi chú">
+                <div style={{ whiteSpace: "pre-wrap", margin: 0 }}>
+                  {selectedRequest.notes}
                 </div>
-              </Col>
-              <Col span={12}>
-                <div className={styles.detailItem}>
-                  <strong>Tên phụ tùng:</strong>
-                  <span>{selectedRequest.partName}</span>
-                </div>
-              </Col>
-              <Col span={12}>
-                <div className={styles.detailItem}>
-                  <strong>Số lượng:</strong>
-                  <span>{selectedRequest.quantity}</span>
-                </div>
-              </Col>
-              <Col span={12}>
-                <div className={styles.detailItem}>
-                  <strong>Trạng thái:</strong>
-                  <Tag
-                    color={
-                      selectedRequest.status === "Chờ duyệt"
-                        ? "warning"
-                        : selectedRequest.status === "Đã duyệt"
-                        ? "success"
-                        : "error"
-                    }
-                  >
-                    {selectedRequest.status}
-                  </Tag>
-                </div>
-              </Col>
-              <Col span={12}>
-                <div className={styles.detailItem}>
-                  <strong>Người yêu cầu:</strong>
-                  <span>{selectedRequest.requestedByName}</span>
-                </div>
-              </Col>
-              <Col span={12}>
-                <div className={styles.detailItem}>
-                  <strong>Ngày yêu cầu:</strong>
-                  <span>
-                    {dayjs(selectedRequest.requestDate).format("DD/MM/YYYY")}
-                  </span>
-                </div>
-              </Col>
-              {selectedRequest.approvedBy && (
-                <>
-                  <Col span={12}>
-                    <div className={styles.detailItem}>
-                      <strong>Người duyệt:</strong>
-                      <span>{selectedRequest.approvedByName}</span>
-                    </div>
-                  </Col>
-                  <Col span={12}>
-                    <div className={styles.detailItem}>
-                      <strong>Ngày duyệt:</strong>
-                      <span>
-                        {dayjs(selectedRequest.approvedDate).format(
-                          "DD/MM/YYYY"
-                        )}
-                      </span>
-                    </div>
-                  </Col>
-                </>
-              )}
-              {selectedRequest.rejectedBy && (
-                <>
-                  <Col span={12}>
-                    <div className={styles.detailItem}>
-                      <strong>Người từ chối:</strong>
-                      <span>{selectedRequest.rejectedByName}</span>
-                    </div>
-                  </Col>
-                  <Col span={12}>
-                    <div className={styles.detailItem}>
-                      <strong>Ngày từ chối:</strong>
-                      <span>
-                        {dayjs(selectedRequest.rejectedDate).format(
-                          "DD/MM/YYYY"
-                        )}
-                      </span>
-                    </div>
-                  </Col>
-                </>
-              )}
-              <Col span={24}>
-                <div className={styles.detailItem}>
-                  <strong>Lý do yêu cầu:</strong>
-                  <p>{selectedRequest.reason}</p>
-                </div>
-              </Col>
-              {selectedRequest.notes && (
-                <Col span={24}>
-                  <div className={styles.detailItem}>
-                    <strong>Ghi chú:</strong>
-                    <p>{selectedRequest.notes}</p>
-                  </div>
-                </Col>
-              )}
-            </Row>
-          </div>
+              </Descriptions.Item>
+            )}
+          </Descriptions>
         )}
       </Modal>
     </div>

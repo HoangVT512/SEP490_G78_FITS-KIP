@@ -6,6 +6,7 @@ namespace FITSKIP.Application.Interfaces;
 public interface IAuthService
 {
     Task<LoginResponse> LoginAsync(LoginRequest request);
+    Task<MobileLoginResponse> MobileLoginAsync(MobileLoginRequest request);
     Task<bool> LogoutAsync(string userId);
     Task<bool> SendForgotPasswordOtpAsync(ForgotPasswordRequest request);
     Task<bool> VerifyOtpAsync(VerifyOtpRequest request);

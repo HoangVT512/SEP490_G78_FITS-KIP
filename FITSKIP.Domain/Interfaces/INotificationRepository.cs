@@ -13,6 +13,7 @@ namespace FITSKIP.Domain.Interfaces
         Task<bool> MarkAsReadAsync(int notificationId, string userId);
         Task<bool> MarkAllAsReadAsync(string userId);
         Task<bool> DeleteAsync(int notificationId);
+        Task DeleteAllReadByUserIdAsync(string userId);
         Task<IEnumerable<Notification>> GetAllAsync();
     }
 }

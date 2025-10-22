@@ -234,6 +234,40 @@ export const userService = {
       throw new Error("Không thể lấy danh sách quản lý.");
     }
   },
+
+  // Get active team leads by line
+  getActiveTeamLeadsByLine: async (lineId) => {
+    try {
+      const response = await apiRequest(`/Users/active-team-leads/${lineId}`);
+      return response;
+    } catch (error) {
+      console.error("Lấy team lead theo line lỗi:", error);
+      throw error;
+    }
+  },
+
+  // Reset user password to default (123456)
+  resetPassword: async (id) => {
+    try {
+      return await apiRequest(`/Users/${id}/reset-password`, {
+        method: "POST",
+        body: JSON.stringify({}),
+      });
+    } catch (error) {
+      console.error("Error resetting user password:", error);
+      throw new Error("Không thể đặt lại mật khẩu người dùng.");
+    }
+  },
+
+  // Get user lines by user ID
+  getUserLines: async (userId) => {
+    try {
+      return await apiRequest(`/Users/${userId}/lines`);
+    } catch (error) {
+      console.error("Lỗi tải danh sách dây chuyền của người dùng:", error);
+      throw new Error("Không thể tải danh sách dây chuyền của người dùng.");
+    }
+  },
 };
 
 export default userService;

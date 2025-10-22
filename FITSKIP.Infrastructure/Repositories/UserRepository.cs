@@ -4,6 +4,7 @@ using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
 using FITSKIP.Infrastructure.DbContexts;
 using FITSKIP.Domain.DTO;
+using System.Text.RegularExpressions;
 
 namespace FITSKIP.Infrastructure.Repositories;
 
@@ -18,21 +19,64 @@ public class UserRepository : IUserRepository
         this.userManager = userManager;
     }
 
+    private bool IsValidEmail(string email)
+    {
+        if (string.IsNullOrWhiteSpace(email))
+            return false;
+
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private bool IsValidVietnamPhoneNumber(string phoneNumber)
+    {
+        if (string.IsNullOrWhiteSpace(phoneNumber))
+            return false;
+
+        string pattern = @"^(?:\+84|0)[0-9]{9}$";
+        return Regex.IsMatch(phoneNumber, pattern);
+    }
+
     public async Task<User> CreateUserAsync(User user, string password, string[]? roleIds = null, CancellationToken cancellationToken = default)
     {
+        // Validation: Check required fields
+        if (string.IsNullOrWhiteSpace(user.EmployeeCode))
+        {
+            throw new ArgumentException("Mã nhân viên là bắt buộc");
+        }
+
+        if (string.IsNullOrWhiteSpace(user.FullName))
+        {
+            throw new ArgumentException("Họ tên là bắt buộc");
+        }
+
+        // Validation: Check if username already exists
         var existingUser = await db.Users.FirstOrDefaultAsync(u => u.UserName == user.UserName, cancellationToken);
         if (existingUser != null)
         {
-            throw new ArgumentException("Người dùng với tên đăng nhập này đã tồn tại.");
+            throw new ArgumentException($"Tên đăng nhập '{user.UserName}' đã tồn tại trong hệ thống");
         }
 
-        // Only check for duplicate email when an email is provided (non-empty, non-whitespace)
+        // Validation: Check if email already exists (only when email is provided)
         if (!string.IsNullOrWhiteSpace(user.Email))
         {
+            // Validate email format
+            if (!IsValidEmail(user.Email))
+            {
+                throw new ArgumentException("Email không hợp lệ");
+            }
+
             var existingEmail = await db.Users.FirstOrDefaultAsync(u => u.Email == user.Email, cancellationToken);
             if (existingEmail != null)
             {
-                throw new ArgumentException("Người dùng với email này đã tồn tại.");
+                throw new ArgumentException($"Email '{user.Email}' đã tồn tại trong hệ thống");
             }
         }
         else
@@ -41,42 +85,39 @@ public class UserRepository : IUserRepository
             user.Email = null;
         }
 
+        // Validation: Check if employee code already exists
         if (!string.IsNullOrEmpty(user.EmployeeCode))
         {
             var existingEmployeeCode = await db.Users.FirstOrDefaultAsync(u => u.EmployeeCode == user.EmployeeCode, cancellationToken);
             if (existingEmployeeCode != null)
             {
-                throw new ArgumentException("Người dùng với mã nhân viên này đã tồn tại.");
+                throw new ArgumentException($"Mã nhân viên '{user.EmployeeCode}' đã tồn tại trong hệ thống");
             }
         }
 
-        // Phone number: treat blank/whitespace as null and only check duplicates when provided
+        // Validation: Check phone number (only when provided)
         if (!string.IsNullOrWhiteSpace(user.PhoneNumber))
         {
+            // Validate phone number format
+            if (!IsValidVietnamPhoneNumber(user.PhoneNumber))
+            {
+                throw new ArgumentException("Số điện thoại không hợp lệ");
+            }
+
             var existingPhone = await db.Users.FirstOrDefaultAsync(u => u.PhoneNumber == user.PhoneNumber, cancellationToken);
             if (existingPhone != null)
             {
-                throw new ArgumentException("Người dùng với số điện thoại này đã tồn tại.");
+                throw new ArgumentException($"Số điện thoại '{user.PhoneNumber}' đã tồn tại trong hệ thống");
             }
         }
         else
         {
             user.PhoneNumber = null;
         }
-
-        // Create user with password using Identity
-        var createResult = await userManager.CreateAsync(user, password);
-        if (!createResult.Succeeded)
-        {
-            throw new Exception($"Failed to create user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
-        }
-
-        // Note: User is already added to db by userManager.CreateAsync, no need to AddAsync again
-
         // Assign role to user if roleIds provided (only first role since User now has single RoleId)
         if (roleIds != null && roleIds.Length > 0)
         {
-            var roleId = roleIds[0]; // Only take first role
+            var roleId = roleIds[0];
 
             // Try to find role by Id first
             var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == roleId, cancellationToken);
@@ -104,6 +145,12 @@ public class UserRepository : IUserRepository
             }
         }
 
+        // Create user with password using Identity
+        var createResult = await userManager.CreateAsync(user, password);
+        if (!createResult.Succeeded)
+        {
+            throw new Exception($"Failed to create user: {string.Join(", ", createResult.Errors.Select(e => e.Description))}");
+        }
         return user;
     }
 
@@ -130,16 +177,11 @@ public class UserRepository : IUserRepository
         var userDTOs = new List<UserDTO>();
         foreach (var user in users)
         {
-            // Get role name from RoleId
             var roleName = user.RoleId != null
                 ? (await db.Roles.AsNoTracking().FirstOrDefaultAsync(r => r.Id == user.RoleId, cancellationToken))?.Name
                 : null;
             var roles = roleName != null ? new List<string> { roleName } : new List<string>();
 
-            // Resolve department using priority:
-            // 1) If user has UserLines -> department of the first line
-            // 2) Else if user.DepartmentId is set -> that department
-            // 3) Else if user is set as Manager (Department.ManagerId) -> that department
             var userLine = user.UserLines.FirstOrDefault();
             Department? department = null;
 
@@ -157,13 +199,11 @@ public class UserRepository : IUserRepository
             }
             else
             {
-                // If user is a manager (has ManagerId set), also check that
                 department = await db.Departments
                     .AsNoTracking()
                     .FirstOrDefaultAsync(d => d.ManagerId == user.Id, cancellationToken);
             }
 
-            // Get lines assigned to user
             var userLineIds = user.UserLines.Select(ul => ul.LineId).ToList();
 
             userDTOs.Add(new UserDTO
@@ -207,11 +247,10 @@ public class UserRepository : IUserRepository
 
     public Task<User?> GetUserByIdAsync(string id, CancellationToken cancellationToken = default)
     {
-        var existingUser = db.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
-        if (existingUser == null)
-        {
-            throw new ArgumentException("A user with the same ID does not exist.");
-        }
+        var existingUser = db.Users
+            .Include(u => u.UserLines)
+            .ThenInclude(ul => ul.Line)
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
         return existingUser;
     }
 
@@ -229,230 +268,132 @@ public class UserRepository : IUserRepository
 
     public async Task<UserDTO?> UpdateUserAsync(string id, UpdateUserRequest request, CancellationToken cancellationToken = default)
     {
-        var existingUser = await db.Users.FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+        var existingUser = await db.Users
+            .Include(u => u.Role) // Include the Role navigation property
+            .FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
+
         if (existingUser == null)
         {
             return null;
         }
 
-        // Normalize incoming contact fields: convert empty/whitespace to null so DB stores NULL instead of empty string
+        // Check if the current role is "Quản trị viên"
+        if (existingUser.Role != null && existingUser.Role.Name.Equals("Quản trị viên", StringComparison.OrdinalIgnoreCase))
+        {
+            // Prevent role updates for "Quản trị viên"
+            if (request.RoleIds != null && request.RoleIds.Length > 0)
+            {
+                throw new ArgumentException("Không thể cập nhật role của người dùng có vai trò 'Quản trị viên'.");
+            }
+        }
+
+        // Normalize incoming contact fields
         var normalizedEmail = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
         var normalizedPhone = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
 
-        // Determine desired UserName: priority -> explicit request.UserName, then request.EmployeeCode, then keep existing
-        string? desiredUserName = null;
-        if (!string.IsNullOrWhiteSpace(request.UserName))
+        // Validation: Check email format (only if email is provided)
+        if (!string.IsNullOrEmpty(normalizedEmail) && !IsValidEmail(normalizedEmail))
         {
-            desiredUserName = request.UserName.Trim();
-        }
-        else if (!string.IsNullOrWhiteSpace(request.EmployeeCode))
-        {
-            // If user didn't explicitly set UserName, prefer EmployeeCode as username when provided
-            desiredUserName = request.EmployeeCode.Trim();
-        }
-        else
-        {
-            desiredUserName = existingUser.UserName;
+            throw new ArgumentException("Email không hợp lệ");
         }
 
-        var normalizedUserName = desiredUserName?.ToUpperInvariant();
-
-        // Ensure the desired username is unique (by normalized username) before applying change
-        if (!string.IsNullOrWhiteSpace(desiredUserName) && normalizedUserName != existingUser.NormalizedUserName)
+        // Validation: Check phone number format (only if phone number is provided)
+        if (!string.IsNullOrEmpty(normalizedPhone) && !IsValidVietnamPhoneNumber(normalizedPhone))
         {
-            var usernameExists = await db.Users.AnyAsync(u => u.NormalizedUserName == normalizedUserName && u.Id != id, cancellationToken);
-            if (usernameExists)
-            {
-                throw new ArgumentException("Tên đăng nhập đã tồn tại.");
-            }
+            throw new ArgumentException("Số điện thoại không hợp lệ");
         }
 
-        // Update user properties using EF Core directly
-        existingUser.UserName = desiredUserName;
-        existingUser.Email = normalizedEmail;
-        existingUser.NormalizedUserName = normalizedUserName;
-        existingUser.NormalizedEmail = normalizedEmail?.ToUpperInvariant();
-        existingUser.FullName = request.FullName;
-        existingUser.EmployeeCode = request.EmployeeCode;
-        existingUser.PhoneNumber = normalizedPhone;
-        existingUser.IsActive = request.IsActive;
-
-        // Update role if provided (Now using RoleId in User entity)
+        // Validation: Ensure the desired role is valid
         if (request.RoleIds != null && request.RoleIds.Length > 0)
         {
-            // Only take the first role since we now have 1-to-many relationship
             var roleIdOrName = request.RoleIds[0];
-
-            // Normalize input
-            var normalizedInput = roleIdOrName?.Trim();
-
-            if (string.IsNullOrEmpty(normalizedInput))
-            {
-                throw new ArgumentException("RoleId hoặc Role Name không được để trống");
-            }
-
-            // Try to find role by Id first, then by Name (case-insensitive)
             var role = await db.Roles.FirstOrDefaultAsync(
-                r => r.Id == normalizedInput || r.Name == normalizedInput,
+                r => r.Id == roleIdOrName || r.Name == roleIdOrName,
                 cancellationToken);
 
-            if (role == null || string.IsNullOrEmpty(role.Name))
+            if (role == null)
             {
-                throw new Exception($"Role '{normalizedInput}' không tồn tại hoặc không hợp lệ trong hệ thống. Vui lòng kiểm tra lại Role ID hoặc Role Name.");
+                throw new ArgumentException($"Role '{roleIdOrName}' không tồn tại hoặc không hợp lệ trong hệ thống");
             }
 
-            // Update RoleId in User entity for navigation (always store the actual ID)
+            // Validation: Restricted roles must not have lines
+            var restrictedRoles = new[] { "Quản lý", "Kỹ thuật viên", "Kỹ thuật", "Quản trị viên" };
+            if (restrictedRoles.Contains(role.Name, StringComparer.OrdinalIgnoreCase) && request.LineIds != null && request.LineIds.Any())
+            {
+                throw new ArgumentException($"Role '{role.Name}' không được nhập Line.");
+            }
+
+            // Check if the role is "Quản lý" and validate department manager assignment
+            if (role.Name.Equals("Quản lý", StringComparison.OrdinalIgnoreCase) && request.DepartmentId.HasValue)
+            {
+                var department = await db.Departments.FirstOrDefaultAsync(
+                    d => d.DepartmentId == request.DepartmentId.Value,
+                    cancellationToken);
+
+                if (department == null)
+                {
+                    throw new ArgumentException($"Phòng ban với ID '{request.DepartmentId}' không tồn tại.");
+                }
+
+                // Check if the department already has a manager
+                if (department.ManagerId != null && department.ManagerId != id)
+                {
+                    throw new ArgumentException($"Phòng ban '{department.DepartmentName}' đã có quản lý.");
+                }
+
+                // Assign the user as the manager of the department
+                department.ManagerId = id;
+            }
+
             existingUser.RoleId = role.Id;
-
-            // If role is "Quản lý" and department is provided, set user as manager
-            if (role.Name == "Quản lý" && request.DepartmentId.HasValue && request.DepartmentId.Value > 0)
-            {
-                // Verify department exists
-                var deptToManage = await db.Departments.FirstOrDefaultAsync(d => d.DepartmentId == request.DepartmentId.Value, cancellationToken);
-                if (deptToManage == null)
-                {
-                    throw new Exception($"Department với ID '{request.DepartmentId.Value}' không tồn tại trong hệ thống");
-                }
-
-                // Check if department already has a different manager
-                if (deptToManage.ManagerId != null && deptToManage.ManagerId != id)
-                {
-                    // Unset the other manager
-                    var otherManagerDept = await db.Departments.FirstOrDefaultAsync(d => d.ManagerId == deptToManage.ManagerId, cancellationToken);
-                    if (otherManagerDept != null)
-                    {
-                        otherManagerDept.ManagerId = null;
-                    }
-                }
-
-                // Unset previous manager if any (if user was managing a different department)
-                var previousManagerDepartment = await db.Departments.FirstOrDefaultAsync(d => d.ManagerId == id && d.DepartmentId != request.DepartmentId.Value, cancellationToken);
-                if (previousManagerDepartment != null)
-                {
-                    previousManagerDepartment.ManagerId = null;
-                }
-
-                // Set user as manager of the new department
-                deptToManage.ManagerId = id;
-
-                // Clear DepartmentId since manager relationship is separate
-                existingUser.DepartmentId = null;
-            }
-            else
-            {
-                // If not "Quản lý" role, remove manager assignment if any
-                var previousManagerDepartment = await db.Departments.FirstOrDefaultAsync(d => d.ManagerId == id, cancellationToken);
-                if (previousManagerDepartment != null)
-                {
-                    previousManagerDepartment.ManagerId = null;
-                }
-            }
-        }
-        else if (request.RoleIds != null && request.RoleIds.Length == 0)
-        {
-            // Clear role if empty array is provided
-            existingUser.RoleId = null;
-
-            // Also remove manager assignment
-            var previousManagerDepartment = await db.Departments.FirstOrDefaultAsync(d => d.ManagerId == id, cancellationToken);
-            if (previousManagerDepartment != null)
-            {
-                previousManagerDepartment.ManagerId = null;
-            }
         }
 
-        // TH1 & TH2: Update department assignment
-        // Remove existing UserLines first
-        var existingUserLines = await db.UserLines
-            .Where(ul => ul.UserId == id)
-            .ToListAsync(cancellationToken);
+        // Update user properties
+        existingUser.FullName = request.FullName;
+        existingUser.Email = normalizedEmail;
+        existingUser.PhoneNumber = normalizedPhone;
 
-        if (existingUserLines.Any())
+        // Remove existing UserLines if LineIds are provided
+        if (request.LineIds != null)
         {
-            db.UserLines.RemoveRange(existingUserLines);
-        }
+            var existingUserLines = await db.UserLines
+                .Where(ul => ul.UserId == id)
+                .ToListAsync(cancellationToken);
 
-        // Handle department assignment based on whether LineIds are provided
-        if (request.DepartmentId.HasValue)
-        {
-            // Verify department exists
-            var dept = await db.Departments.FirstOrDefaultAsync(d => d.DepartmentId == request.DepartmentId.Value, cancellationToken);
-            if (dept == null)
+            if (existingUserLines.Any())
             {
-                throw new Exception($"Department với ID '{request.DepartmentId.Value}' không tồn tại trong hệ thống");
+                db.UserLines.RemoveRange(existingUserLines);
             }
 
-            // TH1: Không có LineIds -> assign user vào department trực tiếp
-            if (request.LineIds == null || request.LineIds.Count == 0)
+            foreach (var lineId in request.LineIds)
             {
-                existingUser.DepartmentId = request.DepartmentId.Value;
-            }
-            // TH2: Có LineIds -> assign qua UserLine, clear DepartmentId
-            else
-            {
-                existingUser.DepartmentId = null;
-
-                foreach (var lineId in request.LineIds)
+                var line = await db.Lines.FirstOrDefaultAsync(l => l.LineId == lineId, cancellationToken);
+                if (line == null)
                 {
-                    // Verify line exists
-                    var line = await db.Lines.FirstOrDefaultAsync(l => l.LineId == lineId, cancellationToken);
-                    if (line == null)
-                    {
-                        throw new Exception($"Line với ID '{lineId}' không tồn tại trong hệ thống");
-                    }
-
-                    // Verify line belongs to the specified department
-                    if (line.DepartmentId != request.DepartmentId.Value)
-                    {
-                        throw new Exception($"Line với ID '{lineId}' không thuộc Department '{request.DepartmentId}'.");
-                    }
-
-                    var newUserLine = new UserLine
-                    {
-                        UserId = id,
-                        LineId = lineId,
-                        CreatedAt = DateTime.UtcNow
-                    };
-                    await db.UserLines.AddAsync(newUserLine, cancellationToken);
+                    throw new ArgumentException($"Line với ID '{lineId}' không tồn tại trong hệ thống");
                 }
+
+                var userLine = new UserLine
+                {
+                    UserId = id,
+                    LineId = lineId,
+                    CreatedAt = DateTime.UtcNow
+                };
+                await db.UserLines.AddAsync(userLine, cancellationToken);
             }
-        }
-        else
-        {
-            // No department specified, clear DepartmentId
-            existingUser.DepartmentId = null;
         }
 
         await db.SaveChangesAsync(cancellationToken);
 
-        // Return UserDTO with role, department, and lines
-        // Get role name from the Role navigation property
+        // Return updated UserDTO
         var roleName = existingUser.RoleId != null
             ? (await db.Roles.FirstOrDefaultAsync(r => r.Id == existingUser.RoleId, cancellationToken))?.Name
             : null;
 
-        // Get lines assigned to user
         var userLines = await db.UserLines
             .Include(ul => ul.Line)
             .Where(ul => ul.UserId == id)
             .ToListAsync(cancellationToken);
-
-        // Get department from user's lines (User → UserLine → Line → Department)
-        var userLine = userLines.FirstOrDefault();
-        Department? department = null;
-        if (userLine?.Line != null)
-        {
-            department = await db.Departments
-                .AsNoTracking()
-                .FirstOrDefaultAsync(d => d.DepartmentId == userLine.Line.DepartmentId, cancellationToken);
-        }
-        // If user is a manager (has ManagerId set), also check that
-        else
-        {
-            department = await db.Departments
-                .AsNoTracking()
-                .FirstOrDefaultAsync(d => d.ManagerId == id, cancellationToken);
-        }
 
         var userLineIds = userLines.Select(ul => ul.LineId).ToList();
 
@@ -460,25 +401,10 @@ public class UserRepository : IUserRepository
         {
             Id = existingUser.Id,
             UserName = existingUser.UserName,
-            NormalizedUserName = existingUser.NormalizedUserName,
-            NormalizedEmail = existingUser.NormalizedEmail,
-            Email = existingUser.Email,
-            EmailConfirmed = existingUser.EmailConfirmed,
-            PasswordHash = existingUser.PasswordHash,
-            SecurityStamp = existingUser.SecurityStamp,
-            ConcurrencyStamp = existingUser.ConcurrencyStamp,
-            PhoneNumber = existingUser.PhoneNumber,
-            PhoneNumberConfirmed = existingUser.PhoneNumberConfirmed,
-            TwoFactorEnabled = existingUser.TwoFactorEnabled,
-            LockoutEnd = existingUser.LockoutEnd,
-            LockoutEnabled = existingUser.LockoutEnabled,
-            AccessFailedCount = existingUser.AccessFailedCount,
             FullName = existingUser.FullName,
-            EmployeeCode = existingUser.EmployeeCode,
-            IsActive = existingUser.IsActive,
+            Email = existingUser.Email,
+            PhoneNumber = existingUser.PhoneNumber,
             Roles = roleName != null ? new List<string> { roleName } : new List<string>(),
-            DepartmentId = department?.DepartmentId,
-            DepartmentName = department?.DepartmentName,
             LineIds = userLineIds
         };
     }
@@ -494,22 +420,46 @@ public class UserRepository : IUserRepository
     {
         try
         {
-            Console.WriteLine($"GetUsersByRoleAsync called with roleName: {roleName}");
+            Console.WriteLine($"GetUsersByRoleAsync được gọi với roleName: {roleName}");
 
-            // Get users by RoleId instead of role name
-            // Note: Removed IsActive filter to include all managers
             var users = await db.Users
                 .Include(u => u.Role)
                 .Where(u => u.Role != null && u.Role.Name == roleName)
                 .ToListAsync(cancellationToken);
 
-            Console.WriteLine($"Found {users.Count} users with role {roleName}");
+            Console.WriteLine($"Đã tìm thấy {users.Count} users với role {roleName}");
 
             return users;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error in GetUsersByRoleAsync: {ex.Message}");
+            Console.WriteLine($"Lỗi trong GetUsersByRoleAsync: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            return new List<User>();
+        }
+    }
+
+    public async Task<IReadOnlyList<User>> GetActiveTeamLeadsByLineAsync(int lineId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            Console.WriteLine($"GetActiveTeamLeadsByLineAsync được gọi với lineId: {lineId}");
+
+            var users = await db.Users
+                .Include(u => u.Role)
+                .Include(u => u.UserLines)
+                .Include(u => u.Department)
+                .Where(u => u.Role != null && u.Role.Name == "Tổ trưởng" && u.IsActive == true)
+                .Where(u => u.UserLines.Any(ul => ul.LineId == lineId))
+                .ToListAsync(cancellationToken);
+
+            Console.WriteLine($"Đã tìm thấy {users.Count} team leads hoạt động cho line {lineId}");
+
+            return users;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Lỗi trong GetActiveTeamLeadsByLineAsync: {ex.Message}");
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
             return new List<User>();
         }
@@ -525,38 +475,51 @@ public class UserRepository : IUserRepository
                 throw new ArgumentException("Không tìm thấy người dùng với ID này.");
             }
 
-            // Check if email is already taken by another user (only when provided)
-            if (!string.IsNullOrWhiteSpace(request.Email))
-            {
-                var emailExists = await db.Users.AnyAsync(u => u.Email == request.Email && u.Id != userId, cancellationToken);
-                if (emailExists)
-                {
-                    throw new ArgumentException("Đã có người dùng sử dụng email này, không được dùng.");
-                }
-            }
-
-            // Check if phone number is already taken by another user (only when provided)
-            if (!string.IsNullOrWhiteSpace(request.PhoneNumber))
-            {
-                var phoneExists = await db.Users.AnyAsync(u => u.PhoneNumber == request.PhoneNumber && u.Id != userId, cancellationToken);
-                if (phoneExists)
-                {
-                    throw new ArgumentException("Đã có người dùng sử dụng số điện thoại này, không được dùng.");
-                }
-            }
-
-            // Update only editable fields - normalize empty values to null
-            existingUser.FullName = request.FullName;
             var normalizedEmailProfile = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
             var normalizedPhoneProfile = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
 
-            // Check if email is being changed and set EmailConfirmed to false
+            // Validation: Check email format
+            if (!string.IsNullOrEmpty(normalizedEmailProfile) && !IsValidEmail(normalizedEmailProfile))
+            {
+                throw new ArgumentException("Email không hợp lệ");
+            }
+
+            // Validation: Check phone number format
+            if (!string.IsNullOrEmpty(normalizedPhoneProfile) && !IsValidVietnamPhoneNumber(normalizedPhoneProfile))
+            {
+                throw new ArgumentException("Số điện thoại không hợp lệ");
+            }
+
+            // Validation: Check if email is already taken by another user
+            if (!string.IsNullOrWhiteSpace(normalizedEmailProfile))
+            {
+                var emailExists = await db.Users.AnyAsync(u => u.Email == normalizedEmailProfile && u.Id != userId, cancellationToken);
+                if (emailExists)
+                {
+                    throw new ArgumentException($"Email '{normalizedEmailProfile}' đã có người dùng sử dụng, không được dùng.");
+                }
+            }
+
+            // Validation: Check if phone number is already taken by another user
+            if (!string.IsNullOrWhiteSpace(normalizedPhoneProfile))
+            {
+                var phoneExists = await db.Users.AnyAsync(u => u.PhoneNumber == normalizedPhoneProfile && u.Id != userId, cancellationToken);
+                if (phoneExists)
+                {
+                    throw new ArgumentException($"Số điện thoại '{normalizedPhoneProfile}' đã có người dùng sử dụng, không được dùng.");
+                }
+            }
+
+            // Update editable fields
+            existingUser.FullName = request.FullName;
+
+            // Check if email is being changed
             if (existingUser.Email != normalizedEmailProfile)
             {
                 existingUser.EmailConfirmed = false;
             }
 
-            // Check if phone number is being changed and set PhoneNumberConfirmed to false
+            // Check if phone number is being changed
             if (existingUser.PhoneNumber != normalizedPhoneProfile)
             {
                 existingUser.PhoneNumberConfirmed = false;
@@ -565,7 +528,6 @@ public class UserRepository : IUserRepository
             existingUser.Email = normalizedEmailProfile;
             existingUser.NormalizedEmail = normalizedEmailProfile?.ToUpperInvariant();
             existingUser.PhoneNumber = normalizedPhoneProfile;
-            // Note: ProfileImageUrl would be handled when we add image upload functionality
 
             await db.SaveChangesAsync(cancellationToken);
             return existingUser;
@@ -579,58 +541,120 @@ public class UserRepository : IUserRepository
 
     public async Task<User> CreateUserWithAssignmentsAsync(CreateUserRequest request, CancellationToken cancellationToken = default)
     {
-        // Create the user entity from request
-        // Auto-set UserName from EmployeeCode if not provided
-        var userName = string.IsNullOrEmpty(request.UserName) ? request.EmployeeCode : request.UserName;
+        // Validation: Check required fields
+        if (string.IsNullOrWhiteSpace(request.EmployeeCode))
+        {
+            throw new ArgumentException("Mã nhân viên là bắt buộc");
+        }
 
-        // Normalize input: convert empty or whitespace email/phone to null to avoid DB storing empty strings
+        if (string.IsNullOrWhiteSpace(request.FullName))
+        {
+            throw new ArgumentException("Họ tên là bắt buộc");
+        }
+
+        var userName = request.EmployeeCode;
         var normalizedEmail = string.IsNullOrWhiteSpace(request.Email) ? null : request.Email.Trim();
         var normalizedPhone = string.IsNullOrWhiteSpace(request.PhoneNumber) ? null : request.PhoneNumber.Trim();
 
-        var user = new User
+        // Validation: Check email format (only if email is provided)
+        if (!string.IsNullOrEmpty(normalizedEmail) && !IsValidEmail(normalizedEmail))
         {
-            UserName = userName,
-            Email = normalizedEmail,
-            FullName = request.FullName,
-            EmployeeCode = request.EmployeeCode,
-            PhoneNumber = normalizedPhone
-        };
+            throw new ArgumentException("Email không hợp lệ");
+        }
 
-        // Create user using existing method with default password if not provided
-        var password = string.IsNullOrEmpty(request.Password) ? "123456" : request.Password;
-        var createdUser = await CreateUserAsync(user, password, request.RoleIds, cancellationToken);
-
-        // TH1: Nếu có DepartmentId nhưng KHÔNG có LineIds -> set user.DepartmentId trực tiếp
-        // TH2: Nếu có LineIds -> tạo UserLine (không set DepartmentId trực tiếp)
-        if (request.DepartmentId.HasValue)
+        // Validation: Check phone number format (only if phone number is provided)
+        if (!string.IsNullOrEmpty(normalizedPhone) && !IsValidVietnamPhoneNumber(normalizedPhone))
         {
-            // Verify department exists
-            var department = await db.Departments.FirstOrDefaultAsync(d => d.DepartmentId == request.DepartmentId.Value, cancellationToken);
-            if (department == null)
-            {
-                throw new ArgumentException($"Department với ID '{request.DepartmentId}' không tồn tại.");
-            }
+            throw new ArgumentException("Số điện thoại không hợp lệ");
+        }
 
-            // TH1: Không có LineIds -> assign user vào department trực tiếp
-            if (request.LineIds == null || request.LineIds.Length == 0)
+        // Start a transaction
+        using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            // Validate department and role before creating the user
+            if (request.RoleIds != null && request.RoleIds.Length > 0)
             {
-                createdUser.DepartmentId = request.DepartmentId.Value;
-                await db.SaveChangesAsync(cancellationToken);
-            }
-            // TH2: Có LineIds -> assign qua UserLine (DepartmentId sẽ được suy ra từ Line)
-            else
-            {
-                foreach (var lineId in request.LineIds)
+                var roleId = request.RoleIds[0];
+                var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == roleId || r.Name == roleId, cancellationToken);
+
+                if (role == null)
                 {
-                    var line = await db.Lines.FirstOrDefaultAsync(l => l.LineId == lineId, cancellationToken);
-                    if (line != null)
-                    {
-                        // Verify line belongs to the specified department
-                        if (line.DepartmentId != request.DepartmentId.Value)
-                        {
-                            throw new ArgumentException($"Line với ID '{lineId}' không thuộc Department '{request.DepartmentId}'.");
-                        }
+                    throw new ArgumentException($"Role với ID/Name '{roleId}' không tồn tại.");
+                }
 
+                // Validation: Restricted roles must not have lines
+                var restrictedRoles = new[] { "Quản lý", "Kỹ thuật viên", "Kỹ thuật", "Quản trị viên" };
+                if (restrictedRoles.Contains(role.Name, StringComparer.OrdinalIgnoreCase) && request.LineIds != null && request.LineIds.Length > 0)
+                {
+                    throw new ArgumentException($"Role '{role.Name}' không được nhập Line.");
+                }
+
+                // Additional validation for "Quản lý" role
+                if (role.Name == "Quản lý" && request.DepartmentId.HasValue)
+                {
+                    var departmentToManage = await db.Departments.FirstOrDefaultAsync(d => d.DepartmentId == request.DepartmentId.Value, cancellationToken);
+                    if (departmentToManage == null)
+                    {
+                        throw new ArgumentException($"Department với ID '{request.DepartmentId}' không tồn tại.");
+                    }
+
+                    if (departmentToManage.ManagerId != null)
+                    {
+                        throw new ArgumentException($"Phòng ban '{departmentToManage.DepartmentName}' đã có quản lý. Không thể thêm quản lý mới.");
+                    }
+                }
+            }
+
+            // Validate lines belong to the department
+            if (request.LineIds != null && request.LineIds.Length > 0 && request.DepartmentId.HasValue)
+            {
+                var invalidLines = await db.Lines
+                    .Where(line => request.LineIds.Contains(line.LineId) && line.DepartmentId != request.DepartmentId.Value)
+                    .ToListAsync(cancellationToken);
+
+                if (invalidLines.Any())
+                {
+                    var invalidLineIds = string.Join(", ", invalidLines.Select(line => line.LineId));
+                    throw new ArgumentException($"Các Line với ID '{invalidLineIds}' không thuộc Department '{request.DepartmentId}'.");
+                }
+            }
+
+            // Create user object
+            var user = new User
+            {
+                UserName = userName,
+                Email = normalizedEmail,
+                FullName = request.FullName,
+                EmployeeCode = request.EmployeeCode,
+                PhoneNumber = normalizedPhone
+            };
+
+            // Create user using existing method (with all validations)
+            var password = "123456";
+            var createdUser = await CreateUserAsync(user, password, request.RoleIds, cancellationToken);
+
+            // Handle department assignment
+            if (request.DepartmentId.HasValue)
+            {
+                var department = await db.Departments.FirstOrDefaultAsync(d => d.DepartmentId == request.DepartmentId.Value, cancellationToken);
+                if (department == null)
+                {
+                    throw new ArgumentException($"Department với ID '{request.DepartmentId}' không tồn tại.");
+                }
+
+                if (request.LineIds == null || request.LineIds.Length == 0)
+                {
+                    createdUser.DepartmentId = request.DepartmentId.Value;
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+                else
+                {
+                    createdUser.DepartmentId = null;
+
+                    foreach (var lineId in request.LineIds)
+                    {
                         var userLine = new UserLine
                         {
                             UserId = createdUser.Id,
@@ -639,16 +663,40 @@ public class UserRepository : IUserRepository
                         };
                         await db.UserLines.AddAsync(userLine, cancellationToken);
                     }
-                    else
+                    await db.SaveChangesAsync(cancellationToken);
+                }
+            }
+
+            // Handle manager assignment
+            if (request.RoleIds != null && request.RoleIds.Length > 0 && request.DepartmentId.HasValue)
+            {
+                var roleId = request.RoleIds[0];
+                var role = await db.Roles.FirstOrDefaultAsync(r => r.Id == roleId || r.Name == roleId, cancellationToken);
+                if (role != null && role.Name == "Quản lý")
+                {
+                    var departmentToManage = await db.Departments.FirstOrDefaultAsync(d => d.DepartmentId == request.DepartmentId.Value, cancellationToken);
+                    if (departmentToManage != null)
                     {
-                        throw new ArgumentException($"Line với ID '{lineId}' không tồn tại.");
+                        departmentToManage.ManagerId = createdUser.Id;
+                        createdUser.DepartmentId = request.DepartmentId.Value;
+
+                        // Save changes to persist the ManagerId update
+                        await db.SaveChangesAsync(cancellationToken);
                     }
                 }
-                await db.SaveChangesAsync(cancellationToken);
             }
-        }
 
-        return createdUser;
+            // Commit the transaction
+            await transaction.CommitAsync(cancellationToken);
+
+            return createdUser;
+        }
+        catch
+        {
+            // Rollback the transaction if any exception occurs
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
@@ -659,5 +707,32 @@ public class UserRepository : IUserRepository
     public async Task<User?> GetByEmployeeCodeAsync(string employeeCode, CancellationToken cancellationToken = default)
     {
         return await db.Users.FirstOrDefaultAsync(u => u.EmployeeCode == employeeCode, cancellationToken);
+    }
+
+    public async Task<bool> ResetPasswordAsync(string userId, string newPassword, CancellationToken cancellationToken = default)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user == null)
+        {
+            return false;
+        }
+
+        var removeResult = await userManager.RemovePasswordAsync(user);
+        if (!removeResult.Succeeded)
+        {
+            return false;
+        }
+
+        var addResult = await userManager.AddPasswordAsync(user, newPassword);
+        return addResult.Succeeded;
+    }
+
+    public async Task<IReadOnlyList<UserLine>> GetUserLinesAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await db.UserLines
+            .Include(ul => ul.Line)
+            .Where(ul => ul.UserId == userId)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
     }
 }

@@ -18,7 +18,8 @@ public class EquipmentRepository : IEquipmentRepository
     {
         return await _context.Equipment
             .Include(e => e.Stage!)
-            .ThenInclude(s => s.Line)
+            .ThenInclude(s => s.Line!)
+            .ThenInclude(l => l.Department)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }
@@ -27,7 +28,8 @@ public class EquipmentRepository : IEquipmentRepository
     {
         return await _context.Equipment
             .Include(e => e.Stage!)
-            .ThenInclude(s => s.Line)
+            .ThenInclude(s => s.Line!)
+            .ThenInclude(l => l.Department)
             .FirstOrDefaultAsync(e => e.EquipmentId == id, cancellationToken);
     }
 
@@ -111,9 +113,20 @@ public class EquipmentRepository : IEquipmentRepository
             .Include(e => e.Stage!)
             .ThenInclude(s => s.Line!)
             .ThenInclude(l => l.UserLines)
-            .Where(e => e.Stage != null && 
-                        e.Stage.Line != null && 
+            .Where(e => e.Stage != null &&
+                        e.Stage.Line != null &&
                         e.Stage.Line.UserLines.Any(ul => ul.UserId == userId))
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Equipment>> GetByLineIdAsync(int lineId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Equipment
+            .Include(e => e.Stage!)
+            .ThenInclude(s => s.Line!)
+            .ThenInclude(l => l.Department)
+            .Where(e => e.Stage != null && e.Stage.LineId == lineId)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }

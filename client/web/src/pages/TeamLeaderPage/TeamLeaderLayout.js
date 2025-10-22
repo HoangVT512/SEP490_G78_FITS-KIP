@@ -35,6 +35,9 @@ import TeamLeaderEquipment from "./TeamLeaderEquipment";
 import ProductionManagement from "./ProductionManagement";
 import ReplacementComponents from "./ReplacementComponents";
 import IncidentManagement from "./IncidentManagement";
+import EFormSystem from "./EFormSystem";
+import FactoryMap from "./FactoryMap";
+import OEEDashboard from "./OEEDashboard";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -60,12 +63,18 @@ const TeamLeaderLayout = () => {
     const path = location.pathname;
     if (path.includes("/equipment")) {
       setSelectedKey("equipment");
+    } else if (path.includes("/EFormProductionInput")) {
+      setSelectedKey("EFormProductionInput");
     } else if (path.includes("/production")) {
       setSelectedKey("production");
     } else if (path.includes("/replacement")) {
       setSelectedKey("replacement");
     } else if (path.includes("/incidents")) {
       setSelectedKey("incidents");
+    } else if (path.includes("/factory-map")) {
+      setSelectedKey("factory-map");
+    } else if (path.includes("/oee-dashboard")) {
+      setSelectedKey("oee-dashboard");
     } else if (path.includes("/line-monitoring")) {
       setSelectedKey("line-monitoring");
     } else if (path.includes("/reports")) {
@@ -93,10 +102,16 @@ const TeamLeaderLayout = () => {
       return <TeamLeaderEquipment />;
     } else if (path.includes("/production")) {
       return <ProductionManagement />;
+    } else if (path.includes("/EFormProductionInput")) {
+      return <EFormSystem />;
     } else if (path.includes("/replacement")) {
       return <ReplacementComponents />;
     } else if (path.includes("/incidents")) {
       return <IncidentManagement />;
+    } else if (path.includes("/factory-map")) {
+      return <FactoryMap />;
+    } else if (path.includes("/oee-dashboard")) {
+      return <OEEDashboard />;
     } else if (path === "/team-leader" || path.includes("/dashboard")) {
       return <TeamLeaderDashboard />;
     }
@@ -112,8 +127,23 @@ const TeamLeaderLayout = () => {
       label: "Tổng quan",
     },
     {
-      key: "production",
+      key: "factory-map",
       icon: <AppstoreOutlined />,
+      label: "Sơ đồ nhà máy",
+    },
+    {
+      key: "oee-dashboard",
+      icon: <BarChartOutlined />,
+      label: "Biểu đồ OEE",
+    },
+    {
+      key: "EFormProductionInput",
+      icon: <EditOutlined />,
+      label: "E-Form Nhập liệu sản lượng",
+    },
+    {
+      key: "production",
+      icon: <BarChartOutlined />,
       label: "Quản lý sản xuất",
     },
     {
@@ -144,6 +174,15 @@ const TeamLeaderLayout = () => {
       case "dashboard":
         navigate("/team-leader/dashboard");
         break;
+      case "factory-map":
+        navigate("/team-leader/factory-map");
+        break;
+      case "oee-dashboard":
+        navigate("/team-leader/oee-dashboard");
+        break;
+      case "EFormProductionInput":
+        navigate("/team-leader/EFormProductionInput");
+        break;
       case "production":
         navigate("/team-leader/production");
         break;
@@ -171,18 +210,18 @@ const TeamLeaderLayout = () => {
       label: "Thông tin cá nhân",
       onClick: () => navigate("/profile"),
     },
-    {
-      key: "edit-profile",
-      icon: <EditOutlined />,
-      label: "Chỉnh sửa thông tin",
-      onClick: () => navigate("/profile/edit"),
-    },
-    {
-      key: "change-password",
-      icon: <SafetyOutlined />,
-      label: "Đổi mật khẩu",
-      onClick: () => navigate("/profile/change-password"),
-    },
+    // {
+    //   key: "edit-profile",
+    //   icon: <EditOutlined />,
+    //   label: "Chỉnh sửa thông tin",
+    //   onClick: () => navigate("/profile/edit"),
+    // },
+    // {
+    //   key: "change-password",
+    //   icon: <SafetyOutlined />,
+    //   label: "Đổi mật khẩu",
+    //   onClick: () => navigate("/profile/change-password"),
+    // },
     {
       type: "divider",
     },

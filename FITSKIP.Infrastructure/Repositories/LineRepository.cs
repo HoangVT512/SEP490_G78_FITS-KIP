@@ -98,4 +98,49 @@ public class LineRepository : ILineRepository
 
         return line;
     }
+
+    public async Task<IReadOnlyList<Line>> GetLinesByUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Lines
+            .Include(l => l.Department)
+            .Include(l => l.Stages)
+            .Where(l => l.UserLines.Any(ul => ul.UserId == userId))
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task RemoveUserLinesForLineAsync(int lineId, CancellationToken cancellationToken = default)
+    {
+        var line = await _context.Lines.FirstOrDefaultAsync(l => l.LineId == lineId, cancellationToken);
+        if (line == null)
+        {
+            return;
+        }
+
+        var userLines = await _context.UserLines
+            .Where(ul => ul.LineId == lineId)
+            .ToListAsync(cancellationToken);
+
+        if (userLines.Any())
+        {
+            // Get list of user IDs from UserLines
+            var userIds = userLines.Select(ul => ul.UserId).ToList();
+
+            // Remove UserLines
+            _context.UserLines.RemoveRange(userLines);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            // Set DepartmentId for these users to the original line's department
+            // This ensures users stay in their original department when a line moves
+            var users = await _context.Users
+                .Where(u => userIds.Contains(u.Id))
+                .ToListAsync(cancellationToken);
+
+            foreach (var user in users)
+            {
+                user.DepartmentId = line.DepartmentId;
+            }
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+    }
 }

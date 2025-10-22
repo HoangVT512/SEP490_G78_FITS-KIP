@@ -18,6 +18,11 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.Equi
         this.equipmentList = equipmentList;
     }
 
+    public void setData(List<Equipment> newList) {
+        this.equipmentList = newList;
+        notifyDataSetChanged();
+    }
+
     @NonNull
     @Override
     public EquipmentViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -50,16 +55,24 @@ public class EquipmentAdapter extends RecyclerView.Adapter<EquipmentAdapter.Equi
         }
 
         public void bind(Equipment equipment) {
-            tvCode.setText("Mã TB: " + equipment.getCode());
-            tvName.setText("Tên TB: " + equipment.getName());
-            tvStage.setText("Công đoạn: " + equipment.getStage());
-            tvLine.setText("Dây chuyền: " + equipment.getLine());
+            tvCode.setText("Mã TB: " + equipment.getEquipmentCode());
+            tvName.setText("Tên TB: " + equipment.getEquipmentName());
+            tvStage.setText("Công đoạn: " + equipment.getStageName());
+            tvLine.setText("Dây chuyền: " + equipment.getLineName());
 
-            if (equipment.getIssues().isEmpty()) {
+            String issue = equipment.getIssue();
+            if (issue == null || issue.trim().isEmpty()) {
                 tvIssues.setText("Vấn đề: Không có");
             } else {
-                String issuesText = "Vấn đề: " + String.join(", ", equipment.getIssues());
-                tvIssues.setText(issuesText);
+                String[] issues = issue.split(";");
+                StringBuilder sb = new StringBuilder("Vấn đề: ");
+                for (int i = 0; i < issues.length; i++) {
+                    sb.append(issues[i].trim());
+                    if (i < issues.length - 1) {
+                        sb.append("\n");
+                    }
+                }
+                tvIssues.setText(sb.toString());
             }
         }
     }

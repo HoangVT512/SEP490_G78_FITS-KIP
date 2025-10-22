@@ -47,7 +47,7 @@ public class QRScannerActivity extends AppCompatActivity implements BarcodeCallb
     public void barcodeResult(BarcodeResult result) {
         // Handle the scanned QR code
         String qrCode = result.getText();
-        Toast.makeText(this, "Scanned: " + qrCode, Toast.LENGTH_LONG).show();
+        //Toast.makeText(this, "Scanned: " + qrCode, Toast.LENGTH_LONG).show();
 
         // Return result to calling activity
         Intent intent = new Intent();
@@ -69,7 +69,7 @@ public class QRScannerActivity extends AppCompatActivity implements BarcodeCallb
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 initScanner();
             } else {
-                Toast.makeText(this, "Camera permission is required to scan QR codes", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Quyền camera là được yêu cầu để quét mã QR", Toast.LENGTH_SHORT).show();
                 finish();
             }
         }

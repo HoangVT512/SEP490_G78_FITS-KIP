@@ -1,12 +1,16 @@
 package com.example.fitsforkip.ui.home;
 
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
+import android.widget.ImageButton;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -27,7 +31,22 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.card.MaterialCardView;
 
-public class HomeActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener {
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+
+import com.example.fitsforkip.data.model.Equipment;
+import com.example.fitsforkip.data.remote.ApiClient;
+import com.example.fitsforkip.data.remote.ApiService;
+import com.example.fitsforkip.data.model.ApiResponse;
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+public class HomeActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, DeviceInfoDialog.OnOptionsSelectedListener {
 
     private DrawerLayout drawerLayout;
     private NavigationView navigationView;
@@ -53,11 +72,29 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     private TextView tvHeaderEmployeeId;
     private TextView tvHeaderProductionLine;
 
+    private LinearLayout llDeviceCardsContainer;
+
+    private Map<String, DeviceCard> deviceCards = new HashMap<>();
+
     private boolean isFabOpen = false;
     private Animation fabOpenRotate, fabCloseRotate, fabOpen, fabClose;
 
     private String employeeId;
     private String productionLine;
+
+    private String currentDeviceCode;
+    private String currentProdLine;
+    private String currentCongDoan;
+
+    private Handler timerHandler = new Handler();
+    private Runnable timerRunnable;
+    private long totalElapsed = 0;
+    private long lastStartTime = 0;
+    private boolean isTimerRunning = false;
+
+    private ProgressDialog progressDialog;
+
+    private List<Equipment> equipmentList;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -65,6 +102,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         setContentView(R.layout.activity_home);
 
         loadUserData();
+        loadEquipmentList();
         initViews();
         setupToolbarAndDrawer();
         setupAnimations();
@@ -103,6 +141,8 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
 
         // Initialize btnScan
         btnScan = findViewById(R.id.btnScan);
+
+        llDeviceCardsContainer = findViewById(R.id.ll_device_cards_container);
 
         setupNavListeners();
     }
@@ -220,11 +260,379 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         if (requestCode == 1 && resultCode == RESULT_OK) {
             String qrCode = data.getStringExtra("qr_code");
             String prodLine = data.getStringExtra("production_line");
-            // Assume congDoan is fetched or hardcoded
-            String congDoan = "Công đoạn 1"; // Placeholder, replace with actual logic
 
-            DeviceInfoDialog dialog = new DeviceInfoDialog(this, qrCode, prodLine, congDoan);
-            dialog.show();
+            // Find equipment by qrCode
+            Equipment equipment = null;
+            if (equipmentList != null) {
+                for (Equipment eq : equipmentList) {
+                    if (eq.getQrcode().equals(qrCode)) {
+                        equipment = eq;
+                        break;
+                    }
+                }
+            }
+
+            if (equipment == null) {
+                Toast.makeText(this, "Không tìm thấy thiết bị với mã QR đã quét", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            currentDeviceCode = qrCode;
+            currentProdLine = prodLine;
+            currentCongDoan = equipment.getStageName();
+
+            if (deviceCards.containsKey(currentDeviceCode)) {
+                // Second scan: directly show confirmation dialog
+                showStopConfirmationDialog(currentDeviceCode);
+            } else {
+                // First scan: show DeviceInfoDialog with equipment
+                DeviceInfoDialog dialog = new DeviceInfoDialog(this, equipment, this);
+                dialog.show();
+            }
+        }
+    }
+
+    private void showStopConfirmationDialog(String deviceCode) {
+        DeviceCard card = deviceCards.get(deviceCode);
+        long currentElapsed = card.totalElapsed;
+        if (card.isTimerRunning) {
+            currentElapsed += System.currentTimeMillis() - card.lastStartTime;
+        }
+        long totalSeconds = currentElapsed / 1000;
+        int hours = (int) (totalSeconds / 3600);
+        int minutes = (int) ((totalSeconds % 3600) / 60);
+        int seconds = (int) (totalSeconds % 60);
+        String currentRunningTime = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Xác nhận kết thúc")
+                .setMessage("Thiết bị: " + deviceCode + "\nThời gian bắt đầu: " + card.startTime + "\nThời gian chạy hiện tại: " + currentRunningTime + "\nBạn có muốn kết thúc và ghi nhận không?")
+                .setPositiveButton("Xác nhận", (dialog, which) -> {
+                    // Show loading
+                    showLoading("Đang lưu bản ghi...");
+
+                    // Simulate API call with delay
+                    new Handler().postDelayed(() -> {
+                        // Calculate total time
+                        card.stopAndRemove();
+                        //reset deviceCards
+                        deviceCards.remove(deviceCode);
+
+                        hideLoading();
+                        Toast.makeText(HomeActivity.this, "Đã ghi nhận thành công cho thiết bị " + deviceCode, Toast.LENGTH_SHORT).show();
+                    }, 2000); // Simulate 2s API call
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
+    }
+
+    @Override
+    public void onOptionsSelected(List<String> selectedOptions) {
+        // Check if selected options include relevant ones (exclude "Báo cáo sự cố")
+        boolean hasRelevantOption = false;
+        String type = "";
+        String problem = "";
+        Equipment equipment = null;
+
+        for (String option : selectedOptions) {
+            if (option.equals("Phế phẩm")) {
+                hasRelevantOption = true;
+                type = "Phế phẩm";
+                problem = "";
+            } else if (!option.equals("Cần hỗ trợ kỹ thuật") && !option.equals("Báo cáo sự cố")) {
+                // XỬ LÝ CÁC OPTIONS KHÁC TỪ EQUIPMENT ISSUES
+                hasRelevantOption = true;
+                if (type.isEmpty()) {
+                    type = "Chưa xác định";
+                }
+                if (problem.isEmpty()) {
+                    problem = option;
+                } else {
+                    problem += ", " + option;
+                }
+            } else if (option.equals("Cần hỗ trợ kỹ thuật")) {
+                hasRelevantOption = true;
+                if (type.isEmpty()) {
+                    type = "Cần hỗ trợ kỹ thuật";
+                }
+                if (problem.isEmpty()) {
+                    problem = "Chưa xác định";
+                } else {
+                    problem += ", Cần hỗ trợ kỹ thuật";
+                }
+            }
+        }
+
+        if (hasRelevantOption) {
+            // Find the equipment details
+            if (equipmentList != null) {
+                for (Equipment eq : equipmentList) {
+                    if (eq.getQrcode().equals(currentDeviceCode)) {
+                        equipment = eq;
+                        break;
+                    }
+                }
+            }
+
+            // NẾU KHÔNG TÌM THẤY EQUIPMENT THÌ THÔNG BÁO LỖI - GIỮ NGUYÊN LOGIC CŨ
+            if (equipment == null) {
+                Toast.makeText(this, "Không tìm thấy thông tin thiết bị", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Check if device is already running
+            if (deviceCards.containsKey(currentDeviceCode)) {
+                // Second scan: confirm to stop and remove
+                DeviceCard card = deviceCards.get(currentDeviceCode);
+                long currentElapsed = card.totalElapsed;
+                if (card.isTimerRunning) {
+                    currentElapsed += System.currentTimeMillis() - card.lastStartTime;
+                }
+                long totalSeconds = currentElapsed / 1000;
+                int hours = (int) (totalSeconds / 3600);
+                int minutes = (int) ((totalSeconds % 3600) / 60);
+                int seconds = (int) (totalSeconds % 60);
+                String currentRunningTime = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+
+                new AlertDialog.Builder(this)
+                        .setTitle("Xác nhận kết thúc")
+                        .setMessage("Thiết bị: " + currentDeviceCode + "\nThời gian bắt đầu: " + card.startTime + "\nThời gian chạy hiện tại: " + currentRunningTime + "\nBạn có muốn kết thúc và ghi nhận không?")
+                        .setPositiveButton("Xác nhận", (dialog, which) -> {
+                            // Show loading
+                            showLoading("Đang lưu bản ghi...");
+
+                            // Simulate API call with delay
+                            new Handler().postDelayed(() -> {
+                                // Calculate total time
+                                card.stopAndRemove();
+                                hideLoading();
+                                Toast.makeText(HomeActivity.this, "Đã ghi nhận thành công cho thiết bị " + currentDeviceCode, Toast.LENGTH_SHORT).show();
+                            }, 2000); // Simulate 2s API call
+                        })
+                        .setNegativeButton("Hủy", null)
+                        .show();
+            } else {
+                // First scan: create new card VÀ HIỂN THỊ LÊN MÀN HÌNH - CODE MỚI THÊM
+                String startTimeStr = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
+                DeviceCard newCard = new DeviceCard(
+                        equipment.getEquipmentCode(),
+                        equipment.getEquipmentName(),
+                        startTimeStr,
+                        type,
+                        problem
+                );
+                deviceCards.put(currentDeviceCode, newCard);
+
+                //Toast.makeText(this, "Đã bắt đầu ghi nhận thiết bị " + currentDeviceCode, Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void startTimer() {
+        lastStartTime = System.currentTimeMillis();
+        isTimerRunning = true;
+        //btnToggleTimer.setImageResource(android.R.drawable.ic_media_pause);
+
+        timerRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (isTimerRunning) {
+                    totalElapsed += System.currentTimeMillis() - lastStartTime;
+                    lastStartTime = System.currentTimeMillis();
+
+                    long elapsed = totalElapsed;
+                    int seconds = (int) (elapsed / 1000) % 60;
+                    int minutes = (int) ((elapsed / (1000 * 60)) % 60);
+                    int hours = (int) ((elapsed / (1000 * 60 * 60)) % 24);
+                    //tvRunningTime.setText(String.format("Thời gian chạy: %02d:%02d:%02d", hours, minutes, seconds));
+                    timerHandler.postDelayed(this, 1000);
+                }
+            }
+        };
+        timerHandler.post(timerRunnable);
+    }
+
+    private void toggleTimer() {
+        if (isTimerRunning) {
+            // Pause timer
+            totalElapsed += System.currentTimeMillis() - lastStartTime;
+            isTimerRunning = false;
+            //btnToggleTimer.setImageResource(android.R.drawable.ic_media_play);
+            timerHandler.removeCallbacks(timerRunnable);
+        } else {
+            // Resume timer
+            lastStartTime = System.currentTimeMillis();
+            isTimerRunning = true;
+            //btnToggleTimer.setImageResource(android.R.drawable.ic_media_pause);
+            timerHandler.post(timerRunnable);
+        }
+    }
+
+    private void showLoading(String message) {
+        if (progressDialog == null) {
+            progressDialog = new ProgressDialog(this);
+            progressDialog.setCancelable(false);
+        }
+        progressDialog.setMessage(message);
+        progressDialog.show();
+    }
+
+    private void hideLoading() {
+        if (progressDialog != null && progressDialog.isShowing()) {
+            progressDialog.dismiss();
+        }
+    }
+
+    private void loadEquipmentList() {
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        String token = prefs.getString("token", null);
+        int lineId = prefs.getInt("line_id", -1);
+
+        if (token == null || lineId == -1) {
+            Toast.makeText(this, "Không tìm thấy thông tin xác thực", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ApiService apiService = ApiClient.getClient().create(ApiService.class);
+        Call<ApiResponse<List<Equipment>>> call = apiService.getEquipmentsByLine("Bearer " + token, lineId);
+        call.enqueue(new Callback<ApiResponse<List<Equipment>>>() {
+            @Override
+            public void onResponse(Call<ApiResponse<List<Equipment>>> call, Response<ApiResponse<List<Equipment>>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    equipmentList = response.body().getData();
+                    // Optionally, show a toast or log
+                    Toast.makeText(HomeActivity.this, "Đã tải danh sách thiết bị", Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(HomeActivity.this, "Không thể tải danh sách thiết bị", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ApiResponse<List<Equipment>>> call, Throwable t) {
+                Toast.makeText(HomeActivity.this, "Lỗi: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private class DeviceCard {
+        String deviceCode;
+        String deviceName;
+        String startTime;
+        String type;
+        String problem;
+        long totalElapsed;
+        long lastStartTime;
+        boolean isTimerRunning;
+        Handler timerHandler;
+        Runnable timerRunnable;
+        View cardView;
+        TextView tvRunningTime;
+        ImageButton btnToggleTimer;
+
+        DeviceCard(String deviceCode, String deviceName, String startTime, String type, String problem) {
+            this.deviceCode = deviceCode;
+            this.deviceName = deviceName;
+            this.startTime = startTime;
+            this.type = type;
+            this.problem = problem;
+            this.totalElapsed = 0;
+            this.lastStartTime = 0;
+            this.isTimerRunning = false;
+            this.timerHandler = new Handler();
+
+            // Inflate the card view
+            cardView = getLayoutInflater().inflate(R.layout.item_device_card, llDeviceCardsContainer, false);
+            llDeviceCardsContainer.addView(cardView);
+
+            // Initialize views
+            TextView tvDeviceCode = cardView.findViewById(R.id.tv_device_code);
+            TextView tvDeviceName = cardView.findViewById(R.id.tv_device_name);
+            TextView tvStartTime = cardView.findViewById(R.id.tv_start_time);
+            TextView tvType = cardView.findViewById(R.id.tv_type);
+            TextView tvProblem = cardView.findViewById(R.id.tv_problem);
+            tvRunningTime = cardView.findViewById(R.id.tv_running_time);
+            btnToggleTimer = cardView.findViewById(R.id.btn_toggle_timer);
+
+            // Populate fields
+            tvDeviceCode.setText("Mã TB: " + deviceCode);
+            tvDeviceName.setText("Tên TB: " + deviceName);
+            tvStartTime.setText("TG BD: " + startTime);
+            tvType.setText("Loại: " + type);
+            if (!problem.isEmpty()) {
+                tvProblem.setText("Vấn đề: " + problem);
+                tvProblem.setVisibility(View.VISIBLE);
+            } else {
+                tvProblem.setVisibility(View.GONE);
+            }
+
+            // Start timer
+            startTimer();
+
+            // Set up toggle button listener
+            btnToggleTimer.setOnClickListener(v -> toggleTimer());
+        }
+
+        void startTimer() {
+            lastStartTime = System.currentTimeMillis();
+            isTimerRunning = true;
+            btnToggleTimer.setImageResource(android.R.drawable.ic_media_pause);
+
+            timerRunnable = new Runnable() {
+                @Override
+                public void run() {
+                    if (isTimerRunning) {
+                        totalElapsed += System.currentTimeMillis() - lastStartTime;
+                        lastStartTime = System.currentTimeMillis();
+
+                        long elapsed = totalElapsed;
+                        int seconds = (int) (elapsed / 1000) % 60;
+                        int minutes = (int) ((elapsed / (1000 * 60)) % 60);
+                        int hours = (int) ((elapsed / (1000 * 60 * 60)) % 24);
+                        tvRunningTime.setText(String.format("Thời gian chạy: %02d:%02d:%02d", hours, minutes, seconds));
+                        timerHandler.postDelayed(this, 1000);
+                    }
+                }
+            };
+            timerHandler.post(timerRunnable);
+        }
+
+        void toggleTimer() {
+            if (isTimerRunning) {
+                // Pause timer
+                totalElapsed += System.currentTimeMillis() - lastStartTime;
+                isTimerRunning = false;
+                btnToggleTimer.setImageResource(android.R.drawable.ic_media_play);
+                timerHandler.removeCallbacks(timerRunnable);
+            } else {
+                // Resume timer
+                lastStartTime = System.currentTimeMillis();
+                isTimerRunning = true;
+                btnToggleTimer.setImageResource(android.R.drawable.ic_media_pause);
+                timerHandler.post(timerRunnable);
+            }
+        }
+
+        void stopAndRemove() {
+            // Stop timer
+            if (isTimerRunning) {
+                totalElapsed += System.currentTimeMillis() - lastStartTime;
+                timerHandler.removeCallbacks(timerRunnable);
+            }
+
+            // Calculate total time
+            long totalSeconds = totalElapsed / 1000;
+            int hours = (int) (totalSeconds / 3600);
+            int minutes = (int) ((totalSeconds % 3600) / 60);
+            int seconds = (int) (totalSeconds % 60);
+            String totalTime = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+
+            // Log or save the total time (placeholder)
+            Toast.makeText(HomeActivity.this, "Thiết bị " + deviceCode + " tổng thời gian: " + totalTime, Toast.LENGTH_SHORT).show();
+
+            // Remove from container and map
+            llDeviceCardsContainer.removeView(cardView);
+            deviceCards.remove(deviceCode);
         }
     }
 }
+

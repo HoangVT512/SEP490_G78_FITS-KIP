@@ -97,6 +97,19 @@ export const lineService = {
       );
     }
   },
+
+  // Lấy chuyền sản xuất mà user được phân công
+  getLinesByUser: async (userId) => {
+    try {
+      const response = await apiRequest(`/Lines/user/${encodeURIComponent(userId)}`);
+      return response.data || response;
+    } catch (error) {
+      console.error("Get lines by user error:", error);
+      throw new Error(
+        error.message || "Lấy chuyền sản xuất của user thất bại"
+      );
+    }
+  },
 };
 
 export default lineService;

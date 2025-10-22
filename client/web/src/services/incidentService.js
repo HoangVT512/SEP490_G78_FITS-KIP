@@ -21,6 +21,14 @@ export const incidentService = {
     return res?.data || res;
   },
 
+  async createBulk(incidents) {
+    const res = await apiRequest("/Incidents/bulk", {
+      method: "POST",
+      body: JSON.stringify({ incidents }),
+    });
+    return res?.data || res;
+  },
+
   async update(id, payload) {
     const res = await apiRequest(`/Incidents/${encodeURIComponent(id)}`, {
       method: "PUT",
@@ -49,4 +57,26 @@ export const incidentService = {
     );
     return res?.data || res;
   },
+
+  async getIncidentShifts(incidentId) {
+    const res = await apiRequest(`/Incidents/${encodeURIComponent(incidentId)}/shifts`, {
+      method: "GET",
+    });
+    return res?.data || res;
+  },
+
+  async assignTechnician(incidentId, technicianId, updateStatus = false) {
+    const res = await apiRequest(`/Incidents/${encodeURIComponent(incidentId)}/assign-technician`, {
+      method: "PUT",
+      body: JSON.stringify({ technicianId, updateStatus }),
+    });
+    return res?.data || res;
+  },
+
+  async getIncidentsByUserLines(userId) {
+    const res = await apiRequest(`/Incidents/user/${encodeURIComponent(userId)}/lines`, {
+      method: "GET",
+    });
+    return res?.data || res;
+  }
 };

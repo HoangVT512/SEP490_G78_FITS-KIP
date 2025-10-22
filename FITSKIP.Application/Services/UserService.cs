@@ -37,11 +37,17 @@ public class UserService : IUserService
 
     public Task<IReadOnlyList<User>> GetUsersByRoleAsync(string roleName, CancellationToken cancellationToken = default) => userRepository.GetUsersByRoleAsync(roleName, cancellationToken);
 
+    public Task<IReadOnlyList<User>> GetActiveTeamLeadsByLineAsync(int lineId, CancellationToken cancellationToken = default) => userRepository.GetActiveTeamLeadsByLineAsync(lineId, cancellationToken);
+
     public Task<User?> UpdateProfileAsync(string userId, UpdateProfileRequest request, CancellationToken cancellationToken = default) => userRepository.UpdateProfileAsync(userId, request, cancellationToken);
 
     public Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default) => userRepository.GetByEmailAsync(email, cancellationToken);
 
     public Task<User?> GetByEmployeeCodeAsync(string employeeCode, CancellationToken cancellationToken = default) => userRepository.GetByEmployeeCodeAsync(employeeCode, cancellationToken);
+
+    public Task<bool> ResetPasswordAsync(string userId, string newPassword, CancellationToken cancellationToken = default) => userRepository.ResetPasswordAsync(userId, newPassword, cancellationToken);
+
+    public Task<IReadOnlyList<UserLine>> GetUserLinesAsync(string userId, CancellationToken cancellationToken = default) => userRepository.GetUserLinesAsync(userId, cancellationToken);
 }
 
 

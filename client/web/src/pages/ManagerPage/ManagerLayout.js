@@ -33,6 +33,7 @@ import {
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import signalRService from "../../services/signalRService";
+import * as notificationService from "../../services/notificationService";
 import styles from "../../styles/pages/ManagerLayout.module.css";
 
 // Import manager pages
@@ -40,11 +41,14 @@ import ManagerDashboard from "./ManagerDashboard";
 import PurchaseApproval from "./PurchaseApproval";
 import MaintenanceReports from "./MaintenanceReports";
 import ReplacementHistory from "./ReplacementHistory";
+import DisplayScreenReplaceItem from "./DisplayScreenReplaceItem";
 import InventoryDashboard from "./InventoryDashboard";
 import ProductionManagement from "./ProductionManagement";
 import ProductionDetailReport from "./ProductionDetailReport";
 import ManagerIncidentList from "./ManagerIncidentList";
 import NotificationsList from "./NotificationsList";
+import FactoryMap from "./FactoryMap";
+import OEEDashboard from "./OEEDashboard";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -71,20 +75,8 @@ const ManagerLayout = () => {
   useEffect(() => {
     const fetchUnreadCount = async () => {
       try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(
-          `${process.env.REACT_APP_API_BASE_URL}/Notifications/unread-count`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          }
-        );
-
-        if (response.ok) {
-          const result = await response.json();
-          setNotificationCount(result.data || 0);
-        }
+        const count = await notificationService.getUnreadCount();
+        setNotificationCount(count);
       } catch (error) {
         console.error("Error fetching unread count:", error);
       }
@@ -205,6 +197,8 @@ const ManagerLayout = () => {
       setSelectedKey("purchase-approval");
     } else if (path.includes("/maintenance-reports")) {
       setSelectedKey("maintenance-reports");
+    } else if (path.includes("/DisplayScreenReplaceItem")) {
+      setSelectedKey("DisplayScreenReplaceItem");
     } else if (path.includes("/replacement-history")) {
       setSelectedKey("replacement-history");
     } else if (path.includes("/inventory-dashboard")) {
@@ -213,6 +207,10 @@ const ManagerLayout = () => {
       setSelectedKey("production-management");
     } else if (path.includes("/production-report")) {
       setSelectedKey("production-report");
+    } else if (path.includes("/factory-map")) {
+      setSelectedKey("factory-map");
+    } else if (path.includes("/oee-dashboard")) {
+      setSelectedKey("oee-dashboard");
     } else if (path.includes("/incidents")) {
       setSelectedKey("incidents");
     } else {
@@ -228,6 +226,8 @@ const ManagerLayout = () => {
       return <PurchaseApproval />;
     } else if (path.includes("/maintenance-reports")) {
       return <MaintenanceReports />;
+    } else if (path.includes("/DisplayScreenReplaceItem")) {
+      return <DisplayScreenReplaceItem />;
     } else if (path.includes("/replacement-history")) {
       return <ReplacementHistory />;
     } else if (path.includes("/inventory-dashboard")) {
@@ -236,6 +236,10 @@ const ManagerLayout = () => {
       return <ProductionManagement />;
     } else if (path.includes("/production-report")) {
       return <ProductionDetailReport />;
+    } else if (path.includes("/factory-map")) {
+      return <FactoryMap />;
+    } else if (path.includes("/oee-dashboard")) {
+      return <OEEDashboard />;
     } else if (path.includes("/incidents")) {
       return <ManagerIncidentList />;
     } else if (path === "/manager" || path.includes("/dashboard")) {
@@ -253,6 +257,16 @@ const ManagerLayout = () => {
       label: "Tổng quan",
     },
     {
+      key: "factory-map",
+      icon: <FundOutlined />,
+      label: "Sơ đồ nhà máy",
+    },
+    {
+      key: "oee-dashboard",
+      icon: <FundOutlined />,
+      label: "Biểu đồ OEE",
+    },
+    {
       key: "purchase-approval",
       icon: <ShoppingOutlined />,
       label: "Duyệt yêu cầu mua hàng",
@@ -261,6 +275,11 @@ const ManagerLayout = () => {
       key: "maintenance-reports",
       icon: <ToolOutlined />,
       label: "Báo cáo bảo trì",
+    },
+    {
+      key: "DisplayScreenReplaceItem",
+      icon: <SwapOutlined />,
+      label: "Thay thế linh kiện",
     },
     {
       key: "replacement-history",
@@ -295,11 +314,20 @@ const ManagerLayout = () => {
       case "dashboard":
         navigate("/manager/dashboard");
         break;
+      case "factory-map":
+        navigate("/manager/factory-map");
+        break;
+      case "oee-dashboard":
+        navigate("/manager/oee-dashboard");
+        break;
       case "purchase-approval":
         navigate("/manager/purchase-approval");
         break;
       case "maintenance-reports":
         navigate("/manager/maintenance-reports");
+        break;
+      case "DisplayScreenReplaceItem":
+        navigate("/manager/DisplayScreenReplaceItem");
         break;
       case "replacement-history":
         navigate("/manager/replacement-history");
@@ -328,18 +356,18 @@ const ManagerLayout = () => {
       label: "Thông tin cá nhân",
       onClick: () => navigate("/profile"),
     },
-    {
-      key: "edit-profile",
-      icon: <EditOutlined />,
-      label: "Chỉnh sửa thông tin",
-      onClick: () => navigate("/profile/edit"),
-    },
-    {
-      key: "change-password",
-      icon: <SafetyOutlined />,
-      label: "Đổi mật khẩu",
-      onClick: () => navigate("/profile/change-password"),
-    },
+    // {
+    //   key: "edit-profile",
+    //   icon: <EditOutlined />,
+    //   label: "Chỉnh sửa thông tin",
+    //   onClick: () => navigate("/profile/edit"),
+    // },
+    // {
+    //   key: "change-password",
+    //   icon: <SafetyOutlined />,
+    //   label: "Đổi mật khẩu",
+    //   onClick: () => navigate("/profile/change-password"),
+    // },
     {
       type: "divider",
     },
@@ -497,8 +525,10 @@ const ManagerLayout = () => {
                   onClick={() => {
                     // Mở drawer notifications
                     setNotificationDrawerOpen(true);
-                    // Reset notification count khi click
-                    setNotificationCount(0);
+                    // Refresh unread count from server
+                    notificationService.getUnreadCount().then((count) => {
+                      setNotificationCount(count);
+                    });
                   }}
                 />
               </Badge>
@@ -535,12 +565,17 @@ const ManagerLayout = () => {
         <Drawer
           title="Thông báo"
           placement="right"
-          width={600}
+          width={720}
           onClose={() => setNotificationDrawerOpen(false)}
           open={notificationDrawerOpen}
           styles={{ body: { padding: 0 } }}
         >
-          <NotificationsList onClose={() => setNotificationDrawerOpen(false)} />
+          <NotificationsList
+            onClose={() => setNotificationDrawerOpen(false)}
+            onNotificationCountChange={(newCount) =>
+              setNotificationCount(newCount)
+            }
+          />
         </Drawer>
       </AntLayout>
     </App>

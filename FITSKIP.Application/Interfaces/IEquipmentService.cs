@@ -12,5 +12,6 @@ public interface IEquipmentService
     Task<EquipmentDTO?> ToggleEquipmentStatusAsync(int id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<EquipmentDTO>> GetEquipmentsByStageAsync(int stageId, CancellationToken cancellationToken = default);
     Task<string?> GenerateQRCodeAsync(int id, CancellationToken cancellationToken = default);
-    Task<IReadOnlyList<EquipmentDTO>> GetEquipmentsByTeamLeaderAsync(string userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<EquipmentDTO>> GetEquipmentsByUserLinesAsync(string userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<EquipmentDTO>> GetEquipmentsByLineAsync(int lineId, CancellationToken cancellationToken = default);
 }

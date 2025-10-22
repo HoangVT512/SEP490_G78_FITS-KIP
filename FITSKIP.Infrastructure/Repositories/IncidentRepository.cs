@@ -21,6 +21,9 @@ public class IncidentRepository : IIncidentRepository
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
+            .Include(i => i.ReportedByUser)
+            .Include(i => i.IncidentShifts)
+                .ThenInclude(ishft => ishft.Shift)
             .OrderByDescending(i => i.CreatedDate)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -33,6 +36,9 @@ public class IncidentRepository : IIncidentRepository
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
+            .Include(i => i.ReportedByUser)
+            .Include(i => i.IncidentShifts)
+                .ThenInclude(ishft => ishft.Shift)
             .FirstOrDefaultAsync(i => i.IncidentId == id, cancellationToken);
     }
 
@@ -45,13 +51,13 @@ public class IncidentRepository : IIncidentRepository
         await _context.Entry(incident)
             .Reference(i => i.Equipment)
             .LoadAsync(cancellationToken);
-        
+
         if (incident.Equipment != null)
         {
             await _context.Entry(incident.Equipment)
                 .Reference(e => e.Stage)
                 .LoadAsync(cancellationToken);
-            
+
             if (incident.Equipment.Stage != null)
             {
                 await _context.Entry(incident.Equipment.Stage)
@@ -62,6 +68,10 @@ public class IncidentRepository : IIncidentRepository
 
         await _context.Entry(incident)
             .Reference(i => i.Type)
+            .LoadAsync(cancellationToken);
+
+        await _context.Entry(incident)
+            .Collection(i => i.IncidentShifts)
             .LoadAsync(cancellationToken);
 
         return incident;
@@ -76,13 +86,13 @@ public class IncidentRepository : IIncidentRepository
         await _context.Entry(incident)
             .Reference(i => i.Equipment)
             .LoadAsync(cancellationToken);
-        
+
         if (incident.Equipment != null)
         {
             await _context.Entry(incident.Equipment)
                 .Reference(e => e.Stage)
                 .LoadAsync(cancellationToken);
-            
+
             if (incident.Equipment.Stage != null)
             {
                 await _context.Entry(incident.Equipment.Stage)
@@ -93,6 +103,10 @@ public class IncidentRepository : IIncidentRepository
 
         await _context.Entry(incident)
             .Reference(i => i.Type)
+            .LoadAsync(cancellationToken);
+
+        await _context.Entry(incident)
+            .Collection(i => i.IncidentShifts)
             .LoadAsync(cancellationToken);
 
         return incident;
@@ -116,6 +130,7 @@ public class IncidentRepository : IIncidentRepository
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
+            .Include(i => i.IncidentShifts)
             .Where(i => i.StartTime >= startDate && i.StartTime <= endDate)
             .OrderByDescending(i => i.CreatedDate)
             .AsNoTracking()
@@ -129,13 +144,32 @@ public class IncidentRepository : IIncidentRepository
                 .ThenInclude(e => e!.Stage)
                     .ThenInclude(s => s!.Line)
             .Include(i => i.Type)
-            .Where(i => i.Equipment != null && 
-                       i.Equipment.Stage != null && 
-                       i.Equipment.Stage.Line != null && 
+            .Include(i => i.IncidentShifts)
+            .Where(i => i.Equipment != null &&
+                       i.Equipment.Stage != null &&
+                       i.Equipment.Stage.Line != null &&
                        i.Equipment.Stage.Line.LineId == lineId &&
-                       i.StartTime >= startDate && 
+                       i.StartTime >= startDate &&
                        i.StartTime <= endDate)
             .OrderByDescending(i => i.CreatedDate)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<dynamic>> GetStopTypesAsync(CancellationToken cancellationToken = default)
+    {
+        return await _context.StopTypes
+            .Select(s => new { typeId = s.TypeId, typeName = s.TypeName } as dynamic)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<IncidentShift>> GetIncidentShiftsAsync(int incidentId, CancellationToken cancellationToken = default)
+    {
+        return await _context.IncidentShifts
+            .Include(ishft => ishft.Shift)
+            .Where(ishft => ishft.IncidentId == incidentId)
+            .OrderBy(ishft => ishft.StartTime)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }

@@ -21,12 +21,16 @@ namespace FITSKIP.API.Hubs
                 var roles = Context.User?.FindAll(ClaimTypes.Role)?.Select(c => c.Value) ?? Enumerable.Empty<string>();
                 foreach (var role in roles)
                 {
-                    if (role.Contains("Quản lý") || role.Contains("Manager"))
+                    Console.WriteLine($"User {userId} has role: {role}");
+
+                    // Fix: Check for exact role "Quản lý" (Manager) first, NOT "Quản lý kỹ thuật"
+                    if (role == "Quản lý" || role == "Manager")
                     {
                         await Groups.AddToGroupAsync(Context.ConnectionId, "Managers");
                         Console.WriteLine($"User {userId} added to Managers group");
                     }
-                    else if (role.Contains("Quản lý kỹ thuật") || role.Contains("Technical Manager"))
+                    // Check for Technical Manager role (includes "Quản lý kỹ thuật")
+                    if (role == "Quản lý kỹ thuật" || role == "Technical Manager" || role.Contains("Quản lý kỹ thuật"))
                     {
                         await Groups.AddToGroupAsync(Context.ConnectionId, "TechnicalManagers");
                         Console.WriteLine($"User {userId} added to TechnicalManagers group");
@@ -51,11 +55,12 @@ namespace FITSKIP.API.Hubs
         }
 
         // Client can call this to mark notification as read
-        public async Task MarkAsRead(int notificationId)
+        public Task MarkAsRead(int notificationId)
         {
             var userId = Context.UserIdentifier ?? Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             Console.WriteLine($"User {userId} marked notification {notificationId} as read");
             // The actual marking will be done through the API endpoint
+            return Task.CompletedTask;
         }
 
         // Join a specific group (for role-based or department-based notifications)
@@ -68,6 +73,29 @@ namespace FITSKIP.API.Hubs
         // Leave a specific group
         public async Task LeaveGroup(string groupName)
         {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
+            Console.WriteLine($"Connection {Context.ConnectionId} left group {groupName}");
+        }
+
+        // Send data update notification to a group
+        public async Task SendDataUpdateToGroup(string groupName, string type, object data)
+        {
+            await Clients.Group(groupName).SendAsync("DataUpdated", new { type, data, timestamp = DateTime.UtcNow });
+            Console.WriteLine($"Sent data update to group {groupName}: {type}");
+        }
+
+        // Join department-specific group for technical manager
+        public async Task JoinDepartmentGroup(int departmentId)
+        {
+            var groupName = $"TechnicalManagers_Department_{departmentId}";
+            await Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+            Console.WriteLine($"Connection {Context.ConnectionId} joined group {groupName}");
+        }
+
+        // Leave department-specific group
+        public async Task LeaveDepartmentGroup(int departmentId)
+        {
+            var groupName = $"TechnicalManagers_Department_{departmentId}";
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
             Console.WriteLine($"Connection {Context.ConnectionId} left group {groupName}");
         }

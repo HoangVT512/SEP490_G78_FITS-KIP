@@ -11,4 +11,6 @@ public interface IIncidentRepository
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<IncidentHistory>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<IncidentHistory>> GetByLineIdAsync(int lineId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<dynamic>> GetStopTypesAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<IncidentShift>> GetIncidentShiftsAsync(int incidentId, CancellationToken cancellationToken = default);
 }

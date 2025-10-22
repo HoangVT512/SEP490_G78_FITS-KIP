@@ -15,9 +15,12 @@ public interface IUserRepository
     Task<User?> DeleteUserAsync(string id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Department>> GetDepartmentsAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<User>> GetUsersByRoleAsync(string roleName, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<User>> GetActiveTeamLeadsByLineAsync(int lineId, CancellationToken cancellationToken = default);
     Task<User?> UpdateProfileAsync(string userId, UpdateProfileRequest request, CancellationToken cancellationToken = default);
     Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<User?> GetByEmployeeCodeAsync(string employeeCode, CancellationToken cancellationToken = default);
+    Task<bool> ResetPasswordAsync(string userId, string newPassword, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<UserLine>> GetUserLinesAsync(string userId, CancellationToken cancellationToken = default);
 }
 
 

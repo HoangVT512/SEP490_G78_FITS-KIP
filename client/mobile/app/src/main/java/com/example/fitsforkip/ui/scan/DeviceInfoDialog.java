@@ -20,6 +20,7 @@ import android.text.TextWatcher;
 import android.text.Editable;
 
 import com.example.fitsforkip.R;
+import com.example.fitsforkip.data.model.Equipment;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,15 +28,17 @@ import java.util.List;
 
 public class DeviceInfoDialog extends Dialog {
 
-    private String idCode;
-    private String dayChuyen;
-    private String congDoan;
+    private Equipment equipment;
+    private OnOptionsSelectedListener listener;
 
-    public DeviceInfoDialog(Context context, String idCode, String dayChuyen, String congDoan) {
+    public interface OnOptionsSelectedListener {
+        void onOptionsSelected(List<String> selectedOptions);
+    }
+
+    public DeviceInfoDialog(Context context, Equipment equipment, OnOptionsSelectedListener listener) {
         super(context);
-        this.idCode = idCode;
-        this.dayChuyen = dayChuyen;
-        this.congDoan = congDoan;
+        this.equipment = equipment;
+        this.listener = listener;
 
         init();
     }
@@ -46,13 +49,13 @@ public class DeviceInfoDialog extends Dialog {
 
         // Set data
         TextView tvIdCode = view.findViewById(R.id.tv_id_code);
-        tvIdCode.setText("IdCode: " + idCode);
+        tvIdCode.setText("IdCode: " + equipment.getQrcode());
 
         TextView tvDayChuyen = view.findViewById(R.id.tv_day_chuyen);
-        tvDayChuyen.setText("Dây chuyền: " + dayChuyen);
+        tvDayChuyen.setText("Dây chuyền: " + equipment.getLineName());
 
         TextView tvCongDoan = view.findViewById(R.id.tv_cong_doan);
-        tvCongDoan.setText("Công đoạn: " + congDoan);
+        tvCongDoan.setText("Công đoạn: " + equipment.getStageName());
 
         // Search EditText
         EditText etSearch = view.findViewById(R.id.et_search);
@@ -60,7 +63,14 @@ public class DeviceInfoDialog extends Dialog {
 
         // Options list
         ListView listOptions = view.findViewById(R.id.list_options);
-        List<String> options = new ArrayList<>(Arrays.asList("Phế phẩm", "Báo cáo sự cố", "Hết lk", "Rơi linh kiện"));
+        List<String> options = new ArrayList<>(Arrays.asList("Phế phẩm", "Cần hỗ trợ kỹ thuật"));
+        // Add issues from equipment
+        if (equipment.getIssue() != null && !equipment.getIssue().trim().isEmpty()) {
+            String[] issueArray = equipment.getIssue().split(";");
+            for (String issue : issueArray) {
+                options.add(issue.trim());
+            }
+        }
         OptionAdapter adapter = new OptionAdapter(options);
         listOptions.setAdapter(adapter);
 
@@ -118,9 +128,9 @@ public class DeviceInfoDialog extends Dialog {
             // Handle OK - show selected options
             List<String> selected = adapter.getSelectedOptions();
             if (!selected.isEmpty()) {
-                Toast.makeText(getContext(), "Selected: " + selected.toString(), Toast.LENGTH_LONG).show();
+                listener.onOptionsSelected(selected);
             } else {
-                Toast.makeText(getContext(), "No options selected", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Không có tùy chọn nào được chọn", Toast.LENGTH_SHORT).show();
             }
             dismiss();
         });
