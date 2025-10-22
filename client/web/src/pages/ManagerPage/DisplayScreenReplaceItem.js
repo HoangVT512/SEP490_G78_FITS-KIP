@@ -669,7 +669,7 @@ const DisplayScreenReplaceItem = () => {
                       borderRadius: '50%',
                       backgroundColor: '#2980b9'
                     }}></div>
-                    <span>🔵 Chưa đến hạn: &lt; 80% định mức (An toàn)</span>
+                    <span>Chưa đến hạn: &lt; 80% định mức (An toàn)</span>
                   </div>
                   <div style={{
                     display: 'flex',
@@ -682,7 +682,7 @@ const DisplayScreenReplaceItem = () => {
                       borderRadius: '50%',
                       backgroundColor: '#f39c12'
                     }}></div>
-                    <span>🟡 Đến hạn: 80-100% (Chuẩn bị thay)</span>
+                    <span>Đến hạn: 80-100% (Chuẩn bị thay)</span>
                   </div>
                   <div style={{
                     display: 'flex',
@@ -695,16 +695,16 @@ const DisplayScreenReplaceItem = () => {
                       borderRadius: '50%',
                       backgroundColor: '#e74c3c'
                     }}></div>
-                    <span>🔴 Quá hạn: &gt; 100% (Thay ngay!)</span>
+                    <span>Quá hạn: &gt; 100% (Thay ngay!)</span>
                   </div>
                 </div>
 
                 {/* Status Summary for This Line */}
                 <div style={{
                   display: 'flex',
-                  justifyContent: 'space-around',
+                  justifyContent: 'space-between',
                   padding: '10px 0',
-                  maxWidth: '900px',
+                  maxWidth: '1200px',
                   margin: '0 auto'
                 }}>
                   <div style={{ textAlign: 'center' }}>
@@ -786,7 +786,7 @@ const DisplayScreenReplaceItem = () => {
                         <th 
                           {...props} 
                           style={{
-                            backgroundColor: '#e74c3c',
+                            backgroundColor: '#334766',
                             color: 'white',
                             padding: '12px 8px',
                             textAlign: 'left',

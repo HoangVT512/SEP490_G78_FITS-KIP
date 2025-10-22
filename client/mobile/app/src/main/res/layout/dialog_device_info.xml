@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@android:color/white">
+
+    <!-- IdCode -->
+    <TextView
+        android:id="@+id/tv_id_code"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="IdCode: "
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Day chuyen -->
+    <TextView
+        android:id="@+id/tv_day_chuyen"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Dây chuyền: "
+        android:textSize="16sp"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Cong doan -->
+    <TextView
+        android:id="@+id/tv_cong_doan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Công đoạn: "
+        android:textSize="16sp"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Icons row -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:layout_marginBottom="16dp">
+
+        <ImageButton
+            android:id="@+id/btn_search"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:src="@android:drawable/ic_menu_search" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_weight="1" />
+
+        <ImageButton
+            android:id="@+id/btn_plus"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="?android:attr/selectableItemBackground"
+            android:src="@android:drawable/ic_menu_add" />
+
+    </LinearLayout>
+
+    <!-- Search EditText -->
+    <EditText
+        android:id="@+id/et_search"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Tìm kiếm tùy chọn"
+        android:layout_marginBottom="8dp" />
+
+    <!-- Options List -->
+    <ListView
+        android:id="@+id/list_options"
+        android:layout_width="match_parent"
+        android:layout_height="250dp"
+        android:background="@color/dialog_option_color"
+        android:layout_marginBottom="16dp" />
+
+    <!-- Buttons -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end">
+
+        <Button
+            android:id="@+id/btn_close"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Đóng"
+            android:layout_marginEnd="8dp"
+            android:background="@android:color/transparent"
+            android:textColor="@android:color/black" />
+
+        <Button
+            android:id="@+id/btn_ok"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="OK"
+            android:background="@android:color/transparent"
+            android:textColor="@android:color/black" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -12,4 +12,5 @@ public interface IEquipmentRepository
     Task<IReadOnlyList<Equipment>> GetByStageIdAsync(int stageId, CancellationToken cancellationToken = default);
     Task<Equipment?> GetByCodeAsync(string equipmentCode, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Equipment>> GetEquipmentsByTeamLeaderAsync(string userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Equipment>> GetByLineIdAsync(int lineId, CancellationToken cancellationToken = default);
 }

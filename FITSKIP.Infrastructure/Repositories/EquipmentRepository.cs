@@ -119,4 +119,15 @@ public class EquipmentRepository : IEquipmentRepository
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<Equipment>> GetByLineIdAsync(int lineId, CancellationToken cancellationToken = default)
+    {
+        return await _context.Equipment
+            .Include(e => e.Stage!)
+            .ThenInclude(s => s.Line!)
+            .ThenInclude(l => l.Department)
+            .Where(e => e.Stage != null && e.Stage.LineId == lineId)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
 }

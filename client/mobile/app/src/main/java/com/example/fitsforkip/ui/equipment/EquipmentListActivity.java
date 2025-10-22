@@ -28,6 +28,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import com.example.fitsforkip.data.remote.ApiClient;
+import com.example.fitsforkip.data.remote.ApiService;
+import com.example.fitsforkip.data.model.ApiResponse;
+
 public class EquipmentListActivity extends AppCompatActivity {
 
     private DrawerLayout drawerLayout;
@@ -49,6 +56,8 @@ public class EquipmentListActivity extends AppCompatActivity {
     private String employeeId;
     private String productionLine;
 
+    private int lineId;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -68,6 +77,7 @@ public class EquipmentListActivity extends AppCompatActivity {
         SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         employeeId = prefs.getString("employee_id", "Unknown");
         productionLine = prefs.getString("production_line", "Unknown");
+        lineId = prefs.getInt("line_id", -1);
     }
 
     private void initViews() {
@@ -76,6 +86,9 @@ public class EquipmentListActivity extends AppCompatActivity {
         navigationView = findViewById(R.id.nav_view);
         rvEquipment = findViewById(R.id.rv_equipment);
         tvEquipmentCount = findViewById(R.id.tv_equipment_count);
+
+        // Initialize equipment list
+        equipmentList = new ArrayList<>();
 
         // Navigation header
         View headerView = navigationView.getHeaderView(0);
@@ -102,18 +115,38 @@ public class EquipmentListActivity extends AppCompatActivity {
     }
 
     private void loadEquipmentData() {
-        // Dữ liệu mẫu thiết bị
-        equipmentList = new ArrayList<>();
-        equipmentList.add(new Equipment("TB001", "Máy hàn tự động", "Hàn khung xe", "Dây chuyền 2 - Hàn",
-                Arrays.asList("Động cơ bị nóng", "Tiếng ồn lớn")));
-        equipmentList.add(new Equipment("TB002", "Máy sơn phun", "Sơn bề mặt", "Dây chuyền 3 - Sơn",
-                Arrays.asList("Bình sơn hết")));
-        equipmentList.add(new Equipment("TB003", "Máy lắp ráp", "Lắp ráp linh kiện", "Dây chuyền 1 - Lắp ráp",
-                Arrays.asList()));
-        equipmentList.add(new Equipment("TB004", "Máy kiểm tra", "Kiểm tra chất lượng", "Dây chuyền 5 - Kiểm tra",
-                Arrays.asList("Cảm biến hỏng", "Màn hình không sáng")));
-        equipmentList.add(new Equipment("TB005", "Máy đóng gói", "Đóng gói sản phẩm", "Dây chuyền 4 - Đóng gói",
-                Arrays.asList("Băng dính hết")));
+        if (lineId == -1) {
+            Toast.makeText(this, "Không tìm thấy thông tin dây chuyền", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        String token = prefs.getString("token", null);
+        if (token == null) {
+            Toast.makeText(this, "Không tìm thấy token xác thực", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Fetch equipment from API
+        ApiService apiService = ApiClient.getClient().create(ApiService.class);
+        Call<ApiResponse<List<Equipment>>> call = apiService.getEquipmentsByLine("Bearer " + token, lineId);
+        call.enqueue(new Callback<ApiResponse<List<Equipment>>>() {
+            @Override
+            public void onResponse(Call<ApiResponse<List<Equipment>>> call, Response<ApiResponse<List<Equipment>>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    equipmentList = response.body().getData();
+                    adapter.setData(equipmentList);
+                    updateEquipmentCount();
+                } else {
+                    Toast.makeText(EquipmentListActivity.this, "Không thể tải danh sách thiết bị", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ApiResponse<List<Equipment>>> call, Throwable t) {
+                Toast.makeText(EquipmentListActivity.this, "Lỗi: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void setupRecyclerView() {

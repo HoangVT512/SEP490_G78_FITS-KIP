@@ -21,8 +21,31 @@ public class AuthsController : ControllerBase
     }
 
     /// <summary>
-    /// Đăng nhập hệ thống
+    /// Đăng nhập mobile app (chỉ cần mã nhân viên + dây chuyền)
     /// </summary>
+    /// <param name="request">Thông tin đăng nhập mobile</param>
+    /// <returns>JWT token và thông tin user + line</returns>
+    [HttpPost("mobile-login")]
+    [AllowAnonymous]
+    public async Task<IActionResult> MobileLogin([FromBody] MobileLoginRequest request)
+    {
+        try
+        {
+            var response = await _authService.MobileLoginAsync(request);
+            return Ok(new { success = true, data = response, message = "Đăng nhập thành công" });
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            return Unauthorized(new { success = false, message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Đã có lỗi xảy ra trong quá trình đăng nhập", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Đăng nhập hệ thống</summary>
     /// <param name="request">Thông tin đăng nhập</param>
     /// <returns>JWT token và thông tin user</returns>
     [HttpPost("login")]

@@ -14,6 +14,14 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- Container for Device Info Cards -->
+        <LinearLayout
+            android:id="@+id/ll_device_cards_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+        </LinearLayout>
+
     </LinearLayout>
 
 </androidx.core.widget.NestedScrollView>

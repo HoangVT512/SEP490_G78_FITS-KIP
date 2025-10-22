@@ -169,4 +169,22 @@ public class LinesController : ControllerBase
             return StatusCode(500, new { success = false, message = "Có lỗi xảy ra khi lấy danh sách chuyền sản xuất của user", details = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Lấy danh sách tất cả chuyền sản xuất (không cần authentication)
+    /// </summary>
+    [HttpGet("public")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetAllLinesPublic()
+    {
+        try
+        {
+            var lines = await _lineService.GetLinesAsync();
+            return Ok(new { success = true, data = lines });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Có lỗi xảy ra khi lấy danh sách chuyền sản xuất", details = ex.Message });
+        }
+    }
 }

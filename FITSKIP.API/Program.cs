@@ -41,6 +41,10 @@ namespace FITSKIP.API
         public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);            // Load optional local overrides without committing to git
+
+            // Cho phép truy cập từ tất cả IP trong LAN, không chỉ localhost
+            builder.WebHost.UseUrls("http://0.0.0.0:5201", "http://0.0.0.0:7003");
+
             builder.Configuration
                 .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
                 .AddEnvironmentVariables();
@@ -211,15 +215,37 @@ namespace FITSKIP.API
                 };
             });
 
+            // C1: Configure CORS
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend",
                     policy => policy
-                        .WithOrigins("http://localhost:3000") // React web
+                        //.WithOrigins("http://localhost:3000") // React web
+                        .SetIsOriginAllowed(origin => true) // Allow all origins - adjust for production
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials()); // Required for SignalR
             });
+
+            //C2: Giới hạn pattern IP nội bộ (tùy chọn nâng cao):
+            // builder.Services.AddCors(options =>
+            // {
+            //     options.AddPolicy("AllowFrontend",
+            //         policy => policy
+            //             .SetIsOriginAllowed(origin =>
+            //             {
+            //                 if (origin.StartsWith("http://localhost"))
+            //                     return true;
+            //                 if (origin.StartsWith("http://192.168."))
+            //                     return true;
+            //                 if (origin.StartsWith("http://10."))
+            //                     return true;
+            //                 return false;
+            //             })
+            //             .AllowAnyHeader()
+            //             .AllowAnyMethod()
+            //             .AllowCredentials());
+            // });
 
             // Add SignalR
             builder.Services.AddSignalR();

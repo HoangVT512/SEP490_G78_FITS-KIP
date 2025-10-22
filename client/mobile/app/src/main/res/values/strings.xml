@@ -41,6 +41,14 @@
     <string name="nav_settings">Cài đặt</string>
     <string name="nav_logout">Đăng xuất</string>
 
+    <!-- Navigation Drawer Items -->
+    <string name="nav_employee_id">Mã NV: Unknown</string>
+    <string name="nav_employee_name">Unknown</string>
+    <string name="nav_home_text">Trang chủ</string>
+    <string name="nav_equipment_text">Thiết bị</string>
+    <string name="nav_history_text">Lịch sử</string>
+    <string name="nav_logout_text">Đăng xuất</string>
+
     <!-- Equipment -->
     <string name="equipment_title">Thiết bị</string>
     <string name="equipment_list_title">Danh sách thiết bị</string>
@@ -85,4 +93,14 @@
     <string name="delete_incident_title">Xóa sự cố</string>
     <string name="delete_incident_message">Bạn có chắc chắn muốn xóa sự cố này?</string>
     <string name="delete_incident_positive">Xóa</string>
+
+    <!-- Item Equipment -->
+    <string name="equipment_code_sample">Mã TB: TB001</string>
+    <string name="equipment_name_sample">Tên TB: Máy hàn tự động</string>
+    <string name="stage_sample">Công đoạn: Hàn khung xe</string>
+    <string name="line_sample">Dây chuyền: Dây chuyền 2 - Hàn</string>
+    <string name="issues_sample">Vấn đề: Động cơ bị nóng, Tiếng ồn lớn</string>
+
+    <!-- Item Incident History -->
+    <string name="synced_label">Đồng bộ: </string>
 </resources>

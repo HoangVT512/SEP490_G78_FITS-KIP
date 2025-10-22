@@ -476,4 +476,45 @@ public class EquipmentsController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Lấy danh sách thiết bị theo dây chuyền
+    /// </summary>
+    /// <param name="lineId">ID của dây chuyền</param>
+    /// <returns>Danh sách thiết bị thuộc dây chuyền</returns>
+    /// <response code="200">Trả về danh sách thiết bị thành công</response>
+    /// <response code="400">ID dây chuyền không hợp lệ</response>
+    /// <response code="500">Lỗi server nội bộ</response>
+    [HttpGet("by-line/{lineId}")]
+    [ProducesResponseType(typeof(ApiResponse<IReadOnlyList<EquipmentDTO>>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> GetEquipmentsByLine(int lineId)
+    {
+        try
+        {
+            if (lineId <= 0)
+            {
+                return BadRequest(ApiResponse.ErrorResponse(
+                    "ID dây chuyền không hợp lệ",
+                    new List<string> { "ID phải lớn hơn 0" }
+                ));
+            }
+
+            var equipments = await _equipmentService.GetEquipmentsByLineAsync(lineId);
+
+            return Ok(ApiResponse<IReadOnlyList<EquipmentDTO>>.SuccessResponse(
+                equipments,
+                $"Lấy danh sách {equipments.Count} thiết bị của dây chuyền {lineId} thành công"
+            ));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi lấy danh sách thiết bị theo dây chuyền với ID: {LineId}", lineId);
+            return StatusCode(500, ApiResponse.ErrorResponse(
+                "Có lỗi xảy ra khi lấy danh sách thiết bị theo dây chuyền",
+                new List<string> { ex.Message }
+            ));
+        }
+    }
+
 }

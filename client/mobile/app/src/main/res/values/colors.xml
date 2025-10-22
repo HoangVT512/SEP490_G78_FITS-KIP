@@ -12,6 +12,7 @@
     <!-- Background Colors -->
     <color name="background_color">#F5F5F5</color>
     <color name="card_background">#FFFFFF</color>
+    <color name="dialog_option_color">#EFE7F6</color>
 
 
     <!-- Text Colors -->

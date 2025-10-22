@@ -11,7 +11,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.google.zxing.Result;
 import com.journeyapps.barcodescanner.BarcodeCallback;
 import com.journeyapps.barcodescanner.BarcodeResult;
 import com.journeyapps.barcodescanner.DecoratedBarcodeView;
@@ -20,10 +19,13 @@ public class QRScannerActivity extends AppCompatActivity implements BarcodeCallb
 
     private static final int CAMERA_PERMISSION_REQUEST = 100;
     private DecoratedBarcodeView barcodeView;
+    private String productionLine;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        productionLine = getIntent().getStringExtra("production_line");
 
         // Check camera permission
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
@@ -45,11 +47,12 @@ public class QRScannerActivity extends AppCompatActivity implements BarcodeCallb
     public void barcodeResult(BarcodeResult result) {
         // Handle the scanned QR code
         String qrCode = result.getText();
-        Toast.makeText(this, "Scanned: " + qrCode, Toast.LENGTH_LONG).show();
+        //Toast.makeText(this, "Scanned: " + qrCode, Toast.LENGTH_LONG).show();
 
         // Return result to calling activity
         Intent intent = new Intent();
         intent.putExtra("qr_code", qrCode);
+        intent.putExtra("production_line", productionLine); // Add this line
         setResult(RESULT_OK, intent);
         finish();
     }
@@ -66,7 +69,7 @@ public class QRScannerActivity extends AppCompatActivity implements BarcodeCallb
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 initScanner();
             } else {
-                Toast.makeText(this, "Camera permission is required to scan QR codes", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Quyền camera là được yêu cầu để quét mã QR", Toast.LENGTH_SHORT).show();
                 finish();
             }
         }
