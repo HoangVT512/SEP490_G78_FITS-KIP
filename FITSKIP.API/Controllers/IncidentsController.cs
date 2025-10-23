@@ -94,19 +94,19 @@ public class IncidentsController : ControllerBase
         {
             if (id <= 0)
             {
-                return BadRequest(new { success = false, message = "Error: ID sự cố không hợp lệ" });
+                return BadRequest(new { success = false, message = "ID sự cố phải lớn hơn 0" });
             }
 
             var incident = await _incidentService.GetIncidentByIdAsync(id);
             if (incident == null)
             {
-                return NotFound(new { success = false, message = "Error: Không tìm thấy sự cố" });
+                return NotFound(new { success = false, message = "Không tìm thấy sự cố với ID " + id });
             }
             return Ok(new { success = true, data = incident });
         }
         catch (Exception ex)
         {
-            return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi lấy thông tin sự cố", details = ex.Message });
+            return BadRequest(new { success = false, message = "Có lỗi xảy ra khi lấy thông tin sự cố", details = ex.Message });
         }
     }
 
@@ -114,14 +114,14 @@ public class IncidentsController : ControllerBase
     /// Tạo sự cố mới
     /// </summary>
     [HttpPost]
-    public async Task<IActionResult> CreateIncident([FromBody] CreateIncidentRequest request)
+    public async Task<IActionResult> CreateIncident([FromForm] CreateIncidentRequest request)
     {
         try
         {
             // Validate request object first
             if (request == null)
             {
-                return BadRequest(new { success = false, message = "Error: Request body is required" });
+                return BadRequest(new { success = false, message = "Dữ liệu yêu cầu không được để trống" });
             }
 
             // Validate ModelState (attributes validation)
@@ -131,25 +131,40 @@ public class IncidentsController : ControllerBase
                     .SelectMany(v => v.Errors)
                     .Select(e => e.ErrorMessage)
                     .ToList();
-                return BadRequest(new { success = false, message = $"Error: Validation failed - {string.Join(", ", errors)}" });
+                return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = errors });
             }
 
             // Additional business validation
-            // if (request.EquipmentId <= 0)
-            // {
-            //     return BadRequest(new { success = false, message = "Error: Equipment ID phải lớn hơn 0" });
-            // }
+            if (request.EquipmentId.HasValue && request.EquipmentId.Value <= 0)
+            {
+                return BadRequest(new { success = false, message = "ID thiết bị phải là số nguyên dương" });
+            }
 
             // Validate LineId if provided
             if (request.LineId.HasValue && request.LineId.Value <= 0)
             {
-                return BadRequest(new { success = false, message = "Error: Line ID phải lớn hơn 0" });
+                return BadRequest(new { success = false, message = "ID dây chuyền phải là số nguyên dương" });
             }
 
-            // TypeId is optional on create; allow null (can be updated later)
+            // Validate TypeId if provided
+            if (request.TypeId.HasValue && request.TypeId.Value <= 0)
+            {
+                return BadRequest(new { success = false, message = "ID loại dừng phải là số nguyên dương" });
+            }
 
-            // StartTime is optional; service will set it to current time if missing
+            // Validate Duration if provided
+            if (request.Duration.HasValue && request.Duration.Value < 0)
+            {
+                return BadRequest(new { success = false, message = "Thời lượng không được âm" });
+            }
 
+            // Validate ReportedByUserId
+            if (string.IsNullOrWhiteSpace(request.ReportedByUserId))
+            {
+                return BadRequest(new { success = false, message = "ID người báo cáo là bắt buộc" });
+            }
+
+            // Validate time logic
             if (request.EndTime.HasValue && request.StartTime.HasValue && request.EndTime.Value <= request.StartTime.Value)
             {
                 return BadRequest(new { success = false, message = "Thời gian kết thúc phải sau thời gian bắt đầu" });
@@ -158,6 +173,11 @@ public class IncidentsController : ControllerBase
             if (request.EndTime.HasValue && request.EndTime.Value > DateTime.Now)
             {
                 return BadRequest(new { success = false, message = "Thời gian kết thúc không thể trong tương lai" });
+            }
+
+            if (request.StartTime.HasValue && request.StartTime.Value > DateTime.Now)
+            {
+                return BadRequest(new { success = false, message = "Thời gian bắt đầu không thể trong tương lai" });
             }
 
             // Set ReportedByUserId from authenticated user if available
@@ -175,11 +195,11 @@ public class IncidentsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { success = false, message = $"{ex.Message}" });
+            return BadRequest(new { success = false, message = ex.Message });
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { success = false, message = $"{ex.Message}" });
+            return BadRequest(new { success = false, message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -297,19 +317,19 @@ public class IncidentsController : ControllerBase
     /// Cập nhật thông tin sự cố
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateIncident(int id, [FromBody] UpdateIncidentRequest request)
+    public async Task<IActionResult> UpdateIncident(int id, [FromForm] UpdateIncidentRequest request)
     {
         try
         {
             if (id <= 0)
             {
-                return BadRequest(new { success = false, message = "ID sự cố phải lớn hơn 0" });
+                return BadRequest(new { success = false, message = "ID sự cố phải là số nguyên dương" });
             }
 
             // Validate request object first
             if (request == null)
             {
-                return BadRequest(new { success = false, message = "Request body is required" });
+                return BadRequest(new { success = false, message = "Dữ liệu yêu cầu không được để trống" });
             }
 
             // Validate ModelState (attributes validation)
@@ -319,23 +339,33 @@ public class IncidentsController : ControllerBase
                     .SelectMany(v => v.Errors)
                     .Select(e => e.ErrorMessage)
                     .ToList();
-                return BadRequest(new { success = false, message = $"Xác thực không thành công - {string.Join(", ", errors)}" });
+                return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = errors });
             }
 
             // Additional business validation
-            // if (request.EquipmentId <= 0)
-            // {
-            //     return BadRequest(new { success = false, message = "ID thiết bị phải lớn hơn 0" });
-            // }
+            if (request.EquipmentId.HasValue && request.EquipmentId.Value <= 0)
+            {
+                return BadRequest(new { success = false, message = "ID thiết bị phải là số nguyên dương" });
+            }
 
             if (request.LineId.HasValue && request.LineId.Value <= 0)
             {
-                return BadRequest(new { success = false, message = "ID dây chuyền phải lớn hơn 0" });
+                return BadRequest(new { success = false, message = "ID dây chuyền phải là số nguyên dương" });
             }
 
-            if (request.TypeId.HasValue && request.TypeId <= 0)
+            if (request.TypeId.HasValue && request.TypeId.Value <= 0)
             {
-                return BadRequest(new { success = false, message = "ID loại dừng phải lớn hơn 0" });
+                return BadRequest(new { success = false, message = "ID loại dừng phải là số nguyên dương" });
+            }
+
+            if (request.Duration.HasValue && request.Duration.Value < 0)
+            {
+                return BadRequest(new { success = false, message = "Thời lượng không được âm" });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.ReportedByUserId))
+            {
+                return BadRequest(new { success = false, message = "ID người báo cáo là bắt buộc" });
             }
 
             if (request.StartTime > DateTime.Now)
@@ -364,11 +394,11 @@ public class IncidentsController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { success = false, message = $"{ex.Message}" });
+            return BadRequest(new { success = false, message = ex.Message });
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { success = false, message = $"{ex.Message}" });
+            return BadRequest(new { success = false, message = ex.Message });
         }
         catch (Exception ex)
         {
@@ -556,6 +586,38 @@ public class IncidentsController : ControllerBase
         catch (Exception ex)
         {
             return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi lấy danh sách sự cố theo line của user", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lấy URL ảnh của sự cố
+    /// </summary>
+    [HttpGet("{id}/image")]
+    public async Task<IActionResult> GetIncidentImage(int id)
+    {
+        try
+        {
+            if (id <= 0)
+            {
+                return BadRequest(new { success = false, message = "ID sự cố không hợp lệ" });
+            }
+
+            var incident = await _incidentService.GetIncidentByIdAsync(id);
+            if (incident == null)
+            {
+                return NotFound(new { success = false, message = "Không tìm thấy sự cố" });
+            }
+
+            if (string.IsNullOrEmpty(incident.ImageUrl))
+            {
+                return NotFound(new { success = false, message = "Sự cố này không có ảnh" });
+            }
+
+            return Ok(new { success = true, data = new { imageUrl = incident.ImageUrl } });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi lấy ảnh sự cố", details = ex.Message });
         }
     }
 }

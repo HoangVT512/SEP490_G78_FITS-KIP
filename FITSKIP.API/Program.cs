@@ -42,8 +42,6 @@ namespace FITSKIP.API
         {
             var builder = WebApplication.CreateBuilder(args);            // Load optional local overrides without committing to git
 
-            // Cho phép truy cập từ tất cả IP trong LAN, không chỉ localhost
-            builder.WebHost.UseUrls("http://0.0.0.0:5201", "http://0.0.0.0:7003");
 
             builder.Configuration
                 .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
@@ -136,6 +134,9 @@ namespace FITSKIP.API
             // SMS Service - Use Mock for testing to avoid Twilio rate limits
             // Change back to TwilioSmsService when ready for production
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.ISmsService, FITSKIP.Application.Services.TwilioSmsService>();
+            
+            // Azure Storage Service
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IAzureStorageService, FITSKIP.Application.Services.AzureStorageService>();
 
             // JWT Authentication configuration
             var jwtSettings = builder.Configuration.GetSection("JwtSettings");
