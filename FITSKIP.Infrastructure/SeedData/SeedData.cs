@@ -864,98 +864,369 @@ namespace FITSKIP.Infrastructure.SeedData
         {
             if (!await context.IncidentHistories.AnyAsync())
             {
-                var equipment = await context.Equipment.ToListAsync();
-                var stopTypes = await context.StopTypes.ToListAsync();
-                var lines = await context.Lines.ToListAsync();
-
-                if (!equipment.Any() || !stopTypes.Any() || !lines.Any())
-                    return;
-
-                var incidents = new List<IncidentHistory>();
-                var random = new Random();
-
-                // Tạo 20 incidents mẫu rải rác từ các ngày trước 23/10/2025
-                for (int i = 0; i < 20; i++)
+                var incidents = new List<IncidentHistory>
                 {
-                    // Random duration: 1-15 phút (để có sự đa dạng)
-                    var durationMinutes = random.Next(1, 16);
-                    var finalDuration = (decimal)durationMinutes;
-
-                    // Xác định typeId dựa trên duration
-                    int typeId;
-                    if (finalDuration > 5)
+                    new IncidentHistory
                     {
-                        // Duration > 5 phút: "Dừng dài" (id: 2)
-                        typeId = 2;
+                        EquipmentId = 6,
+                        LineId = 3,
+                        StartTime = new DateTime(2025, 8, 27, 11, 9, 0),
+                        EndTime = new DateTime(2025, 8, 27, 11, 14, 0),
+                        Duration = 5.00m,
+                        TypeId = 1,
+                        Reason = "Điều chỉnh thông số máy",
+                        Solution = "Ghi nhận và theo dõi",
+                        Issue = "Tạm dừng để điều chỉnh",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 8, 27, 11, 21, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "e76c056a-a38e-42e1-9d82-e0a225a0653e",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 14,
+                        LineId = 3,
+                        StartTime = new DateTime(2025, 9, 27, 13, 17, 0),
+                        EndTime = new DateTime(2025, 9, 27, 13, 18, 0),
+                        Duration = 1.00m,
+                        TypeId = 1,
+                        Reason = "Vệ sinh máy nhanh",
+                        Solution = "Ghi nhận và theo dõi",
+                        Issue = "Tạm dừng để điều chỉnh",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 27, 13, 27, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "dbd2d565-42fb-41c5-9fed-f84170488e5b",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 1,
+                        LineId = 1,
+                        StartTime = new DateTime(2025, 10, 10, 7, 9, 0),
+                        EndTime = new DateTime(2025, 10, 10, 7, 18, 0),
+                        Duration = 9.00m,
+                        TypeId = 2,
+                        Reason = "Vấn đề kỹ thuật nghiêm trọng",
+                        Solution = "Thay thế phụ tùng hỏng",
+                        Issue = "Vấn đề kỹ thuật nghiêm trọng",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 10, 10, 7, 15, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "57a6ea0d-1f03-49ad-8510-266733100913",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 7,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 8, 31, 21, 17, 0),
+                        EndTime = new DateTime(2025, 8, 31, 21, 30, 0),
+                        Duration = 13.00m,
+                        TypeId = 2,
+                        Reason = "Vấn đề kỹ thuật nghiêm trọng",
+                        Solution = "Thay thế phụ tùng hỏng",
+                        Issue = "Máy hỏng nặng cần sửa chữa",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 8, 31, 21, 28, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "79fffa03-0b7b-4f2c-9137-7cc2137dcdf0",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 4,
+                        LineId = 1,
+                        StartTime = new DateTime(2025, 8, 27, 8, 42, 0),
+                        EndTime = new DateTime(2025, 8, 27, 8, 51, 0),
+                        Duration = 9.00m,
+                        TypeId = 2,
+                        Reason = "Thiếu phụ tùng thay thế",
+                        Solution = "Liên hệ kỹ thuật viên",
+                        Issue = "Bảo trì định kỳ kéo dài",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 8, 27, 8, 47, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "c439f9c9-a2e4-4d67-b376-2e4717927f14",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 7,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 9, 6, 17, 44, 0),
+                        EndTime = new DateTime(2025, 9, 6, 17, 48, 0),
+                        Duration = 4.00m,
+                        TypeId = 1,
+                        Reason = "Thay đổi setup sản phẩm",
+                        Solution = "Điều chỉnh lại thông số",
+                        Issue = "Tạm nghỉ giữa ca",
+                        ImageUrl = "/images/incidents/incident_006.jpg",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 6, 17, 49, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "dbd2d565-42fb-41c5-9fed-f84170488e5b",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 7,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 9, 24, 18, 18, 0),
+                        EndTime = new DateTime(2025, 9, 24, 18, 33, 0),
+                        Duration = 15.00m,
+                        TypeId = 2,
+                        Reason = "Vấn đề kỹ thuật nghiêm trọng",
+                        Solution = "Chuẩn bị máy dự phòng",
+                        Issue = "Thiếu phụ tùng thay thế",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 24, 18, 19, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "e76c056a-a38e-42e1-9d82-e0a225a0653e",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 13,
+                        LineId = 3,
+                        StartTime = new DateTime(2025, 10, 7, 12, 14, 0),
+                        EndTime = new DateTime(2025, 10, 7, 12, 20, 0),
+                        Duration = 6.00m,
+                        TypeId = 2,
+                        Reason = "Bảo trì định kỳ kéo dài",
+                        Solution = "Sửa chữa chuyên sâu",
+                        Issue = "Vấn đề kỹ thuật nghiêm trọng",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 10, 7, 12, 28, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "e76c056a-a38e-42e1-9d82-e0a225a0653e",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 12,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 10, 1, 17, 10, 0),
+                        EndTime = new DateTime(2025, 10, 1, 17, 16, 0),
+                        Duration = 6.00m,
+                        TypeId = 2,
+                        Reason = "Hỏng hóc nặng cần sửa chữa",
+                        Solution = "Chuẩn bị máy dự phòng",
+                        Issue = "Vấn đề kỹ thuật nghiêm trọng",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 10, 1, 17, 11, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "c439f9c9-a2e4-4d67-b376-2e4717927f14",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 7,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 10, 7, 21, 10, 0),
+                        EndTime = new DateTime(2025, 10, 7, 21, 12, 0),
+                        Duration = 2.00m,
+                        TypeId = 1,
+                        Reason = "Thay đổi setup sản phẩm",
+                        Solution = "Tiếp tục sản xuất",
+                        Issue = "Máy dừng hoạt động ngắn",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 10, 7, 21, 15, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "79fffa03-0b7b-4f2c-9137-7cc2137dcdf0",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 10,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 10, 20, 14, 12, 0),
+                        EndTime = new DateTime(2025, 10, 20, 14, 19, 0),
+                        Duration = 7.00m,
+                        TypeId = 2,
+                        Reason = "Hỏng hóc nặng cần sửa chữa",
+                        Solution = "Sửa chữa chuyên sâu",
+                        Issue = "Vấn đề kỹ thuật nghiêm trọng",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 10, 20, 14, 16, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "7a650883-383e-4c6f-b015-fce620aa7443",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 2,
+                        LineId = 1,
+                        StartTime = new DateTime(2025, 9, 14, 14, 53, 0),
+                        EndTime = new DateTime(2025, 9, 14, 14, 54, 0),
+                        Duration = 1.00m,
+                        TypeId = 1,
+                        Reason = "Điều chỉnh thông số máy",
+                        Solution = "Tiếp tục sản xuất",
+                        Issue = "Máy dừng hoạt động ngắn",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 14, 14, 55, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "57a6ea0d-1f03-49ad-8510-266733100913",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 6,
+                        LineId = 1,
+                        StartTime = new DateTime(2025, 9, 3, 16, 21, 0),
+                        EndTime = new DateTime(2025, 9, 3, 16, 30, 0),
+                        Duration = 9.00m,
+                        TypeId = 2,
+                        Reason = "Hỏng hóc nặng cần sửa chữa",
+                        Solution = "Thay thế phụ tùng hỏng",
+                        Issue = "Bảo trì định kỳ kéo dài",
+                        ImageUrl = "/images/incidents/incident_013.jpg",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 3, 16, 24, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "7a650883-383e-4c6f-b015-fce620aa7443",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 6,
+                        LineId = 1,
+                        StartTime = new DateTime(2025, 9, 12, 8, 17, 0),
+                        EndTime = new DateTime(2025, 9, 12, 8, 25, 0),
+                        Duration = 8.00m,
+                        TypeId = 2,
+                        Reason = "Hỏng hóc nặng cần sửa chữa",
+                        Solution = "Thay thế phụ tùng hỏng",
+                        Issue = "Bảo trì định kỳ kéo dài",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 12, 8, 23, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "e76c056a-a38e-42e1-9d82-e0a225a0653e",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 12,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 9, 29, 16, 0, 0),
+                        EndTime = new DateTime(2025, 9, 29, 16, 12, 0),
+                        Duration = 12.00m,
+                        TypeId = 2,
+                        Reason = "Hỏng hóc nặng cần sửa chữa",
+                        Solution = "Sửa chữa chuyên sâu",
+                        Issue = "Bảo trì định kỳ kéo dài",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 29, 16, 7, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "57a6ea0d-1f03-49ad-8510-266733100913",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 5,
+                        LineId = 3,
+                        StartTime = new DateTime(2025, 9, 8, 16, 6, 0),
+                        EndTime = new DateTime(2025, 9, 8, 16, 13, 0),
+                        Duration = 7.00m,
+                        TypeId = 2,
+                        Reason = "Sự cố hệ thống điện",
+                        Solution = "Chuẩn bị máy dự phòng",
+                        Issue = "Sự cố hệ thống điện",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 8, 16, 11, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "09b0abd2-dea5-43d6-81d7-24410558a0a7",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 6,
+                        LineId = 1,
+                        StartTime = new DateTime(2025, 9, 9, 11, 39, 0),
+                        EndTime = new DateTime(2025, 9, 9, 11, 40, 0),
+                        Duration = 1.00m,
+                        TypeId = 1,
+                        Reason = "Thay đổi setup sản phẩm",
+                        Solution = "Điều chỉnh lại thông số",
+                        Issue = "Máy dừng hoạt động ngắn",
+                        ImageUrl = "/images/incidents/incident_017.jpg",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 9, 11, 44, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "7a650883-383e-4c6f-b015-fce620aa7443",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 14,
+                        LineId = 3,
+                        StartTime = new DateTime(2025, 10, 10, 18, 8, 0),
+                        EndTime = new DateTime(2025, 10, 10, 19, 17, 0),
+                        Duration = 47.00m,
+                        TypeId = 2,
+                        Reason = "Vấn đề kỹ thuật nghiêm trọng",
+                        Solution = "Thay thế phụ tùng hỏng",
+                        Issue = "Vấn đề kỹ thuật nghiêm trọng",
+                        ImageUrl = "/images/incidents/incident_018.jpg",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 10, 10, 18, 12, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "c439f9c9-a2e4-4d67-b376-2e4717927f14",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 7,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 9, 16, 10, 22, 0),
+                        EndTime = new DateTime(2025, 9, 16, 11, 26, 0),
+                        Duration = 38.00m,
+                        TypeId = 2,
+                        Reason = "Thay đổi setup sản phẩm",
+                        Solution = "Hoàn thành kiểm tra nhanh",
+                        Issue = "Dừng để vệ sinh nhanh",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 16, 10, 26, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "79fffa03-0b7b-4f2c-9137-7cc2137dcdf0",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 7,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 9, 7, 9, 25, 0),
+                        EndTime = new DateTime(2025, 9, 7, 9, 40, 0),
+                        Duration = 15.00m,
+                        TypeId = 2,
+                        Reason = "Bảo trì định kỳ kéo dài",
+                        Solution = "Thay thế phụ tùng hỏng",
+                        Issue = "Thiếu phụ tùng thay thế",
+                        ImageUrl = null,
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 7, 9, 34, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "7a650883-383e-4c6f-b015-fce620aa7443",
+                        IsTechSupport = true
                     }
-                    else
-                    {
-                        // Duration <= 5 phút: "Dừng ngắn" (id: 1)
-                        typeId = 1;
-                    }
-
-                    var selectedStopType = stopTypes.FirstOrDefault(st => st.TypeId == typeId);
-                    if (selectedStopType == null) continue;
-
-                    // Random thời gian trong 60 ngày qua (từ 23/10/2025 trở về trước)
-                    var daysAgo = random.Next(1, 61); // 1-60 ngày trước
-                    var incidentDate = new DateTime(2025, 10, 23).AddDays(-daysAgo);
-
-                    // Random thời gian trong ngày (6h-22h)
-                    var startHour = random.Next(6, 22);
-                    var startMinute = random.Next(0, 60);
-                    var startTime = new DateTime(incidentDate.Year, incidentDate.Month, incidentDate.Day, startHour, startMinute, 0);
-
-                    var endTime = startTime.AddMinutes(durationMinutes);
-
-                    // Random LineId (tất cả incidents đều phải có LineId)
-                    var selectedLine = lines[random.Next(lines.Count)];
-
-                    // Random AssignedTo từ các user ID có sẵn
-                    var users = await context.Users.ToListAsync();
-                    var assignedToUser = users.Any() ? users[random.Next(users.Count)] : null;
-
-                    // Random IsTechSupport (50% cơ hội)
-                    var isTechSupport = random.Next(0, 2) == 1;
-
-                    // Random ImageUrl (30% cơ hội có ảnh)
-                    string? imageUrl = null;
-                    if (random.Next(0, 10) < 3) // 30% chance
-                    {
-                        imageUrl = $"/images/incidents/incident_{i + 1:D3}.jpg";
-                    }
-
-                    var incident = new IncidentHistory
-                    {
-                        StartTime = startTime,
-                        EndTime = endTime,
-                        Duration = finalDuration,
-                        TypeId = typeId,
-                        Issue = GetRandomIssue(selectedStopType.TypeName ?? "", random),
-                        Reason = GetRandomReason(selectedStopType.TypeName ?? "", random),
-                        Solution = GetRandomSolution(selectedStopType.TypeName ?? "", random),
-                        ImageUrl = imageUrl,
-                        CreatedDate = startTime.AddMinutes(random.Next(1, 15)),
-                        AssignedTo = assignedToUser?.Id,
-                        IsTechSupport = isTechSupport,
-                        LineId = selectedLine.LineId // Tất cả incidents đều có LineId
-                    };
-
-                    // Logic cho EquipmentId dựa trên typeId
-                    if (typeId == 4 || typeId == 5) // "Vệ sinh đầu/cuối ca" hoặc "Đổi mã"
-                    {
-                        // Những loại này không cần EquipmentId, chỉ cần LineId
-                        incident.EquipmentId = null;
-                    }
-                    else
-                    {
-                        // Các loại khác (1, 2, 3) cần EquipmentId
-                        var selectedEquipment = equipment[random.Next(equipment.Count)];
-                        incident.EquipmentId = selectedEquipment.EquipmentId;
-                    }
-
-                    incidents.Add(incident);
-                }
+                };
 
                 await context.IncidentHistories.AddRangeAsync(incidents);
                 await context.SaveChangesAsync();
