@@ -47,10 +47,12 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import * as utcPlugin from "dayjs/plugin/utc";
+import * as minMaxPlugin from "dayjs/plugin/minMax";
 import styles from "../../styles/pages/IncidentManagement.module.css";
 
 // Extend dayjs with UTC plugin
 dayjs.extend(utcPlugin.default || utcPlugin);
+dayjs.extend(minMaxPlugin.default || minMaxPlugin);
 import { incidentService } from "../../services/incidentService";
 import { equipmentService } from "../../services/equipmentService";
 import { lineService } from "../../services/lineService";
@@ -60,6 +62,45 @@ import { userService } from "../../services/userService";
 import { authService } from "../../services/authService";
 import { useAuth } from "../../contexts/AuthContext";
 import * as XLSX from "xlsx";
+
+// Calculate adjusted duration with break time deduction (same logic as backend)
+const calculateAdjustedDuration = (startTime, endTime) => {
+  if (!startTime || !endTime || !dayjs(endTime).isAfter(dayjs(startTime))) {
+    return null;
+  }
+
+  const rawDuration = dayjs(endTime).diff(dayjs(startTime), 'minute', true);
+  let adjustedDuration = rawDuration;
+
+  // Break times: 11:00-11:30 and 18:00-18:30
+  const break1Start = dayjs(startTime).set('hour', 11).set('minute', 0).set('second', 0);
+  const break1End = dayjs(startTime).set('hour', 11).set('minute', 30).set('second', 0);
+  const break2Start = dayjs(startTime).set('hour', 18).set('minute', 0).set('second', 0);
+  const break2End = dayjs(startTime).set('hour', 18).set('minute', 30).set('second', 0);
+
+  // Calculate overlap with break 1 (11:00-11:30)
+  const break1Overlap = calculateOverlapMinutes(startTime, endTime, break1Start, break1End);
+  adjustedDuration -= break1Overlap;
+
+  // Calculate overlap with break 2 (18:00-18:30)
+  const break2Overlap = calculateOverlapMinutes(startTime, endTime, break2Start, break2End);
+  adjustedDuration -= break2Overlap;
+
+  // Ensure duration is not negative
+  return Math.max(0, adjustedDuration);
+};
+
+// Calculate overlap minutes between two time ranges
+const calculateOverlapMinutes = (start1, end1, start2, end2) => {
+  const overlapStart = dayjs.max(dayjs(start1), dayjs(start2));
+  const overlapEnd = dayjs.min(dayjs(end1), dayjs(end2));
+
+  if (overlapStart.isBefore(overlapEnd)) {
+    return overlapEnd.diff(overlapStart, 'minute', true);
+  }
+
+  return 0;
+};
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -100,6 +141,9 @@ const IncidentManagement = () => {
   const [formChanged, setFormChanged] = useState(false);
   // Keep previous endTime to restore if user cancels clearing it
   const [previousEndTime, setPreviousEndTime] = useState(null);
+  const [formChangeCounter, setFormChangeCounter] = useState(0);
+  // Track which duration fields have been manually edited
+  const [manualDurationFields, setManualDurationFields] = useState(new Set());
 
   const searchInput = useRef(null);
 
@@ -179,6 +223,79 @@ const IncidentManagement = () => {
       fetchTeamLeads();
     }
   }, [selectedEquipment, currentUser, formModalVisible]);
+
+  // Auto-calculate duration when startTime or endTime changes (Edit mode)
+  // Only auto-fill if user hasn't manually entered duration
+  useEffect(() => {
+    if (formModalVisible && isEditMode) {
+      const startTime = form.getFieldValue('startTime');
+      const endTime = form.getFieldValue('endTime');
+
+      if (startTime && endTime && dayjs(endTime).isAfter(dayjs(startTime))) {
+        const adjustedDuration = calculateAdjustedDuration(startTime, endTime);
+        // Only auto-update if duration field hasn't been manually edited
+        if (!manualDurationFields.has('duration')) {
+          form.setFieldsValue({ duration: Math.round(adjustedDuration * 100) / 100 }); // Round to 0.01 minutes
+        }
+      } else if (!endTime) {
+        // Reset duration when endTime is cleared (only if not manually set)
+        if (!manualDurationFields.has('duration')) {
+          form.setFieldsValue({ duration: undefined });
+        }
+      }
+    }
+  }, [formModalVisible, form.getFieldValue('startTime'), form.getFieldValue('endTime'), isEditMode, manualDurationFields]);
+
+  const handleFormValuesChange = (changedValues, allValues) => {
+    // Track manual duration input
+    const changedKeys = Object.keys(changedValues);
+    changedKeys.forEach(key => {
+      if (key === 'duration' || key.includes('duration_')) {
+        setManualDurationFields(prev => new Set(prev).add(key));
+      }
+    });
+
+    // Trigger re-calculation when startTime or endTime changes
+    if (changedValues.startTime !== undefined || changedValues.endTime !== undefined) {
+      setFormChangeCounter(prev => prev + 1);
+    }
+    // Also trigger for create mode form fields
+    const hasTimeChange = changedKeys.some(key => key.includes('startTime_') || key.includes('endTime_'));
+    if (hasTimeChange) {
+      setFormChangeCounter(prev => prev + 1);
+    }
+    setFormChanged(true);
+  };
+
+  // Auto-calculate duration for create mode (multiple forms)
+  // Only auto-fill if user hasn't manually entered duration
+  useEffect(() => {
+    if (formModalVisible && !isEditMode) {
+      incidentForms.forEach((incidentForm) => {
+        const formId = incidentForm.id;
+        const startTime = form.getFieldValue(`startTime_${formId}`);
+        const endTime = form.getFieldValue(`endTime_${formId}`);
+        const durationFieldKey = `duration_${formId}`;
+
+        if (startTime && endTime && dayjs(endTime).isAfter(dayjs(startTime))) {
+          const adjustedDuration = calculateAdjustedDuration(startTime, endTime);
+          // Only auto-update if duration field hasn't been manually edited
+          if (!manualDurationFields.has(durationFieldKey)) {
+            form.setFieldsValue({
+              [durationFieldKey]: Math.round(adjustedDuration * 100) / 100
+            });
+          }
+        } else if (!endTime) {
+          // Reset duration when endTime is cleared (only if not manually set)
+          if (!manualDurationFields.has(durationFieldKey)) {
+            form.setFieldsValue({
+              [durationFieldKey]: undefined
+            });
+          }
+        }
+      });
+    }
+  }, [formModalVisible, incidentForms, isEditMode, formChangeCounter, manualDurationFields]);
 
   const fetchEquipments = async () => {
     try {
@@ -340,17 +457,19 @@ const IncidentManagement = () => {
         // compute downtime in minutes if possible
         let downtime = 0;
         try {
-          if (it.endTime && it.startTime) {
+          // Priority: use duration from database (already calculated with break time deduction)
+          // Only calculate from start/end time if duration is not available
+          if (it.duration != null) {
+            downtime = Number(it.duration) || 0;
+          } else if (it.downtimeMinutes != null) {
+            downtime = Number(it.downtimeMinutes) || 0;
+          } else if (it.downtime != null) {
+            downtime = Number(it.downtime) || 0;
+          } else if (it.endTime && it.startTime) {
+            // Fallback: calculate from start/end time (without break time deduction)
             const start = dayjs(it.startTime);
             const end = dayjs(it.endTime);
             downtime = Math.abs(end.diff(start, "minute", true)); // true for floating point precision
-          } else if (it.downtimeMinutes != null) {
-            downtime = Number(it.downtimeMinutes) || 0;
-          } else if (it.duration != null) {
-            // duration may be in hours or minutes depending on API; keep as-is
-            downtime = Number(it.duration) || 0;
-          } else if (it.downtime != null) {
-            downtime = Number(it.downtime) || 0;
           }
         } catch (e) {
           downtime = it.downtimeMinutes || it.downtime || it.duration || 0;
@@ -489,6 +608,8 @@ const IncidentManagement = () => {
     setCreateStatus("Chờ xử lý"); // Reset status for create mode
     setIncidentForms([{ id: 1, status: "Chờ xử lý" }]); // Reset to single form
     setFormChanged(false); // Reset form changed state
+    setFormChangeCounter(0); // Reset form change counter
+    setManualDurationFields(new Set()); // Reset manual duration tracking
     form.resetFields();
     // No longer auto-fill reporter - user must select manually
     setFormModalVisible(true);
@@ -551,6 +672,7 @@ const IncidentManagement = () => {
     setIsEditMode(true);
     setSelectedIncident(record);
     setFormChanged(false); // Reset form changed state
+    setManualDurationFields(new Set()); // Reset manual duration tracking for edit mode
 
     // Find the equipment to pre-select it
     const equipment = equipments.find(
@@ -577,6 +699,7 @@ const IncidentManagement = () => {
       status: record.status, // Will be overridden below
       startTime: record.reportDate ? dayjs(record.reportDate) : null,
       endTime: record.resolveDate ? dayjs(record.resolveDate) : null,
+      duration: record.downtime.toFixed(2) || record.duration.toFixed(2) || null, // Display exact duration from database
       reporter: record.reportedByUserId || record.reporterId || null, // Use user ID for editing
       isTechSupport: record.isTechSupport || false,
     });
@@ -774,6 +897,7 @@ const IncidentManagement = () => {
           endTime: values.endTime
             ? dayjs(values.endTime).format("YYYY-MM-DDTHH:mm:ss.SSS")
             : null,
+          duration: values.duration || null, // Send manual duration if provided, otherwise backend will auto-calculate
           typeId: typeId || null,
           issue:
             values.issue !== undefined
@@ -817,6 +941,7 @@ const IncidentManagement = () => {
           const lineId = form.getFieldValue(`lineId_${formId}`);
           const startTime = form.getFieldValue(`startTime_${formId}`);
           const endTime = form.getFieldValue(`endTime_${formId}`);
+          const duration = form.getFieldValue(`duration_${formId}`);
           const typeId = form.getFieldValue(`typeId_${formId}`);
           const issue = form.getFieldValue(`issue_${formId}`);
           const reason = form.getFieldValue(`reason_${formId}`);
@@ -859,6 +984,7 @@ const IncidentManagement = () => {
             endTime: endTime
               ? dayjs(endTime).format("YYYY-MM-DDTHH:mm:ss.SSS")
               : null,
+            duration: duration || null, // Send manual duration if provided, otherwise backend will auto-calculate
             typeId: typeId,
             issue: issue || null,
             reason: reason || null,
@@ -897,6 +1023,7 @@ const IncidentManagement = () => {
       setFormModalVisible(false);
       setSelectedEquipment(null);
       setIncidentForms([{ id: 1, status: "Chờ xử lý" }]);
+      setManualDurationFields(new Set()); // Reset manual duration tracking
       form.resetFields();
       fetchIncidents();
     } catch (error) {
@@ -933,14 +1060,21 @@ const IncidentManagement = () => {
             } else {
               derivedStatus = assigned ? (selectedIncident?.status || "Chờ xử lý") : "Chờ xử lý";
             }
-            form.setFieldsValue({ status: derivedStatus });
+            form.setFieldsValue({
+              status: derivedStatus,
+              duration: null, // Clear duration when endTime is cleared
+            });
             setPreviousEndTime(null);
             setFormChanged(true);
           },
           onCancel() {
-            // Restore previous endTime in the form
+            // Restore previous endTime, status, and duration in the form
             if (previousEndTime) {
-              form.setFieldsValue({ endTime: previousEndTime });
+              form.setFieldsValue({
+                endTime: previousEndTime,
+                status: "Hoàn thành",
+                duration: selectedIncident.downtime ? selectedIncident.downtime.toFixed(2) : null,
+              });
             }
           },
         });
@@ -1930,6 +2064,8 @@ const IncidentManagement = () => {
           setSelectedEquipment(null); // Reset selected equipment when closing modal
           setIncidentForms([{ id: 1, status: "Chờ xử lý" }]); // Reset forms
           setFormChanged(false); // Reset form changed state
+          setFormChangeCounter(0); // Reset form change counter
+          setManualDurationFields(new Set()); // Reset manual duration tracking
           form.resetFields();
         }}
         footer={
@@ -1949,6 +2085,8 @@ const IncidentManagement = () => {
                   setSelectedEquipment(null);
                   setIncidentForms([{ id: 1, status: "Chờ xử lý" }]);
                   setFormChanged(false); // Reset form changed state
+                  setFormChangeCounter(0); // Reset form change counter
+                  setManualDurationFields(new Set()); // Reset manual duration tracking
                   form.resetFields();
                 }}
                 style={{ minWidth: "120px" }}
@@ -1990,7 +2128,7 @@ const IncidentManagement = () => {
           form={form}
           layout="vertical"
           onFinish={handleFormSubmit}
-          onValuesChange={() => setFormChanged(true)}
+          onValuesChange={handleFormValuesChange}
           initialValues={{ status: "Chờ xử lý" }}
         >
           {!isEditMode ? (
@@ -2305,12 +2443,24 @@ const IncidentManagement = () => {
                       </Col>
 
                       <Col span={12}>
-                        <Form.Item label="Trạng thái">
-                          <Select value={incidentForm.status} disabled>
-                            <Option value="Chờ xử lý">Chờ xử lý</Option>
-                            <Option value="Đang xử lý">Đang xử lý</Option>
-                            <Option value="Hoàn thành">Hoàn thành</Option>
-                          </Select>
+                        <Form.Item
+                          label="Thời lượng (phút)"
+                          name={`duration_${incidentForm.id}`}
+                          help="Mặc định tự động tính từ ST-ET (trừ break time). Có thể nhập thủ công để ghi đè."
+                          rules={[
+                            {
+                              pattern: /^\d+(\.\d+)?$/,
+                              message: "Thời lượng phải là số dương!",
+                            },
+                          ]}
+                        >
+                          <Input
+                            type="number"
+                            placeholder="Tự động tính từ ST-ET hoặc nhập thủ công"
+                            min={0}
+                            step={0.01}
+                            addonAfter="phút"
+                          />
                         </Form.Item>
                       </Col>
 
@@ -2352,6 +2502,28 @@ const IncidentManagement = () => {
                           showIcon
                           style={{ marginBottom: 16 }}
                         />
+                      </Col>
+
+                      <Col span={12}>
+                        <Form.Item label="Trạng thái">
+                          <Select value={incidentForm.status} disabled>
+                            <Option value="Chờ xử lý">Chờ xử lý</Option>
+                            <Option value="Đang xử lý">Đang xử lý</Option>
+                            <Option value="Hoàn thành">Hoàn thành</Option>
+                          </Select>
+                        </Form.Item>
+
+                        {/* <Form.Item
+                          name={`isTechSupport_${incidentForm.id}`}
+                          valuePropName="checked"
+                          style={{ marginTop: "30px" }}
+                        >
+                          <Checkbox
+                            disabled={form.getFieldValue(`endTime_${incidentForm.id}`) && dayjs(form.getFieldValue(`endTime_${incidentForm.id}`)).isValid()}
+                          >
+                            Cần hỗ trợ kỹ thuật
+                          </Checkbox>
+                        </Form.Item> */}
                       </Col>
 
                       <Col span={12}>
@@ -2631,29 +2803,25 @@ const IncidentManagement = () => {
                 </Col>
 
                 <Col span={12}>
-                  {isEditMode && (
-                    <Form.Item
-                      label="Trạng thái"
-                      name="status"
-                      rules={[
-                        {
-                          required: true,
-                          message: "Vui lòng chọn trạng thái!",
-                        },
-                      ]}
-                    >
-                      <Select placeholder="Chọn trạng thái">
-                        <Option value="Chờ xử lý">Chờ xử lý</Option>
-                        <Option value="Đang xử lý">Đang xử lý</Option>
-                        <Option value="Hoàn thành">Hoàn thành</Option>
-                      </Select>
-                    </Form.Item>
-                  )}
-                  {!isEditMode && (
-                    <Form.Item label="Trạng thái">
-                      <Input value={createStatus} />
-                    </Form.Item>
-                  )}
+                  <Form.Item
+                    label="Thời lượng (phút)"
+                    name="duration"
+                    help="Mặc định tự động tính từ ST-ET (trừ break time). Có thể nhập thủ công để ghi đè."
+                    rules={[
+                      {
+                        pattern: /^\d+(\.\d+)?$/,
+                        message: "Thời lượng phải là số dương!",
+                      },
+                    ]}
+                  >
+                    <Input
+                      type="number"
+                      placeholder="Tự động tính từ ST-ET hoặc nhập thủ công"
+                      min={0}
+                      step={0.01}
+                      addonAfter="phút"
+                    />
+                  </Form.Item>
                 </Col>
 
                 <Col span={12}>
@@ -2691,6 +2859,44 @@ const IncidentManagement = () => {
                     showIcon
                     style={{ marginBottom: 16, marginTop: 8 }}
                   />
+                </Col>
+
+                <Col span={12}>
+                  {isEditMode && (
+                    <Form.Item
+                      label="Trạng thái"
+                      name="status"
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vui lòng chọn trạng thái!",
+                        },
+                      ]}
+                    >
+                      <Select placeholder="Chọn trạng thái" disabled>
+                        <Option value="Chờ xử lý">Chờ xử lý</Option>
+                        <Option value="Đang xử lý">Đang xử lý</Option>
+                        <Option value="Hoàn thành">Hoàn thành</Option>
+                      </Select>
+                    </Form.Item>
+                  )}
+                  {!isEditMode && (
+                    <Form.Item label="Trạng thái">
+                      <Input value={createStatus} />
+                    </Form.Item>
+                  )}
+
+                  {/* <Form.Item
+                    name="isTechSupport"
+                    valuePropName="checked"
+                    style={{ marginTop: "30px" }}
+                  >
+                    <Checkbox
+                      disabled={isEditMode && selectedIncident?.resolveDate && dayjs(selectedIncident.resolveDate).isValid()}
+                    >
+                      Cần hỗ trợ kỹ thuật
+                    </Checkbox>
+                  </Form.Item> */}
                 </Col>
 
                 <Col span={12}>

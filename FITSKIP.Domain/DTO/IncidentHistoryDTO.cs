@@ -33,6 +33,8 @@ namespace FITSKIP.Domain.DTO
 
         public DateTime? EndTime { get; set; }
 
+        public decimal? Duration { get; set; }
+
         public int? TypeId { get; set; }
 
         [MaxLength(500, ErrorMessage = "Vấn đề không vượt quá 500 ký tự")]
@@ -83,6 +85,8 @@ namespace FITSKIP.Domain.DTO
         public DateTime StartTime { get; set; }
 
         public DateTime? EndTime { get; set; }
+
+        public decimal? Duration { get; set; }
 
         public int? TypeId { get; set; }
 

@@ -25,6 +25,8 @@ public partial class IncidentHistory
 
     public string? Issue { get; set; }
 
+    public string? ImageUrl { get; set; }
+
     public string? Status { get; set; } = "Chờ xử lý"; // Trạng thái: Chờ xử lý, Đang xử lý, Hoàn thành, Hủy
 
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;

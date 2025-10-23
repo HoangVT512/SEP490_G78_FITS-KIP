@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251022174840_InitialCreate")]
+    [Migration("20251023035420_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -138,6 +138,10 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<int?>("EquipmentId")
                         .HasColumnType("int")
                         .HasColumnName("EquipmentID");
+
+                    b.Property<string>("ImageUrl")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
 
                     b.Property<bool>("IsTechSupport")
                         .HasColumnType("bit");

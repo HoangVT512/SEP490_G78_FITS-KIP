@@ -120,6 +120,7 @@ public class TestDbContext : IdentityDbContext<User>
             entity.Property(e => e.StartTime).HasColumnType("datetime");
             entity.Property(e => e.TypeId).HasColumnName("TypeID");
             entity.Property(e => e.Issue).HasMaxLength(500);
+            entity.Property(e => e.ImageUrl).HasMaxLength(1000);
             entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
 
             entity.HasOne(d => d.Equipment).WithMany()

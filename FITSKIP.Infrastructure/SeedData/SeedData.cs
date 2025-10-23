@@ -874,19 +874,32 @@ namespace FITSKIP.Infrastructure.SeedData
                 var incidents = new List<IncidentHistory>();
                 var random = new Random();
 
-                // Tạo 50 incidents mẫu với duration ≤ 60 phút
-                for (int i = 0; i < 50; i++)
+                // Tạo 20 incidents mẫu rải rác từ các ngày trước 23/10/2025
+                for (int i = 0; i < 20; i++)
                 {
-                    var selectedStopType = stopTypes[random.Next(stopTypes.Count)];
-                    var selectedLine = lines[random.Next(lines.Count)];
-
-                    // Duration từ 5 phút đến 60 phút
-                    var durationMinutes = random.Next(5, 61);
+                    // Random duration: 1-15 phút (để có sự đa dạng)
+                    var durationMinutes = random.Next(1, 16);
                     var finalDuration = (decimal)durationMinutes;
 
-                    // Random thời gian trong 30 ngày qua
-                    var daysAgo = random.Next(0, 30);
-                    var incidentDate = DateTime.Now.AddDays(-daysAgo);
+                    // Xác định typeId dựa trên duration
+                    int typeId;
+                    if (finalDuration > 5)
+                    {
+                        // Duration > 5 phút: "Dừng dài" (id: 2)
+                        typeId = 2;
+                    }
+                    else
+                    {
+                        // Duration <= 5 phút: "Dừng ngắn" (id: 1)
+                        typeId = 1;
+                    }
+
+                    var selectedStopType = stopTypes.FirstOrDefault(st => st.TypeId == typeId);
+                    if (selectedStopType == null) continue;
+
+                    // Random thời gian trong 60 ngày qua (từ 23/10/2025 trở về trước)
+                    var daysAgo = random.Next(1, 61); // 1-60 ngày trước
+                    var incidentDate = new DateTime(2025, 10, 23).AddDays(-daysAgo);
 
                     // Random thời gian trong ngày (6h-22h)
                     var startHour = random.Next(6, 22);
@@ -895,13 +908,8 @@ namespace FITSKIP.Infrastructure.SeedData
 
                     var endTime = startTime.AddMinutes(durationMinutes);
 
-                    // Đảm bảo không vượt quá thời gian hiện tại
-                    if (endTime > DateTime.Now)
-                    {
-                        endTime = DateTime.Now;
-                        var actualDuration = (endTime - startTime).TotalMinutes;
-                        finalDuration = (decimal)Math.Max(1, actualDuration);
-                    }
+                    // Random LineId (tất cả incidents đều phải có LineId)
+                    var selectedLine = lines[random.Next(lines.Count)];
 
                     // Random AssignedTo từ các user ID có sẵn
                     var users = await context.Users.ToListAsync();
@@ -910,33 +918,40 @@ namespace FITSKIP.Infrastructure.SeedData
                     // Random IsTechSupport (50% cơ hội)
                     var isTechSupport = random.Next(0, 2) == 1;
 
+                    // Random ImageUrl (30% cơ hội có ảnh)
+                    string? imageUrl = null;
+                    if (random.Next(0, 10) < 3) // 30% chance
+                    {
+                        imageUrl = $"/images/incidents/incident_{i + 1:D3}.jpg";
+                    }
+
                     var incident = new IncidentHistory
                     {
                         StartTime = startTime,
                         EndTime = endTime,
                         Duration = finalDuration,
-                        TypeId = selectedStopType.TypeId,
+                        TypeId = typeId,
                         Issue = GetRandomIssue(selectedStopType.TypeName ?? "", random),
                         Reason = GetRandomReason(selectedStopType.TypeName ?? "", random),
                         Solution = GetRandomSolution(selectedStopType.TypeName ?? "", random),
+                        ImageUrl = imageUrl,
                         CreatedDate = startTime.AddMinutes(random.Next(1, 15)),
                         AssignedTo = assignedToUser?.Id,
-                        IsTechSupport = isTechSupport
+                        IsTechSupport = isTechSupport,
+                        LineId = selectedLine.LineId // Tất cả incidents đều có LineId
                     };
 
-                    // Logic cho EquipmentId và LineId dựa trên loại stop
-                    if (selectedStopType.TypeName == "Vệ sinh đầu/cuối ca" || selectedStopType.TypeName == "Đổi mã")
+                    // Logic cho EquipmentId dựa trên typeId
+                    if (typeId == 4 || typeId == 5) // "Vệ sinh đầu/cuối ca" hoặc "Đổi mã"
                     {
-                        // Những loại này không cần EquipmentId nhưng cần LineId
+                        // Những loại này không cần EquipmentId, chỉ cần LineId
                         incident.EquipmentId = null;
-                        incident.LineId = selectedLine.LineId;
                     }
                     else
                     {
-                        // Các loại khác cần EquipmentId
+                        // Các loại khác (1, 2, 3) cần EquipmentId
                         var selectedEquipment = equipment[random.Next(equipment.Count)];
                         incident.EquipmentId = selectedEquipment.EquipmentId;
-                        incident.LineId = null; // Có thể null cho các loại này
                     }
 
                     incidents.Add(incident);

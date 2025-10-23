@@ -84,15 +84,18 @@ public class IncidentService : IIncidentService
             }
         }
 
-        // Calculate duration if end time is provided
-        decimal? duration = null;
-        if (request.EndTime.HasValue)
+        // Calculate duration logic:
+        // 1. If user provides duration manually, use it (manual override)
+        // 2. If no duration provided but endTime exists, calculate from startTime-endTime with break time deduction
+        // 3. If neither duration nor endTime provided, duration remains null
+        decimal? duration = request.Duration; // Use manual duration if provided
+        if (!request.Duration.HasValue && request.EndTime.HasValue)
         {
-            var timeSpan = request.EndTime.Value - startTime;
-            var durationMinutes = timeSpan.TotalMinutes;
-
-            // Đảm bảo Duration luôn dương và ít nhất 1 phút
-            duration = Math.Max(1, (decimal)durationMinutes);
+            // Auto-calculate only when no manual duration is provided
+            var rawDuration = (decimal)(request.EndTime.Value - startTime).TotalMinutes;
+            // Làm tròn chính xác đến 2 chữ số thập phân
+            rawDuration = Math.Round(rawDuration, 2, MidpointRounding.ToEven);
+            duration = CalculateAdjustedDuration(startTime, request.EndTime.Value, rawDuration);
         }
 
         var incident = new IncidentHistory
@@ -206,13 +209,12 @@ public class IncidentService : IIncidentService
                     }
                 }
 
-                // Calculate duration if end time is provided
-                decimal? duration = null;
-                if (incidentRequest.EndTime.HasValue)
+                // Calculate duration - use provided duration or calculate from end time
+                decimal? duration = incidentRequest.Duration;
+                if (!incidentRequest.Duration.HasValue && incidentRequest.EndTime.HasValue)
                 {
-                    var timeSpan = incidentRequest.EndTime.Value - startTime;
-                    var durationMinutes = timeSpan.TotalMinutes;
-                    duration = Math.Max(1, (decimal)durationMinutes);
+                    var rawDuration = (decimal)(incidentRequest.EndTime.Value - startTime).TotalMinutes;
+                    duration = CalculateAdjustedDuration(startTime, incidentRequest.EndTime.Value, rawDuration);
                 }
 
                 var incident = new IncidentHistory
@@ -337,15 +339,18 @@ public class IncidentService : IIncidentService
             }
         }
 
-        // Calculate duration if end time is provided
-        decimal? duration = null;
-        if (request.EndTime.HasValue)
+        // Calculate duration logic:
+        // 1. If user provides duration manually, use it (manual override)
+        // 2. If no duration provided but endTime exists, calculate from startTime-endTime with break time deduction
+        // 3. If neither duration nor endTime provided, duration remains null
+        decimal? duration = request.Duration; // Use manual duration if provided
+        if (!request.Duration.HasValue && request.EndTime.HasValue)
         {
-            var timeSpan = request.EndTime.Value - request.StartTime;
-            var durationMinutes = timeSpan.TotalMinutes;
-
-            // Đảm bảo Duration luôn dương và ít nhất 1 phút
-            duration = Math.Max(1, (decimal)durationMinutes);
+            // Auto-calculate only when no manual duration is provided
+            var rawDuration = (decimal)(request.EndTime.Value - request.StartTime).TotalMinutes;
+            // Làm tròn chính xác đến 2 chữ số thập phân
+            rawDuration = Math.Round(rawDuration, 2, MidpointRounding.ToEven);
+            duration = CalculateAdjustedDuration(request.StartTime, request.EndTime.Value, rawDuration);
         }
 
         existingIncident.EquipmentId = request.EquipmentId;
@@ -657,6 +662,58 @@ public class IncidentService : IIncidentService
         ).ToList();
 
         return filteredIncidents.AsReadOnly();
+    }
+
+    private static decimal CalculateAdjustedDuration(DateTime startTime, DateTime endTime, decimal rawDurationMinutes)
+    {
+        // Đảm bảo Duration luôn dương và ít nhất 1 phút
+        // if (rawDurationMinutes <= 0)
+        //     return 1;
+
+        var adjustedDuration = rawDurationMinutes;
+
+        // Thời gian nghỉ cố định
+        var break1Start = new TimeSpan(11, 0, 0); // 11:00
+        var break1End = new TimeSpan(11, 30, 0);   // 11:30
+        var break2Start = new TimeSpan(18, 0, 0); // 18:00
+        var break2End = new TimeSpan(18, 30, 0);   // 18:30
+
+        // Tính overlap với thời gian nghỉ trong khoảng thời gian của incident
+        var incidentStart = startTime.TimeOfDay;
+        var incidentEnd = endTime.TimeOfDay;
+
+        // Nếu incident kéo dài qua nhiều ngày, chỉ xét trong ngày đầu tiên
+        if (endTime.Date > startTime.Date)
+        {
+            incidentEnd = new TimeSpan(23, 59, 59);
+        }
+
+        // Tính overlap với break 1 (11:00-11:30)
+        var break1Overlap = CalculateOverlapMinutes(incidentStart, incidentEnd, break1Start, break1End);
+        adjustedDuration -= break1Overlap;
+
+        // Tính overlap với break 2 (18:00-18:30)
+        var break2Overlap = CalculateOverlapMinutes(incidentStart, incidentEnd, break2Start, break2End);
+        adjustedDuration -= break2Overlap;
+
+        // Đảm bảo duration không âm
+        return Math.Max(0, adjustedDuration);
+    }
+
+    private static decimal CalculateOverlapMinutes(TimeSpan start1, TimeSpan end1, TimeSpan start2, TimeSpan end2)
+    {
+        var overlapStart = start1 > start2 ? start1 : start2;
+        var overlapEnd = end1 < end2 ? end1 : end2;
+
+        if (overlapStart < overlapEnd)
+        {
+            //return (decimal)(overlapEnd - overlapStart).TotalMinutes;
+            // Tính chính xác đến 2 chữ số thập phân, không làm tròn
+            var totalSeconds = (overlapEnd - overlapStart).TotalSeconds;
+            return Math.Round((decimal)(totalSeconds / 60), 2, MidpointRounding.ToEven);
+        }
+
+        return 0;
     }
 
     private async Task SendIncidentNotificationToTechnicalManagersAsync(IncidentHistory incident, Equipment? equipment, CancellationToken cancellationToken)

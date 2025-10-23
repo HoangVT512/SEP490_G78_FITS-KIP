@@ -363,6 +363,7 @@ namespace FITSKIP.Infrastructure.Migrations
                     Reason = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Solution = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Issue = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ImageUrl = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
                     ReportedByUserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
