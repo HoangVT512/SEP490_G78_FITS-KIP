@@ -2,6 +2,7 @@ using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using Microsoft.AspNetCore.Http;
 
 namespace FITSKIP.Application.Services;
 
@@ -14,6 +15,7 @@ public class IncidentService : IIncidentService
     private readonly IUserRepository _userRepository;
     private readonly INotificationService _notificationService;
     private readonly IUserService _userService;
+    private readonly IAzureStorageService _azureStorageService;
 
     public IncidentService(
         IIncidentRepository incidentRepository,
@@ -22,7 +24,8 @@ public class IncidentService : IIncidentService
         IShiftRepository shiftRepository,
         IUserRepository userRepository,
         INotificationService notificationService,
-        IUserService userService)
+        IUserService userService,
+        IAzureStorageService azureStorageService)
     {
         _incidentRepository = incidentRepository;
         _equipmentRepository = equipmentRepository;
@@ -31,6 +34,7 @@ public class IncidentService : IIncidentService
         _userRepository = userRepository;
         _notificationService = notificationService;
         _userService = userService;
+        _azureStorageService = azureStorageService;
     }
 
     public Task<IReadOnlyList<IncidentHistory>> GetIncidentsAsync(CancellationToken cancellationToken = default)
@@ -45,13 +49,23 @@ public class IncidentService : IIncidentService
 
     public async Task<IncidentHistory> CreateIncidentAsync(CreateIncidentRequest request, CancellationToken cancellationToken = default)
     {
+        // Handle image upload if provided
+        if (request.ImageFile != null)
+        {
+            request.ImageUrl = await HandleImageUploadAsync(request.ImageFile, cancellationToken);
+        }
+
         // Validate equipment exists and is active if EquipmentId is provided
         if (request.EquipmentId.HasValue)
         {
             var validatedEquipment = await _equipmentRepository.GetByIdAsync(request.EquipmentId.Value, cancellationToken);
-            if (validatedEquipment == null || !validatedEquipment.IsActive)
+            if (validatedEquipment == null)
             {
-                throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId.Value} hoặc thiết bị đã bị vô hiệu hóa");
+                throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId.Value}");
+            }
+            if (!validatedEquipment.IsActive)
+            {
+                throw new InvalidOperationException($"Thiết bị với ID: {request.EquipmentId.Value} đã bị vô hiệu hóa");
             }
         }
 
@@ -59,9 +73,13 @@ public class IncidentService : IIncidentService
         if (request.LineId.HasValue)
         {
             var line = await _lineRepository.GetByIdAsync(request.LineId.Value, cancellationToken);
-            if (line == null || !line.IsActive)
+            if (line == null)
             {
-                throw new InvalidOperationException($"Không tìm thấy dây chuyền với ID: {request.LineId.Value} hoặc dây chuyền đã bị vô hiệu hóa");
+                throw new InvalidOperationException($"Không tìm thấy dây chuyền với ID: {request.LineId.Value}");
+            }
+            if (!line.IsActive)
+            {
+                throw new InvalidOperationException($"Dây chuyền với ID: {request.LineId.Value} đã bị vô hiệu hóa");
             }
         }
 
@@ -109,6 +127,7 @@ public class IncidentService : IIncidentService
             Issue = request.Issue?.Trim(),
             Reason = request.Reason?.Trim(),
             Solution = request.Solution?.Trim(),
+            ImageUrl = request.ImageUrl, // Store the uploaded image URL
             Status = request.EndTime.HasValue ? "Hoàn thành" : "Chờ xử lý",
             CreatedDate = DateTime.Now,
             ReportedByUserId = request.ReportedByUserId,
@@ -228,6 +247,7 @@ public class IncidentService : IIncidentService
                     Issue = incidentRequest.Issue?.Trim(),
                     Reason = incidentRequest.Reason?.Trim(),
                     Solution = incidentRequest.Solution?.Trim(),
+                    ImageUrl = incidentRequest.ImageUrl, // Store the uploaded image URL
                     Status = incidentRequest.EndTime.HasValue ? "Hoàn thành" : "Chờ xử lý",
                     CreatedDate = DateTime.Now,
                     ReportedByUserId = incidentRequest.ReportedByUserId,
@@ -299,13 +319,23 @@ public class IncidentService : IIncidentService
             return null;
         }
 
+        // Handle image upload if provided
+        if (request.ImageFile != null)
+        {
+            request.ImageUrl = await HandleImageUploadAsync(request.ImageFile, cancellationToken);
+        }
+
         // Validate equipment exists and is active if EquipmentId is provided
         if (request.EquipmentId.HasValue)
         {
             var validatedEquipment = await _equipmentRepository.GetByIdAsync(request.EquipmentId.Value, cancellationToken);
-            if (validatedEquipment == null || !validatedEquipment.IsActive)
+            if (validatedEquipment == null)
             {
-                throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId.Value} hoặc thiết bị đã bị vô hiệu hóa");
+                throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId.Value}");
+            }
+            if (!validatedEquipment.IsActive)
+            {
+                throw new InvalidOperationException($"Thiết bị với ID: {request.EquipmentId.Value} đã bị vô hiệu hóa");
             }
         }
 
@@ -313,9 +343,13 @@ public class IncidentService : IIncidentService
         if (request.LineId.HasValue)
         {
             var line = await _lineRepository.GetByIdAsync(request.LineId.Value, cancellationToken);
-            if (line == null || !line.IsActive)
+            if (line == null)
             {
-                throw new InvalidOperationException($"Không tìm thấy dây chuyền với ID: {request.LineId.Value} hoặc dây chuyền đã bị vô hiệu hóa");
+                throw new InvalidOperationException($"Không tìm thấy dây chuyền với ID: {request.LineId.Value}");
+            }
+            if (!line.IsActive)
+            {
+                throw new InvalidOperationException($"Dây chuyền với ID: {request.LineId.Value} đã bị vô hiệu hóa");
             }
         }
 
@@ -371,6 +405,7 @@ public class IncidentService : IIncidentService
         existingIncident.Issue = request.Issue?.Trim();
         existingIncident.Reason = request.Reason?.Trim(); // Có thể null
         existingIncident.Solution = request.Solution?.Trim(); // Có thể null
+        existingIncident.ImageUrl = request.ImageUrl; // Update the image URL
 
         // Update status if provided
         if (!string.IsNullOrEmpty(request.Status))
@@ -781,6 +816,22 @@ public class IncidentService : IIncidentService
             // Log error but don't fail the incident creation
             Console.WriteLine($"❌ Error sending incident notification: {ex.Message}");
             Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+        }
+    }
+
+    private async Task<string> HandleImageUploadAsync(IFormFile imageFile, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await _azureStorageService.UploadFileAsync(imageFile, "incidents", "images", cancellationToken);
+        }
+        catch (ArgumentException ex)
+        {
+            throw new InvalidOperationException($"Lỗi upload ảnh: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            throw new InvalidOperationException($"Có lỗi xảy ra khi upload ảnh: {ex.Message}");
         }
     }
 }

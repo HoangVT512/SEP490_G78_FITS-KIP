@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
 
 namespace FITSKIP.Domain.DTO
 {
@@ -24,31 +25,42 @@ namespace FITSKIP.Domain.DTO
 
     public class CreateIncidentRequest
     {
-        //[Required(ErrorMessage = "ID thiết bị là bắt buộc")]
+        [Range(1, int.MaxValue, ErrorMessage = "ID thiết bị phải là số nguyên dương")]
         public int? EquipmentId { get; set; }
 
+        [Range(1, int.MaxValue, ErrorMessage = "ID dây chuyền phải là số nguyên dương")]
         public int? LineId { get; set; }
 
+        [DataType(DataType.DateTime, ErrorMessage = "Thời gian bắt đầu không đúng định dạng")]
         public DateTime? StartTime { get; set; }
 
+        [DataType(DataType.DateTime, ErrorMessage = "Thời gian kết thúc không đúng định dạng")]
         public DateTime? EndTime { get; set; }
 
+        [Range(0, double.MaxValue, ErrorMessage = "Thời lượng phải là số dương")]
         public decimal? Duration { get; set; }
 
+        [Range(1, int.MaxValue, ErrorMessage = "ID loại dừng phải lớn hơn 0")]
         public int? TypeId { get; set; }
 
-        [MaxLength(500, ErrorMessage = "Vấn đề không vượt quá 500 ký tự")]
+        [MaxLength(500, ErrorMessage = "Mô tả vấn đề không được vượt quá 500 ký tự")]
         public string? Issue { get; set; } // Optional - có thể null
 
-        [MaxLength(500, ErrorMessage = "Lý do không vượt quá 500 ký tự")]
+        [MaxLength(500, ErrorMessage = "Nguyên nhân không được vượt quá 500 ký tự")]
         public string? Reason { get; set; } // Optional - có thể null
 
-        [MaxLength(500, ErrorMessage = "Giải pháp không vượt quá 500 ký tự")]
+        [MaxLength(500, ErrorMessage = "Giải pháp không được vượt quá 500 ký tự")]
         public string? Solution { get; set; } // Optional - có thể null
 
+        [Required(ErrorMessage = "ID người báo cáo là bắt buộc")]
+        [StringLength(450, ErrorMessage = "ID người báo cáo không được vượt quá 450 ký tự")]
         public string? ReportedByUserId { get; set; }
 
         public bool IsTechSupport { get; set; } = false;
+
+        // File upload properties - will be handled separately in controller
+        public string? ImageUrl { get; set; } // This will be set after file upload
+        public IFormFile? ImageFile { get; set; } // File to upload
     }
 
     public class CreateBulkIncidentRequest
@@ -76,35 +88,46 @@ namespace FITSKIP.Domain.DTO
 
     public class UpdateIncidentRequest
     {
-        //[Required(ErrorMessage = "ID thiết bị là bắt buộc")]
+        [Range(1, int.MaxValue, ErrorMessage = "ID thiết bị phải là số nguyên dương")]
         public int? EquipmentId { get; set; }
 
+        [Range(1, int.MaxValue, ErrorMessage = "ID dây chuyền phải là số nguyên dương")]
         public int? LineId { get; set; }
 
         [Required(ErrorMessage = "Thời gian bắt đầu là bắt buộc")]
+        [DataType(DataType.DateTime, ErrorMessage = "Thời gian bắt đầu không đúng định dạng")]
         public DateTime StartTime { get; set; }
 
+        [DataType(DataType.DateTime, ErrorMessage = "Thời gian kết thúc không đúng định dạng")]
         public DateTime? EndTime { get; set; }
 
+        [Range(0, double.MaxValue, ErrorMessage = "Thời lượng phải là số dương")]
         public decimal? Duration { get; set; }
 
+        [Range(1, int.MaxValue, ErrorMessage = "ID loại dừng phải là số nguyên dương")]
         public int? TypeId { get; set; }
 
-        [MaxLength(500, ErrorMessage = "Vấn đề không vượt quá 500 ký tự")]
+        [MaxLength(500, ErrorMessage = "Mô tả vấn đề không được vượt quá 500 ký tự")]
         public string? Issue { get; set; }
 
-        [MaxLength(500, ErrorMessage = "Lý do không vượt quá 500 ký tự")]
+        [MaxLength(500, ErrorMessage = "Nguyên nhân không được vượt quá 500 ký tự")]
         public string? Reason { get; set; } // Optional - có thể null
 
-        [MaxLength(500, ErrorMessage = "Giải pháp không vượt quá 500 ký tự")]
+        [MaxLength(500, ErrorMessage = "Giải pháp không được vượt quá 500 ký tự")]
         public string? Solution { get; set; } // Optional - có thể null
 
-        [MaxLength(50, ErrorMessage = "Trạng thái không vượt quá 50 ký tự")]
+        [MaxLength(50, ErrorMessage = "Trạng thái không được vượt quá 50 ký tự")]
         public string? Status { get; set; }
 
+        [Required(ErrorMessage = "ID người báo cáo là bắt buộc")]
+        [StringLength(450, ErrorMessage = "ID người báo cáo không được vượt quá 450 ký tự")]
         public string? ReportedByUserId { get; set; }
 
         public bool IsTechSupport { get; set; } = false;
+
+        // File upload properties - will be handled separately in controller
+        public string? ImageUrl { get; set; } // This will be set after file upload
+        public IFormFile? ImageFile { get; set; } // File to upload
     }
 
     public class DowntimeStatsDTO
