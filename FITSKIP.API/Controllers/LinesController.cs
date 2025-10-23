@@ -171,6 +171,23 @@ public class LinesController : ControllerBase
     }
 
     /// <summary>
+    /// Lấy danh sách chuyền sản xuất theo phòng ban
+    /// </summary>
+    [HttpGet("department/{departmentId}")]
+    public async Task<IActionResult> GetLinesByDepartment(int departmentId)
+    {
+        try
+        {
+            var lines = await _lineService.GetLinesByDepartmentAsync(departmentId);
+            return Ok(new { success = true, data = lines });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Có lỗi xảy ra khi lấy danh sách chuyền sản xuất theo phòng ban", details = ex.Message });
+        }
+    }
+    
+    /// <summary>
     /// Lấy danh sách tất cả chuyền sản xuất (không cần authentication)
     /// </summary>
     [HttpGet("public")]

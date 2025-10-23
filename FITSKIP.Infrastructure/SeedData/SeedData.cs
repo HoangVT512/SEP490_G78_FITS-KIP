@@ -1372,6 +1372,416 @@ namespace FITSKIP.Infrastructure.SeedData
             return solutions[random.Next(solutions.Length)];
         }
 
+        public static async Task SeedProductionOutputs(FitskipDbContext context)
+        {
+            if (!await context.ProductionOutputs.AnyAsync())
+            {
+                var productionOutputs = new List<ProductionOutput>
+                {
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 8, 27),
+                        ShiftId = 1,
+                        SlotTime = "08:00–09:00",
+                        LoadingTime = 50,
+                        TargetAmount = "120",
+                        ResultAmount = "110",
+                        OEE = 91.7m,
+                        CreatedAt = new DateTime(2025, 8, 27, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 8, 27),
+                        ShiftId = 1,
+                        SlotTime = "11:30–12:30",
+                        LoadingTime = 50,
+                        TargetAmount = "100",
+                        ResultAmount = "95",
+                        OEE = 95.0m,
+                        CreatedAt = new DateTime(2025, 8, 27, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 8, 31),
+                        ShiftId = 2,
+                        SlotTime = "21:00–21:30",
+                        LoadingTime = 50,
+                        TargetAmount = "90",
+                        ResultAmount = "85",
+                        OEE = 94.4m,
+                        CreatedAt = new DateTime(2025, 8, 31, 22, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 9, 3),
+                        ShiftId = 2,
+                        SlotTime = "16:00–17:00",
+                        LoadingTime = 50,
+                        TargetAmount = "100",
+                        ResultAmount = "98",
+                        OEE = 98.0m,
+                        CreatedAt = new DateTime(2025, 9, 3, 18, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 9, 6),
+                        ShiftId = 2,
+                        SlotTime = "17:00–18:30",
+                        LoadingTime = 60,
+                        TargetAmount = "120",
+                        ResultAmount = "110",
+                        OEE = 91.7m,
+                        CreatedAt = new DateTime(2025, 9, 6, 19, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 9, 7),
+                        ShiftId = 1,
+                        SlotTime = "09:00–10:00",
+                        LoadingTime = 60,
+                        TargetAmount = "130",
+                        ResultAmount = "125",
+                        OEE = 96.1m,
+                        CreatedAt = new DateTime(2025, 9, 7, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 9, 8),
+                        ShiftId = 2,
+                        SlotTime = "16:00–17:00",
+                        LoadingTime = 50,
+                        TargetAmount = "100",
+                        ResultAmount = "95",
+                        OEE = 95.0m,
+                        CreatedAt = new DateTime(2025, 9, 8, 18, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 9, 9),
+                        ShiftId = 1,
+                        SlotTime = "11:00–12:00",
+                        LoadingTime = 50,
+                        TargetAmount = "100",
+                        ResultAmount = "90",
+                        OEE = 90.0m,
+                        CreatedAt = new DateTime(2025, 9, 9, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 9, 12),
+                        ShiftId = 1,
+                        SlotTime = "08:00–09:00",
+                        LoadingTime = 50,
+                        TargetAmount = "120",
+                        ResultAmount = "110",
+                        OEE = 91.7m,
+                        CreatedAt = new DateTime(2025, 9, 12, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 9, 14),
+                        ShiftId = 2,
+                        SlotTime = "14:00–15:00",
+                        LoadingTime = 60,
+                        TargetAmount = "150",
+                        ResultAmount = "145",
+                        OEE = 96.7m,
+                        CreatedAt = new DateTime(2025, 9, 14, 18, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 9, 16),
+                        ShiftId = 1,
+                        SlotTime = "10:00–11:00",
+                        LoadingTime = 60,
+                        TargetAmount = "140",
+                        ResultAmount = "130",
+                        OEE = 92.8m,
+                        CreatedAt = new DateTime(2025, 9, 16, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 9, 24),
+                        ShiftId = 2,
+                        SlotTime = "18:00–19:00",
+                        LoadingTime = 60,
+                        TargetAmount = "120",
+                        ResultAmount = "115",
+                        OEE = 95.8m,
+                        CreatedAt = new DateTime(2025, 9, 24, 20, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 9, 27),
+                        ShiftId = 1,
+                        SlotTime = "13:00–14:00",
+                        LoadingTime = 60,
+                        TargetAmount = "100",
+                        ResultAmount = "95",
+                        OEE = 95.0m,
+                        CreatedAt = new DateTime(2025, 9, 27, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 9, 29),
+                        ShiftId = 2,
+                        SlotTime = "16:00–17:00",
+                        LoadingTime = 50,
+                        TargetAmount = "110",
+                        ResultAmount = "100",
+                        OEE = 90.9m,
+                        CreatedAt = new DateTime(2025, 9, 29, 18, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 10, 1),
+                        ShiftId = 2,
+                        SlotTime = "17:00–18:00",
+                        LoadingTime = 60,
+                        TargetAmount = "120",
+                        ResultAmount = "115",
+                        OEE = 95.8m,
+                        CreatedAt = new DateTime(2025, 10, 1, 20, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 10, 7),
+                        ShiftId = 2,
+                        SlotTime = "21:00–21:30",
+                        LoadingTime = 50,
+                        TargetAmount = "100",
+                        ResultAmount = "92",
+                        OEE = 92.0m,
+                        CreatedAt = new DateTime(2025, 10, 7, 22, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 10, 7),
+                        ShiftId = 1,
+                        SlotTime = "12:00–12:30",
+                        LoadingTime = 50,
+                        TargetAmount = "80",
+                        ResultAmount = "75",
+                        OEE = 93.7m,
+                        CreatedAt = new DateTime(2025, 10, 7, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 10, 10),
+                        ShiftId = 1,
+                        SlotTime = "07:00–08:00",
+                        LoadingTime = 60,
+                        TargetAmount = "130",
+                        ResultAmount = "120",
+                        OEE = 92.3m,
+                        CreatedAt = new DateTime(2025, 10, 10, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 10, 10),
+                        ShiftId = 2,
+                        SlotTime = "18:00–19:00",
+                        LoadingTime = 60,
+                        TargetAmount = "110",
+                        ResultAmount = "105",
+                        OEE = 95.5m,
+                        CreatedAt = new DateTime(2025, 10, 10, 20, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 10, 20),
+                        ShiftId = 2,
+                        SlotTime = "14:00–15:00",
+                        LoadingTime = 60,
+                        TargetAmount = "120",
+                        ResultAmount = "115",
+                        OEE = 95.8m,
+                        CreatedAt = new DateTime(2025, 10, 20, 18, 0, 0)
+                    },
+                    // Các ngày chỉ có sản lượng, không có sự cố:
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 8, 20),
+                        ShiftId = 1,
+                        SlotTime = "06:00–07:00",
+                        LoadingTime = 60,
+                        TargetAmount = "100",
+                        ResultAmount = "95",
+                        OEE = 95.0m,
+                        CreatedAt = new DateTime(2025, 8, 20, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 9, 1),
+                        ShiftId = 2,
+                        SlotTime = "15:00–16:00",
+                        LoadingTime = 60,
+                        TargetAmount = "120",
+                        ResultAmount = "118",
+                        OEE = 98.3m,
+                        CreatedAt = new DateTime(2025, 9, 1, 20, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 9, 10),
+                        ShiftId = 3,
+                        SlotTime = "22:00–23:00",
+                        LoadingTime = 60,
+                        TargetAmount = "110",
+                        ResultAmount = "105",
+                        OEE = 95.5m,
+                        CreatedAt = new DateTime(2025, 9, 10, 23, 59, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 9, 20),
+                        ShiftId = 1,
+                        SlotTime = "09:00–10:00",
+                        LoadingTime = 60,
+                        TargetAmount = "130",
+                        ResultAmount = "125",
+                        OEE = 96.1m,
+                        CreatedAt = new DateTime(2025, 9, 20, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 9, 30),
+                        ShiftId = 2,
+                        SlotTime = "18:30–19:30",
+                        LoadingTime = 60,
+                        TargetAmount = "115",
+                        ResultAmount = "108",
+                        OEE = 93.9m,
+                        CreatedAt = new DateTime(2025, 9, 30, 20, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 10, 3),
+                        ShiftId = 3,
+                        SlotTime = "01:00–03:00",
+                        LoadingTime = 75,
+                        TargetAmount = "120",
+                        ResultAmount = "110",
+                        OEE = 91.6m,
+                        CreatedAt = new DateTime(2025, 10, 3, 6, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 10, 5),
+                        ShiftId = 1,
+                        SlotTime = "10:00–11:30",
+                        LoadingTime = 60,
+                        TargetAmount = "150",
+                        ResultAmount = "140",
+                        OEE = 93.3m,
+                        CreatedAt = new DateTime(2025, 10, 5, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 10, 12),
+                        ShiftId = 2,
+                        SlotTime = "19:30–20:30",
+                        LoadingTime = 50,
+                        TargetAmount = "90",
+                        ResultAmount = "85",
+                        OEE = 94.4m,
+                        CreatedAt = new DateTime(2025, 10, 12, 22, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 10, 15),
+                        ShiftId = 3,
+                        SlotTime = "05:00–06:00",
+                        LoadingTime = 60,
+                        TargetAmount = "100",
+                        ResultAmount = "97",
+                        OEE = 97.0m,
+                        CreatedAt = new DateTime(2025, 10, 15, 6, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 10, 18),
+                        ShiftId = 1,
+                        SlotTime = "11:30–12:30",
+                        LoadingTime = 50,
+                        TargetAmount = "120",
+                        ResultAmount = "118",
+                        OEE = 98.3m,
+                        CreatedAt = new DateTime(2025, 10, 18, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 10, 22),
+                        ShiftId = 2,
+                        SlotTime = "15:00–16:00",
+                        LoadingTime = 60,
+                        TargetAmount = "130",
+                        ResultAmount = "120",
+                        OEE = 92.3m,
+                        CreatedAt = new DateTime(2025, 10, 22, 18, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 10, 25),
+                        ShiftId = 3,
+                        SlotTime = "22:00–23:00",
+                        LoadingTime = 60,
+                        TargetAmount = "140",
+                        ResultAmount = "135",
+                        OEE = 96.4m,
+                        CreatedAt = new DateTime(2025, 10, 25, 23, 59, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 10, 28),
+                        ShiftId = 1,
+                        SlotTime = "08:00–09:00",
+                        LoadingTime = 50,
+                        TargetAmount = "120",
+                        ResultAmount = "115",
+                        OEE = 95.8m,
+                        CreatedAt = new DateTime(2025, 10, 28, 14, 0, 0)
+                    }
+                };
+
+                await context.ProductionOutputs.AddRangeAsync(productionOutputs);
+                await context.SaveChangesAsync();
+            }
+        }
+
         public static async Task SeedAllData(FitskipDbContext context)
         {
             await SeedRoles(context);
@@ -1385,6 +1795,7 @@ namespace FITSKIP.Infrastructure.SeedData
             await SeedShifts(context);
             await SeedSpareParts(context);
             await SeedIncidentHistories(context);
+            await SeedProductionOutputs(context);
         }
     }
 }

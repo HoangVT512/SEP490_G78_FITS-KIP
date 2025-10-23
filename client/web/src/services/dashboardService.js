@@ -29,4 +29,49 @@ export const dashboardService = {
       throw error;
     }
   },
+
+  // Lấy thống kê downtime theo tháng và dây chuyền
+  getDowntimeStats: async (month, year, lineId = null) => {
+    try {
+      const params = new URLSearchParams({
+        month: month.toString(),
+        year: year.toString(),
+      });
+      if (lineId) {
+        params.append("lineId", lineId.toString());
+      }
+
+      const response = await apiRequest(`/dashboard/downtime-stats?${params.toString()}`, {
+        method: "GET",
+      });
+      return response;
+    } catch (error) {
+      console.error("Error fetching downtime stats:", error);
+      throw error;
+    }
+  },
+
+  // Lấy thống kê downtime theo ngày
+  getDailyDowntimeStats: async (month, year, lineId = null, date = null) => {
+    try {
+      const params = new URLSearchParams({
+        month: month.toString(),
+        year: year.toString(),
+      });
+      if (lineId) {
+        params.append("lineId", lineId.toString());
+      }
+      if (date) {
+        params.append("date", date);
+      }
+
+      const response = await apiRequest(`/dashboard/daily-downtime-stats?${params.toString()}`, {
+        method: "GET",
+      });
+      return response;
+    } catch (error) {
+      console.error("Error fetching daily downtime stats:", error);
+      throw error;
+    }
+  },
 };

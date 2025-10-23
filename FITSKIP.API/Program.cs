@@ -121,7 +121,9 @@ namespace FITSKIP.API
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.ISparePartService, FITSKIP.Application.Services.SparePartService>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IIncidentRepository, FITSKIP.Infrastructure.Repositories.IncidentRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IIncidentService, FITSKIP.Application.Services.IncidentService>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IDashboardService, FITSKIP.Application.Services.DashboardService>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IShiftRepository, FITSKIP.Infrastructure.Repositories.ShiftRepository>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IDashboardRepository, FITSKIP.Infrastructure.Repositories.DashboardRepository>();
 
             // Import Excel service
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IExcelImportService,
@@ -136,6 +138,8 @@ namespace FITSKIP.API
             // SMS Service - Use Mock for testing to avoid Twilio rate limits
             // Change back to TwilioSmsService when ready for production
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.ISmsService, FITSKIP.Application.Services.TwilioSmsService>();
+
+            builder.Services.AddLogging();
 
             // JWT Authentication configuration
             var jwtSettings = builder.Configuration.GetSection("JwtSettings");
