@@ -19,6 +19,7 @@ namespace FITSKIP.Domain.DTO
         public string? Reason { get; set; }
         public string? Solution { get; set; }
         public string? Issue { get; set; }
+        public string? ImageUrl { get; set; }
         public DateTime CreatedDate { get; set; }
         public bool IsTechSupport { get; set; }
     }

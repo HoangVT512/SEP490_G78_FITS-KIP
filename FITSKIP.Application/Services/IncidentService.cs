@@ -819,6 +819,16 @@ public class IncidentService : IIncidentService
         }
     }
 
+    public async Task<string> UploadIncidentImageAsync(IFormFile imageFile, CancellationToken cancellationToken = default)
+    {
+        if (imageFile == null || imageFile.Length == 0)
+        {
+            throw new ArgumentException("File ảnh không hợp lệ");
+        }
+
+        return await HandleImageUploadAsync(imageFile, cancellationToken);
+    }
+
     private async Task<string> HandleImageUploadAsync(IFormFile imageFile, CancellationToken cancellationToken = default)
     {
         try

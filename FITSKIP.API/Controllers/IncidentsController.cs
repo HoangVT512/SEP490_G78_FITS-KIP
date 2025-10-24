@@ -620,4 +620,41 @@ public class IncidentsController : ControllerBase
             return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi lấy ảnh sự cố", details = ex.Message });
         }
     }
+
+    /// <summary>
+    /// Upload ảnh cho sự cố
+    /// </summary>
+    [HttpPost("upload-image")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadImage(IFormFile imageFile)
+    {
+        try
+        {
+            if (imageFile == null || imageFile.Length == 0)
+            {
+                return BadRequest(new { success = false, message = "Vui lòng chọn file ảnh" });
+            }
+
+            // Validate file type
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
+            var extension = Path.GetExtension(imageFile.FileName).ToLowerInvariant();
+            if (!allowedExtensions.Contains(extension))
+            {
+                return BadRequest(new { success = false, message = "Chỉ chấp nhận file ảnh (jpg, jpeg, png, gif, bmp)" });
+            }
+
+            // Validate file size (max 5MB)
+            if (imageFile.Length > 5 * 1024 * 1024)
+            {
+                return BadRequest(new { success = false, message = "Kích thước file không được vượt quá 5MB" });
+            }
+
+            var imageUrl = await _incidentService.UploadIncidentImageAsync(imageFile);
+            return Ok(new { success = true, data = new { imageUrl } });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi upload ảnh", details = ex.Message });
+        }
+    }
 }

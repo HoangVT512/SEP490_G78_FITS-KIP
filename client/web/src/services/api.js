@@ -8,18 +8,28 @@ const apiRequest = async (endpoint, options = {}) => {
   // Get token from localStorage
   const token = localStorage.getItem("token");
 
+  // Set default headers
+  const headers = {
+    ...(token && { Authorization: `Bearer ${token}` }),
+    ...options.headers,
+  };
+
+  // Only add Content-Type for non-FormData requests
+  if (!options.isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
+
   const defaultOptions = {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token && { Authorization: `Bearer ${token}` }),
-      ...options.headers,
-    },
+    headers,
   };
 
   const config = {
     ...defaultOptions,
     ...options,
   };
+
+  // Remove isFormData flag from config before sending
+  delete config.isFormData;
 
   try {
     const response = await fetch(url, config);
