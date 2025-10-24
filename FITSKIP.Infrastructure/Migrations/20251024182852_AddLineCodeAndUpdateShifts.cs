@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FITSKIP.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class NewMigration : Migration
+    public partial class AddLineCodeAndUpdateShifts : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -232,6 +232,7 @@ namespace FITSKIP.Infrastructure.Migrations
                     LineID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     LineName = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
+                    LineCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     DepartmentID = table.Column<int>(type: "int", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
                 },

@@ -375,18 +375,21 @@ namespace FITSKIP.Infrastructure.SeedData
                         new Line
                         {
                             LineName = "Dây chuyền sản xuất 1",
+                            LineCode = "LINE001",
                             DepartmentId = productionDept.DepartmentId,
                             IsActive = true
                         },
                         new Line
                         {
                             LineName = "Dây chuyền sản xuất 2",
+                            LineCode = "LINE002",
                             DepartmentId = productionDept.DepartmentId,
                             IsActive = true
                         },
                         new Line
                         {
                             LineName = "Dây chuyền đóng gói",
+                            LineCode = "LINE003",
                             DepartmentId = productionDept.DepartmentId,
                             IsActive = true
                         }
@@ -624,21 +627,15 @@ namespace FITSKIP.Infrastructure.SeedData
                 {
                     new Shift
                     {
-                        ShiftName = "Ca sáng",
-                        StartTime = new TimeOnly(6, 0),
-                        EndTime = new TimeOnly(14, 0)
+                        ShiftName = "Ca 1",
+                        StartTime = new TimeOnly(7, 0),
+                        EndTime = new TimeOnly(15, 0)
                     },
                     new Shift
                     {
-                        ShiftName = "Ca chiều",
-                        StartTime = new TimeOnly(14, 0),
-                        EndTime = new TimeOnly(22, 0)
-                    },
-                    new Shift
-                    {
-                        ShiftName = "Ca đêm",
-                        StartTime = new TimeOnly(22, 0),
-                        EndTime = new TimeOnly(6, 0)
+                        ShiftName = "Ca 2",
+                        StartTime = new TimeOnly(15, 0),
+                        EndTime = new TimeOnly(23, 0)
                     }
                 };
 
@@ -1647,7 +1644,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     {
                         LineId = 3,
                         Date = new DateTime(2025, 9, 10),
-                        ShiftId = 3,
+                        ShiftId = 2,
                         SlotTime = "22:00–23:00",
                         LoadingTime = 60,
                         TargetAmount = "110",
@@ -1683,7 +1680,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     {
                         LineId = 3,
                         Date = new DateTime(2025, 10, 3),
-                        ShiftId = 3,
+                        ShiftId = 2,
                         SlotTime = "01:00–03:00",
                         LoadingTime = 75,
                         TargetAmount = "120",
@@ -1719,7 +1716,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     {
                         LineId = 3,
                         Date = new DateTime(2025, 10, 15),
-                        ShiftId = 3,
+                        ShiftId = 2,
                         SlotTime = "05:00–06:00",
                         LoadingTime = 60,
                         TargetAmount = "100",
@@ -1755,7 +1752,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     {
                         LineId = 3,
                         Date = new DateTime(2025, 10, 25),
-                        ShiftId = 3,
+                        ShiftId = 2,
                         SlotTime = "22:00–23:00",
                         LoadingTime = 60,
                         TargetAmount = "140",

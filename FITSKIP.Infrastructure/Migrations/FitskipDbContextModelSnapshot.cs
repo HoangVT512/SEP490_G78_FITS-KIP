@@ -235,6 +235,10 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
+                    b.Property<string>("LineCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("LineName")
                         .IsRequired()
                         .HasMaxLength(250)

@@ -173,6 +173,7 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.LineId).HasColumnName("LineID");
             entity.Property(e => e.DepartmentId).HasColumnName("DepartmentID");
             entity.Property(e => e.LineName).HasMaxLength(250);
+            entity.Property(e => e.LineCode).HasMaxLength(50);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
             entity.HasOne(d => d.Department).WithMany(p => p.Lines)
