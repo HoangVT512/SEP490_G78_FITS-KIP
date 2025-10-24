@@ -159,9 +159,9 @@ public class UserRepository : IUserRepository
         }
 
         // Check if the user has the "Quản lý" role
-        if (existingUser.Role != null && existingUser.Role.Name.Equals("Quản lý", StringComparison.OrdinalIgnoreCase))
+        if (existingUser.Role != null && existingUser.Role.Name.Equals("Quản trị viên", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Không thể vô hiệu hóa người dùng có vai trò 'Quản lý'.");
+            throw new InvalidOperationException("Không thể khóa tài khoản của quản trị viên");
         }
 
         // Deactivate the user
