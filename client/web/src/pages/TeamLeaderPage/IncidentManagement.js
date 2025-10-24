@@ -930,6 +930,9 @@ const IncidentManagement = () => {
         [formId]: imageUrl,
       }));
 
+      // Mark form as changed so submit button is enabled in edit mode
+      setFormChanged(true);
+
       message.success("Tải ảnh lên thành công!");
       return imageUrl;
     } catch (error) {
@@ -1094,6 +1097,7 @@ const IncidentManagement = () => {
           selectedIncident?.id ||
           selectedIncident?.incidentId ||
           selectedIncident?.IncidentId;
+        console.log("Edit payload:", editPayload);
         await incidentService.update(id, editPayload);
         message.success("Cập nhật sự cố thành công!");
       } else {

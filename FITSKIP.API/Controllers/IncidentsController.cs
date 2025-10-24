@@ -317,7 +317,7 @@ public class IncidentsController : ControllerBase
     /// Cập nhật thông tin sự cố
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateIncident(int id, [FromForm] UpdateIncidentRequest request)
+    public async Task<IActionResult> UpdateIncident(int id, [FromBody] UpdateIncidentRequest request)
     {
         try
         {
