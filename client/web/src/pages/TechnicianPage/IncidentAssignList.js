@@ -28,6 +28,8 @@ import {
   FileTextOutlined,
   ToolOutlined,
 } from "@ant-design/icons";
+import dayjs from "dayjs";
+import { incidentService } from "../../services/incidentService";
 import styles from "../../styles/pages/IncidentAssignList.module.css";
 
 const { TextArea } = Input;
@@ -42,106 +44,58 @@ const IncidentAssignList = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [form] = Form.useForm();
 
-  // Mock data - sẽ thay bằng API call sau
+  // Fetch incidents assigned to current user
   useEffect(() => {
     fetchIncidents();
   }, [filterStatus]);
 
-  const fetchIncidents = () => {
+  const fetchIncidents = async () => {
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      const mockData = [
-        {
-          key: 1,
-          incidentId: 1,
-          incidentCode: "INC-001",
-          equipmentId: 1,
-          equipmentCode: "EQ-001",
-          equipmentName: "Máy CNC 01",
-          issue: "Lỗi động cơ không hoạt động",
-          reason: "Động cơ bị quá nhiệt",
-          solution: null,
-          priority: "Cao",
-          status: "Đang xử lý",
-          startTime: "2025-10-13 08:30:00",
-          endTime: null,
-          assignedDate: "2025-10-13 08:30:00",
-          dueDate: "2025-10-13 18:00:00",
-          reportedBy: "Nguyễn Văn A",
-          lineName: "Dây chuyền 1",
-          stageName: "Giai đoạn gia công",
-        },
-        {
-          key: 2,
-          incidentId: 2,
-          incidentCode: "INC-002",
-          equipmentId: 15,
-          equipmentCode: "EQ-015",
-          equipmentName: "Robot hàn 03",
-          issue: "Lỗi cảm biến vị trí",
-          reason: "Cảm biến bị lệch vị trí",
-          solution: null,
-          priority: "Trung bình",
-          status: "Chưa xử lý",
-          startTime: "2025-10-13 09:00:00",
-          endTime: null,
-          assignedDate: "2025-10-13 09:00:00",
-          dueDate: "2025-10-14 12:00:00",
-          reportedBy: "Trần Thị B",
-          lineName: "Dây chuyền 2",
-          stageName: "Giai đoạn lắp ráp",
-        },
-        {
-          key: 3,
-          incidentId: 3,
-          incidentCode: "INC-003",
-          equipmentId: 25,
-          equipmentCode: "EQ-025",
-          equipmentName: "Băng chuyền 05",
-          issue: "Tiếng kêu bất thường",
-          reason: "Thiếu dầu bôi trơn",
-          solution: null,
-          priority: "Thấp",
-          status: "Chưa xử lý",
-          startTime: "2025-10-13 10:15:00",
-          endTime: null,
-          assignedDate: "2025-10-13 10:15:00",
-          dueDate: "2025-10-15 17:00:00",
-          reportedBy: "Lê Văn C",
-          lineName: "Dây chuyền 3",
-          stageName: "Giai đoạn vận chuyển",
-        },
-        {
-          key: 4,
-          incidentId: 4,
-          incidentCode: "INC-004",
-          equipmentId: 8,
-          equipmentCode: "EQ-008",
-          equipmentName: "Máy phay CNC 02",
-          issue: "Dao cắt bị gãy",
-          reason: "Dao cắt đã hết tuổi thọ",
-          solution: "Đã thay thế dao cắt mới",
-          priority: "Cao",
-          status: "Hoàn thành",
-          startTime: "2025-10-12 14:00:00",
-          endTime: "2025-10-12 16:30:00",
-          assignedDate: "2025-10-12 14:00:00",
-          dueDate: "2025-10-12 18:00:00",
-          reportedBy: "Phạm Văn D",
-          lineName: "Dây chuyền 1",
-          stageName: "Giai đoạn gia công",
-        },
-      ];
+    try {
+      // Call API to get incidents assigned to current technician
+      const res = await incidentService.getAssignedToMe();
+      const items = Array.isArray(res) ? res : res?.data || [];
 
+      // Map to frontend format
+      const mapped = items.map((it) => ({
+        key: it.incidentId || it.id,
+        incidentId: it.incidentId || it.id,
+        incidentCode: `INC-${String(it.incidentId || it.id).padStart(3, "0")}`,
+        equipmentId: it.equipmentId || it.equipment?.equipmentId,
+        equipmentCode: it.equipment?.equipmentCode || it.equipmentCode || "",
+        equipmentName: it.equipment?.equipmentName || it.equipmentName || "",
+        issue: it.issue || it.title || "",
+        reason: it.reason || "",
+        solution: it.solution || null,
+        priority: it.priority || "Trung bình",
+        status: it.status || (it.isResolved ? "Hoàn thành" : "Chưa xử lý"),
+        startTime: it.startTime || it.reportDate,
+        endTime: it.endTime || null,
+        assignedDate: it.assignedDate || it.startTime || it.reportDate,
+        dueDate: it.dueDate || it.expectedEndTime || null,
+        reportedBy:
+          it.reportedByUser?.fullName || it.reportedByName || it.reporter || "",
+        lineName:
+          it.equipment?.stage?.line?.lineName || it.line?.lineName || "",
+        stageName: it.equipment?.stage?.stageName || it.stage?.stageName || "",
+        imageUrl: it.imageUrl || null,
+        imageUrls: it.incidentImages?.map((img) => img.imageUrl) || [],
+      }));
+
+      // Filter by status if needed
+      let filtered = mapped;
       if (filterStatus !== "all") {
-        setIncidents(mockData.filter((item) => item.status === filterStatus));
-      } else {
-        setIncidents(mockData);
+        filtered = mapped.filter((item) => item.status === filterStatus);
       }
 
+      setIncidents(filtered);
+    } catch (err) {
+      console.error("Lỗi khi tải danh sách sự cố:", err);
+      message.error("Không thể tải danh sách sự cố. Vui lòng thử lại.");
+      setIncidents([]);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   const columns = [

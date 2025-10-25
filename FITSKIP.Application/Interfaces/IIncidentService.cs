@@ -17,6 +17,7 @@ namespace FITSKIP.Application.Interfaces
         Task<IReadOnlyList<IncidentShift>> GetIncidentShiftsAsync(int incidentId, CancellationToken cancellationToken = default);
         Task<bool> AssignTechnicianAsync(int incidentId, string technicianId, bool updateStatus = false, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<IncidentHistory>> GetIncidentsByUserLinesAsync(string userId, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<IncidentHistory>> GetIncidentsAssignedToTechnicianAsync(string technicianId, CancellationToken cancellationToken = default);
         Task<string> UploadIncidentImageAsync(IFormFile imageFile, CancellationToken cancellationToken = default);
     }
 }

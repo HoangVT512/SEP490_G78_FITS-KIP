@@ -790,6 +790,17 @@ public class IncidentService : IIncidentService
         return filteredIncidents.AsReadOnly();
     }
 
+    public async Task<IReadOnlyList<IncidentHistory>> GetIncidentsAssignedToTechnicianAsync(string technicianId, CancellationToken cancellationToken = default)
+    {
+        // Get all incidents that are assigned to the technician
+        var allIncidents = await _incidentRepository.GetAllAsync(cancellationToken);
+        var assignedIncidents = allIncidents.Where(i =>
+            i.AssignedTo != null && i.AssignedTo.ToString() == technicianId
+        ).ToList();
+
+        return assignedIncidents.AsReadOnly();
+    }
+
     private static decimal CalculateAdjustedDuration(DateTime startTime, DateTime endTime, decimal rawDurationMinutes)
     {
         // Đảm bảo Duration luôn dương và ít nhất 1 phút

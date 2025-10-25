@@ -85,6 +85,29 @@ public class IncidentsController : ControllerBase
     }
 
     /// <summary>
+    /// Lấy danh sách sự cố được giao cho kỹ thuật viên hiện tại
+    /// </summary>
+    [HttpGet("assigned-to-me")]
+    public async Task<IActionResult> GetIncidentsAssignedToMe()
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { success = false, message = "Không thể xác thực người dùng" });
+            }
+
+            var incidents = await _incidentService.GetIncidentsAssignedToTechnicianAsync(userId);
+            return Ok(new { success = true, data = incidents });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Có lỗi xảy ra khi lấy danh sách sự cố được giao", details = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Lấy thông tin sự cố theo ID
     /// </summary>
     [HttpGet("{id}")]

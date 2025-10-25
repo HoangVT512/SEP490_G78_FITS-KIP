@@ -6,6 +6,13 @@ export const incidentService = {
     return res?.data || res;
   },
 
+  async getAssignedToMe() {
+    const res = await apiRequest("/Incidents/assigned-to-me", {
+      method: "GET",
+    });
+    return res?.data || res;
+  },
+
   async getById(id) {
     const res = await apiRequest(`/Incidents/${encodeURIComponent(id)}`, {
       method: "GET",

@@ -121,6 +121,13 @@ const IncidentList = () => {
   }, []);
 
   useEffect(() => {
+    // Fetch incidents again when activeTab changes
+    if (activeTab === "myTasks") {
+      fetchIncidents();
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
     handleFilter();
   }, [searchText, filterStatus, incidents, activeTab]);
 
@@ -161,14 +168,26 @@ const IncidentList = () => {
   const fetchIncidents = async () => {
     setLoading(true);
     try {
-      const res = await incidentService.getAll();
+      let res;
+
+      // If viewing "My Tasks" tab, fetch only incidents assigned to current user
+      if (activeTab === "myTasks") {
+        res = await incidentService.getAssignedToMe();
+      } else {
+        // Otherwise, fetch all incidents
+        res = await incidentService.getAll();
+      }
+
       // backend returns { success, data }
       const items = Array.isArray(res) ? res : res?.data || [];
 
-      // Filter only incidents that need technical support
-      const techSupportIncidents = items.filter(
-        (item) => item.isTechSupport === true
-      );
+      // Filter only incidents that need technical support (skip for myTasks as they're already filtered)
+      let techSupportIncidents = items;
+      if (activeTab !== "myTasks") {
+        techSupportIncidents = items.filter(
+          (item) => item.isTechSupport === true
+        );
+      }
 
       // For Technical Manager: Show ALL tech support incidents from all departments
       // (no department filtering needed for technical managers)
@@ -352,6 +371,8 @@ const IncidentList = () => {
     } else if (activeTab === "completed") {
       filtered = filtered.filter((inc) => inc.status === "Hoàn thành");
     }
+    // For "myTasks" tab, data is already filtered by backend (assigned to current user)
+    // So no additional filtering needed here
 
     if (searchText) {
       const q = String(searchText).toLowerCase();
@@ -592,6 +613,12 @@ const IncidentList = () => {
       );
     } else if (activeTab === "completed") {
       filteredIncidents = incidents.filter((i) => i.status === "Hoàn thành");
+    } else if (activeTab === "myTasks") {
+      const currentUserId = currentUser?.userId || currentUser?.id;
+      filteredIncidents = incidents.filter((i) => {
+        const assignedId = i.assignedTo || i.assignedToId;
+        return assignedId && assignedId === currentUserId;
+      });
     }
 
     return {
@@ -764,6 +791,87 @@ const IncidentList = () => {
         </Card>
       ),
     },
+    {
+      key: "myTasks",
+      label: (
+        <span>
+          <UserAddOutlined />
+          Nhiệm vụ của tôi (
+          {
+            incidents.filter((i) => {
+              const currentUserId = currentUser?.userId || currentUser?.id;
+              const assignedId = i.assignedTo || i.assignedToId;
+              return assignedId && assignedId === currentUserId;
+            }).length
+          }
+          )
+        </span>
+      ),
+      children: (
+        <Card
+          title={
+            <Space>
+              <UserAddOutlined />
+              <span>Sự cố được phân công cho tôi</span>
+            </Space>
+          }
+          extra={
+            <Button icon={<ReloadOutlined />} onClick={fetchIncidents}>
+              Làm mới
+            </Button>
+          }
+          variant="borderless"
+        >
+          {/* Filters */}
+          <div style={{ marginBottom: 16 }}>
+            <Space size="middle" wrap>
+              <Input
+                placeholder="Tìm kiếm mã, tiêu đề, thiết bị..."
+                prefix={<SearchOutlined />}
+                value={searchText}
+                onChange={(e) => setSearchText(e.target.value)}
+                style={{ width: 300 }}
+                allowClear
+              />
+              <Select
+                value={filterStatus}
+                onChange={setFilterStatus}
+                style={{ width: 150 }}
+                placeholder="Trạng thái"
+              >
+                <Option value="all">Tất cả</Option>
+                <Option value="Chờ xử lý">Chờ xử lý</Option>
+                <Option value="Đang xử lý">Đang xử lý</Option>
+                <Option value="Hoàn thành">Hoàn thành</Option>
+                <Option value="Hủy">Hủy</Option>
+              </Select>
+            </Space>
+          </div>
+
+          {/* Table */}
+          <Table
+            columns={columns}
+            dataSource={filteredIncidents}
+            rowKey="id"
+            loading={loading}
+            scroll={{ x: "max-content" }}
+            pagination={{
+              pageSize: 10,
+              showSizeChanger: true,
+              showTotal: (total) => `Tổng ${total} nhiệm vụ của tôi`,
+            }}
+            locale={{
+              emptyText: (
+                <Empty
+                  description="Không có nhiệm vụ nào được phân công cho bạn"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
+              ),
+            }}
+          />
+        </Card>
+      ),
+    },
   ];
 
   return (
@@ -776,7 +884,9 @@ const IncidentList = () => {
               title={
                 activeTab === "pending"
                   ? "Tổng sự cố chờ xử lý"
-                  : "Tổng sự cố hoàn thành"
+                  : activeTab === "completed"
+                  ? "Tổng sự cố hoàn thành"
+                  : "Tổng nhiệm vụ của tôi"
               }
               value={stats.total}
               prefix={<WarningOutlined />}
