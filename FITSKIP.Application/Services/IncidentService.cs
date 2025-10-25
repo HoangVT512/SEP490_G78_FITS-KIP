@@ -49,12 +49,6 @@ public class IncidentService : IIncidentService
 
     public async Task<IncidentHistory> CreateIncidentAsync(CreateIncidentRequest request, CancellationToken cancellationToken = default)
     {
-        // Handle image upload if provided
-        if (request.ImageFile != null)
-        {
-            request.ImageUrl = await HandleImageUploadAsync(request.ImageFile, cancellationToken);
-        }
-
         // Validate equipment exists and is active if EquipmentId is provided
         if (request.EquipmentId.HasValue)
         {
@@ -116,13 +110,6 @@ public class IncidentService : IIncidentService
             duration = CalculateAdjustedDuration(startTime, request.EndTime.Value, rawDuration);
         }
 
-        // Set ImageUrl to first image for backward compatibility
-        string? primaryImageUrl = request.ImageUrl;
-        if (request.ImageUrls != null && request.ImageUrls.Count > 0)
-        {
-            primaryImageUrl = request.ImageUrls[0]; // Use first image as primary
-        }
-
         var incident = new IncidentHistory
         {
             EquipmentId = request.EquipmentId,
@@ -134,7 +121,6 @@ public class IncidentService : IIncidentService
             Issue = request.Issue?.Trim(),
             Reason = request.Reason?.Trim(),
             Solution = request.Solution?.Trim(),
-            ImageUrl = primaryImageUrl, // Store the first image URL for backward compatibility
             Status = request.EndTime.HasValue ? "Hoàn thành" : "Chờ xử lý",
             CreatedDate = DateTime.Now,
             ReportedByUserId = request.ReportedByUserId,
@@ -279,7 +265,6 @@ public class IncidentService : IIncidentService
                     Issue = incidentRequest.Issue?.Trim(),
                     Reason = incidentRequest.Reason?.Trim(),
                     Solution = incidentRequest.Solution?.Trim(),
-                    ImageUrl = incidentRequest.ImageUrls?.FirstOrDefault() ?? incidentRequest.ImageUrl, // Use first image from array or fallback to single imageUrl
                     Status = incidentRequest.EndTime.HasValue ? "Hoàn thành" : "Chờ xử lý",
                     CreatedDate = DateTime.Now,
                     ReportedByUserId = incidentRequest.ReportedByUserId,
@@ -372,12 +357,6 @@ public class IncidentService : IIncidentService
             return null;
         }
 
-        // Handle image upload if provided
-        if (request.ImageFile != null)
-        {
-            request.ImageUrl = await HandleImageUploadAsync(request.ImageFile, cancellationToken);
-        }
-
         // Validate equipment exists and is active if EquipmentId is provided
         if (request.EquipmentId.HasValue)
         {
@@ -459,14 +438,6 @@ public class IncidentService : IIncidentService
         existingIncident.Reason = request.Reason?.Trim(); // Có thể null
         existingIncident.Solution = request.Solution?.Trim(); // Có thể null
 
-        // Update images - handle both single and multiple images
-        string? primaryImageUrl = request.ImageUrl;
-        if (request.ImageUrls != null && request.ImageUrls.Count > 0)
-        {
-            primaryImageUrl = request.ImageUrls[0]; // Use first image as primary
-        }
-        existingIncident.ImageUrl = primaryImageUrl; // Update the primary image URL for backward compatibility
-
         // Update IncidentImages collection
         if (request.ImageUrls != null && request.ImageUrls.Count > 0)
         {
@@ -495,7 +466,6 @@ public class IncidentService : IIncidentService
             // If imageUrls is empty array, clear all images
             Console.WriteLine($"[UpdateIncidentAsync] Clearing all images for incident {id}");
             existingIncident.IncidentImages.Clear();
-            existingIncident.ImageUrl = null;
         }
 
         // Update status if provided

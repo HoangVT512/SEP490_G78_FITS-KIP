@@ -631,12 +631,14 @@ public class IncidentsController : ControllerBase
                 return NotFound(new { success = false, message = "Không tìm thấy sự cố" });
             }
 
-            if (string.IsNullOrEmpty(incident.ImageUrl))
+            if (incident.IncidentImages == null || !incident.IncidentImages.Any())
             {
                 return NotFound(new { success = false, message = "Sự cố này không có ảnh" });
             }
 
-            return Ok(new { success = true, data = new { imageUrl = incident.ImageUrl } });
+            // Return all images from IncidentImages table
+            var imageUrls = incident.IncidentImages.OrderBy(i => i.OrderIndex).Select(i => i.ImageUrl).ToList();
+            return Ok(new { success = true, data = new { imageUrls } });
         }
         catch (Exception ex)
         {

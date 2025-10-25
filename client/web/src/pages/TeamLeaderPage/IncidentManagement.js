@@ -588,11 +588,10 @@ const IncidentManagement = () => {
           issue: it.issue || it.Issue || it.description || "",
           reason: it.reason || it.Reason || null,
           solution: it.solution || it.Solution || null,
-          imageUrl: it.imageUrl || it.ImageUrl || null,
           imageUrls:
             it.incidentImages?.map((img) => img.imageUrl) ||
             it.IncidentImages?.map((img) => img.ImageUrl) ||
-            (it.imageUrl ? [it.imageUrl] : []), // Fallback to single image as array
+            [],
           category: it.category || it.Category || it.type?.typeName || null,
           downtime: downtime,
           impact: it.impact || it.Impact || null,
@@ -744,8 +743,7 @@ const IncidentManagement = () => {
     setManualDurationFields(new Set()); // Reset manual duration tracking for edit mode
 
     // Load existing images from record
-    const existingImageUrls =
-      record.imageUrls || (record.imageUrl ? [record.imageUrl] : []);
+    const existingImageUrls = record.imageUrls || [];
 
     // Set uploaded image URLs
     setUploadedImageUrls({
@@ -2390,35 +2388,31 @@ const IncidentManagement = () => {
                         {selectedIncident.solution || "Chưa có giải pháp"}
                       </div>
                     </Col>
-                    {(selectedIncident.imageUrl ||
-                      (selectedIncident.imageUrls &&
-                        selectedIncident.imageUrls.length > 0)) && (
-                      <Col span={24}>
-                        <div
-                          style={{
-                            fontSize: "13px",
-                            color: "#666",
-                            marginBottom: "6px",
-                            fontWeight: 600,
-                          }}
-                        >
-                          Hình ảnh sự cố
-                        </div>
-                        <div
-                          style={{
-                            padding: "12px",
-                            backgroundColor: "#fafafa",
-                            borderRadius: "6px",
-                            border: "1px solid #f0f0f0",
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: "12px",
-                          }}
-                        >
-                          {selectedIncident.imageUrls &&
-                          selectedIncident.imageUrls.length > 0 ? (
-                            // Display multiple images
-                            selectedIncident.imageUrls.map((url, index) => (
+                    {selectedIncident.imageUrls &&
+                      selectedIncident.imageUrls.length > 0 && (
+                        <Col span={24}>
+                          <div
+                            style={{
+                              fontSize: "13px",
+                              color: "#666",
+                              marginBottom: "6px",
+                              fontWeight: 600,
+                            }}
+                          >
+                            Hình ảnh sự cố
+                          </div>
+                          <div
+                            style={{
+                              padding: "12px",
+                              backgroundColor: "#fafafa",
+                              borderRadius: "6px",
+                              border: "1px solid #f0f0f0",
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: "12px",
+                            }}
+                          >
+                            {selectedIncident.imageUrls.map((url, index) => (
                               <img
                                 key={index}
                                 src={url}
@@ -2432,26 +2426,10 @@ const IncidentManagement = () => {
                                 }}
                                 onClick={() => window.open(url, "_blank")}
                               />
-                            ))
-                          ) : (
-                            // Display single image (backward compatibility)
-                            <img
-                              src={selectedIncident.imageUrl}
-                              alt="Hình ảnh sự cố"
-                              style={{
-                                maxWidth: "100%",
-                                maxHeight: "400px",
-                                borderRadius: "4px",
-                                cursor: "pointer",
-                              }}
-                              onClick={() =>
-                                window.open(selectedIncident.imageUrl, "_blank")
-                              }
-                            />
-                          )}
-                        </div>
-                      </Col>
-                    )}
+                            ))}
+                          </div>
+                        </Col>
+                      )}
                   </Row>
                 </Card>
               </Col>
@@ -3517,18 +3495,6 @@ const IncidentManagement = () => {
                         Chọn ảnh
                       </Button>
                     </Upload>
-                    {selectedIncident?.imageUrl &&
-                      !uploadedImageUrls["edit"] && (
-                        <div style={{ marginTop: 8 }}>
-                          <a
-                            href={selectedIncident.imageUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            Xem ảnh hiện tại
-                          </a>
-                        </div>
-                      )}
                   </Form.Item>
                 </Col>
               </Row>

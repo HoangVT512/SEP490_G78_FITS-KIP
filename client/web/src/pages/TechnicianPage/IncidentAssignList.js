@@ -78,7 +78,6 @@ const IncidentAssignList = () => {
         lineName:
           it.equipment?.stage?.line?.lineName || it.line?.lineName || "",
         stageName: it.equipment?.stage?.stageName || it.stage?.stageName || "",
-        imageUrl: it.imageUrl || null,
         imageUrls: it.incidentImages?.map((img) => img.imageUrl) || [],
       }));
 
