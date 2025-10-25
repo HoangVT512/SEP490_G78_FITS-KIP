@@ -299,7 +299,11 @@ const IncidentList = () => {
   const getTechnicianName = (technicianId) => {
     if (!technicianId) return null;
     const user = allUsers.find((u) => (u.userId || u.id) === technicianId);
-    return user ? user.fullName || user.name || user.username : technicianId;
+    if (!user) return technicianId;
+
+    const name = user.fullName || user.name || user.username;
+    const code = user.employeeCode;
+    return code ? `${name} (${code})` : name;
   };
 
   const assignTechnician = async (
@@ -1147,6 +1151,9 @@ const IncidentList = () => {
                                 value={tech.userId || tech.id}
                               >
                                 {tech.fullName || tech.name || tech.username}
+                                {tech.employeeCode
+                                  ? ` (${tech.employeeCode})`
+                                  : ""}
                               </Option>
                             ))}
                           </Select>

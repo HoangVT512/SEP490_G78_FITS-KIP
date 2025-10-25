@@ -1497,6 +1497,13 @@ const IncidentManagement = () => {
     return assignedToIdOrName;
   };
 
+  // Helper function to truncate long text with tooltip
+  const truncateText = (text, maxLength = 50) => {
+    if (!text) return "";
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
+  };
+
   const columns = [
     {
       title: "#",
@@ -1573,7 +1580,9 @@ const IncidentManagement = () => {
       ...getColumnSearchProps("issue", "Tìm vấn đề"),
       render: (text) => (
         <Tooltip title={text || " "}>
-          <span>{text || " "}</span>
+          <span className={styles.cellContent}>
+            {truncateText(text, 20) || " "}
+          </span>
         </Tooltip>
       ),
     },
