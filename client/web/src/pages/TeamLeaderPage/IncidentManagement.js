@@ -1184,7 +1184,7 @@ const IncidentManagement = () => {
 
           if (!startTime) {
             message.error(
-              `Sự cố No.${formId}: Vui lòng nhập thời gian bắt đầu!`
+              `Sự cố No.${formId}: Vui lòng nhập thời gian bắt đầu sự cố!`
             );
             setLoading(false);
             return;
@@ -2903,19 +2903,19 @@ const IncidentManagement = () => {
 
                       <Col span={12}>
                         <Form.Item
-                          label="Thời gian bắt đầu"
+                          label="Thời gian bắt đầu sự cố"
                           name={`startTime_${incidentForm.id}`}
                           rules={[
                             {
                               required: true,
-                              message: "Vui lòng nhập thời gian bắt đầu!",
+                              message: "Vui lòng nhập thời gian bắt đầu sự cố!",
                             },
                           ]}
                         >
                           <DatePicker
                             showTime={{ format: "HH:mm:ss" }}
                             format="DD/MM/YYYY HH:mm:ss"
-                            placeholder="Chọn thời gian bắt đầu"
+                            placeholder="Chọn thời gian bắt đầu sự cố"
                             style={{ width: "100%" }}
                           />
                         </Form.Item>
@@ -2923,13 +2923,13 @@ const IncidentManagement = () => {
 
                       <Col span={12}>
                         <Form.Item
-                          label="Thời gian kết thúc"
+                          label="Thời gian kết thúc sự cố"
                           name={`endTime_${incidentForm.id}`}
                         >
                           <DatePicker
                             showTime={{ format: "HH:mm:ss" }}
                             format="DD/MM/YYYY HH:mm:ss"
-                            placeholder="Chọn thời gian kết thúc"
+                            placeholder="Chọn thời gian kết thúc sự cố"
                             style={{ width: "100%" }}
                             onChange={(value) => {
                               const hasEndTime =
@@ -3293,30 +3293,30 @@ const IncidentManagement = () => {
 
                 <Col span={12}>
                   <Form.Item
-                    label="Thời gian bắt đầu"
+                    label="Thời gian bắt đầu sự cố"
                     name="startTime"
                     rules={[
                       {
                         required: true,
-                        message: "Vui lòng nhập thời gian bắt đầu!",
+                        message: "Vui lòng nhập thời gian bắt đầu sự cố!",
                       },
                     ]}
                   >
                     <DatePicker
                       showTime={{ format: "HH:mm:ss" }}
                       format="DD/MM/YYYY HH:mm:ss"
-                      placeholder="Chọn thời gian bắt đầu"
+                      placeholder="Chọn thời gian bắt đầu sự cố"
                       style={{ width: "100%" }}
                     />
                   </Form.Item>
                 </Col>
 
                 <Col span={12}>
-                  <Form.Item label="Thời gian kết thúc" name="endTime">
+                  <Form.Item label="Thời gian kết thúc sự cố" name="endTime">
                     <DatePicker
                       showTime={{ format: "HH:mm:ss" }}
                       format="DD/MM/YYYY HH:mm:ss"
-                      placeholder="Chọn thời gian kết thúc"
+                      placeholder="Chọn thời gian kết thúc sự cố"
                       style={{ width: "100%" }}
                       onChange={(value) => handleEndTimeChange(value)}
                     />
