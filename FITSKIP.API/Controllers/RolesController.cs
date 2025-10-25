@@ -2,6 +2,7 @@ using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using NUnit.Framework;
 
 namespace FITSKIP.API.Controllers
 {
@@ -41,23 +42,33 @@ namespace FITSKIP.API.Controllers
             };
             return Ok(response);
         }
+        // https://localhost:7003/api/roles/{id}
         [HttpDelete]
         [Route("{id}")]
         public async Task<IActionResult> DeleteRole(string id)
         {
-            var role = await roleService.DeleteRoleAsync(id);
-            if (role == null)
+            try
             {
-                return BadRequest(new { message = "Không tìm thấy vai trò với ID: " + id });
+
+
+                var role = await roleService.DeleteRoleAsync(id);
+                if (role == null)
+                {
+                    ;
+                }
+                var response = new RoleDTO
+                {
+                    Id = role.Id,
+                    Name = role.Name,
+                    NormalizedName = role.NormalizedName,
+                    ConcurrencyStamp = role.ConcurrencyStamp
+                };
+                return Ok(response);
             }
-            var response = new RoleDTO
+            catch(Exception ex)
             {
-                Id = role.Id,
-                Name = role.Name,
-                NormalizedName = role.NormalizedName,
-                ConcurrencyStamp = role.ConcurrencyStamp
-            };
-            return Ok(response);
+                return BadRequest(new { success = false, message = $"Error: {ex.Message}" });
+            }
         }
         [HttpPost]
         public async Task<IActionResult> CreateRole([FromBody] CreateRoleRequest request)
@@ -94,7 +105,7 @@ namespace FITSKIP.API.Controllers
             {
                 Id = id,
                 Name = request.Name,
-                NormalizedName = request.Name.ToUpper().Replace(" ", "_"),
+                NormalizedName = request.Name.ToUpper().Replace(" ", " "),
                 ConcurrencyStamp = Guid.NewGuid().ToString()
             };
             var updatedRole = await roleService.UpdateRoleAsync(role);
