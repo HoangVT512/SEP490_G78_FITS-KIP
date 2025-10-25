@@ -11,8 +11,8 @@ public partial class ProductionOutput
     public int ShiftId { get; set; }
     public string SlotTime { get; set; } = null!;
     public int? LoadingTime { get; set; }
-    public string? TargetAmount { get; set; } // "177/377" (sản phẩm tốt/tổng sản phẩm)
-    public string? ResultAmount { get; set; } // "150" (tổng sản phẩm thực tế)
+    public int? TargetAmount { get; set; } // Sản phẩm mục tiêu
+    public int? ResultAmount { get; set; } // Sản phẩm thực tế
     public decimal? OEE { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
