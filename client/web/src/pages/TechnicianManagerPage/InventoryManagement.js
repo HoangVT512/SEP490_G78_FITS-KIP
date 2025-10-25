@@ -55,15 +55,9 @@ const InventoryManagement = () => {
 
   const stats = {
     total: spareParts.length,
-    inStock: spareParts.filter(
-      (p) => p.status === "Đủ hàng" || p.status === "Available"
-    ).length,
-    lowStock: spareParts.filter(
-      (p) => p.status === "Sắp hết" || p.status === "Low Stock"
-    ).length,
-    outOfStock: spareParts.filter(
-      (p) => p.status === "Hết hàng" || p.status === "Out of Stock"
-    ).length,
+    inStock: spareParts.filter((p) => p.status === "Đủ hàng").length,
+    lowStock: spareParts.filter((p) => p.status === "Sắp hết").length,
+    outOfStock: spareParts.filter((p) => p.status === "Hết hàng").length,
   };
 
   const columns = [
@@ -145,17 +139,14 @@ const InventoryManagement = () => {
           // Use explicit status from backend
           switch (status) {
             case "Đủ hàng":
-            case "Available":
               color = "success";
               displayStatus = "Đủ hàng";
               break;
             case "Sắp hết":
-            case "Low Stock":
               color = "warning";
               displayStatus = "Sắp hết";
               break;
             case "Hết hàng":
-            case "Out of Stock":
               color = "error";
               displayStatus = "Hết hàng";
               break;
@@ -381,13 +372,10 @@ const InventoryManagement = () => {
   const getStatusSortOrder = (status) => {
     switch (status) {
       case "Hết hàng":
-      case "Out of Stock":
         return 0; // Highest priority - show first
       case "Sắp hết":
-      case "Low Stock":
         return 1; // Medium priority
       case "Đủ hàng":
-      case "Available":
         return 2; // Low priority - show last
       default:
         return 3;

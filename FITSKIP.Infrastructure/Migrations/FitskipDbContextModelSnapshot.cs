@@ -494,6 +494,15 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<DateTime?>("ReceivedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReceivedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReceivedByNavigationId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<DateTime?>("RejectedAt")
                         .HasColumnType("datetime");
 
@@ -518,6 +527,8 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.HasIndex("ApprovedBy");
 
                     b.HasIndex("PartId");
+
+                    b.HasIndex("ReceivedByNavigationId");
 
                     b.HasIndex("RejectedBy");
 
@@ -1071,6 +1082,10 @@ namespace FITSKIP.Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__PurchaseR__PartI__1332DBDC");
 
+                    b.HasOne("FITSKIP.Domain.Entities.User", "ReceivedByNavigation")
+                        .WithMany()
+                        .HasForeignKey("ReceivedByNavigationId");
+
                     b.HasOne("FITSKIP.Domain.Entities.User", "RejectedByNavigation")
                         .WithMany("PurchaseRequestRejectedByNavigations")
                         .HasForeignKey("RejectedBy")
@@ -1085,6 +1100,8 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("ApprovedByNavigation");
 
                     b.Navigation("Part");
+
+                    b.Navigation("ReceivedByNavigation");
 
                     b.Navigation("RejectedByNavigation");
 

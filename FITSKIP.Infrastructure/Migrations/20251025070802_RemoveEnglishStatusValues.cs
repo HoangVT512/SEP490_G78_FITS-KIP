@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FITSKIP.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddIncidentImagesTable : Migration
+    public partial class RemoveEnglishStatusValues : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -197,12 +197,20 @@ namespace FITSKIP.Infrastructure.Migrations
                     Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true, defaultValue: "Pending"),
                     ApprovedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
                     RejectedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    ReceivedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ApprovedAt = table.Column<DateTime>(type: "datetime", nullable: true),
-                    RejectedAt = table.Column<DateTime>(type: "datetime", nullable: true)
+                    RejectedAt = table.Column<DateTime>(type: "datetime", nullable: true),
+                    ReceivedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReceivedByNavigationId = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Purchase__33A8519A9AC26C34", x => x.RequestID);
+                    table.ForeignKey(
+                        name: "FK_PurchaseRequests_AspNetUsers_ReceivedByNavigationId",
+                        column: x => x.ReceivedByNavigationId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK__PurchaseR__Appro__151B244E",
                         column: x => x.ApprovedBy,
@@ -653,6 +661,11 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "IX_PurchaseRequests_PartID",
                 table: "PurchaseRequests",
                 column: "PartID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PurchaseRequests_ReceivedByNavigationId",
+                table: "PurchaseRequests",
+                column: "ReceivedByNavigationId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PurchaseRequests_RejectedBy",

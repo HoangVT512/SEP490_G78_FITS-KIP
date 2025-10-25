@@ -66,4 +66,14 @@ export const purchaseRequestService = {
     );
     return res?.data || res;
   },
+
+  async markAsReceived(requestId) {
+    const res = await apiRequest(
+      `/PurchaseRequests/${encodeURIComponent(requestId)}/received`,
+      {
+        method: "POST",
+      }
+    );
+    return res?.data || res;
+  },
 };

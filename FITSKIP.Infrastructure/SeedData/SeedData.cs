@@ -1790,7 +1790,7 @@ namespace FITSKIP.Infrastructure.SeedData
             await SeedStages(context);
             await SeedEquipment(context);
             await SeedShifts(context);
-            await SeedSpareParts(context);
+            // await SeedSpareParts(context); // Removed: User will add spare parts via web interface
             await SeedIncidentHistories(context);
             await SeedProductionOutputs(context);
         }

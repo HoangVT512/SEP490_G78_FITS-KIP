@@ -58,6 +58,7 @@ const PurchaseRequestManagement = () => {
     pending: requests.filter((req) => req.status === "Chờ duyệt").length,
     approved: requests.filter((req) => req.status === "Đã duyệt").length,
     rejected: requests.filter((req) => req.status === "Từ chối").length,
+    received: requests.filter((req) => req.status === "Đã nhập").length,
   };
 
   const loadData = async () => {
@@ -153,18 +154,23 @@ const PurchaseRequestManagement = () => {
       key: "status",
       width: 120,
       render: (status) => {
-        let displayStatus;
-        let color = "warning";
-        if (status === "Đã duyệt") {
+        let displayStatus = status;
+        let color = "default";
+
+        if (status === "Chờ duyệt") {
+          displayStatus = "Chờ duyệt";
+          color = "warning";
+        } else if (status === "Đã duyệt") {
           displayStatus = "Đã duyệt";
           color = "success";
         } else if (status === "Từ chối") {
           displayStatus = "Từ chối";
           color = "error";
-        } else {
-          displayStatus = "Chờ duyệt";
-          color = "warning";
+        } else if (status === "Đã nhập") {
+          displayStatus = "Đã nhập";
+          color = "processing";
         }
+
         return <Tag color={color}>{displayStatus}</Tag>;
       },
     },
@@ -186,6 +192,12 @@ const PurchaseRequestManagement = () => {
             label: "Chỉnh sửa",
             disabled: record.status !== "Chờ duyệt",
             onClick: () => handleEditRequest(record),
+          },
+          {
+            key: "received",
+            label: "Đã nhập kho",
+            disabled: record.status !== "Đã duyệt",
+            onClick: () => handleMarkAsReceived(record),
           },
         ];
 
@@ -364,6 +376,36 @@ const PurchaseRequestManagement = () => {
     });
   };
 
+  const handleMarkAsReceived = async (record) => {
+    Modal.confirm({
+      title: "Xác nhận đã nhập kho",
+      content: `Bạn có chắc chắn đã nhập phụ tùng "${record.partName}" vào kho? Số lượng tồn kho sẽ tự động được cập nhật.`,
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      onOk: async () => {
+        setLoading(true);
+        try {
+          await purchaseRequestService.markAsReceived(record.requestId);
+          message.success(
+            "Đã đánh dấu nhập kho thành công! Số lượng tồn kho đã được cập nhật."
+          );
+          // Wait a bit for backend to complete, then refresh
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          await loadData();
+        } catch (error) {
+          console.error("Mark as received error:", error);
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            "Có lỗi xảy ra khi đánh dấu đã nhập kho!";
+          message.error(errorMessage);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+  };
+
   const filteredRequests = requests.filter((req) => {
     const matchSearch =
       req.partNumber.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -503,6 +545,7 @@ const PurchaseRequestManagement = () => {
               <Option value="Chờ duyệt">Chờ duyệt</Option>
               <Option value="Đã duyệt">Đã duyệt</Option>
               <Option value="Từ chối">Từ chối</Option>
+              <Option value="Đã nhập">Đã nhập kho</Option>
             </Select>
           </Col>
         </Row>
@@ -652,6 +695,8 @@ const PurchaseRequestManagement = () => {
                     ? "warning"
                     : selectedRequest.status === "Đã duyệt"
                     ? "success"
+                    : selectedRequest.status === "Đã nhập"
+                    ? "processing"
                     : "error"
                 }
               >
