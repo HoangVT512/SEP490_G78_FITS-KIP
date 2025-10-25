@@ -195,7 +195,7 @@ const InventoryManagement = () => {
       width: 130,
       render: (isActive) => (
         <Tag color={isActive ? "green" : "red"}>
-          {isActive ? "Đang sử dụng" : "Đã xóa"}
+          {isActive ? "Đang sử dụng" : "Ngưng sử dụng"}
         </Tag>
       ),
     },
@@ -221,7 +221,7 @@ const InventoryManagement = () => {
           {
             key: "delete",
             icon: <DeleteOutlined />,
-            label: record.isActive ? "Xóa" : "Khôi phục",
+            label: record.isActive ? "Ngưng sử dụng" : "Khôi phục",
             danger: record.isActive,
             onClick: () => handleDelete(record),
           },
@@ -259,11 +259,11 @@ const InventoryManagement = () => {
 
   const handleDelete = (record) => {
     const isDeleting = record.isActive;
-    const title = isDeleting ? "Xác nhận xóa" : "Xác nhận khôi phục";
+    const title = isDeleting ? "Xác nhận ngưng sử dụng" : "Xác nhận khôi phục";
     const content = isDeleting
-      ? `Bạn có chắc chắn muốn xóa phụ tùng "${record.partName}"?`
+      ? `Bạn có chắc chắn muốn ngưng sử dụng phụ tùng "${record.partName}"?`
       : `Bạn có chắc chắn muốn khôi phục phụ tùng "${record.partName}"?`;
-    const okText = isDeleting ? "Xóa" : "Khôi phục";
+    const okText = isDeleting ? "Ngưng sử dụng" : "Khôi phục";
 
     Modal.confirm({
       title,
@@ -279,7 +279,7 @@ const InventoryManagement = () => {
             await sparePartService.delete(record.partId);
             message.success(
               isDeleting
-                ? "Xóa phụ tùng thành công!"
+                ? "Ngưng sử dụng phụ tùng thành công!"
                 : "Khôi phục phụ tùng thành công!"
             );
             await loadParts();
@@ -377,17 +377,45 @@ const InventoryManagement = () => {
     loadParts();
   }, []);
 
-  const filteredData = spareParts.filter((part) => {
-    const matchSearch =
-      part.partNumber.toLowerCase().includes(searchText.toLowerCase()) ||
-      part.partName.toLowerCase().includes(searchText.toLowerCase());
-    const matchStatus = filterStatus === "all" || part.status === filterStatus;
-    const matchActive =
-      filterActive === "all" ||
-      (filterActive === "active" && part.isActive) ||
-      (filterActive === "inactive" && !part.isActive);
-    return matchSearch && matchStatus && matchActive;
-  });
+  // Helper function to get sort order for status
+  const getStatusSortOrder = (status) => {
+    switch (status) {
+      case "Hết hàng":
+      case "Out of Stock":
+        return 0; // Highest priority - show first
+      case "Sắp hết":
+      case "Low Stock":
+        return 1; // Medium priority
+      case "Đủ hàng":
+      case "Available":
+        return 2; // Low priority - show last
+      default:
+        return 3;
+    }
+  };
+
+  const filteredData = spareParts
+    .filter((part) => {
+      const matchSearch =
+        part.partNumber.toLowerCase().includes(searchText.toLowerCase()) ||
+        part.partName.toLowerCase().includes(searchText.toLowerCase());
+      const matchStatus =
+        filterStatus === "all" || part.status === filterStatus;
+      const matchActive =
+        filterActive === "all" ||
+        (filterActive === "active" && part.isActive) ||
+        (filterActive === "inactive" && !part.isActive);
+      return matchSearch && matchStatus && matchActive;
+    })
+    .sort((a, b) => {
+      // Sort by status first (out of stock first, then low stock, then in stock)
+      const statusOrderDiff =
+        getStatusSortOrder(a.status) - getStatusSortOrder(b.status);
+      if (statusOrderDiff !== 0) return statusOrderDiff;
+
+      // If same status, sort by part name
+      return (a.partName || "").localeCompare(b.partName || "", "vi");
+    });
 
   // Get list of low stock and out of stock spare parts for alerts
   const getLowStockAlerts = () => {
