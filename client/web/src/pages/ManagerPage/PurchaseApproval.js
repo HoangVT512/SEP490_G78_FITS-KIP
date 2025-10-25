@@ -30,6 +30,7 @@ import {
 import dayjs from "dayjs";
 import styles from "../../styles/pages/PurchaseApproval.module.css";
 import { purchaseRequestService } from "../../services/purchaseRequestService";
+import { sparePartService } from "../../services/sparePartService";
 import signalRService from "../../services/signalRService";
 
 const { TextArea } = Input;
@@ -42,6 +43,7 @@ const PurchaseApproval = () => {
   const [approveModalVisible, setApproveModalVisible] = useState(false);
   const [rejectModalVisible, setRejectModalVisible] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState(null);
+  const [selectedPartDetails, setSelectedPartDetails] = useState(null);
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("Chờ duyệt");
@@ -214,9 +216,20 @@ const PurchaseApproval = () => {
     },
   ];
 
-  const handleViewDetail = (record) => {
+  const handleViewDetail = async (record) => {
     setSelectedRequest(record);
     setDetailModalVisible(true);
+
+    // Load spare part details to show inventory status
+    if (record.partId) {
+      try {
+        const partDetails = await sparePartService.getById(record.partId);
+        setSelectedPartDetails(partDetails);
+      } catch (error) {
+        console.error("Error loading spare part details:", error);
+        setSelectedPartDetails(null);
+      }
+    }
   };
 
   const handleApproveClick = (record) => {
@@ -382,10 +395,20 @@ const PurchaseApproval = () => {
           selectedRequest?.requestId
         ).padStart(3, "0")}`}
         open={detailModalVisible}
-        onCancel={() => setDetailModalVisible(false)}
+        onCancel={() => {
+          setDetailModalVisible(false);
+          setSelectedPartDetails(null);
+        }}
         footer={
           <Space>
-            <Button onClick={() => setDetailModalVisible(false)}>Đóng</Button>
+            <Button
+              onClick={() => {
+                setDetailModalVisible(false);
+                setSelectedPartDetails(null);
+              }}
+            >
+              Đóng
+            </Button>
             {selectedRequest?.status === "Chờ duyệt" && (
               <>
                 <Button
@@ -449,9 +472,62 @@ const PurchaseApproval = () => {
             <Descriptions.Item label="Tên phụ tùng" span={1}>
               {selectedRequest.partName}
             </Descriptions.Item>
-            <Descriptions.Item label="Số lượng" span={1}>
-              {selectedRequest.quantity}
+            <Descriptions.Item label="Số lượng yêu cầu" span={1}>
+              <span
+                style={{
+                  fontSize: "16px",
+                  fontWeight: "600",
+                  color: "#1890ff",
+                }}
+              >
+                {selectedRequest.quantity}
+              </span>
             </Descriptions.Item>
+            {selectedPartDetails && (
+              <>
+                <Descriptions.Item label="Số lượng tồn kho" span={1}>
+                  <span
+                    style={{
+                      fontSize: "16px",
+                      fontWeight: "600",
+                      color:
+                        selectedPartDetails.quantity === 0
+                          ? "#ff4d4f"
+                          : selectedPartDetails.quantity <
+                            selectedPartDetails.minQuantity
+                          ? "#faad14"
+                          : "#52c41a",
+                    }}
+                  >
+                    {selectedPartDetails.quantity}
+                  </span>
+                </Descriptions.Item>
+                <Descriptions.Item label="Trạng thái kho" span={1}>
+                  <Tag
+                    color={
+                      selectedPartDetails.status === "Hết hàng" ||
+                      selectedPartDetails.status === "Out of Stock"
+                        ? "error"
+                        : selectedPartDetails.status === "Sắp hết" ||
+                          selectedPartDetails.status === "Low Stock"
+                        ? "warning"
+                        : "success"
+                    }
+                  >
+                    {selectedPartDetails.status}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="Số lượng tối thiểu" span={1}>
+                  {selectedPartDetails.minQuantity || 0}
+                </Descriptions.Item>
+                <Descriptions.Item label="Số lượng tối đa" span={1}>
+                  {selectedPartDetails.maxQuantity || 0}
+                </Descriptions.Item>
+                <Descriptions.Item label="Đơn vị tính" span={1}>
+                  {selectedPartDetails.unit || "-"}
+                </Descriptions.Item>
+              </>
+            )}
             <Descriptions.Item label="Người yêu cầu" span={1}>
               {selectedRequest.requestedBy}
             </Descriptions.Item>
