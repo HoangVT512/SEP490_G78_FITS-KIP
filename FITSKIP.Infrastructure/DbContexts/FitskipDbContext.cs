@@ -25,6 +25,8 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
     public virtual DbSet<IncidentShift> IncidentShifts { get; set; }
 
+    public virtual DbSet<IncidentImage> IncidentImages { get; set; }
+
     public virtual DbSet<Line> Lines { get; set; }
 
     public virtual DbSet<Notification> Notifications { get; set; }
@@ -164,6 +166,27 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .WithOne(e => e.Incident)
                 .HasForeignKey(e => e.IncidentId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Relationship to IncidentImages
+            entity.HasMany(d => d.IncidentImages)
+                .WithOne(e => e.Incident)
+                .HasForeignKey(e => e.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<IncidentImage>(entity =>
+        {
+            entity.HasKey(e => e.ImageId).HasName("PK__Incident__7516F4EC");
+
+            entity.ToTable("IncidentImages");
+
+            entity.Property(e => e.ImageId).HasColumnName("ImageID");
+            entity.Property(e => e.IncidentId).HasColumnName("IncidentID");
+            entity.Property(e => e.ImageUrl).HasMaxLength(1000).IsRequired();
+            entity.Property(e => e.OrderIndex).HasDefaultValue(0);
+            entity.Property(e => e.UploadedAt).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
+
+            // Relationship to IncidentHistory is already configured above
         });
 
         modelBuilder.Entity<Line>(entity =>

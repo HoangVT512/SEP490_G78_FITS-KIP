@@ -589,6 +589,10 @@ const IncidentManagement = () => {
           reason: it.reason || it.Reason || null,
           solution: it.solution || it.Solution || null,
           imageUrl: it.imageUrl || it.ImageUrl || null,
+          imageUrls:
+            it.incidentImages?.map((img) => img.imageUrl) ||
+            it.IncidentImages?.map((img) => img.ImageUrl) ||
+            (it.imageUrl ? [it.imageUrl] : []), // Fallback to single image as array
           category: it.category || it.Category || it.type?.typeName || null,
           downtime: downtime,
           impact: it.impact || it.Impact || null,
@@ -739,9 +743,27 @@ const IncidentManagement = () => {
     setFormChanged(false); // Reset form changed state
     setManualDurationFields(new Set()); // Reset manual duration tracking for edit mode
 
-    // Reset image states
-    setImageFileList({});
-    setUploadedImageUrls({});
+    // Load existing images from record
+    const existingImageUrls =
+      record.imageUrls || (record.imageUrl ? [record.imageUrl] : []);
+
+    // Set uploaded image URLs
+    setUploadedImageUrls({
+      edit: existingImageUrls,
+    });
+
+    // Create fileList from existing images for display
+    const existingFileList = existingImageUrls.map((url, index) => ({
+      uid: `existing-${index}`,
+      name: `image-${index + 1}.png`,
+      status: "done",
+      url: url,
+      thumbUrl: url,
+    }));
+
+    setImageFileList({
+      edit: existingFileList,
+    });
 
     // Find the equipment to pre-select it
     const equipment = equipments.find(
@@ -918,17 +940,24 @@ const IncidentManagement = () => {
     setDetailModalVisible(true);
   };
 
-  // Handle image upload
+  // Handle image upload - supports multiple images (up to 5)
   const handleImageUpload = async (file, formId = "edit") => {
     try {
       setUploadingImage(true);
       const imageUrl = await incidentService.uploadImage(file);
 
-      // Store the uploaded URL
-      setUploadedImageUrls((prev) => ({
-        ...prev,
-        [formId]: imageUrl,
-      }));
+      // Store the uploaded URL in array format
+      setUploadedImageUrls((prev) => {
+        const existingUrls = prev[formId] || [];
+        const updatedUrls = Array.isArray(existingUrls)
+          ? [...existingUrls, imageUrl]
+          : [imageUrl];
+
+        return {
+          ...prev,
+          [formId]: updatedUrls.slice(0, 5), // Limit to 5 images
+        };
+      });
 
       // Mark form as changed so submit button is enabled in edit mode
       setFormChanged(true);
@@ -948,7 +977,8 @@ const IncidentManagement = () => {
   const getUploadProps = (formId = "edit") => ({
     name: "file",
     listType: "picture",
-    maxCount: 1,
+    maxCount: 5,
+    multiple: true, // Allow selecting multiple files at once
     accept: "image/*",
     beforeUpload: async (file) => {
       // Validate file type
@@ -981,16 +1011,33 @@ const IncidentManagement = () => {
         [formId]: fileList,
       }));
     },
-    onRemove: () => {
-      setUploadedImageUrls((prev) => {
-        const newUrls = { ...prev };
-        delete newUrls[formId];
-        return newUrls;
-      });
+    onRemove: (file) => {
+      // Mark form as changed
+      setFormChanged(true);
+
+      // Remove the specific image URL from the array
+      const fileIndex = imageFileList[formId]?.indexOf(file);
+      if (fileIndex !== undefined && fileIndex >= 0) {
+        setUploadedImageUrls((prev) => {
+          const currentUrls = prev[formId] || [];
+          const newUrls = Array.isArray(currentUrls)
+            ? currentUrls.filter((_, index) => index !== fileIndex)
+            : [];
+
+          return {
+            ...prev,
+            [formId]: newUrls.length > 0 ? newUrls : null,
+          };
+        });
+      }
+
       setImageFileList((prev) => {
-        const newList = { ...prev };
-        delete newList[formId];
-        return newList;
+        const currentList = prev[formId] || [];
+        const newList = currentList.filter((f) => f.uid !== file.uid);
+        return {
+          ...prev,
+          [formId]: newList,
+        };
       });
     },
   });
@@ -1089,8 +1136,8 @@ const IncidentManagement = () => {
             ? { reportedByUserId: values.reporter }
             : {}),
           isTechSupport: values.isTechSupport || false,
-          imageUrl:
-            uploadedImageUrls["edit"] || selectedIncident.imageUrl || null,
+          imageUrls:
+            uploadedImageUrls["edit"] || selectedIncident.imageUrls || null,
         };
 
         const id =
@@ -1165,7 +1212,7 @@ const IncidentManagement = () => {
             reportedByUserId:
               reporter || currentUser?.id || currentUser?.userId || null, // Fallback to current user
             isTechSupport: isTechSupport || false,
-            imageUrl: uploadedImageUrls[formId] || null,
+            imageUrls: uploadedImageUrls[formId] || null, // Send array of image URLs
           };
 
           console.log(`Payload for incident No.${formId}:`, payload);
@@ -1176,6 +1223,7 @@ const IncidentManagement = () => {
         try {
           console.log("Creating bulk incidents:", incidentsToCreate);
           const response = await incidentService.createBulk(incidentsToCreate);
+          console.log("Bulk create response:", response);
 
           if (response.successCount > 0) {
             message.success(
@@ -2294,7 +2342,9 @@ const IncidentManagement = () => {
                         {selectedIncident.solution || "Chưa có giải pháp"}
                       </div>
                     </Col>
-                    {selectedIncident.imageUrl && (
+                    {(selectedIncident.imageUrl ||
+                      (selectedIncident.imageUrls &&
+                        selectedIncident.imageUrls.length > 0)) && (
                       <Col span={24}>
                         <div
                           style={{
@@ -2312,21 +2362,45 @@ const IncidentManagement = () => {
                             backgroundColor: "#fafafa",
                             borderRadius: "6px",
                             border: "1px solid #f0f0f0",
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: "12px",
                           }}
                         >
-                          <img
-                            src={selectedIncident.imageUrl}
-                            alt="Hình ảnh sự cố"
-                            style={{
-                              maxWidth: "100%",
-                              maxHeight: "400px",
-                              borderRadius: "4px",
-                              cursor: "pointer",
-                            }}
-                            onClick={() =>
-                              window.open(selectedIncident.imageUrl, "_blank")
-                            }
-                          />
+                          {selectedIncident.imageUrls &&
+                          selectedIncident.imageUrls.length > 0 ? (
+                            // Display multiple images
+                            selectedIncident.imageUrls.map((url, index) => (
+                              <img
+                                key={index}
+                                src={url}
+                                alt={`Hình ảnh sự cố ${index + 1}`}
+                                style={{
+                                  maxWidth: "200px",
+                                  maxHeight: "200px",
+                                  borderRadius: "4px",
+                                  cursor: "pointer",
+                                  objectFit: "cover",
+                                }}
+                                onClick={() => window.open(url, "_blank")}
+                              />
+                            ))
+                          ) : (
+                            // Display single image (backward compatibility)
+                            <img
+                              src={selectedIncident.imageUrl}
+                              alt="Hình ảnh sự cố"
+                              style={{
+                                maxWidth: "100%",
+                                maxHeight: "400px",
+                                borderRadius: "4px",
+                                cursor: "pointer",
+                              }}
+                              onClick={() =>
+                                window.open(selectedIncident.imageUrl, "_blank")
+                              }
+                            />
+                          )}
                         </div>
                       </Col>
                     )}

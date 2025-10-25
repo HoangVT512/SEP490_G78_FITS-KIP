@@ -20,6 +20,7 @@ namespace FITSKIP.Domain.DTO
         public string? Solution { get; set; }
         public string? Issue { get; set; }
         public string? ImageUrl { get; set; }
+        public List<string>? ImageUrls { get; set; } // Multiple image URLs
         public DateTime CreatedDate { get; set; }
         public bool IsTechSupport { get; set; }
     }
@@ -60,7 +61,8 @@ namespace FITSKIP.Domain.DTO
         public bool IsTechSupport { get; set; } = false;
 
         // File upload properties - will be handled separately in controller
-        public string? ImageUrl { get; set; } // This will be set after file upload
+        public string? ImageUrl { get; set; } // Single image URL (backward compatibility)
+        public List<string>? ImageUrls { get; set; } // Multiple image URLs (up to 5)
         public IFormFile? ImageFile { get; set; } // File to upload
     }
 
@@ -127,7 +129,8 @@ namespace FITSKIP.Domain.DTO
         public bool IsTechSupport { get; set; } = false;
 
         // File upload properties - will be handled separately in controller
-        public string? ImageUrl { get; set; } // This will be set after file upload
+        public string? ImageUrl { get; set; } // Single image URL (backward compatibility)
+        public List<string>? ImageUrls { get; set; } // Multiple image URLs (up to 5)
         public IFormFile? ImageFile { get; set; } // File to upload
     }
 

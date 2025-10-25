@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FITSKIP.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class AddLineCodeAndUpdateShifts : Migration
+    public partial class AddIncidentImagesTable : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -460,6 +460,28 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "IncidentImages",
+                columns: table => new
+                {
+                    ImageID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IncidentID = table.Column<int>(type: "int", nullable: false),
+                    ImageUrl = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    OrderIndex = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    UploadedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Incident__7516F4EC", x => x.ImageID);
+                    table.ForeignKey(
+                        name: "FK_IncidentImages_IncidentHistory_IncidentID",
+                        column: x => x.IncidentID,
+                        principalTable: "IncidentHistory",
+                        principalColumn: "IncidentID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "IncidentShifts",
                 columns: table => new
                 {
@@ -571,6 +593,11 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "IX_IncidentHistory_TypeID",
                 table: "IncidentHistory",
                 column: "TypeID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_IncidentImages_IncidentID",
+                table: "IncidentImages",
+                column: "IncidentID");
 
             migrationBuilder.CreateIndex(
                 name: "IX_IncidentShifts_IncidentID",
@@ -689,6 +716,9 @@ namespace FITSKIP.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
+
+            migrationBuilder.DropTable(
+                name: "IncidentImages");
 
             migrationBuilder.DropTable(
                 name: "IncidentShifts");

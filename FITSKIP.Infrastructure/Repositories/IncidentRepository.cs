@@ -25,6 +25,7 @@ public class IncidentRepository : IIncidentRepository
             .Include(i => i.ReportedByUser)
             .Include(i => i.IncidentShifts)
                 .ThenInclude(ishft => ishft.Shift)
+            .Include(i => i.IncidentImages) // Load incident images
             .OrderByDescending(i => i.CreatedDate)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
@@ -41,6 +42,7 @@ public class IncidentRepository : IIncidentRepository
             .Include(i => i.ReportedByUser)
             .Include(i => i.IncidentShifts)
                 .ThenInclude(ishft => ishft.Shift)
+            .Include(i => i.IncidentImages) // Load incident images
             .FirstOrDefaultAsync(i => i.IncidentId == id, cancellationToken);
     }
 
@@ -82,6 +84,20 @@ public class IncidentRepository : IIncidentRepository
     public async Task<IncidentHistory?> UpdateAsync(IncidentHistory incident, CancellationToken cancellationToken = default)
     {
         _context.IncidentHistories.Update(incident);
+
+        // Ensure IncidentImages collection is tracked and saved
+        if (incident.IncidentImages != null && incident.IncidentImages.Any())
+        {
+            foreach (var image in incident.IncidentImages)
+            {
+                // If ImageId is 0, it's a new image - add it
+                if (image.ImageId == 0)
+                {
+                    _context.Entry(image).State = EntityState.Added;
+                }
+            }
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
 
         // Load related entities after updating
@@ -111,6 +127,11 @@ public class IncidentRepository : IIncidentRepository
             .Collection(i => i.IncidentShifts)
             .LoadAsync(cancellationToken);
 
+        // Load IncidentImages collection
+        await _context.Entry(incident)
+            .Collection(i => i.IncidentImages)
+            .LoadAsync(cancellationToken);
+
         return incident;
     }
 
@@ -134,6 +155,7 @@ public class IncidentRepository : IIncidentRepository
             .Include(i => i.Line)
             .Include(i => i.Type)
             .Include(i => i.IncidentShifts)
+            .Include(i => i.IncidentImages) // Load incident images
             .Where(i => i.StartTime >= startDate && i.StartTime <= endDate)
             .OrderByDescending(i => i.CreatedDate)
             .AsNoTracking()
@@ -149,6 +171,7 @@ public class IncidentRepository : IIncidentRepository
             .Include(i => i.Line)
             .Include(i => i.Type)
             .Include(i => i.IncidentShifts)
+            .Include(i => i.IncidentImages) // Load incident images
             .Where(i =>
                 // Include incidents with direct LineId
                 (i.LineId == lineId) ||

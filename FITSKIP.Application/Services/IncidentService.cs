@@ -116,6 +116,13 @@ public class IncidentService : IIncidentService
             duration = CalculateAdjustedDuration(startTime, request.EndTime.Value, rawDuration);
         }
 
+        // Set ImageUrl to first image for backward compatibility
+        string? primaryImageUrl = request.ImageUrl;
+        if (request.ImageUrls != null && request.ImageUrls.Count > 0)
+        {
+            primaryImageUrl = request.ImageUrls[0]; // Use first image as primary
+        }
+
         var incident = new IncidentHistory
         {
             EquipmentId = request.EquipmentId,
@@ -127,7 +134,7 @@ public class IncidentService : IIncidentService
             Issue = request.Issue?.Trim(),
             Reason = request.Reason?.Trim(),
             Solution = request.Solution?.Trim(),
-            ImageUrl = request.ImageUrl, // Store the uploaded image URL
+            ImageUrl = primaryImageUrl, // Store the first image URL for backward compatibility
             Status = request.EndTime.HasValue ? "Hoàn thành" : "Chờ xử lý",
             CreatedDate = DateTime.Now,
             ReportedByUserId = request.ReportedByUserId,
@@ -135,6 +142,31 @@ public class IncidentService : IIncidentService
         };
 
         var createdIncident = await _incidentRepository.CreateAsync(incident, cancellationToken);
+
+        // Create IncidentImage records if multiple images provided
+        if (request.ImageUrls != null && request.ImageUrls.Count > 0)
+        {
+            Console.WriteLine($"[CreateIncidentAsync] Creating {request.ImageUrls.Count} image records for incident {createdIncident.IncidentId}");
+            for (int i = 0; i < Math.Min(request.ImageUrls.Count, 5); i++) // Max 5 images
+            {
+                var incidentImage = new IncidentImage
+                {
+                    IncidentId = createdIncident.IncidentId,
+                    ImageUrl = request.ImageUrls[i],
+                    OrderIndex = i,
+                    UploadedAt = DateTime.Now
+                };
+                createdIncident.IncidentImages.Add(incidentImage);
+                Console.WriteLine($"[CreateIncidentAsync] Added image {i}: {request.ImageUrls[i]}");
+            }
+            // Save the incident images
+            await _incidentRepository.UpdateAsync(createdIncident, cancellationToken);
+            Console.WriteLine($"[CreateIncidentAsync] Saved {createdIncident.IncidentImages.Count} images to database");
+        }
+        else
+        {
+            Console.WriteLine($"[CreateIncidentAsync] No imageUrls provided");
+        }
 
         // Tự động tạo IncidentShift records nếu có endtime
         if (request.EndTime.HasValue)
@@ -247,7 +279,7 @@ public class IncidentService : IIncidentService
                     Issue = incidentRequest.Issue?.Trim(),
                     Reason = incidentRequest.Reason?.Trim(),
                     Solution = incidentRequest.Solution?.Trim(),
-                    ImageUrl = incidentRequest.ImageUrl, // Store the uploaded image URL
+                    ImageUrl = incidentRequest.ImageUrls?.FirstOrDefault() ?? incidentRequest.ImageUrl, // Use first image from array or fallback to single imageUrl
                     Status = incidentRequest.EndTime.HasValue ? "Hoàn thành" : "Chờ xử lý",
                     CreatedDate = DateTime.Now,
                     ReportedByUserId = incidentRequest.ReportedByUserId,
@@ -255,6 +287,27 @@ public class IncidentService : IIncidentService
                 };
 
                 var createdIncident = await _incidentRepository.CreateAsync(incident, cancellationToken);
+
+                // Create IncidentImage records if multiple images provided
+                if (incidentRequest.ImageUrls != null && incidentRequest.ImageUrls.Count > 0)
+                {
+                    Console.WriteLine($"[Bulk CreateIncidentAsync] Creating {incidentRequest.ImageUrls.Count} image records for incident {createdIncident.IncidentId}");
+                    for (int j = 0; j < Math.Min(incidentRequest.ImageUrls.Count, 5); j++) // Max 5 images
+                    {
+                        var incidentImage = new IncidentImage
+                        {
+                            IncidentId = createdIncident.IncidentId,
+                            ImageUrl = incidentRequest.ImageUrls[j],
+                            OrderIndex = j,
+                            UploadedAt = DateTime.Now
+                        };
+                        createdIncident.IncidentImages.Add(incidentImage);
+                        Console.WriteLine($"[Bulk CreateIncidentAsync] Added image {j}: {incidentRequest.ImageUrls[j]}");
+                    }
+                    // Save the incident images
+                    await _incidentRepository.UpdateAsync(createdIncident, cancellationToken);
+                    Console.WriteLine($"[Bulk CreateIncidentAsync] Saved {createdIncident.IncidentImages.Count} images to database");
+                }
 
                 // Tự động tạo IncidentShift records nếu có endtime
                 if (incidentRequest.EndTime.HasValue)
@@ -405,7 +458,45 @@ public class IncidentService : IIncidentService
         existingIncident.Issue = request.Issue?.Trim();
         existingIncident.Reason = request.Reason?.Trim(); // Có thể null
         existingIncident.Solution = request.Solution?.Trim(); // Có thể null
-        existingIncident.ImageUrl = request.ImageUrl; // Update the image URL
+
+        // Update images - handle both single and multiple images
+        string? primaryImageUrl = request.ImageUrl;
+        if (request.ImageUrls != null && request.ImageUrls.Count > 0)
+        {
+            primaryImageUrl = request.ImageUrls[0]; // Use first image as primary
+        }
+        existingIncident.ImageUrl = primaryImageUrl; // Update the primary image URL for backward compatibility
+
+        // Update IncidentImages collection
+        if (request.ImageUrls != null && request.ImageUrls.Count > 0)
+        {
+            Console.WriteLine($"[UpdateIncidentAsync] Updating {request.ImageUrls.Count} image records for incident {id}");
+
+            // Clear existing images
+            existingIncident.IncidentImages.Clear();
+
+            // Add new images
+            for (int i = 0; i < Math.Min(request.ImageUrls.Count, 5); i++) // Max 5 images
+            {
+                var incidentImage = new IncidentImage
+                {
+                    IncidentId = existingIncident.IncidentId,
+                    ImageUrl = request.ImageUrls[i],
+                    OrderIndex = i,
+                    UploadedAt = DateTime.Now
+                };
+                existingIncident.IncidentImages.Add(incidentImage);
+                Console.WriteLine($"[UpdateIncidentAsync] Added image {i}: {request.ImageUrls[i]}");
+            }
+            Console.WriteLine($"[UpdateIncidentAsync] Updated {existingIncident.IncidentImages.Count} images");
+        }
+        else if (request.ImageUrls != null && request.ImageUrls.Count == 0)
+        {
+            // If imageUrls is empty array, clear all images
+            Console.WriteLine($"[UpdateIncidentAsync] Clearing all images for incident {id}");
+            existingIncident.IncidentImages.Clear();
+            existingIncident.ImageUrl = null;
+        }
 
         // Update status if provided
         if (!string.IsNullOrEmpty(request.Status))

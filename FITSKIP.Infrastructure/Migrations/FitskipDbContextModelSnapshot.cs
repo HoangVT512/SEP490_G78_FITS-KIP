@@ -184,6 +184,42 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.ToTable("IncidentHistory", (string)null);
                 });
 
+            modelBuilder.Entity("FITSKIP.Domain.Entities.IncidentImage", b =>
+                {
+                    b.Property<int>("ImageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("ImageID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ImageId"));
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("IncidentId")
+                        .HasColumnType("int")
+                        .HasColumnName("IncidentID");
+
+                    b.Property<int>("OrderIndex")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime>("UploadedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.HasKey("ImageId")
+                        .HasName("PK__Incident__7516F4EC");
+
+                    b.HasIndex("IncidentId");
+
+                    b.ToTable("IncidentImages", (string)null);
+                });
+
             modelBuilder.Entity("FITSKIP.Domain.Entities.IncidentShift", b =>
                 {
                     b.Property<int>("IncidentShiftId")
@@ -923,6 +959,17 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("Type");
                 });
 
+            modelBuilder.Entity("FITSKIP.Domain.Entities.IncidentImage", b =>
+                {
+                    b.HasOne("FITSKIP.Domain.Entities.IncidentHistory", "Incident")
+                        .WithMany("IncidentImages")
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Incident");
+                });
+
             modelBuilder.Entity("FITSKIP.Domain.Entities.IncidentShift", b =>
                 {
                     b.HasOne("FITSKIP.Domain.Entities.IncidentHistory", "Incident")
@@ -1136,6 +1183,8 @@ namespace FITSKIP.Infrastructure.Migrations
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.IncidentHistory", b =>
                 {
+                    b.Navigation("IncidentImages");
+
                     b.Navigation("IncidentShifts");
                 });
 
