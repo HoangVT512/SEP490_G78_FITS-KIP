@@ -1046,6 +1046,25 @@ const IncidentManagement = () => {
     try {
       setLoading(true);
 
+      // Validate duration against actual time difference
+      if (values.startTime && values.endTime && values.duration) {
+        const startTime = dayjs(values.startTime);
+        const endTime = dayjs(values.endTime);
+        const actualDuration = calculateAdjustedDuration(startTime, endTime);
+
+        if (values.duration > actualDuration) {
+          message.error(
+            `Thời lượng (${
+              values.duration
+            } phút) không được lớn hơn thời gian thực tế (${
+              Math.round(actualDuration * 100) / 100
+            } phút)!`
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
       if (isEditMode) {
         // Edit mode - determine status with business rules
         const hasEndTime = values.endTime && dayjs(values.endTime).isValid();
@@ -1188,6 +1207,26 @@ const IncidentManagement = () => {
             );
             setLoading(false);
             return;
+          }
+
+          // Validate duration against actual time difference
+          if (startTime && endTime && duration) {
+            const startTimeObj = dayjs(startTime);
+            const endTimeObj = dayjs(endTime);
+            const actualDuration = calculateAdjustedDuration(
+              startTimeObj,
+              endTimeObj
+            );
+
+            if (duration > actualDuration) {
+              message.error(
+                `Sự cố No.${formId}: Thời lượng (${duration} phút) không được lớn hơn thời gian thực tế (${
+                  Math.round(actualDuration * 100) / 100
+                } phút)!`
+              );
+              setLoading(false);
+              return;
+            }
           }
 
           // Determine status
