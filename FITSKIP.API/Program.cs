@@ -122,6 +122,13 @@ namespace FITSKIP.API
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IDashboardService, FITSKIP.Application.Services.DashboardService>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IShiftRepository, FITSKIP.Infrastructure.Repositories.ShiftRepository>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IDashboardRepository, FITSKIP.Infrastructure.Repositories.DashboardRepository>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IProductionOutputRepository, FITSKIP.Infrastructure.Repositories.ProductionOutputRepository>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IProductionOutputService, FITSKIP.Application.Services.ProductionOutputService>();
+
+            // Maintenance services
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IMaintenancePlanRepository, FITSKIP.Infrastructure.Repositories.MaintenancePlanRepository>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IMaintenanceChecklistItemRepository, FITSKIP.Infrastructure.Repositories.MaintenanceChecklistItemRepository>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IMaintenanceService, FITSKIP.Application.Services.MaintenanceService>();
 
             // Import Excel service
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IExcelImportService,

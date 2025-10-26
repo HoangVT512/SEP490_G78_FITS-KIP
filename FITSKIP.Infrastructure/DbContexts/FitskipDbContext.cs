@@ -253,9 +253,9 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.ShiftId).HasColumnName("ShiftID");
             entity.Property(e => e.Date).HasColumnType("datetime");
             entity.Property(e => e.SlotTime).HasMaxLength(50);
-            entity.Property(e => e.LoadingTime).HasColumnType("decimal(10, 2)");
-            entity.Property(e => e.TargetAmount).HasMaxLength(50);
-            entity.Property(e => e.ResultAmount).HasMaxLength(50);
+            entity.Property(e => e.LoadingTime).HasColumnType("int");
+            entity.Property(e => e.TargetAmount).HasColumnType("int");
+            entity.Property(e => e.ResultAmount).HasColumnType("int");
             entity.Property(e => e.OEE).HasColumnType("decimal(5, 2)");
             entity.Property(e => e.CreatedAt).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");

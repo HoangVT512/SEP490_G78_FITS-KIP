@@ -4,6 +4,7 @@ using FITSKIP.Infrastructure.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,16 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    partial class FitskipDbContextModelSnapshot : ModelSnapshot
+<<<<<<<< HEAD:FITSKIP.Infrastructure/Migrations/20251025161421_UpdateProductionOutputToInt.Designer.cs
+    [Migration("20251025161421_UpdateProductionOutputToInt")]
+    partial class UpdateProductionOutputToInt
+========
+    [Migration("20251026112236_InitialCreate")]
+    partial class InitialCreate
+>>>>>>>> origin/trongvd/maintaincePlan_otpForgotPass:FITSKIP.Infrastructure/Migrations/20251026112236_InitialCreate.Designer.cs
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
