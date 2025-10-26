@@ -12,8 +12,13 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
+<<<<<<<< HEAD:FITSKIP.Infrastructure/Migrations/20251025161421_UpdateProductionOutputToInt.Designer.cs
     [Migration("20251025161421_UpdateProductionOutputToInt")]
     partial class UpdateProductionOutputToInt
+========
+    [Migration("20251026112236_InitialCreate")]
+    partial class InitialCreate
+>>>>>>>> origin/trongvd/maintaincePlan_otpForgotPass:FITSKIP.Infrastructure/Migrations/20251026112236_InitialCreate.Designer.cs
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
