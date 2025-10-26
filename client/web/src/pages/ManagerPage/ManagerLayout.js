@@ -50,6 +50,7 @@ import NotificationsList from "./NotificationsList";
 import FactoryMap from "./FactoryMap";
 import OEEDashboard from "./OEEDashboard";
 import DowntimeChartDashboard from "./DowntimeChartDashboard";
+import OEE from "./OEE";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -109,11 +110,10 @@ const ManagerLayout = () => {
 
           // Hiển thị message toast (LUÔN LUÔN hiển thị)
           antdMessage.success({
-            content: `🔔 ${
-              notificationData.title ||
+            content: `🔔 ${notificationData.title ||
               notificationData.message ||
               "Bạn có thông báo mới"
-            }`,
+              }`,
             duration: 5,
           });
 
@@ -146,11 +146,10 @@ const ManagerLayout = () => {
 
           // Hiển thị message toast
           antdMessage.info({
-            content: `📢 ${
-              broadcastData.title ||
+            content: `📢 ${broadcastData.title ||
               broadcastData.message ||
               "Thông báo hệ thống mới"
-            }`,
+              }`,
             duration: 5,
           });
 
@@ -214,6 +213,8 @@ const ManagerLayout = () => {
       setSelectedKey("oee-dashboard");
     } else if (path.includes("/downtime-chart")) {
       setSelectedKey("downtime-chart");
+    } else if (path.includes("/oee")) {
+      setSelectedKey("oee");
     } else if (path.includes("/incidents")) {
       setSelectedKey("incidents");
     } else {
@@ -245,6 +246,9 @@ const ManagerLayout = () => {
       return <OEEDashboard />;
     } else if (path.includes("/downtime-chart")) {
       return <DowntimeChartDashboard />;
+    } else if (path.includes("/oee")) {
+      // Return null for OEE - it will be rendered in fullscreen mode
+      return null;
     } else if (path.includes("/incidents")) {
       return <ManagerIncidentList />;
     } else if (path === "/manager" || path.includes("/dashboard")) {
@@ -275,6 +279,11 @@ const ManagerLayout = () => {
       key: "downtime-chart",
       icon: <FundOutlined />,
       label: "Biểu đồ thời gian ngừng",
+    },
+    {
+      key: "oee",
+      icon: <FundOutlined />,
+      label: "OEE",
     },
     {
       key: "purchase-approval",
@@ -332,6 +341,10 @@ const ManagerLayout = () => {
         break;
       case "downtime-chart":
         navigate("/manager/downtime-chart");
+        break;
+      case "oee":
+        // Mở OEE trong tab mới
+        window.open("/manager/oee", "_blank");
         break;
       case "purchase-approval":
         navigate("/manager/purchase-approval");
@@ -448,6 +461,20 @@ const ManagerLayout = () => {
     border: "none",
     fontSize: "14px",
   };
+
+  // Check if current page is OEE fullscreen
+  const isOEEFullscreen = location.pathname.includes("manager/oee");
+
+  // If OEE fullscreen, render without sidebar and header
+  if (isOEEFullscreen) {
+    return (
+      <App>
+        <div style={{ height: '100vh', overflow: 'hidden', position: 'relative' }}>
+          <OEE />
+        </div>
+      </App>
+    );
+  }
 
   return (
     <App>
