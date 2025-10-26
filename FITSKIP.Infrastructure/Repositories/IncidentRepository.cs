@@ -174,12 +174,13 @@ public class IncidentRepository : IIncidentRepository
             .Include(i => i.IncidentImages) // Load incident images
             .Where(i =>
                 // Include incidents with direct LineId
-                (i.LineId == lineId) ||
+                ((i.LineId == lineId) ||
                 // Or incidents with Equipment.Stage.LineId
                 (i.Equipment != null &&
                  i.Equipment.Stage != null &&
                  i.Equipment.Stage.Line != null &&
-                 i.Equipment.Stage.Line.LineId == lineId) &&
+                 i.Equipment.Stage.Line.LineId == lineId)) &&
+                // Apply time filter to both conditions
                 i.StartTime >= startDate &&
                 i.StartTime <= endDate)
             .OrderByDescending(i => i.CreatedDate)
