@@ -136,10 +136,6 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("EquipmentID");
 
-                    b.Property<string>("ImageUrl")
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
                     b.Property<bool>("IsTechSupport")
                         .HasColumnType("bit");
 
@@ -182,6 +178,42 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.HasIndex("TypeId");
 
                     b.ToTable("IncidentHistory", (string)null);
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.IncidentImage", b =>
+                {
+                    b.Property<int>("ImageId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("ImageID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ImageId"));
+
+                    b.Property<string>("ImageUrl")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("IncidentId")
+                        .HasColumnType("int")
+                        .HasColumnName("IncidentID");
+
+                    b.Property<int>("OrderIndex")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime>("UploadedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.HasKey("ImageId")
+                        .HasName("PK__Incident__7516F4EC");
+
+                    b.HasIndex("IncidentId");
+
+                    b.ToTable("IncidentImages", (string)null);
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.IncidentShift", b =>
@@ -234,6 +266,10 @@ namespace FITSKIP.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
+
+                    b.Property<string>("LineCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<string>("LineName")
                         .IsRequired()
@@ -454,6 +490,15 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<DateTime?>("ReceivedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReceivedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReceivedByNavigationId")
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<DateTime?>("RejectedAt")
                         .HasColumnType("datetime");
 
@@ -478,6 +523,8 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.HasIndex("ApprovedBy");
 
                     b.HasIndex("PartId");
+
+                    b.HasIndex("ReceivedByNavigationId");
 
                     b.HasIndex("RejectedBy");
 
@@ -919,6 +966,17 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("Type");
                 });
 
+            modelBuilder.Entity("FITSKIP.Domain.Entities.IncidentImage", b =>
+                {
+                    b.HasOne("FITSKIP.Domain.Entities.IncidentHistory", "Incident")
+                        .WithMany("IncidentImages")
+                        .HasForeignKey("IncidentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Incident");
+                });
+
             modelBuilder.Entity("FITSKIP.Domain.Entities.IncidentShift", b =>
                 {
                     b.HasOne("FITSKIP.Domain.Entities.IncidentHistory", "Incident")
@@ -1020,6 +1078,10 @@ namespace FITSKIP.Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__PurchaseR__PartI__1332DBDC");
 
+                    b.HasOne("FITSKIP.Domain.Entities.User", "ReceivedByNavigation")
+                        .WithMany()
+                        .HasForeignKey("ReceivedByNavigationId");
+
                     b.HasOne("FITSKIP.Domain.Entities.User", "RejectedByNavigation")
                         .WithMany("PurchaseRequestRejectedByNavigations")
                         .HasForeignKey("RejectedBy")
@@ -1034,6 +1096,8 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("ApprovedByNavigation");
 
                     b.Navigation("Part");
+
+                    b.Navigation("ReceivedByNavigation");
 
                     b.Navigation("RejectedByNavigation");
 
@@ -1132,6 +1196,8 @@ namespace FITSKIP.Infrastructure.Migrations
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.IncidentHistory", b =>
                 {
+                    b.Navigation("IncidentImages");
+
                     b.Navigation("IncidentShifts");
                 });
 

@@ -21,6 +21,7 @@ public class PurchaseRequestRepository : IPurchaseRequestRepository
             .Include(pr => pr.RequestedByNavigation)
             .Include(pr => pr.ApprovedByNavigation)
             .Include(pr => pr.RejectedByNavigation)
+            .Include(pr => pr.ReceivedByNavigation)
             .Where(pr => pr.Status != "Deleted") // Soft delete filter
             .OrderByDescending(pr => pr.RequestId)
             .AsNoTracking()
@@ -34,6 +35,7 @@ public class PurchaseRequestRepository : IPurchaseRequestRepository
             .Include(pr => pr.RequestedByNavigation)
             .Include(pr => pr.ApprovedByNavigation)
             .Include(pr => pr.RejectedByNavigation)
+            .Include(pr => pr.ReceivedByNavigation)
             .Where(pr => pr.Status != "Deleted") // Soft delete filter
             .FirstOrDefaultAsync(pr => pr.RequestId == id, cancellationToken);
     }
@@ -45,6 +47,7 @@ public class PurchaseRequestRepository : IPurchaseRequestRepository
             .Include(pr => pr.RequestedByNavigation)
             .Include(pr => pr.ApprovedByNavigation)
             .Include(pr => pr.RejectedByNavigation)
+            .Include(pr => pr.ReceivedByNavigation)
             .Where(pr => pr.Status == status && pr.Status != "Deleted")
             .OrderByDescending(pr => pr.RequestId)
             .AsNoTracking()
@@ -58,6 +61,7 @@ public class PurchaseRequestRepository : IPurchaseRequestRepository
             .Include(pr => pr.RequestedByNavigation)
             .Include(pr => pr.ApprovedByNavigation)
             .Include(pr => pr.RejectedByNavigation)
+            .Include(pr => pr.ReceivedByNavigation)
             .Where(pr => pr.RequestedBy == userId && pr.Status != "Deleted")
             .OrderByDescending(pr => pr.RequestId)
             .AsNoTracking()
@@ -115,6 +119,13 @@ public class PurchaseRequestRepository : IPurchaseRequestRepository
         {
             await _context.Entry(purchaseRequest)
                 .Reference(pr => pr.RejectedByNavigation)
+                .LoadAsync(cancellationToken);
+        }
+
+        if (!string.IsNullOrEmpty(purchaseRequest.ReceivedBy))
+        {
+            await _context.Entry(purchaseRequest)
+                .Reference(pr => pr.ReceivedByNavigation)
                 .LoadAsync(cancellationToken);
         }
 

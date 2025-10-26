@@ -69,21 +69,43 @@ const calculateAdjustedDuration = (startTime, endTime) => {
     return null;
   }
 
-  const rawDuration = dayjs(endTime).diff(dayjs(startTime), 'minute', true);
+  const rawDuration = dayjs(endTime).diff(dayjs(startTime), "minute", true);
   let adjustedDuration = rawDuration;
 
   // Break times: 11:00-11:30 and 18:00-18:30
-  const break1Start = dayjs(startTime).set('hour', 11).set('minute', 0).set('second', 0);
-  const break1End = dayjs(startTime).set('hour', 11).set('minute', 30).set('second', 0);
-  const break2Start = dayjs(startTime).set('hour', 18).set('minute', 0).set('second', 0);
-  const break2End = dayjs(startTime).set('hour', 18).set('minute', 30).set('second', 0);
+  const break1Start = dayjs(startTime)
+    .set("hour", 11)
+    .set("minute", 0)
+    .set("second", 0);
+  const break1End = dayjs(startTime)
+    .set("hour", 11)
+    .set("minute", 30)
+    .set("second", 0);
+  const break2Start = dayjs(startTime)
+    .set("hour", 18)
+    .set("minute", 0)
+    .set("second", 0);
+  const break2End = dayjs(startTime)
+    .set("hour", 18)
+    .set("minute", 30)
+    .set("second", 0);
 
   // Calculate overlap with break 1 (11:00-11:30)
-  const break1Overlap = calculateOverlapMinutes(startTime, endTime, break1Start, break1End);
+  const break1Overlap = calculateOverlapMinutes(
+    startTime,
+    endTime,
+    break1Start,
+    break1End
+  );
   adjustedDuration -= break1Overlap;
 
   // Calculate overlap with break 2 (18:00-18:30)
-  const break2Overlap = calculateOverlapMinutes(startTime, endTime, break2Start, break2End);
+  const break2Overlap = calculateOverlapMinutes(
+    startTime,
+    endTime,
+    break2Start,
+    break2End
+  );
   adjustedDuration -= break2Overlap;
 
   // Ensure duration is not negative
@@ -96,7 +118,7 @@ const calculateOverlapMinutes = (start1, end1, start2, end2) => {
   const overlapEnd = dayjs.min(dayjs(end1), dayjs(end2));
 
   if (overlapStart.isBefore(overlapEnd)) {
-    return overlapEnd.diff(overlapStart, 'minute', true);
+    return overlapEnd.diff(overlapStart, "minute", true);
   }
 
   return 0;
@@ -144,6 +166,10 @@ const IncidentManagement = () => {
   const [formChangeCounter, setFormChangeCounter] = useState(0);
   // Track which duration fields have been manually edited
   const [manualDurationFields, setManualDurationFields] = useState(new Set());
+  // Image upload states
+  const [imageFileList, setImageFileList] = useState({});
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadedImageUrls, setUploadedImageUrls] = useState({});
 
   const searchInput = useRef(null);
 
@@ -194,7 +220,9 @@ const IncidentManagement = () => {
     ),
     onFilter: (value, record) => {
       const text = record[dataIndex];
-      return text ? text.toString().toLowerCase().includes(value.toLowerCase()) : false;
+      return text
+        ? text.toString().toLowerCase().includes(value.toLowerCase())
+        : false;
     },
     filterDropdownProps: {
       onOpenChange(open) {
@@ -228,41 +256,54 @@ const IncidentManagement = () => {
   // Only auto-fill if user hasn't manually entered duration
   useEffect(() => {
     if (formModalVisible && isEditMode) {
-      const startTime = form.getFieldValue('startTime');
-      const endTime = form.getFieldValue('endTime');
+      const startTime = form.getFieldValue("startTime");
+      const endTime = form.getFieldValue("endTime");
 
       if (startTime && endTime && dayjs(endTime).isAfter(dayjs(startTime))) {
         const adjustedDuration = calculateAdjustedDuration(startTime, endTime);
         // Only auto-update if duration field hasn't been manually edited
-        if (!manualDurationFields.has('duration')) {
-          form.setFieldsValue({ duration: Math.round(adjustedDuration * 100) / 100 }); // Round to 0.01 minutes
+        if (!manualDurationFields.has("duration")) {
+          form.setFieldsValue({
+            duration: Math.round(adjustedDuration * 100) / 100,
+          }); // Round to 0.01 minutes
         }
       } else if (!endTime) {
         // Reset duration when endTime is cleared (only if not manually set)
-        if (!manualDurationFields.has('duration')) {
+        if (!manualDurationFields.has("duration")) {
           form.setFieldsValue({ duration: undefined });
         }
       }
     }
-  }, [formModalVisible, form.getFieldValue('startTime'), form.getFieldValue('endTime'), isEditMode, manualDurationFields]);
+  }, [
+    formModalVisible,
+    form.getFieldValue("startTime"),
+    form.getFieldValue("endTime"),
+    isEditMode,
+    manualDurationFields,
+  ]);
 
   const handleFormValuesChange = (changedValues, allValues) => {
     // Track manual duration input
     const changedKeys = Object.keys(changedValues);
-    changedKeys.forEach(key => {
-      if (key === 'duration' || key.includes('duration_')) {
-        setManualDurationFields(prev => new Set(prev).add(key));
+    changedKeys.forEach((key) => {
+      if (key === "duration" || key.includes("duration_")) {
+        setManualDurationFields((prev) => new Set(prev).add(key));
       }
     });
 
     // Trigger re-calculation when startTime or endTime changes
-    if (changedValues.startTime !== undefined || changedValues.endTime !== undefined) {
-      setFormChangeCounter(prev => prev + 1);
+    if (
+      changedValues.startTime !== undefined ||
+      changedValues.endTime !== undefined
+    ) {
+      setFormChangeCounter((prev) => prev + 1);
     }
     // Also trigger for create mode form fields
-    const hasTimeChange = changedKeys.some(key => key.includes('startTime_') || key.includes('endTime_'));
+    const hasTimeChange = changedKeys.some(
+      (key) => key.includes("startTime_") || key.includes("endTime_")
+    );
     if (hasTimeChange) {
-      setFormChangeCounter(prev => prev + 1);
+      setFormChangeCounter((prev) => prev + 1);
     }
     setFormChanged(true);
   };
@@ -278,24 +319,33 @@ const IncidentManagement = () => {
         const durationFieldKey = `duration_${formId}`;
 
         if (startTime && endTime && dayjs(endTime).isAfter(dayjs(startTime))) {
-          const adjustedDuration = calculateAdjustedDuration(startTime, endTime);
+          const adjustedDuration = calculateAdjustedDuration(
+            startTime,
+            endTime
+          );
           // Only auto-update if duration field hasn't been manually edited
           if (!manualDurationFields.has(durationFieldKey)) {
             form.setFieldsValue({
-              [durationFieldKey]: Math.round(adjustedDuration * 100) / 100
+              [durationFieldKey]: Math.round(adjustedDuration * 100) / 100,
             });
           }
         } else if (!endTime) {
           // Reset duration when endTime is cleared (only if not manually set)
           if (!manualDurationFields.has(durationFieldKey)) {
             form.setFieldsValue({
-              [durationFieldKey]: undefined
+              [durationFieldKey]: undefined,
             });
           }
         }
       });
     }
-  }, [formModalVisible, incidentForms, isEditMode, formChangeCounter, manualDurationFields]);
+  }, [
+    formModalVisible,
+    incidentForms,
+    isEditMode,
+    formChangeCounter,
+    manualDurationFields,
+  ]);
 
   const fetchEquipments = async () => {
     try {
@@ -307,7 +357,9 @@ const IncidentManagement = () => {
         response = await equipmentService.getEquipments();
       } else {
         // Team Leader sees only equipments from their assigned lines
-        response = await equipmentService.getEquipmentsByUserLines(currentUser.id);
+        response = await equipmentService.getEquipmentsByUserLines(
+          currentUser.id
+        );
       }
 
       const data = Array.isArray(response) ? response : response?.data || [];
@@ -536,6 +588,10 @@ const IncidentManagement = () => {
           issue: it.issue || it.Issue || it.description || "",
           reason: it.reason || it.Reason || null,
           solution: it.solution || it.Solution || null,
+          imageUrls:
+            it.incidentImages?.map((img) => img.imageUrl) ||
+            it.IncidentImages?.map((img) => img.ImageUrl) ||
+            [],
           category: it.category || it.Category || it.type?.typeName || null,
           downtime: downtime,
           impact: it.impact || it.Impact || null,
@@ -590,12 +646,14 @@ const IncidentManagement = () => {
     }
 
     // Sort by reportDate descending (newest first)
-    filtered.sort((a, b) => dayjs(b.reportDate).valueOf() - dayjs(a.reportDate).valueOf());
+    filtered.sort(
+      (a, b) => dayjs(b.reportDate).valueOf() - dayjs(a.reportDate).valueOf()
+    );
 
     // Add rowIndex for display
     filtered = filtered.map((item, index) => ({
       ...item,
-      rowIndex: index + 1
+      rowIndex: index + 1,
     }));
 
     setFilteredIncidents(filtered);
@@ -642,19 +700,29 @@ const IncidentManagement = () => {
 
   const getCurrentShift = () => {
     const now = dayjs();
-    const currentTime = now.format('HH:mm');
+    const currentTime = now.format("HH:mm");
 
     // Hardcoded shifts based on the provided data
     const shifts = [
-      { shiftId: 1, shiftName: 'Ca sáng', startTime: '06:00', endTime: '14:00' },
-      { shiftId: 2, shiftName: 'Ca chiều', startTime: '14:00', endTime: '22:00' },
-      { shiftId: 3, shiftName: 'Ca đêm', startTime: '22:00', endTime: '06:00' }
+      {
+        shiftId: 1,
+        shiftName: "Ca sáng",
+        startTime: "06:00",
+        endTime: "14:00",
+      },
+      {
+        shiftId: 2,
+        shiftName: "Ca chiều",
+        startTime: "14:00",
+        endTime: "22:00",
+      },
+      { shiftId: 3, shiftName: "Ca đêm", startTime: "22:00", endTime: "06:00" },
     ];
 
     for (const shift of shifts) {
       if (shift.shiftId === 3) {
         // Night shift: 22:00 to 06:00 (next day)
-        if (currentTime >= '22:00' || currentTime < '06:00') {
+        if (currentTime >= "22:00" || currentTime < "06:00") {
           return shift;
         }
       } else {
@@ -673,6 +741,27 @@ const IncidentManagement = () => {
     setSelectedIncident(record);
     setFormChanged(false); // Reset form changed state
     setManualDurationFields(new Set()); // Reset manual duration tracking for edit mode
+
+    // Load existing images from record
+    const existingImageUrls = record.imageUrls || [];
+
+    // Set uploaded image URLs
+    setUploadedImageUrls({
+      edit: existingImageUrls,
+    });
+
+    // Create fileList from existing images for display
+    const existingFileList = existingImageUrls.map((url, index) => ({
+      uid: `existing-${index}`,
+      name: `image-${index + 1}.png`,
+      status: "done",
+      url: url,
+      thumbUrl: url,
+    }));
+
+    setImageFileList({
+      edit: existingFileList,
+    });
 
     // Find the equipment to pre-select it
     const equipment = equipments.find(
@@ -699,7 +788,8 @@ const IncidentManagement = () => {
       status: record.status, // Will be overridden below
       startTime: record.reportDate ? dayjs(record.reportDate) : null,
       endTime: record.resolveDate ? dayjs(record.resolveDate) : null,
-      duration: record.downtime.toFixed(2) || record.duration.toFixed(2) || null, // Display exact duration from database
+      duration:
+        record.downtime.toFixed(2) || record.duration.toFixed(2) || null, // Display exact duration from database
       reporter: record.reportedByUserId || record.reporterId || null, // Use user ID for editing
       isTechSupport: record.isTechSupport || false,
     });
@@ -756,7 +846,8 @@ const IncidentManagement = () => {
           fetchIncidents();
         } catch (error) {
           console.error("Lỗi khi xóa nhiều sự cố:", error);
-          const errMsg = error?.message || error?.data?.message || "Xóa thất bại!";
+          const errMsg =
+            error?.message || error?.data?.message || "Xóa thất bại!";
           message.error(errMsg);
           setLoading(false);
         }
@@ -768,22 +859,32 @@ const IncidentManagement = () => {
     try {
       // Prepare data for export
       const exportData = filteredIncidents.map((incident, index) => ({
-        'STT': index + 1,
-        'Mã sự cố': incident.id,
-        'Thiết bị': `${incident.equipmentName}${incident.equipmentCode ? ` (${incident.equipmentCode})` : ''}`,
-        'Dây chuyền': incident.lineName || '',
-        'Công đoạn': incident.stageName || '',
-        'Loại dừng': incident.category || '',
-        'Vấn đề': incident.issue || '',
-        'Ngày báo cáo': incident.reportDate ? dayjs(incident.reportDate).format('DD/MM/YYYY') : '',
-        'Giờ bắt đầu': incident.reportDate ? dayjs(incident.reportDate).format('HH:mm') : '',
-        'Giờ kết thúc': incident.resolveDate ? dayjs(incident.resolveDate).format('HH:mm') : '',
-        'Thời lượng (phút)': incident.downtime ? incident.downtime.toFixed(2) : '',
-        'Trạng thái': incident.status || '',
-        'Người báo cáo': incident.reporter || '',
-        'Cần hỗ trợ kỹ thuật': incident.isTechSupport ? 'Có' : 'Không',
-        'Nguyên nhân': incident.reason || '',
-        'Giải pháp': incident.solution || '',
+        STT: index + 1,
+        "Mã sự cố": incident.id,
+        "Thiết bị": `${incident.equipmentName}${
+          incident.equipmentCode ? ` (${incident.equipmentCode})` : ""
+        }`,
+        "Dây chuyền": incident.lineName || "",
+        "Công đoạn": incident.stageName || "",
+        "Loại dừng": incident.category || "",
+        "Vấn đề": incident.issue || "",
+        "Ngày báo cáo": incident.reportDate
+          ? dayjs(incident.reportDate).format("DD/MM/YYYY")
+          : "",
+        "Giờ bắt đầu": incident.reportDate
+          ? dayjs(incident.reportDate).format("HH:mm")
+          : "",
+        "Giờ kết thúc": incident.resolveDate
+          ? dayjs(incident.resolveDate).format("HH:mm")
+          : "",
+        "Thời lượng (phút)": incident.downtime
+          ? incident.downtime.toFixed(2)
+          : "",
+        "Trạng thái": incident.status || "",
+        "Người báo cáo": incident.reporter || "",
+        "Cần hỗ trợ kỹ thuật": incident.isTechSupport ? "Có" : "Không",
+        "Nguyên nhân": incident.reason || "",
+        "Giải pháp": incident.solution || "",
       }));
 
       // Create workbook and worksheet
@@ -792,7 +893,7 @@ const IncidentManagement = () => {
 
       // Set column widths
       const colWidths = [
-        { wch: 5 },  // STT
+        { wch: 5 }, // STT
         { wch: 10 }, // Mã sự cố
         { wch: 25 }, // Thiết bị
         { wch: 15 }, // Dây chuyền
@@ -809,26 +910,27 @@ const IncidentManagement = () => {
         { wch: 30 }, // Nguyên nhân
         { wch: 30 }, // Giải pháp
       ];
-      ws['!cols'] = colWidths;
+      ws["!cols"] = colWidths;
 
       // Add worksheet to workbook
-      XLSX.utils.book_append_sheet(wb, ws, 'Báo cáo sự cố');
+      XLSX.utils.book_append_sheet(wb, ws, "Báo cáo sự cố");
 
       // Generate filename with current date
-      const fileName = `BaoCaoSuCo_${dayjs().format('YYYY-MM-DD')}.xlsx`;
+      const fileName = `BaoCaoSuCo_${dayjs().format("YYYY-MM-DD")}.xlsx`;
 
       // Save file
       XLSX.writeFile(wb, fileName);
 
-      message.success('Xuất file Excel thành công!');
+      message.success("Xuất file Excel thành công!");
     } catch (error) {
-      console.error('Lỗi khi xuất Excel:', error);
-      message.error('Xuất file Excel thất bại!');
+      console.error("Lỗi khi xuất Excel:", error);
+      message.error("Xuất file Excel thất bại!");
     }
   };
 
   const handleViewDetail = (record) => {
     setSelectedIncident(record);
+    console.log("Selected incident for detail view:", record); // Debug log
     fetchIncidentShifts(record.id);
     // Ensure we have latest user/team lead lists for name resolution
     fetchAllUsers();
@@ -836,9 +938,130 @@ const IncidentManagement = () => {
     setDetailModalVisible(true);
   };
 
+  // Handle image upload - supports multiple images (up to 5)
+  const handleImageUpload = async (file, formId = "edit") => {
+    try {
+      setUploadingImage(true);
+      const imageUrl = await incidentService.uploadImage(file);
+
+      // Store the uploaded URL in array format
+      setUploadedImageUrls((prev) => {
+        const existingUrls = prev[formId] || [];
+        const updatedUrls = Array.isArray(existingUrls)
+          ? [...existingUrls, imageUrl]
+          : [imageUrl];
+
+        return {
+          ...prev,
+          [formId]: updatedUrls.slice(0, 5), // Limit to 5 images
+        };
+      });
+
+      // Mark form as changed so submit button is enabled in edit mode
+      setFormChanged(true);
+
+      message.success("Tải ảnh lên thành công!");
+      return imageUrl;
+    } catch (error) {
+      console.error("Lỗi khi tải ảnh:", error);
+      message.error(error?.message || "Tải ảnh lên thất bại!");
+      throw error;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Upload props for Ant Design Upload component
+  const getUploadProps = (formId = "edit") => ({
+    name: "file",
+    listType: "picture",
+    maxCount: 5,
+    multiple: true, // Allow selecting multiple files at once
+    accept: "image/*",
+    beforeUpload: async (file) => {
+      // Validate file type
+      const isImage = file.type.startsWith("image/");
+      if (!isImage) {
+        message.error("Chỉ có thể tải lên file ảnh!");
+        return Upload.LIST_IGNORE;
+      }
+
+      // Validate file size (5MB)
+      const isLt5M = file.size / 1024 / 1024 < 5;
+      if (!isLt5M) {
+        message.error("Kích thước ảnh phải nhỏ hơn 5MB!");
+        return Upload.LIST_IGNORE;
+      }
+
+      // Upload immediately
+      try {
+        await handleImageUpload(file, formId);
+      } catch (error) {
+        return Upload.LIST_IGNORE;
+      }
+
+      return false; // Prevent default upload behavior
+    },
+    fileList: imageFileList[formId] || [],
+    onChange: ({ fileList }) => {
+      setImageFileList((prev) => ({
+        ...prev,
+        [formId]: fileList,
+      }));
+    },
+    onRemove: (file) => {
+      // Mark form as changed
+      setFormChanged(true);
+
+      // Remove the specific image URL from the array
+      const fileIndex = imageFileList[formId]?.indexOf(file);
+      if (fileIndex !== undefined && fileIndex >= 0) {
+        setUploadedImageUrls((prev) => {
+          const currentUrls = prev[formId] || [];
+          const newUrls = Array.isArray(currentUrls)
+            ? currentUrls.filter((_, index) => index !== fileIndex)
+            : [];
+
+          return {
+            ...prev,
+            [formId]: newUrls.length > 0 ? newUrls : null,
+          };
+        });
+      }
+
+      setImageFileList((prev) => {
+        const currentList = prev[formId] || [];
+        const newList = currentList.filter((f) => f.uid !== file.uid);
+        return {
+          ...prev,
+          [formId]: newList,
+        };
+      });
+    },
+  });
+
   const handleFormSubmit = async (values) => {
     try {
       setLoading(true);
+
+      // Validate duration against actual time difference
+      if (values.startTime && values.endTime && values.duration) {
+        const startTime = dayjs(values.startTime);
+        const endTime = dayjs(values.endTime);
+        const actualDuration = calculateAdjustedDuration(startTime, endTime);
+
+        if (values.duration > actualDuration) {
+          message.error(
+            `Thời lượng (${
+              values.duration
+            } phút) không được lớn hơn thời gian thực tế (${
+              Math.round(actualDuration * 100) / 100
+            } phút)!`
+          );
+          setLoading(false);
+          return;
+        }
+      }
 
       if (isEditMode) {
         // Edit mode - determine status with business rules
@@ -853,13 +1076,17 @@ const IncidentManagement = () => {
             status = values.status;
           } else {
             // Determine based on tech support flag and assigned person
-            const isSupport = values.isTechSupport !== undefined
-              ? values.isTechSupport
-              : selectedIncident?.isTechSupport;
+            const isSupport =
+              values.isTechSupport !== undefined
+                ? values.isTechSupport
+                : selectedIncident?.isTechSupport;
             // Try to read assigned value from form (if exists) or from selectedIncident
-            const assigned = values.assignedTo !== undefined
-              ? values.assignedTo
-              : (selectedIncident?.assignedTo || selectedIncident?.assignedToName || null);
+            const assigned =
+              values.assignedTo !== undefined
+                ? values.assignedTo
+                : selectedIncident?.assignedTo ||
+                  selectedIncident?.assignedToName ||
+                  null;
 
             // Rules:
             // - If it's a tech-support issue and someone is assigned => Đang xử lý
@@ -867,7 +1094,10 @@ const IncidentManagement = () => {
             // - Otherwise preserve existing status (if any), fallback to Chờ xử lý
             if (isSupport && assigned) {
               status = "Đang xử lý";
-            } else if (!isSupport && (!assigned || assigned === null || assigned === "")) {
+            } else if (
+              !isSupport &&
+              (!assigned || assigned === null || assigned === "")
+            ) {
               status = "Chờ xử lý";
             } else {
               status = selectedIncident?.status || "Chờ xử lý";
@@ -876,7 +1106,8 @@ const IncidentManagement = () => {
         }
 
         const formEquipmentId = form.getFieldValue("equipmentId");
-        const finalEquipmentId = formEquipmentId !== undefined ? formEquipmentId : null; // Convert undefined to null for nullable field
+        const finalEquipmentId =
+          formEquipmentId !== undefined ? formEquipmentId : null; // Convert undefined to null for nullable field
 
         let typeId = values.typeId;
         if (!typeId && selectedIncident.category) {
@@ -892,8 +1123,8 @@ const IncidentManagement = () => {
           startTime: values.startTime
             ? dayjs(values.startTime).format("YYYY-MM-DDTHH:mm:ss.SSS")
             : dayjs(selectedIncident.reportDate).format(
-              "YYYY-MM-DDTHH:mm:ss.SSS"
-            ),
+                "YYYY-MM-DDTHH:mm:ss.SSS"
+              ),
           endTime: values.endTime
             ? dayjs(values.endTime).format("YYYY-MM-DDTHH:mm:ss.SSS")
             : null,
@@ -918,14 +1149,19 @@ const IncidentManagement = () => {
                 : values.solution
               : selectedIncident.solution,
           status: status,
-          ...(values.reporter !== undefined ? { reportedByUserId: values.reporter } : {}),
+          ...(values.reporter !== undefined
+            ? { reportedByUserId: values.reporter }
+            : {}),
           isTechSupport: values.isTechSupport || false,
+          imageUrls:
+            uploadedImageUrls["edit"] || selectedIncident.imageUrls || null,
         };
 
         const id =
           selectedIncident?.id ||
           selectedIncident?.incidentId ||
           selectedIncident?.IncidentId;
+        console.log("Edit payload:", editPayload);
         await incidentService.update(id, editPayload);
         message.success("Cập nhật sự cố thành công!");
       } else {
@@ -947,7 +1183,8 @@ const IncidentManagement = () => {
           const reason = form.getFieldValue(`reason_${formId}`);
           const solution = form.getFieldValue(`solution_${formId}`);
           const reporter = form.getFieldValue(`reporter_${formId}`);
-          const isTechSupport = form.getFieldValue(`isTechSupport_${formId}`) || false;
+          const isTechSupport =
+            form.getFieldValue(`isTechSupport_${formId}`) || false;
 
           // Validate required fields
           // if (!equipmentId) {
@@ -964,10 +1201,30 @@ const IncidentManagement = () => {
 
           if (!startTime) {
             message.error(
-              `Sự cố No.${formId}: Vui lòng nhập thời gian bắt đầu!`
+              `Sự cố No.${formId}: Vui lòng nhập thời gian bắt đầu sự cố!`
             );
             setLoading(false);
             return;
+          }
+
+          // Validate duration against actual time difference
+          if (startTime && endTime && duration) {
+            const startTimeObj = dayjs(startTime);
+            const endTimeObj = dayjs(endTime);
+            const actualDuration = calculateAdjustedDuration(
+              startTimeObj,
+              endTimeObj
+            );
+
+            if (duration > actualDuration) {
+              message.error(
+                `Sự cố No.${formId}: Thời lượng (${duration} phút) không được lớn hơn thời gian thực tế (${
+                  Math.round(actualDuration * 100) / 100
+                } phút)!`
+              );
+              setLoading(false);
+              return;
+            }
           }
 
           // Determine status
@@ -976,8 +1233,8 @@ const IncidentManagement = () => {
 
           // Build payload for this incident
           const payload = {
-            equipmentId: equipmentId,
-            lineId: lineId,
+            equipmentId: equipmentId || null,
+            lineId: lineId || null,
             startTime: startTime
               ? dayjs(startTime).format("YYYY-MM-DDTHH:mm:ss.SSS")
               : null,
@@ -985,21 +1242,25 @@ const IncidentManagement = () => {
               ? dayjs(endTime).format("YYYY-MM-DDTHH:mm:ss.SSS")
               : null,
             duration: duration || null, // Send manual duration if provided, otherwise backend will auto-calculate
-            typeId: typeId,
-            issue: issue || null,
-            reason: reason || null,
-            solution: solution || null,
-            status: status,
-            reportedByUserId: reporter, // Must be selected by user, no fallback to currentUser
-            isTechSupport: isTechSupport,
+            typeId: typeId || null,
+            issue: issue?.trim() || null,
+            reason: reason?.trim() || null,
+            solution: solution?.trim() || null,
+            reportedByUserId:
+              reporter || currentUser?.id || currentUser?.userId || null, // Fallback to current user
+            isTechSupport: isTechSupport || false,
+            imageUrls: uploadedImageUrls[formId] || null, // Send array of image URLs
           };
 
+          console.log(`Payload for incident No.${formId}:`, payload);
           incidentsToCreate.push(payload);
         }
 
         // Create all incidents using bulk API
         try {
+          console.log("Creating bulk incidents:", incidentsToCreate);
           const response = await incidentService.createBulk(incidentsToCreate);
+          console.log("Bulk create response:", response);
 
           if (response.successCount > 0) {
             message.success(
@@ -1024,6 +1285,8 @@ const IncidentManagement = () => {
       setSelectedEquipment(null);
       setIncidentForms([{ id: 1, status: "Chờ xử lý" }]);
       setManualDurationFields(new Set()); // Reset manual duration tracking
+      setImageFileList({}); // Reset image file list
+      setUploadedImageUrls({}); // Reset uploaded image URLs
       form.resetFields();
       fetchIncidents();
     } catch (error) {
@@ -1039,7 +1302,9 @@ const IncidentManagement = () => {
   // If user clears the endTime for a previously completed incident, ask for confirmation.
   const handleEndTimeChange = (value) => {
     try {
-      const currentlyCompleted = selectedIncident?.resolveDate && dayjs(selectedIncident.resolveDate).isValid();
+      const currentlyCompleted =
+        selectedIncident?.resolveDate &&
+        dayjs(selectedIncident.resolveDate).isValid();
 
       // User cleared the endTime (value === null)
       if (!value && currentlyCompleted) {
@@ -1053,12 +1318,15 @@ const IncidentManagement = () => {
             // User confirmed: clear the form field (it is already null), update status preview according to business rules
             // Derive new status based on isTechSupport and assignedTo
             const isTech = form.getFieldValue("isTechSupport");
-            const assigned = form.getFieldValue("assignedTo") || selectedIncident?.assignedTo;
+            const assigned =
+              form.getFieldValue("assignedTo") || selectedIncident?.assignedTo;
             let derivedStatus = "Chờ xử lý";
             if (isTech) {
               derivedStatus = assigned ? "Đang xử lý" : "Chờ xử lý";
             } else {
-              derivedStatus = assigned ? (selectedIncident?.status || "Chờ xử lý") : "Chờ xử lý";
+              derivedStatus = assigned
+                ? selectedIncident?.status || "Chờ xử lý"
+                : "Chờ xử lý";
             }
             form.setFieldsValue({
               status: derivedStatus,
@@ -1073,7 +1341,9 @@ const IncidentManagement = () => {
               form.setFieldsValue({
                 endTime: previousEndTime,
                 status: "Hoàn thành",
-                duration: selectedIncident.downtime ? selectedIncident.downtime.toFixed(2) : null,
+                duration: selectedIncident.downtime
+                  ? selectedIncident.downtime.toFixed(2)
+                  : null,
               });
             }
           },
@@ -1085,11 +1355,18 @@ const IncidentManagement = () => {
         } else {
           // value is null but not previously completed: derive status conservatively
           const isTech = form.getFieldValue("isTechSupport");
-          const assigned = form.getFieldValue("assignedTo") || selectedIncident?.assignedTo;
+          const assigned =
+            form.getFieldValue("assignedTo") || selectedIncident?.assignedTo;
           if (isTech) {
-            form.setFieldsValue({ status: assigned ? "Đang xử lý" : "Chờ xử lý" });
+            form.setFieldsValue({
+              status: assigned ? "Đang xử lý" : "Chờ xử lý",
+            });
           } else {
-            form.setFieldsValue({ status: assigned ? (selectedIncident?.status || "Chờ xử lý") : "Chờ xử lý" });
+            form.setFieldsValue({
+              status: assigned
+                ? selectedIncident?.status || "Chờ xử lý"
+                : "Chờ xử lý",
+            });
           }
         }
         // update stored previousEndTime
@@ -1152,18 +1429,23 @@ const IncidentManagement = () => {
     );
     if (teamLead) return teamLead.fullName || teamLead.userName;
     // fallback to all users list
-    const user = allUsers.find(u => (u.id || u.userId || u.userID) === reporterId);
-    return user ? (user.fullName || user.name || user.userName || user.username) : reporterId;
+    const user = allUsers.find(
+      (u) => (u.id || u.userId || u.userID) === reporterId
+    );
+    return user
+      ? user.fullName || user.name || user.userName || user.username
+      : reporterId;
   };
 
   const getAssignedToName = (assignedToIdOrName) => {
     if (assignedToIdOrName == null) return null;
 
     // If API already provides a readable name, prefer it — but avoid treating UUIDs as names.
-    if (typeof assignedToIdOrName === 'string') {
+    if (typeof assignedToIdOrName === "string") {
       const trimmed = assignedToIdOrName.trim();
       // UUID regex (v4 format) — if it matches, treat as an id, not a name
-      const uuidRegex = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+      const uuidRegex =
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
       if (uuidRegex.test(trimmed)) {
         // it's an id-like string, continue to lookup
       } else {
@@ -1176,30 +1458,48 @@ const IncidentManagement = () => {
     const target = String(assignedToIdOrName);
 
     // Try to find in allUsers by common id fields (compare as strings)
-    const user = allUsers.find(u => {
+    const user = allUsers.find((u) => {
       const candidate = String(u.id || u.userId || u.userID || "");
       return candidate && candidate === target;
     });
-    if (user) return user.fullName || user.name || user.userName || user.username;
+    if (user)
+      return user.fullName || user.name || user.userName || user.username;
 
     // Try to find by matching username/fullName fields too
-    const userByName = allUsers.find(u => {
-      const fullname = (u.fullName || u.name || u.userName || u.username || "").toString();
+    const userByName = allUsers.find((u) => {
+      const fullname = (
+        u.fullName ||
+        u.name ||
+        u.userName ||
+        u.username ||
+        ""
+      ).toString();
       return fullname && fullname === target;
     });
-    if (userByName) return userByName.fullName || userByName.name || userByName.userName || userByName.username;
+    if (userByName)
+      return (
+        userByName.fullName ||
+        userByName.name ||
+        userByName.userName ||
+        userByName.username
+      );
 
     // Try teamLeads as a final fallback (compare as strings)
-    const tl = teamLeads.find(
-      (t) => {
-        const cand = String(t.id || t.userId || t.userID || "");
-        return cand && cand === target;
-      }
-    );
+    const tl = teamLeads.find((t) => {
+      const cand = String(t.id || t.userId || t.userID || "");
+      return cand && cand === target;
+    });
     if (tl) return tl.fullName || tl.userName;
 
     // Nothing matched; return original value (may be null/empty)
     return assignedToIdOrName;
+  };
+
+  // Helper function to truncate long text with tooltip
+  const truncateText = (text, maxLength = 50) => {
+    if (!text) return "";
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
   };
 
   const columns = [
@@ -1222,8 +1522,9 @@ const IncidentManagement = () => {
       ...getColumnSearchProps("equipmentName", "Tìm thiết bị"),
       render: (text, record) => (
         <Tooltip
-          title={`${text}${record.equipmentCode ? ` (${record.equipmentCode})` : ""
-            }`}
+          title={`${text}${
+            record.equipmentCode ? ` (${record.equipmentCode})` : ""
+          }`}
         >
           <div>
             <div style={{ fontWeight: 500 }}>{text}</div>
@@ -1277,7 +1578,9 @@ const IncidentManagement = () => {
       ...getColumnSearchProps("issue", "Tìm vấn đề"),
       render: (text) => (
         <Tooltip title={text || " "}>
-          <span>{text || " "}</span>
+          <span className={styles.cellContent}>
+            {truncateText(text, 20) || " "}
+          </span>
         </Tooltip>
       ),
     },
@@ -1384,13 +1687,15 @@ const IncidentManagement = () => {
         value: stopType.typeName || stopType.stopTypeName,
       })),
       onFilter: (value, record) => {
-        const stopType = stopTypes.find(st =>
-          st.stopTypeId === record.typeId ||
-          st.typeId === record.typeId ||
-          st.typeName === record.category ||
-          st.stopTypeName === record.category
+        const stopType = stopTypes.find(
+          (st) =>
+            st.stopTypeId === record.typeId ||
+            st.typeId === record.typeId ||
+            st.typeName === record.category ||
+            st.stopTypeName === record.category
         );
-        const stopTypeName = stopType?.typeName || stopType?.stopTypeName || record.category || "";
+        const stopTypeName =
+          stopType?.typeName || stopType?.stopTypeName || record.category || "";
         return stopTypeName === value;
       },
       filterIcon: (filtered) => (
@@ -1573,7 +1878,7 @@ const IncidentManagement = () => {
               type="dashed"
               icon={<FileExcelOutlined />}
               onClick={exportToExcel}
-            //style={{ backgroundColor: "#52c41a", borderColor: "#52c41a", color: "white" }}
+              //style={{ backgroundColor: "#52c41a", borderColor: "#52c41a", color: "white" }}
             >
               Xuất Excel
             </Button>
@@ -1582,7 +1887,14 @@ const IncidentManagement = () => {
               icon={<DeleteOutlined />}
               onClick={handleBulkDelete}
               disabled={selectedRowKeys.length === 0}
-              style={{ backgroundColor: selectedRowKeys.length === 0 ? "#f5f5f5" : "#ff4d4f", color: selectedRowKeys.length === 0 ? "rgba(0,0,0,0.25)" : "white", borderColor: selectedRowKeys.length === 0 ? "#d9d9d9" : "#ff4d4f" }}
+              style={{
+                backgroundColor:
+                  selectedRowKeys.length === 0 ? "#f5f5f5" : "#ff4d4f",
+                color:
+                  selectedRowKeys.length === 0 ? "rgba(0,0,0,0.25)" : "white",
+                borderColor:
+                  selectedRowKeys.length === 0 ? "#d9d9d9" : "#ff4d4f",
+              }}
             >
               Xóa đã chọn ({selectedRowKeys.length})
             </Button>
@@ -1687,7 +1999,7 @@ const IncidentManagement = () => {
             maxHeight: "calc(100vh - 200px)",
             overflowY: "auto",
             padding: "20px 24px",
-          }
+          },
         }}
       >
         {selectedIncident && (
@@ -1706,7 +2018,13 @@ const IncidentManagement = () => {
                 >
                   <Row gutter={[16, 8]} align="middle">
                     <Col span={18}>
-                      <div style={{ fontSize: "24px", fontWeight: 700, marginBottom: "4px" }}>
+                      <div
+                        style={{
+                          fontSize: "24px",
+                          fontWeight: 700,
+                          marginBottom: "4px",
+                        }}
+                      >
                         #{selectedIncident.id}
                       </div>
                       <div style={{ fontSize: "14px", opacity: 0.9 }}>
@@ -1742,10 +2060,25 @@ const IncidentManagement = () => {
 
               {/* Equipment & Process Information */}
               <Col span={24}>
-                <Card size="small" title={<><InfoCircleOutlined /> Thông tin thiết bị & quy trình</>} variant="outlined">
+                <Card
+                  size="small"
+                  title={
+                    <>
+                      <InfoCircleOutlined /> Thông tin thiết bị & quy trình
+                    </>
+                  }
+                  variant="outlined"
+                >
                   <Row gutter={[16, 16]}>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Thiết bị
                       </div>
                       <div style={{ fontWeight: 600, fontSize: "14px" }}>
@@ -1758,7 +2091,14 @@ const IncidentManagement = () => {
                       </div>
                     </Col>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Dây chuyền
                       </div>
                       <div style={{ fontSize: "14px" }}>
@@ -1766,7 +2106,14 @@ const IncidentManagement = () => {
                       </div>
                     </Col>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Công đoạn
                       </div>
                       <div style={{ fontSize: "14px" }}>
@@ -1774,17 +2121,33 @@ const IncidentManagement = () => {
                       </div>
                     </Col>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Loại dừng
                       </div>
                       {selectedIncident.category ? (
-                        <Tag color="orange" style={{ fontSize: "13px" }}>{selectedIncident.category}</Tag>
+                        <Tag color="orange" style={{ fontSize: "13px" }}>
+                          {selectedIncident.category}
+                        </Tag>
                       ) : (
                         <span style={{ fontSize: "14px" }}>-</span>
                       )}
                     </Col>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Người báo cáo
                       </div>
                       <div style={{ fontSize: "14px" }}>
@@ -1802,31 +2165,59 @@ const IncidentManagement = () => {
                       </div>
                     </Col>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Ngày tạo
                       </div>
                       <div style={{ fontSize: "14px" }}>
                         {selectedIncident.reportDate
-                          ? dayjs(selectedIncident.reportDate).format("DD/MM/YYYY")
+                          ? dayjs(selectedIncident.reportDate).format(
+                              "DD/MM/YYYY"
+                            )
                           : "-"}
                       </div>
                     </Col>
                     {selectedIncident.isTechSupport && (
                       <>
                         <Col span={8}>
-                          <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                          <div
+                            style={{
+                              fontSize: "13px",
+                              color: "#666",
+                              marginBottom: "6px",
+                              fontWeight: 600,
+                            }}
+                          >
                             Hỗ trợ kỹ thuật
                           </div>
-                          <Tag color="blue" icon={<ToolOutlined />} style={{ fontSize: "13px" }}>
+                          <Tag
+                            color="blue"
+                            icon={<ToolOutlined />}
+                            style={{ fontSize: "13px" }}
+                          >
                             Yêu cầu hỗ trợ
                           </Tag>
                         </Col>
                         <Col span={8}>
-                          <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                          <div
+                            style={{
+                              fontSize: "13px",
+                              color: "#666",
+                              marginBottom: "6px",
+                              fontWeight: 600,
+                            }}
+                          >
                             Người đảm nhiệm
                           </div>
                           <div style={{ fontSize: "14px", fontWeight: 600 }}>
-                            {getAssignedToName(selectedIncident.assignedTo) || "Chưa phân công"}
+                            {getAssignedToName(selectedIncident.assignedTo) ||
+                              "Chưa phân công"}
                           </div>
                         </Col>
                       </>
@@ -1837,34 +2228,76 @@ const IncidentManagement = () => {
 
               {/* Time Information */}
               <Col span={24}>
-                <Card size="small" title={<><ClockCircleOutlined /> Thông tin thời gian</>} variant="outlined">
+                <Card
+                  size="small"
+                  title={
+                    <>
+                      <ClockCircleOutlined /> Thông tin thời gian
+                    </>
+                  }
+                  variant="outlined"
+                >
                   <Row gutter={[16, 16]}>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Thời gian bắt đầu
                       </div>
                       <div style={{ fontSize: "14px", fontWeight: 500 }}>
                         {selectedIncident.reportDate
-                          ? dayjs(selectedIncident.reportDate).format("DD/MM/YYYY HH:mm:ss")
+                          ? dayjs(selectedIncident.reportDate).format(
+                              "DD/MM/YYYY HH:mm:ss"
+                            )
                           : "-"}
                       </div>
                     </Col>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Thời gian kết thúc
                       </div>
                       <div style={{ fontSize: "14px", fontWeight: 500 }}>
                         {selectedIncident.resolveDate
-                          ? dayjs(selectedIncident.resolveDate).format("DD/MM/YYYY HH:mm:ss")
+                          ? dayjs(selectedIncident.resolveDate).format(
+                              "DD/MM/YYYY HH:mm:ss"
+                            )
                           : "-"}
                       </div>
                     </Col>
                     <Col span={8}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Thời lượng (phút)
                       </div>
-                      <div style={{ fontSize: "16px", fontWeight: 700, color: selectedIncident.downtime > 5 ? "red" : "#1890ff" }}>
-                        {selectedIncident.downtime ? selectedIncident.downtime.toFixed(2) : "-"}
+                      <div
+                        style={{
+                          fontSize: "16px",
+                          fontWeight: 700,
+                          color:
+                            selectedIncident.downtime > 5 ? "red" : "#1890ff",
+                        }}
+                      >
+                        {selectedIncident.downtime
+                          ? selectedIncident.downtime.toFixed(2)
+                          : "-"}
                       </div>
                     </Col>
                   </Row>
@@ -1873,53 +2306,130 @@ const IncidentManagement = () => {
 
               {/* Incident Details */}
               <Col span={24}>
-                <Card size="small" title={<><FileTextOutlined /> Chi tiết sự cố</>} variant="outlined">
+                <Card
+                  size="small"
+                  title={
+                    <>
+                      <FileTextOutlined /> Chi tiết sự cố
+                    </>
+                  }
+                  variant="outlined"
+                >
                   <Row gutter={[16, 16]}>
                     <Col span={24}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Vấn đề
                       </div>
-                      <div style={{
-                        fontSize: "14px",
-                        lineHeight: 1.6,
-                        padding: "12px",
-                        backgroundColor: "#fafafa",
-                        borderRadius: "6px",
-                        border: "1px solid #f0f0f0"
-                      }}>
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          lineHeight: 1.6,
+                          padding: "12px",
+                          backgroundColor: "#fafafa",
+                          borderRadius: "6px",
+                          border: "1px solid #f0f0f0",
+                        }}
+                      >
                         {selectedIncident.issue || "Không có mô tả"}
                       </div>
                     </Col>
                     <Col span={24}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Nguyên nhân
                       </div>
-                      <div style={{
-                        fontSize: "14px",
-                        lineHeight: 1.6,
-                        padding: "12px",
-                        backgroundColor: "#fafafa",
-                        borderRadius: "6px",
-                        border: "1px solid #f0f0f0"
-                      }}>
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          lineHeight: 1.6,
+                          padding: "12px",
+                          backgroundColor: "#fafafa",
+                          borderRadius: "6px",
+                          border: "1px solid #f0f0f0",
+                        }}
+                      >
                         {selectedIncident.reason || "Chưa xác định"}
                       </div>
                     </Col>
                     <Col span={24}>
-                      <div style={{ fontSize: "13px", color: "#666", marginBottom: "6px", fontWeight: 600 }}>
+                      <div
+                        style={{
+                          fontSize: "13px",
+                          color: "#666",
+                          marginBottom: "6px",
+                          fontWeight: 600,
+                        }}
+                      >
                         Giải pháp
                       </div>
-                      <div style={{
-                        fontSize: "14px",
-                        lineHeight: 1.6,
-                        padding: "12px",
-                        backgroundColor: "#fafafa",
-                        borderRadius: "6px",
-                        border: "1px solid #f0f0f0"
-                      }}>
+                      <div
+                        style={{
+                          fontSize: "14px",
+                          lineHeight: 1.6,
+                          padding: "12px",
+                          backgroundColor: "#fafafa",
+                          borderRadius: "6px",
+                          border: "1px solid #f0f0f0",
+                        }}
+                      >
                         {selectedIncident.solution || "Chưa có giải pháp"}
                       </div>
                     </Col>
+                    {selectedIncident.imageUrls &&
+                      selectedIncident.imageUrls.length > 0 && (
+                        <Col span={24}>
+                          <div
+                            style={{
+                              fontSize: "13px",
+                              color: "#666",
+                              marginBottom: "6px",
+                              fontWeight: 600,
+                            }}
+                          >
+                            Hình ảnh sự cố
+                          </div>
+                          <div
+                            style={{
+                              padding: "12px",
+                              backgroundColor: "#fafafa",
+                              borderRadius: "6px",
+                              border: "1px solid #f0f0f0",
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: "12px",
+                            }}
+                          >
+                            {selectedIncident.imageUrls.map((url, index) => (
+                              <img
+                                key={index}
+                                src={url}
+                                alt={`Hình ảnh sự cố ${index + 1}`}
+                                style={{
+                                  maxWidth: "200px",
+                                  maxHeight: "200px",
+                                  borderRadius: "4px",
+                                  cursor: "pointer",
+                                  objectFit: "cover",
+                                }}
+                                onClick={() => window.open(url, "_blank")}
+                              />
+                            ))}
+                          </div>
+                        </Col>
+                      )}
                   </Row>
                 </Card>
               </Col>
@@ -1927,7 +2437,15 @@ const IncidentManagement = () => {
               {/* Incident Shifts Table */}
               {incidentShifts.length > 0 && (
                 <Col span={24}>
-                  <Card size="small" title={<><TeamOutlined /> Chi tiết theo ca</>} variant="outlined">
+                  <Card
+                    size="small"
+                    title={
+                      <>
+                        <TeamOutlined /> Chi tiết theo ca
+                      </>
+                    }
+                    variant="outlined"
+                  >
                     <Table
                       dataSource={incidentShifts.map((shift, index) => ({
                         key: shift.incidentShiftId,
@@ -1935,20 +2453,32 @@ const IncidentManagement = () => {
                         shiftName: shift.shift?.shiftName || "N/A",
                         shiftStartTime: shift.shift?.startTime || "-",
                         shiftEndTime: shift.shift?.endTime || "-",
-                        duration: shift.startTime && shift.endTime
-                          ? dayjs(shift.endTime).diff(dayjs(shift.startTime), "minute", true)
-                          : "-",
-                        shiftDuration: shift.shift?.startTime && shift.shift?.endTime
-                          ? (() => {
-                            const start = dayjs(shift.shift.startTime, "HH:mm:ss.SSSSSSS");
-                            let end = dayjs(shift.shift.endTime, "HH:mm:ss.SSSSSSS");
-                            // Handle night shift (end time is next day)
-                            if (end.isBefore(start)) {
-                              end = end.add(1, 'day');
-                            }
-                            return end.diff(start, "minute", true);
-                          })()
-                          : "-",
+                        duration:
+                          shift.startTime && shift.endTime
+                            ? dayjs(shift.endTime).diff(
+                                dayjs(shift.startTime),
+                                "minute",
+                                true
+                              )
+                            : "-",
+                        shiftDuration:
+                          shift.shift?.startTime && shift.shift?.endTime
+                            ? (() => {
+                                const start = dayjs(
+                                  shift.shift.startTime,
+                                  "HH:mm:ss.SSSSSSS"
+                                );
+                                let end = dayjs(
+                                  shift.shift.endTime,
+                                  "HH:mm:ss.SSSSSSS"
+                                );
+                                // Handle night shift (end time is next day)
+                                if (end.isBefore(start)) {
+                                  end = end.add(1, "day");
+                                }
+                                return end.diff(start, "minute", true);
+                              })()
+                            : "-",
                       }))}
                       columns={[
                         {
@@ -1965,9 +2495,7 @@ const IncidentManagement = () => {
                           width: 120,
                           align: "center",
                           render: (text) => (
-                            <Tag style={{ fontWeight: 600 }}>
-                              {text}
-                            </Tag>
+                            <Tag style={{ fontWeight: 600 }}>{text}</Tag>
                           ),
                         },
                         {
@@ -2006,11 +2534,14 @@ const IncidentManagement = () => {
                           key: "duration",
                           width: 130,
                           align: "center",
-                          render: (val) => val !== "-" ? (
-                            <span style={{ fontWeight: 600 }}>
-                              {val.toFixed(2)}
-                            </span>
-                          ) : val,
+                          render: (val) =>
+                            val !== "-" ? (
+                              <span style={{ fontWeight: 600 }}>
+                                {val.toFixed(2)}
+                              </span>
+                            ) : (
+                              val
+                            ),
                         },
                       ]}
                       pagination={false}
@@ -2066,6 +2597,8 @@ const IncidentManagement = () => {
           setFormChanged(false); // Reset form changed state
           setFormChangeCounter(0); // Reset form change counter
           setManualDurationFields(new Set()); // Reset manual duration tracking
+          setImageFileList({}); // Reset image file list
+          setUploadedImageUrls({}); // Reset uploaded image URLs
           form.resetFields();
         }}
         footer={
@@ -2087,6 +2620,8 @@ const IncidentManagement = () => {
                   setFormChanged(false); // Reset form changed state
                   setFormChangeCounter(0); // Reset form change counter
                   setManualDurationFields(new Set()); // Reset manual duration tracking
+                  setImageFileList({}); // Reset image file list
+                  setUploadedImageUrls({}); // Reset uploaded image URLs
                   form.resetFields();
                 }}
                 style={{ minWidth: "120px" }}
@@ -2101,8 +2636,10 @@ const IncidentManagement = () => {
                 onClick={() => form.submit()}
                 disabled={isEditMode && !formChanged}
                 style={{
-                  backgroundColor: (!isEditMode || formChanged) ? "#334766" : "#d9d9d9",
-                  borderColor: (!isEditMode || formChanged) ? "#334766" : "#d9d9d9",
+                  backgroundColor:
+                    !isEditMode || formChanged ? "#334766" : "#d9d9d9",
+                  borderColor:
+                    !isEditMode || formChanged ? "#334766" : "#d9d9d9",
                   minWidth: "120px",
                 }}
               >
@@ -2121,7 +2658,7 @@ const IncidentManagement = () => {
             paddingBottom: "60px",
             paddingLeft: "24px",
             paddingRight: "24px",
-          }
+          },
         }}
       >
         <Form
@@ -2235,12 +2772,12 @@ const IncidentManagement = () => {
                         <Form.Item
                           label="Mã thiết bị"
                           name={`equipmentCode_${incidentForm.id}`}
-                        // rules={[
-                        //   {
-                        //     required: true,
-                        //     message: "Vui lòng chọn mã thiết bị!",
-                        //   },
-                        // ]}
+                          // rules={[
+                          //   {
+                          //     required: true,
+                          //     message: "Vui lòng chọn mã thiết bị!",
+                          //   },
+                          // ]}
                         >
                           <Select
                             placeholder="Chọn hoặc tìm mã thiết bị"
@@ -2290,13 +2827,18 @@ const IncidentManagement = () => {
                             allowClear
                             optionFilterProp="children"
                             onChange={(value) => {
-                              const equipment = equipments.find(e => e.equipmentId === value);
+                              const equipment = equipments.find(
+                                (e) => e.equipmentId === value
+                              );
                               if (equipment) {
                                 setSelectedEquipment(equipment);
                                 form.setFieldsValue({
-                                  [`equipmentCode_${incidentForm.id}`]: equipment.equipmentCode,
-                                  [`lineId_${incidentForm.id}`]: equipment.lineId,
-                                  [`stageId_${incidentForm.id}`]: equipment.stageId,
+                                  [`equipmentCode_${incidentForm.id}`]:
+                                    equipment.equipmentCode,
+                                  [`lineId_${incidentForm.id}`]:
+                                    equipment.lineId,
+                                  [`stageId_${incidentForm.id}`]:
+                                    equipment.stageId,
                                 });
                               } else {
                                 setSelectedEquipment(null);
@@ -2308,7 +2850,8 @@ const IncidentManagement = () => {
                                 key={equipment.equipmentId}
                                 value={equipment.equipmentId}
                               >
-                                {equipment.equipmentName} ({equipment.equipmentCode})
+                                {equipment.equipmentName} (
+                                {equipment.equipmentCode})
                               </Option>
                             ))}
                           </Select>
@@ -2327,10 +2870,7 @@ const IncidentManagement = () => {
                             optionFilterProp="children"
                           >
                             {stages.map((stage) => (
-                              <Option
-                                key={stage.stageId}
-                                value={stage.stageId}
-                              >
+                              <Option key={stage.stageId} value={stage.stageId}>
                                 {stage.stageName}
                               </Option>
                             ))}
@@ -2353,10 +2893,7 @@ const IncidentManagement = () => {
                             optionFilterProp="children"
                           >
                             {lines.map((line) => (
-                              <Option
-                                key={line.lineId}
-                                value={line.lineId}
-                              >
+                              <Option key={line.lineId} value={line.lineId}>
                                 {line.lineName}
                               </Option>
                             ))}
@@ -2392,19 +2929,19 @@ const IncidentManagement = () => {
 
                       <Col span={12}>
                         <Form.Item
-                          label="Thời gian bắt đầu"
+                          label="Thời gian bắt đầu sự cố"
                           name={`startTime_${incidentForm.id}`}
                           rules={[
                             {
                               required: true,
-                              message: "Vui lòng nhập thời gian bắt đầu!",
+                              message: "Vui lòng nhập thời gian bắt đầu sự cố!",
                             },
                           ]}
                         >
                           <DatePicker
                             showTime={{ format: "HH:mm:ss" }}
                             format="DD/MM/YYYY HH:mm:ss"
-                            placeholder="Chọn thời gian bắt đầu"
+                            placeholder="Chọn thời gian bắt đầu sự cố"
                             style={{ width: "100%" }}
                           />
                         </Form.Item>
@@ -2412,13 +2949,13 @@ const IncidentManagement = () => {
 
                       <Col span={12}>
                         <Form.Item
-                          label="Thời gian kết thúc"
+                          label="Thời gian kết thúc sự cố"
                           name={`endTime_${incidentForm.id}`}
                         >
                           <DatePicker
                             showTime={{ format: "HH:mm:ss" }}
                             format="DD/MM/YYYY HH:mm:ss"
-                            placeholder="Chọn thời gian kết thúc"
+                            placeholder="Chọn thời gian kết thúc sự cố"
                             style={{ width: "100%" }}
                             onChange={(value) => {
                               const hasEndTime =
@@ -2533,7 +3070,14 @@ const IncidentManagement = () => {
                           style={{ marginTop: "30px" }}
                         >
                           <Checkbox
-                            disabled={form.getFieldValue(`endTime_${incidentForm.id}`) && dayjs(form.getFieldValue(`endTime_${incidentForm.id}`)).isValid()}
+                            disabled={
+                              form.getFieldValue(
+                                `endTime_${incidentForm.id}`
+                              ) &&
+                              dayjs(
+                                form.getFieldValue(`endTime_${incidentForm.id}`)
+                              ).isValid()
+                            }
                           >
                             Cần hỗ trợ kỹ thuật
                           </Checkbox>
@@ -2575,6 +3119,19 @@ const IncidentManagement = () => {
                           />
                         </Form.Item>
                       </Col>
+
+                      <Col span={24}>
+                        <Form.Item label="Hình ảnh sự cố">
+                          <Upload {...getUploadProps(incidentForm.id)}>
+                            <Button
+                              icon={<UploadOutlined />}
+                              loading={uploadingImage}
+                            >
+                              Chọn ảnh
+                            </Button>
+                          </Upload>
+                        </Form.Item>
+                      </Col>
                     </Row>
 
                     {/* Delete Button */}
@@ -2612,16 +3169,16 @@ const IncidentManagement = () => {
                   <Form.Item
                     label="Mã thiết bị"
                     name="equipmentCode"
-                  // rules={[
-                  //   { required: true, message: "Vui lòng chọn mã thiết bị!" },
-                  // ]}
+                    // rules={[
+                    //   { required: true, message: "Vui lòng chọn mã thiết bị!" },
+                    // ]}
                   >
                     <Select
                       placeholder="Chọn hoặc tìm mã thiết bị"
                       showSearch
                       allowClear
                       optionFilterProp="children"
-                      onSearch={() => { }}
+                      onSearch={() => {}}
                       onChange={(value) => {
                         // value will be equipmentId (we store id as value but show code+name)
                         const equipment = equipments.find(
@@ -2654,17 +3211,16 @@ const IncidentManagement = () => {
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item
-                    label="Thiết bị"
-                    name="equipmentId"
-                  >
+                  <Form.Item label="Thiết bị" name="equipmentId">
                     <Select
                       placeholder="-- Chọn --"
                       showSearch
                       allowClear
                       optionFilterProp="children"
                       onChange={(value) => {
-                        const equipment = equipments.find(e => e.equipmentId === value);
+                        const equipment = equipments.find(
+                          (e) => e.equipmentId === value
+                        );
                         if (equipment) {
                           setSelectedEquipment(equipment);
                           form.setFieldsValue({
@@ -2691,10 +3247,7 @@ const IncidentManagement = () => {
                 </Col>
 
                 <Col span={12}>
-                  <Form.Item
-                    label="Công đoạn"
-                    name="stageId"
-                  >
+                  <Form.Item label="Công đoạn" name="stageId">
                     <Select
                       placeholder="-- Chọn --"
                       showSearch
@@ -2702,10 +3255,7 @@ const IncidentManagement = () => {
                       optionFilterProp="children"
                     >
                       {stages.map((stage) => (
-                        <Option
-                          key={stage.stageId}
-                          value={stage.stageId}
-                        >
+                        <Option key={stage.stageId} value={stage.stageId}>
                           {stage.stageName}
                         </Option>
                       ))}
@@ -2728,10 +3278,7 @@ const IncidentManagement = () => {
                       optionFilterProp="children"
                     >
                       {lines.map((line) => (
-                        <Option
-                          key={line.lineId}
-                          value={line.lineId}
-                        >
+                        <Option key={line.lineId} value={line.lineId}>
                           {line.lineName}
                         </Option>
                       ))}
@@ -2750,7 +3297,7 @@ const IncidentManagement = () => {
                       showSearch
                       allowClear
                       optionFilterProp="children"
-                      onSearch={() => { }}
+                      onSearch={() => {}}
                       onChange={(value) => {
                         // value will be equipmentId (we store id as value but show code+name)
                         const stopType = stopTypes.find(
@@ -2772,30 +3319,30 @@ const IncidentManagement = () => {
 
                 <Col span={12}>
                   <Form.Item
-                    label="Thời gian bắt đầu"
+                    label="Thời gian bắt đầu sự cố"
                     name="startTime"
                     rules={[
                       {
                         required: true,
-                        message: "Vui lòng nhập thời gian bắt đầu!",
+                        message: "Vui lòng nhập thời gian bắt đầu sự cố!",
                       },
                     ]}
                   >
                     <DatePicker
                       showTime={{ format: "HH:mm:ss" }}
                       format="DD/MM/YYYY HH:mm:ss"
-                      placeholder="Chọn thời gian bắt đầu"
+                      placeholder="Chọn thời gian bắt đầu sự cố"
                       style={{ width: "100%" }}
                     />
                   </Form.Item>
                 </Col>
 
                 <Col span={12}>
-                  <Form.Item label="Thời gian kết thúc" name="endTime">
+                  <Form.Item label="Thời gian kết thúc sự cố" name="endTime">
                     <DatePicker
                       showTime={{ format: "HH:mm:ss" }}
                       format="DD/MM/YYYY HH:mm:ss"
-                      placeholder="Chọn thời gian kết thúc"
+                      placeholder="Chọn thời gian kết thúc sự cố"
                       style={{ width: "100%" }}
                       onChange={(value) => handleEndTimeChange(value)}
                     />
@@ -2825,16 +3372,13 @@ const IncidentManagement = () => {
                 </Col>
 
                 <Col span={12}>
-                  <Form.Item
-                    label="Người báo cáo"
-                    name="reporter"
-                  >
+                  <Form.Item label="Người báo cáo" name="reporter">
                     <Select
                       placeholder="Chọn người báo cáo"
                       showSearch
                       allowClear
                       optionFilterProp="children"
-                      onSearch={() => { }}
+                      onSearch={() => {}}
                     >
                       <Option value={null}>Không có</Option>
                       {teamLeads.map((teamLead) => (
@@ -2906,7 +3450,11 @@ const IncidentManagement = () => {
                     style={{ marginTop: "30px" }}
                   >
                     <Checkbox
-                      disabled={isEditMode && selectedIncident?.resolveDate && dayjs(selectedIncident.resolveDate).isValid()}
+                      disabled={
+                        isEditMode &&
+                        selectedIncident?.resolveDate &&
+                        dayjs(selectedIncident.resolveDate).isValid()
+                      }
                     >
                       Cần hỗ trợ kỹ thuật
                     </Checkbox>
@@ -2935,6 +3483,18 @@ const IncidentManagement = () => {
                       rows={3}
                       placeholder="Mô tả giải pháp đã/đang thực hiện... (tùy chọn)"
                     />
+                  </Form.Item>
+                </Col>
+                <Col span={24}>
+                  <Form.Item label="Hình ảnh sự cố">
+                    <Upload {...getUploadProps("edit")}>
+                      <Button
+                        icon={<UploadOutlined />}
+                        loading={uploadingImage}
+                      >
+                        Chọn ảnh
+                      </Button>
+                    </Upload>
                   </Form.Item>
                 </Col>
               </Row>

@@ -25,8 +25,6 @@ public partial class IncidentHistory
 
     public string? Issue { get; set; }
 
-    public string? ImageUrl { get; set; }
-
     public string? Status { get; set; } = "Chờ xử lý"; // Trạng thái: Chờ xử lý, Đang xử lý, Hoàn thành, Hủy
 
     public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
@@ -46,4 +44,6 @@ public partial class IncidentHistory
     public virtual User? ReportedByUser { get; set; }
 
     public virtual ICollection<IncidentShift> IncidentShifts { get; set; } = new List<IncidentShift>();
+
+    public virtual ICollection<IncidentImage> IncidentImages { get; set; } = new List<IncidentImage>();
 }

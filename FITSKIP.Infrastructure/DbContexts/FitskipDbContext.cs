@@ -25,6 +25,8 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
     public virtual DbSet<IncidentShift> IncidentShifts { get; set; }
 
+    public virtual DbSet<IncidentImage> IncidentImages { get; set; }
+
     public virtual DbSet<Line> Lines { get; set; }
 
     public virtual DbSet<Notification> Notifications { get; set; }
@@ -143,7 +145,6 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.StartTime).HasColumnType("datetime");
             entity.Property(e => e.TypeId).HasColumnName("TypeID");
             entity.Property(e => e.Issue).HasMaxLength(500);
-            entity.Property(e => e.ImageUrl).HasMaxLength(1000);
             entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
 
             // Equipment, Type relationships - no reverse collections
@@ -164,6 +165,27 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .WithOne(e => e.Incident)
                 .HasForeignKey(e => e.IncidentId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Relationship to IncidentImages
+            entity.HasMany(d => d.IncidentImages)
+                .WithOne(e => e.Incident)
+                .HasForeignKey(e => e.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<IncidentImage>(entity =>
+        {
+            entity.HasKey(e => e.ImageId).HasName("PK__Incident__7516F4EC");
+
+            entity.ToTable("IncidentImages");
+
+            entity.Property(e => e.ImageId).HasColumnName("ImageID");
+            entity.Property(e => e.IncidentId).HasColumnName("IncidentID");
+            entity.Property(e => e.ImageUrl).HasMaxLength(1000).IsRequired();
+            entity.Property(e => e.OrderIndex).HasDefaultValue(0);
+            entity.Property(e => e.UploadedAt).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
+
+            // Relationship to IncidentHistory is already configured above
         });
 
         modelBuilder.Entity<Line>(entity =>
@@ -173,6 +195,7 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.LineId).HasColumnName("LineID");
             entity.Property(e => e.DepartmentId).HasColumnName("DepartmentID");
             entity.Property(e => e.LineName).HasMaxLength(250);
+            entity.Property(e => e.LineCode).HasMaxLength(50);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
             entity.HasOne(d => d.Department).WithMany(p => p.Lines)

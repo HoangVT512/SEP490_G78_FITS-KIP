@@ -55,15 +55,9 @@ const InventoryManagement = () => {
 
   const stats = {
     total: spareParts.length,
-    inStock: spareParts.filter(
-      (p) => p.status === "Đủ hàng" || p.status === "Available"
-    ).length,
-    lowStock: spareParts.filter(
-      (p) => p.status === "Sắp hết" || p.status === "Low Stock"
-    ).length,
-    outOfStock: spareParts.filter(
-      (p) => p.status === "Hết hàng" || p.status === "Out of Stock"
-    ).length,
+    inStock: spareParts.filter((p) => p.status === "Đủ hàng").length,
+    lowStock: spareParts.filter((p) => p.status === "Sắp hết").length,
+    outOfStock: spareParts.filter((p) => p.status === "Hết hàng").length,
   };
 
   const columns = [
@@ -81,6 +75,25 @@ const InventoryManagement = () => {
       width: 200,
     },
     {
+      title: "Loại phụ tùng",
+      dataIndex: "partType",
+      key: "partType",
+      width: 150,
+    },
+    {
+      title: "Nhà cung cấp",
+      dataIndex: "supplier",
+      key: "supplier",
+      width: 150,
+    },
+    {
+      title: "Giá mua",
+      dataIndex: "purchasePrice",
+      key: "purchasePrice",
+      width: 120,
+      render: (price) => (price ? `${price.toLocaleString("vi-VN")} đ` : "N/A"),
+    },
+    {
       title: "Số lượng",
       dataIndex: "quantity",
       key: "quantity",
@@ -92,6 +105,25 @@ const InventoryManagement = () => {
       dataIndex: "location",
       key: "location",
       width: 150,
+    },
+    {
+      title: "Kho",
+      dataIndex: "warehouse",
+      key: "warehouse",
+      width: 120,
+    },
+    {
+      title: "Đơn vị tính",
+      dataIndex: "uom",
+      key: "uom",
+      width: 100,
+    },
+    {
+      title: "Số lượng tối thiểu",
+      dataIndex: "minQuantity",
+      key: "minQuantity",
+      width: 140,
+      render: (min) => min ?? 0,
     },
     {
       title: "Trạng thái",
@@ -107,17 +139,14 @@ const InventoryManagement = () => {
           // Use explicit status from backend
           switch (status) {
             case "Đủ hàng":
-            case "Available":
               color = "success";
               displayStatus = "Đủ hàng";
               break;
             case "Sắp hết":
-            case "Low Stock":
               color = "warning";
               displayStatus = "Sắp hết";
               break;
             case "Hết hàng":
-            case "Out of Stock":
               color = "error";
               displayStatus = "Hết hàng";
               break;
@@ -145,11 +174,10 @@ const InventoryManagement = () => {
       },
     },
     {
-      title: "Số lượng tối thiểu",
-      dataIndex: "minQuantity",
-      key: "minQuantity",
+      title: "Chu kỳ thay thế",
+      dataIndex: "replacementCycle",
+      key: "replacementCycle",
       width: 140,
-      render: (min) => min ?? 0,
     },
     {
       title: "Trạng thái hoạt động",
@@ -158,7 +186,7 @@ const InventoryManagement = () => {
       width: 130,
       render: (isActive) => (
         <Tag color={isActive ? "green" : "red"}>
-          {isActive ? "Đang sử dụng" : "Đã xóa"}
+          {isActive ? "Đang sử dụng" : "Ngưng sử dụng"}
         </Tag>
       ),
     },
@@ -184,7 +212,7 @@ const InventoryManagement = () => {
           {
             key: "delete",
             icon: <DeleteOutlined />,
-            label: record.isActive ? "Xóa" : "Khôi phục",
+            label: record.isActive ? "Ngưng sử dụng" : "Khôi phục",
             danger: record.isActive,
             onClick: () => handleDelete(record),
           },
@@ -222,11 +250,11 @@ const InventoryManagement = () => {
 
   const handleDelete = (record) => {
     const isDeleting = record.isActive;
-    const title = isDeleting ? "Xác nhận xóa" : "Xác nhận khôi phục";
+    const title = isDeleting ? "Xác nhận ngưng sử dụng" : "Xác nhận khôi phục";
     const content = isDeleting
-      ? `Bạn có chắc chắn muốn xóa phụ tùng "${record.partName}"?`
+      ? `Bạn có chắc chắn muốn ngưng sử dụng phụ tùng "${record.partName}"?`
       : `Bạn có chắc chắn muốn khôi phục phụ tùng "${record.partName}"?`;
-    const okText = isDeleting ? "Xóa" : "Khôi phục";
+    const okText = isDeleting ? "Ngưng sử dụng" : "Khôi phục";
 
     Modal.confirm({
       title,
@@ -242,7 +270,7 @@ const InventoryManagement = () => {
             await sparePartService.delete(record.partId);
             message.success(
               isDeleting
-                ? "Xóa phụ tùng thành công!"
+                ? "Ngưng sử dụng phụ tùng thành công!"
                 : "Khôi phục phụ tùng thành công!"
             );
             await loadParts();
@@ -264,9 +292,19 @@ const InventoryManagement = () => {
       const payload = {
         partNumber: values.partNumber,
         partName: values.partName,
+        partType: values.partType || "",
+        material: values.material || "",
+        specifications: values.specifications || "",
+        supplier: values.supplier || "",
+        purchasePrice: values.purchasePrice || null,
         quantity: values.quantity || 0,
         minQuantity: values.minQuantity ?? 5,
         location: values.location || "",
+        warehouse: values.warehouse || "",
+        uom: values.uom || "",
+        replacementCycle: values.replacementCycle || "",
+        dateAdded: values.dateAdded ? values.dateAdded.toISOString() : null,
+        documentUrl: values.documentUrl || "",
       };
 
       if (editingRecord) {
@@ -300,11 +338,21 @@ const InventoryManagement = () => {
         partId: p.partId || p.PartId,
         partNumber: p.partNumber || p.PartNumber,
         partName: p.partName || p.PartName,
+        partType: p.partType || p.PartType || "",
+        material: p.material || p.Material || "",
+        specifications: p.specifications || p.Specifications || "",
+        supplier: p.supplier || p.Supplier || "",
+        purchasePrice: p.purchasePrice ?? p.PurchasePrice ?? null,
         quantity: p.quantity ?? p.Quantity ?? 0,
-        minQuantity: p.minQuantity ?? 5,
+        minQuantity: p.minQuantity ?? p.MinQuantity ?? 5,
         location: p.location || p.Location || "",
+        warehouse: p.warehouse || p.Warehouse || "",
+        uom: p.uom || p.UoM || p.uoM || "",
+        replacementCycle: p.replacementCycle || p.ReplacementCycle || "",
+        dateAdded: p.dateAdded || p.DateAdded || null,
         unitPrice: p.unitPrice || p.UnitPrice || null,
         status: p.status || p.Status || null,
+        documentUrl: p.documentUrl || p.DocumentUrl || null,
         isActive: p.isActive !== undefined ? p.isActive : true,
       }));
       setSpareParts(normalized);
@@ -320,17 +368,42 @@ const InventoryManagement = () => {
     loadParts();
   }, []);
 
-  const filteredData = spareParts.filter((part) => {
-    const matchSearch =
-      part.partNumber.toLowerCase().includes(searchText.toLowerCase()) ||
-      part.partName.toLowerCase().includes(searchText.toLowerCase());
-    const matchStatus = filterStatus === "all" || part.status === filterStatus;
-    const matchActive =
-      filterActive === "all" ||
-      (filterActive === "active" && part.isActive) ||
-      (filterActive === "inactive" && !part.isActive);
-    return matchSearch && matchStatus && matchActive;
-  });
+  // Helper function to get sort order for status
+  const getStatusSortOrder = (status) => {
+    switch (status) {
+      case "Hết hàng":
+        return 0; // Highest priority - show first
+      case "Sắp hết":
+        return 1; // Medium priority
+      case "Đủ hàng":
+        return 2; // Low priority - show last
+      default:
+        return 3;
+    }
+  };
+
+  const filteredData = spareParts
+    .filter((part) => {
+      const matchSearch =
+        part.partNumber.toLowerCase().includes(searchText.toLowerCase()) ||
+        part.partName.toLowerCase().includes(searchText.toLowerCase());
+      const matchStatus =
+        filterStatus === "all" || part.status === filterStatus;
+      const matchActive =
+        filterActive === "all" ||
+        (filterActive === "active" && part.isActive) ||
+        (filterActive === "inactive" && !part.isActive);
+      return matchSearch && matchStatus && matchActive;
+    })
+    .sort((a, b) => {
+      // Sort by status first (out of stock first, then low stock, then in stock)
+      const statusOrderDiff =
+        getStatusSortOrder(a.status) - getStatusSortOrder(b.status);
+      if (statusOrderDiff !== 0) return statusOrderDiff;
+
+      // If same status, sort by part name
+      return (a.partName || "").localeCompare(b.partName || "", "vi");
+    });
 
   // Get list of low stock and out of stock spare parts for alerts
   const getLowStockAlerts = () => {
@@ -590,7 +663,7 @@ const InventoryManagement = () => {
             dataSource={filteredData}
             rowKey="partId"
             loading={loading}
-            scroll={{ x: 1200 }}
+            scroll={{ x: 2000 }}
             pagination={{
               pageSize: 10,
               showSizeChanger: true,
@@ -611,10 +684,15 @@ const InventoryManagement = () => {
           form.resetFields();
         }}
         footer={null}
-        width={1200}
+        width={1400}
         style={{ top: 20 }}
       >
-        <Form form={form} layout="vertical" onFinish={handleSubmit}>
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+          scrollToFirstError
+        >
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
@@ -626,13 +704,11 @@ const InventoryManagement = () => {
                     validator: async (_, value) => {
                       if (!value) return;
                       try {
-                        // Check if partNumber already exists (only when adding new or changing)
                         const existingParts = spareParts.filter(
                           (p) =>
                             p.partNumber.toLowerCase() === value.toLowerCase()
                         );
                         if (editingRecord) {
-                          // When editing, exclude current record
                           const conflicts = existingParts.filter(
                             (p) => p.partId !== editingRecord.partId
                           );
@@ -640,7 +716,6 @@ const InventoryManagement = () => {
                             throw new Error("Mã phụ tùng đã tồn tại");
                           }
                         } else {
-                          // When adding new
                           if (existingParts.length > 0) {
                             throw new Error("Mã phụ tùng đã tồn tại");
                           }
@@ -670,13 +745,11 @@ const InventoryManagement = () => {
                     validator: async (_, value) => {
                       if (!value) return;
                       try {
-                        // Check if partName already exists (only when adding new or changing)
                         const existingParts = spareParts.filter(
                           (p) =>
                             p.partName.toLowerCase() === value.toLowerCase()
                         );
                         if (editingRecord) {
-                          // When editing, exclude current record
                           const conflicts = existingParts.filter(
                             (p) => p.partId !== editingRecord.partId
                           );
@@ -684,7 +757,6 @@ const InventoryManagement = () => {
                             throw new Error("Tên phụ tùng đã tồn tại");
                           }
                         } else {
-                          // When adding new
                           if (existingParts.length > 0) {
                             throw new Error("Tên phụ tùng đã tồn tại");
                           }
@@ -697,6 +769,52 @@ const InventoryManagement = () => {
                 ]}
               >
                 <Input placeholder="VD: Motor điện 5HP" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="partType" label="Loại phụ tùng">
+                <Input placeholder="VD: Cơ khí, Điện tử, Điều khiển" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="supplier" label="Nhà cung cấp">
+                <Input placeholder="VD: Công ty XYZ" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="material" label="Vật liệu">
+                <Input placeholder="VD: Thép không gỉ, Nhôm" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="purchasePrice"
+                label="Giá mua (đ)"
+                rules={[
+                  { type: "number", min: 0, message: "Giá không được âm" },
+                ]}
+              >
+                <InputNumber
+                  style={{ width: "100%" }}
+                  placeholder="VD: 100000"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="specifications" label="Thông số kỹ thuật">
+                <Input.TextArea
+                  placeholder="VD: Chiều dài 1500mm, Đường kính 50mm"
+                  rows={2}
+                />
               </Form.Item>
             </Col>
           </Row>
@@ -716,6 +834,19 @@ const InventoryManagement = () => {
             </Col>
             <Col span={12}>
               <Form.Item
+                name="minQuantity"
+                label="Số lượng tối thiểu"
+                rules={[{ type: "number", min: 0, message: "Phải >= 0" }]}
+                initialValue={editingRecord ? undefined : 5}
+              >
+                <InputNumber min={0} style={{ width: "100%" }} />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
                 name="location"
                 label="Vị trí"
                 rules={[
@@ -727,17 +858,30 @@ const InventoryManagement = () => {
                 <Input placeholder="VD: Kho A - Kệ 1" />
               </Form.Item>
             </Col>
+            <Col span={12}>
+              <Form.Item name="warehouse" label="Kho">
+                <Input placeholder="VD: Kho chính" />
+              </Form.Item>
+            </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item
-                name="minQuantity"
-                label="Số lượng tối thiểu"
-                rules={[{ type: "number", min: 0, message: "Phải >= 0" }]}
-                initialValue={editingRecord ? undefined : 5}
-              >
-                <InputNumber min={0} style={{ width: "100%" }} />
+              <Form.Item name="uom" label="Đơn vị tính">
+                <Input placeholder="VD: Cái, Bộ, Chiếc" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="replacementCycle" label="Chu kỳ thay thế">
+                <Input placeholder="VD: 12 tháng, 6 tháng" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="documentUrl" label="URL tài liệu">
+                <Input placeholder="VD: /documents/SP001_datasheet.pdf" />
               </Form.Item>
             </Col>
           </Row>
@@ -861,7 +1005,7 @@ const InventoryManagement = () => {
             Chỉnh sửa
           </Button>,
         ]}
-        width={1000}
+        width={1200}
         style={{ top: 20 }}
       >
         {viewingRecord && (
@@ -879,12 +1023,62 @@ const InventoryManagement = () => {
                 </div>
                 <div style={{ fontSize: 16 }}>{viewingRecord.partName}</div>
               </Col>
+
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Loại phụ tùng:</strong>
+                </div>
+                <div style={{ fontSize: 16 }}>
+                  {viewingRecord.partType || "Chưa xác định"}
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Nhà cung cấp:</strong>
+                </div>
+                <div style={{ fontSize: 16 }}>
+                  {viewingRecord.supplier || "Chưa xác định"}
+                </div>
+              </Col>
+
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Vật liệu:</strong>
+                </div>
+                <div style={{ fontSize: 16 }}>
+                  {viewingRecord.material || "Chưa xác định"}
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Giá mua:</strong>
+                </div>
+                <div
+                  style={{ fontSize: 16, color: "#283652", fontWeight: "600" }}
+                >
+                  {viewingRecord.purchasePrice
+                    ? `${viewingRecord.purchasePrice.toLocaleString("vi-VN")} đ`
+                    : "Chưa xác định"}
+                </div>
+              </Col>
+
+              <Col span={24}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Thông số kỹ thuật:</strong>
+                </div>
+                <div style={{ fontSize: 16 }}>
+                  {viewingRecord.specifications || "Chưa xác định"}
+                </div>
+              </Col>
+
               <Col span={12}>
                 <div style={{ marginBottom: 8 }}>
                   <strong>Số lượng hiện tại:</strong>
                 </div>
-                <div style={{ fontSize: 16, color: "#283652" }}>
-                  {viewingRecord.quantity ?? 0} cái
+                <div
+                  style={{ fontSize: 16, color: "#283652", fontWeight: "600" }}
+                >
+                  {viewingRecord.quantity ?? 0} {viewingRecord.uom || "cái"}
                 </div>
               </Col>
               <Col span={12}>
@@ -892,15 +1086,54 @@ const InventoryManagement = () => {
                   <strong>Số lượng tối thiểu:</strong>
                 </div>
                 <div style={{ fontSize: 16 }}>
-                  {viewingRecord.minQuantity ?? 0} cái
+                  {viewingRecord.minQuantity ?? 0} {viewingRecord.uom || "cái"}
                 </div>
               </Col>
+
               <Col span={12}>
                 <div style={{ marginBottom: 8 }}>
                   <strong>Vị trí:</strong>
                 </div>
                 <div style={{ fontSize: 16 }}>
                   {viewingRecord.location || "Chưa xác định"}
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Kho:</strong>
+                </div>
+                <div style={{ fontSize: 16 }}>
+                  {viewingRecord.warehouse || "Chưa xác định"}
+                </div>
+              </Col>
+
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Đơn vị tính:</strong>
+                </div>
+                <div style={{ fontSize: 16 }}>
+                  {viewingRecord.uom || "Chưa xác định"}
+                </div>
+              </Col>
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Chu kỳ thay thế:</strong>
+                </div>
+                <div style={{ fontSize: 16 }}>
+                  {viewingRecord.replacementCycle || "Chưa xác định"}
+                </div>
+              </Col>
+
+              <Col span={12}>
+                <div style={{ marginBottom: 8 }}>
+                  <strong>Ngày thêm:</strong>
+                </div>
+                <div style={{ fontSize: 16 }}>
+                  {viewingRecord.dateAdded
+                    ? new Date(viewingRecord.dateAdded).toLocaleDateString(
+                        "vi-VN"
+                      )
+                    : "Chưa xác định"}
                 </div>
               </Col>
               <Col span={12}>
@@ -962,6 +1195,23 @@ const InventoryManagement = () => {
                   </Tag>
                 </div>
               </Col>
+
+              {viewingRecord.documentUrl && (
+                <Col span={24}>
+                  <div style={{ marginBottom: 8 }}>
+                    <strong>Tài liệu:</strong>
+                  </div>
+                  <div style={{ fontSize: 16 }}>
+                    <a
+                      href={viewingRecord.documentUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      {viewingRecord.documentUrl}
+                    </a>
+                  </div>
+                </Col>
+              )}
             </Row>
           </div>
         )}

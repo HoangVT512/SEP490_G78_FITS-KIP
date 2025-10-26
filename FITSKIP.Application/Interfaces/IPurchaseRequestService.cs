@@ -13,5 +13,6 @@ public interface IPurchaseRequestService
     Task<bool> DeletePurchaseRequestAsync(int id, string userId, CancellationToken cancellationToken = default);
     Task<PurchaseRequestDTO?> ApprovePurchaseRequestAsync(int id, string managerId, CancellationToken cancellationToken = default);
     Task<PurchaseRequestDTO?> RejectPurchaseRequestAsync(int id, string managerId, string reason, CancellationToken cancellationToken = default);
+    Task<PurchaseRequestDTO?> MarkAsReceivedAsync(int id, string userId, CancellationToken cancellationToken = default);
 }
 

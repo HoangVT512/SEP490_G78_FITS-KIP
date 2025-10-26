@@ -85,6 +85,29 @@ public class IncidentsController : ControllerBase
     }
 
     /// <summary>
+    /// Lấy danh sách sự cố được giao cho kỹ thuật viên hiện tại
+    /// </summary>
+    [HttpGet("assigned-to-me")]
+    public async Task<IActionResult> GetIncidentsAssignedToMe()
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { success = false, message = "Không thể xác thực người dùng" });
+            }
+
+            var incidents = await _incidentService.GetIncidentsAssignedToTechnicianAsync(userId);
+            return Ok(new { success = true, data = incidents });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Có lỗi xảy ra khi lấy danh sách sự cố được giao", details = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Lấy thông tin sự cố theo ID
     /// </summary>
     [HttpGet("{id}")]
@@ -317,7 +340,7 @@ public class IncidentsController : ControllerBase
     /// Cập nhật thông tin sự cố
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateIncident(int id, [FromForm] UpdateIncidentRequest request)
+    public async Task<IActionResult> UpdateIncident(int id, [FromBody] UpdateIncidentRequest request)
     {
         try
         {
@@ -608,16 +631,55 @@ public class IncidentsController : ControllerBase
                 return NotFound(new { success = false, message = "Không tìm thấy sự cố" });
             }
 
-            if (string.IsNullOrEmpty(incident.ImageUrl))
+            if (incident.IncidentImages == null || !incident.IncidentImages.Any())
             {
                 return NotFound(new { success = false, message = "Sự cố này không có ảnh" });
             }
 
-            return Ok(new { success = true, data = new { imageUrl = incident.ImageUrl } });
+            // Return all images from IncidentImages table
+            var imageUrls = incident.IncidentImages.OrderBy(i => i.OrderIndex).Select(i => i.ImageUrl).ToList();
+            return Ok(new { success = true, data = new { imageUrls } });
         }
         catch (Exception ex)
         {
             return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi lấy ảnh sự cố", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Upload ảnh cho sự cố
+    /// </summary>
+    [HttpPost("upload-image")]
+    [Consumes("multipart/form-data")]
+    public async Task<IActionResult> UploadImage(IFormFile imageFile)
+    {
+        try
+        {
+            if (imageFile == null || imageFile.Length == 0)
+            {
+                return BadRequest(new { success = false, message = "Vui lòng chọn file ảnh" });
+            }
+
+            // Validate file type
+            var allowedExtensions = new[] { ".jpg", ".jpeg", ".png", ".gif", ".bmp" };
+            var extension = Path.GetExtension(imageFile.FileName).ToLowerInvariant();
+            if (!allowedExtensions.Contains(extension))
+            {
+                return BadRequest(new { success = false, message = "Chỉ chấp nhận file ảnh (jpg, jpeg, png, gif, bmp)" });
+            }
+
+            // Validate file size (max 5MB)
+            if (imageFile.Length > 5 * 1024 * 1024)
+            {
+                return BadRequest(new { success = false, message = "Kích thước file không được vượt quá 5MB" });
+            }
+
+            var imageUrl = await _incidentService.UploadIncidentImageAsync(imageFile);
+            return Ok(new { success = true, data = new { imageUrl } });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi upload ảnh", details = ex.Message });
         }
     }
 }

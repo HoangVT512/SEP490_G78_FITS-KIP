@@ -33,6 +33,18 @@ export const purchaseRequestService = {
     // For create endpoint controller returns ApiResponse<PurchaseRequestDTO>
     return res?.data || res;
   },
+
+  async update(requestId, request) {
+    const res = await apiRequest(
+      `/PurchaseRequests/${encodeURIComponent(requestId)}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(request),
+      }
+    );
+    return res?.data || res;
+  },
+
   async approve(requestId) {
     const res = await apiRequest(
       `/PurchaseRequests/${encodeURIComponent(requestId)}/approve`,
@@ -50,6 +62,16 @@ export const purchaseRequestService = {
       {
         method: "POST",
         body: payload ? JSON.stringify(payload) : undefined,
+      }
+    );
+    return res?.data || res;
+  },
+
+  async markAsReceived(requestId) {
+    const res = await apiRequest(
+      `/PurchaseRequests/${encodeURIComponent(requestId)}/received`,
+      {
+        method: "POST",
       }
     );
     return res?.data || res;

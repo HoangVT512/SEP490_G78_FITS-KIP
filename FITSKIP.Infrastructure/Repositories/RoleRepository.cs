@@ -25,7 +25,7 @@ namespace FITSKIP.Infrastructure.Repositories
             var existingRole = await db.Roles.FirstOrDefaultAsync(r => r.Name == role.Name);
             if (existingRole != null)
             {
-                throw new ArgumentException("Role with the same name already exists.");
+                throw new ArgumentException($"Role với tên {role.Name} đã tồ tại trong hệ thống");
             }
             await db.Roles.AddAsync(role, cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
@@ -34,11 +34,21 @@ namespace FITSKIP.Infrastructure.Repositories
 
         public async Task<IdentityRole?> DeleteRoleAsync(string id, CancellationToken cancellationToken = default)
         {
+            // Find the role by ID
             var existingRole = await db.Roles.FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
             if (existingRole == null)
             {
-                return null;
+                throw new Exception($"Role '{id}' không tồn tại.");
             }
+
+            // Check if any users are associated with this role
+            var isRoleInUse = await db.Users.AnyAsync(u => u.RoleId == id, cancellationToken);
+            if (isRoleInUse)
+            {
+                throw new Exception($"Role '{existingRole.Name}' đang tồn tại người dùng.");
+            }
+
+            // Proceed with deletion if no users are associated
             db.Roles.Remove(existingRole);
             await db.SaveChangesAsync(cancellationToken);
             return existingRole;

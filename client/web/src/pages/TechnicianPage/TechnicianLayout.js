@@ -34,6 +34,7 @@ import IncidentAssignList from "./IncidentAssignList";
 import MaintenanceTasks from "./MaintenanceTasks";
 import MaintenanceSchedule from "./MaintenanceSchedule";
 import MaintenanceChecklist from "./MaintenanceChecklist";
+import SparePartRequest from "./SparePartRequest";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -59,6 +60,8 @@ const TechnicianLayout = () => {
     const path = location.pathname;
     if (path.includes("/incident-list")) {
       setSelectedKey("incident-list");
+    } else if (path.includes("/spare-parts")) {
+      setSelectedKey("spare-request");
     } else if (path.includes("/maintenance-tasks")) {
       setSelectedKey("maintenance-tasks");
     } else if (path.includes("/maintenance-schedule")) {
@@ -76,6 +79,8 @@ const TechnicianLayout = () => {
 
     if (path.includes("/incident-list")) {
       return <IncidentAssignList />;
+    } else if (path.includes("/spare-parts")) {
+      return <SparePartRequest />;
     } else if (path.includes("/maintenance-tasks")) {
       return <MaintenanceTasks />;
     } else if (path.includes("/maintenance-schedule")) {
@@ -107,6 +112,11 @@ const TechnicianLayout = () => {
       label: "Nhiệm vụ bảo trì",
     },
     {
+      key: "spare-request",
+      icon: <ToolOutlined />,
+      label: "Yêu cầu phụ tùng",
+    },
+    {
       key: "maintenance-schedule",
       icon: <CalendarOutlined />,
       label: "Lịch bảo trì",
@@ -126,6 +136,9 @@ const TechnicianLayout = () => {
         break;
       case "incident-list":
         navigate("/technician/incident-list");
+        break;
+      case "spare-request":
+        navigate("/technician/spare-parts");
         break;
       case "maintenance-tasks":
         navigate("/technician/maintenance-tasks");

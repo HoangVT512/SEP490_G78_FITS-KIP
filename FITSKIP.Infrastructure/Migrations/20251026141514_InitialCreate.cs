@@ -197,12 +197,20 @@ namespace FITSKIP.Infrastructure.Migrations
                     Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true, defaultValue: "Pending"),
                     ApprovedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
                     RejectedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    ReceivedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     ApprovedAt = table.Column<DateTime>(type: "datetime", nullable: true),
-                    RejectedAt = table.Column<DateTime>(type: "datetime", nullable: true)
+                    RejectedAt = table.Column<DateTime>(type: "datetime", nullable: true),
+                    ReceivedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReceivedByNavigationId = table.Column<string>(type: "nvarchar(450)", nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Purchase__33A8519A9AC26C34", x => x.RequestID);
+                    table.ForeignKey(
+                        name: "FK_PurchaseRequests_AspNetUsers_ReceivedByNavigationId",
+                        column: x => x.ReceivedByNavigationId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK__PurchaseR__Appro__151B244E",
                         column: x => x.ApprovedBy,
@@ -232,6 +240,7 @@ namespace FITSKIP.Infrastructure.Migrations
                     LineID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     LineName = table.Column<string>(type: "nvarchar(250)", maxLength: 250, nullable: false),
+                    LineCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     DepartmentID = table.Column<int>(type: "int", nullable: true),
                     IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
                 },
@@ -363,7 +372,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     Reason = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Solution = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     Issue = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    ImageUrl = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     Status = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
                     ReportedByUserId = table.Column<string>(type: "nvarchar(450)", nullable: true),
@@ -456,6 +464,28 @@ namespace FITSKIP.Infrastructure.Migrations
                         column: x => x.ReplacedBy,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "IncidentImages",
+                columns: table => new
+                {
+                    ImageID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    IncidentID = table.Column<int>(type: "int", nullable: false),
+                    ImageUrl = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: false),
+                    OrderIndex = table.Column<int>(type: "int", nullable: false, defaultValue: 0),
+                    UploadedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()")
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Incident__7516F4EC", x => x.ImageID);
+                    table.ForeignKey(
+                        name: "FK_IncidentImages_IncidentHistory_IncidentID",
+                        column: x => x.IncidentID,
+                        principalTable: "IncidentHistory",
+                        principalColumn: "IncidentID",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -572,6 +602,11 @@ namespace FITSKIP.Infrastructure.Migrations
                 column: "TypeID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_IncidentImages_IncidentID",
+                table: "IncidentImages",
+                column: "IncidentID");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_IncidentShifts_IncidentID",
                 table: "IncidentShifts",
                 column: "IncidentID");
@@ -625,6 +660,11 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "IX_PurchaseRequests_PartID",
                 table: "PurchaseRequests",
                 column: "PartID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_PurchaseRequests_ReceivedByNavigationId",
+                table: "PurchaseRequests",
+                column: "ReceivedByNavigationId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_PurchaseRequests_RejectedBy",
@@ -688,6 +728,9 @@ namespace FITSKIP.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "AspNetRoleClaims");
+
+            migrationBuilder.DropTable(
+                name: "IncidentImages");
 
             migrationBuilder.DropTable(
                 name: "IncidentShifts");

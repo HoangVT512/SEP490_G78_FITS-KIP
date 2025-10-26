@@ -58,6 +58,7 @@ const PurchaseRequestManagement = () => {
     pending: requests.filter((req) => req.status === "Chờ duyệt").length,
     approved: requests.filter((req) => req.status === "Đã duyệt").length,
     rejected: requests.filter((req) => req.status === "Từ chối").length,
+    received: requests.filter((req) => req.status === "Đã nhập").length,
   };
 
   const loadData = async () => {
@@ -153,18 +154,23 @@ const PurchaseRequestManagement = () => {
       key: "status",
       width: 120,
       render: (status) => {
-        let displayStatus;
-        let color = "warning";
-        if (status === "Đã duyệt") {
+        let displayStatus = status;
+        let color = "default";
+
+        if (status === "Chờ duyệt") {
+          displayStatus = "Chờ duyệt";
+          color = "warning";
+        } else if (status === "Đã duyệt") {
           displayStatus = "Đã duyệt";
           color = "success";
         } else if (status === "Từ chối") {
           displayStatus = "Từ chối";
           color = "error";
-        } else {
-          displayStatus = "Chờ duyệt";
-          color = "warning";
+        } else if (status === "Đã nhập") {
+          displayStatus = "Đã nhập";
+          color = "processing";
         }
+
         return <Tag color={color}>{displayStatus}</Tag>;
       },
     },
@@ -180,6 +186,18 @@ const PurchaseRequestManagement = () => {
             icon: <EyeOutlined />,
             label: "Chi tiết",
             onClick: () => handleViewDetail(record),
+          },
+          {
+            key: "edit",
+            label: "Chỉnh sửa",
+            disabled: record.status !== "Chờ duyệt",
+            onClick: () => handleEditRequest(record),
+          },
+          {
+            key: "received",
+            label: "Đã nhập kho",
+            disabled: record.status !== "Đã duyệt",
+            onClick: () => handleMarkAsReceived(record),
           },
         ];
 
@@ -206,6 +224,21 @@ const PurchaseRequestManagement = () => {
     setDetailModalVisible(true);
   };
 
+  const handleEditRequest = (record) => {
+    // Only allow editing if status is "Chờ duyệt" (Pending)
+    if (record.status !== "Chờ duyệt") {
+      message.warning("Chỉ có thể chỉnh sửa yêu cầu ở trạng thái 'Chờ duyệt'");
+      return;
+    }
+    form.setFieldsValue({
+      partNumber: record.partId,
+      quantity: record.quantity,
+      reason: record.reason,
+    });
+    setSelectedRequest(record);
+    setIsModalVisible(true);
+  };
+
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
@@ -216,24 +249,6 @@ const PurchaseRequestManagement = () => {
         throw new Error("Phụ tùng không hợp lệ");
       }
 
-      // Check if there's already a pending request for this part
-      const pendingRequest = requests.find(
-        (req) => req.partId === partId && req.status === "Chờ duyệt"
-      );
-
-      if (pendingRequest) {
-        message.error(
-          `Phụ tùng này đã có yêu cầu đang chờ duyệt (REQ${String(
-            pendingRequest.requestId
-          ).padStart(
-            3,
-            "0"
-          )}). Vui lòng chờ hoàn thành yêu cầu này trước khi tạo yêu cầu mới!`
-        );
-        setLoading(false);
-        return;
-      }
-
       // Backend expects { partId, quantity, reason }
       const payload = {
         partId: partId,
@@ -241,13 +256,41 @@ const PurchaseRequestManagement = () => {
         reason: values.reason,
       };
 
-      await purchaseRequestService.create(payload);
-      message.success("Tạo yêu cầu mua hàng thành công!");
+      // If editing an existing request (selectedRequest is set)
+      if (selectedRequest) {
+        // Update existing purchase request
+        await purchaseRequestService.update(selectedRequest.requestId, payload);
+        message.success("Cập nhật yêu cầu mua hàng thành công!");
+      } else {
+        // Check if there's already a pending request for this part (only for new requests)
+        const pendingRequest = requests.find(
+          (req) => req.partId === partId && req.status === "Chờ duyệt"
+        );
+
+        if (pendingRequest) {
+          message.error(
+            `Phụ tùng này đã có yêu cầu đang chờ duyệt (REQ${String(
+              pendingRequest.requestId
+            ).padStart(
+              3,
+              "0"
+            )}). Vui lòng chờ hoàn thành yêu cầu này trước khi tạo yêu cầu mới!`
+          );
+          setLoading(false);
+          return;
+        }
+
+        // Create new purchase request
+        await purchaseRequestService.create(payload);
+        message.success("Tạo yêu cầu mua hàng thành công!");
+      }
+
       // refresh list
       const res = await purchaseRequestService.getMyRequests();
       setRequests(Array.isArray(res) ? res : []);
       setIsModalVisible(false);
       form.resetFields();
+      setSelectedRequest(null);
     } catch (error) {
       console.error("Create purchase request error:", error);
       // Try to get message from backend response first, then from error message
@@ -326,6 +369,36 @@ const PurchaseRequestManagement = () => {
         } catch (err) {
           console.error("Reject error", err);
           message.error(err?.message || "Không thể từ chối yêu cầu");
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+  };
+
+  const handleMarkAsReceived = async (record) => {
+    Modal.confirm({
+      title: "Xác nhận đã nhập kho",
+      content: `Bạn có chắc chắn đã nhập phụ tùng "${record.partName}" vào kho? Số lượng tồn kho sẽ tự động được cập nhật.`,
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      onOk: async () => {
+        setLoading(true);
+        try {
+          await purchaseRequestService.markAsReceived(record.requestId);
+          message.success(
+            "Đã đánh dấu nhập kho thành công! Số lượng tồn kho đã được cập nhật."
+          );
+          // Wait a bit for backend to complete, then refresh
+          await new Promise((resolve) => setTimeout(resolve, 300));
+          await loadData();
+        } catch (error) {
+          console.error("Mark as received error:", error);
+          const errorMessage =
+            error?.response?.data?.message ||
+            error?.message ||
+            "Có lỗi xảy ra khi đánh dấu đã nhập kho!";
+          message.error(errorMessage);
         } finally {
           setLoading(false);
         }
@@ -472,6 +545,7 @@ const PurchaseRequestManagement = () => {
               <Option value="Chờ duyệt">Chờ duyệt</Option>
               <Option value="Đã duyệt">Đã duyệt</Option>
               <Option value="Từ chối">Từ chối</Option>
+              <Option value="Đã nhập">Đã nhập kho</Option>
             </Select>
           </Col>
         </Row>
@@ -558,13 +632,20 @@ const PurchaseRequestManagement = () => {
       {/* Main Content - Only Request List */}
       {RequestListTable}
 
-      {/* Create Request Modal */}
+      {/* Create/Edit Request Modal */}
       <Modal
-        title="Tạo yêu cầu mua hàng mới"
+        title={
+          selectedRequest
+            ? `Chỉnh sửa yêu cầu REQ${String(
+                selectedRequest.requestId
+              ).padStart(3, "0")}`
+            : "Tạo yêu cầu mua hàng mới"
+        }
         open={isModalVisible}
         onCancel={() => {
           setIsModalVisible(false);
           form.resetFields();
+          setSelectedRequest(null);
         }}
         footer={null}
         width={700}
@@ -614,6 +695,8 @@ const PurchaseRequestManagement = () => {
                     ? "warning"
                     : selectedRequest.status === "Đã duyệt"
                     ? "success"
+                    : selectedRequest.status === "Đã nhập"
+                    ? "processing"
                     : "error"
                 }
               >

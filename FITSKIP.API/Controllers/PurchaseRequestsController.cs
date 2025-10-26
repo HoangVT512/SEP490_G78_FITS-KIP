@@ -567,5 +567,66 @@ public class PurchaseRequestsController : ControllerBase
             ));
         }
     }
+
+    /// <summary>
+    /// Mark purchase request as received (Đã nhập kho) - Only for Technical Managers
+    /// </summary>
+    [HttpPost("{id}/received")]
+    [Authorize(Roles = "Quản lý kỹ thuật")]
+    [ProducesResponseType(typeof(ApiResponse<PurchaseRequestDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> MarkAsReceived(int id)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(ApiResponse.ErrorResponse("Không thể xác thực người dùng"));
+            }
+
+            if (id <= 0)
+            {
+                return BadRequest(ApiResponse.ErrorResponse(
+                    "ID yêu cầu mua hàng không hợp lệ",
+                    new List<string> { "ID phải lớn hơn 0" }
+                ));
+            }
+
+            var purchaseRequest = await _purchaseRequestService.MarkAsReceivedAsync(id, userId);
+            if (purchaseRequest == null)
+            {
+                return NotFound(ApiResponse.ErrorResponse($"Không tìm thấy yêu cầu mua hàng với ID: {id}"));
+            }
+
+            // Send real-time update to both groups
+            await _hubContext.Clients.Group("TechnicalManagers").SendAsync("DataUpdated", new { type = "purchaseRequest", action = "received", requestId = purchaseRequest.RequestId });
+            await _hubContext.Clients.Group("Managers").SendAsync("DataUpdated", new { type = "purchaseRequest", action = "received", requestId = purchaseRequest.RequestId });
+
+            return Ok(ApiResponse<PurchaseRequestDTO>.SuccessResponse(
+                purchaseRequest,
+                "Đánh dấu đã nhập kho thành công. Số lượng tồn kho đã được cập nhật."
+            ));
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Lỗi business logic khi đánh dấu đã nhập kho yêu cầu mua hàng với ID: {RequestId}", id);
+            return BadRequest(ApiResponse.ErrorResponse(
+                ex.Message,
+                new List<string> { ex.Message }
+            ));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi đánh dấu đã nhập kho yêu cầu mua hàng với ID: {RequestId}", id);
+            return StatusCode(500, ApiResponse.ErrorResponse(
+                "Có lỗi xảy ra khi đánh dấu đã nhập kho",
+                new List<string> { ex.Message }
+            ));
+        }
+    }
 }
 

@@ -375,18 +375,21 @@ namespace FITSKIP.Infrastructure.SeedData
                         new Line
                         {
                             LineName = "Dây chuyền sản xuất 1",
+                            LineCode = "LINE001",
                             DepartmentId = productionDept.DepartmentId,
                             IsActive = true
                         },
                         new Line
                         {
                             LineName = "Dây chuyền sản xuất 2",
+                            LineCode = "LINE002",
                             DepartmentId = productionDept.DepartmentId,
                             IsActive = true
                         },
                         new Line
                         {
                             LineName = "Dây chuyền đóng gói",
+                            LineCode = "LINE003",
                             DepartmentId = productionDept.DepartmentId,
                             IsActive = true
                         }
@@ -624,21 +627,15 @@ namespace FITSKIP.Infrastructure.SeedData
                 {
                     new Shift
                     {
-                        ShiftName = "Ca sáng",
-                        StartTime = new TimeOnly(6, 0),
-                        EndTime = new TimeOnly(14, 0)
+                        ShiftName = "Ca 1",
+                        StartTime = new TimeOnly(7, 0),
+                        EndTime = new TimeOnly(15, 0)
                     },
                     new Shift
                     {
-                        ShiftName = "Ca chiều",
-                        StartTime = new TimeOnly(14, 0),
-                        EndTime = new TimeOnly(22, 0)
-                    },
-                    new Shift
-                    {
-                        ShiftName = "Ca đêm",
-                        StartTime = new TimeOnly(22, 0),
-                        EndTime = new TimeOnly(6, 0)
+                        ShiftName = "Ca 2",
+                        StartTime = new TimeOnly(15, 0),
+                        EndTime = new TimeOnly(23, 0)
                     }
                 };
 
@@ -877,7 +874,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Điều chỉnh thông số máy",
                         Solution = "Ghi nhận và theo dõi",
                         Issue = "Tạm dừng để điều chỉnh",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 8, 27, 11, 21, 0),
                         ReportedByUserId = null,
@@ -895,7 +891,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Vệ sinh máy nhanh",
                         Solution = "Ghi nhận và theo dõi",
                         Issue = "Tạm dừng để điều chỉnh",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 9, 27, 13, 27, 0),
                         ReportedByUserId = null,
@@ -913,7 +908,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Vấn đề kỹ thuật nghiêm trọng",
                         Solution = "Thay thế phụ tùng hỏng",
                         Issue = "Vấn đề kỹ thuật nghiêm trọng",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 10, 10, 7, 15, 0),
                         ReportedByUserId = null,
@@ -931,7 +925,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Vấn đề kỹ thuật nghiêm trọng",
                         Solution = "Thay thế phụ tùng hỏng",
                         Issue = "Máy hỏng nặng cần sửa chữa",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 8, 31, 21, 28, 0),
                         ReportedByUserId = null,
@@ -949,7 +942,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Thiếu phụ tùng thay thế",
                         Solution = "Liên hệ kỹ thuật viên",
                         Issue = "Bảo trì định kỳ kéo dài",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 8, 27, 8, 47, 0),
                         ReportedByUserId = null,
@@ -967,7 +959,7 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Thay đổi setup sản phẩm",
                         Solution = "Điều chỉnh lại thông số",
                         Issue = "Tạm nghỉ giữa ca",
-                        ImageUrl = "/images/incidents/incident_006.jpg",
+
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 9, 6, 17, 49, 0),
                         ReportedByUserId = null,
@@ -985,7 +977,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Vấn đề kỹ thuật nghiêm trọng",
                         Solution = "Chuẩn bị máy dự phòng",
                         Issue = "Thiếu phụ tùng thay thế",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 9, 24, 18, 19, 0),
                         ReportedByUserId = null,
@@ -1003,7 +994,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Bảo trì định kỳ kéo dài",
                         Solution = "Sửa chữa chuyên sâu",
                         Issue = "Vấn đề kỹ thuật nghiêm trọng",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 10, 7, 12, 28, 0),
                         ReportedByUserId = null,
@@ -1021,7 +1011,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Hỏng hóc nặng cần sửa chữa",
                         Solution = "Chuẩn bị máy dự phòng",
                         Issue = "Vấn đề kỹ thuật nghiêm trọng",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 10, 1, 17, 11, 0),
                         ReportedByUserId = null,
@@ -1039,7 +1028,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Thay đổi setup sản phẩm",
                         Solution = "Tiếp tục sản xuất",
                         Issue = "Máy dừng hoạt động ngắn",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 10, 7, 21, 15, 0),
                         ReportedByUserId = null,
@@ -1057,7 +1045,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Hỏng hóc nặng cần sửa chữa",
                         Solution = "Sửa chữa chuyên sâu",
                         Issue = "Vấn đề kỹ thuật nghiêm trọng",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 10, 20, 14, 16, 0),
                         ReportedByUserId = null,
@@ -1075,7 +1062,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Điều chỉnh thông số máy",
                         Solution = "Tiếp tục sản xuất",
                         Issue = "Máy dừng hoạt động ngắn",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 9, 14, 14, 55, 0),
                         ReportedByUserId = null,
@@ -1093,7 +1079,7 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Hỏng hóc nặng cần sửa chữa",
                         Solution = "Thay thế phụ tùng hỏng",
                         Issue = "Bảo trì định kỳ kéo dài",
-                        ImageUrl = "/images/incidents/incident_013.jpg",
+
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 9, 3, 16, 24, 0),
                         ReportedByUserId = null,
@@ -1111,7 +1097,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Hỏng hóc nặng cần sửa chữa",
                         Solution = "Thay thế phụ tùng hỏng",
                         Issue = "Bảo trì định kỳ kéo dài",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 9, 12, 8, 23, 0),
                         ReportedByUserId = null,
@@ -1129,7 +1114,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Hỏng hóc nặng cần sửa chữa",
                         Solution = "Sửa chữa chuyên sâu",
                         Issue = "Bảo trì định kỳ kéo dài",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 9, 29, 16, 7, 0),
                         ReportedByUserId = null,
@@ -1147,7 +1131,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Sự cố hệ thống điện",
                         Solution = "Chuẩn bị máy dự phòng",
                         Issue = "Sự cố hệ thống điện",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 9, 8, 16, 11, 0),
                         ReportedByUserId = null,
@@ -1165,7 +1148,7 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Thay đổi setup sản phẩm",
                         Solution = "Điều chỉnh lại thông số",
                         Issue = "Máy dừng hoạt động ngắn",
-                        ImageUrl = "/images/incidents/incident_017.jpg",
+
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 9, 9, 11, 44, 0),
                         ReportedByUserId = null,
@@ -1183,7 +1166,7 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Vấn đề kỹ thuật nghiêm trọng",
                         Solution = "Thay thế phụ tùng hỏng",
                         Issue = "Vấn đề kỹ thuật nghiêm trọng",
-                        ImageUrl = "/images/incidents/incident_018.jpg",
+
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 10, 10, 18, 12, 0),
                         ReportedByUserId = null,
@@ -1201,7 +1184,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Thay đổi setup sản phẩm",
                         Solution = "Hoàn thành kiểm tra nhanh",
                         Issue = "Dừng để vệ sinh nhanh",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 9, 16, 10, 26, 0),
                         ReportedByUserId = null,
@@ -1219,7 +1201,6 @@ namespace FITSKIP.Infrastructure.SeedData
                         Reason = "Bảo trì định kỳ kéo dài",
                         Solution = "Thay thế phụ tùng hỏng",
                         Issue = "Thiếu phụ tùng thay thế",
-                        ImageUrl = null,
                         Status = "Hoàn thành",
                         CreatedDate = new DateTime(2025, 9, 7, 9, 34, 0),
                         ReportedByUserId = null,
@@ -1647,7 +1628,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     {
                         LineId = 3,
                         Date = new DateTime(2025, 9, 10),
-                        ShiftId = 3,
+                        ShiftId = 2,
                         SlotTime = "22:00–23:00",
                         LoadingTime = 60,
                         TargetAmount = "110",
@@ -1683,7 +1664,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     {
                         LineId = 3,
                         Date = new DateTime(2025, 10, 3),
-                        ShiftId = 3,
+                        ShiftId = 2,
                         SlotTime = "01:00–03:00",
                         LoadingTime = 75,
                         TargetAmount = "120",
@@ -1719,7 +1700,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     {
                         LineId = 3,
                         Date = new DateTime(2025, 10, 15),
-                        ShiftId = 3,
+                        ShiftId = 2,
                         SlotTime = "05:00–06:00",
                         LoadingTime = 60,
                         TargetAmount = "100",
@@ -1755,7 +1736,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     {
                         LineId = 3,
                         Date = new DateTime(2025, 10, 25),
-                        ShiftId = 3,
+                        ShiftId = 2,
                         SlotTime = "22:00–23:00",
                         LoadingTime = 60,
                         TargetAmount = "140",
@@ -1793,7 +1774,7 @@ namespace FITSKIP.Infrastructure.SeedData
             await SeedStages(context);
             await SeedEquipment(context);
             await SeedShifts(context);
-            await SeedSpareParts(context);
+            // await SeedSpareParts(context); // Removed: User will add spare parts via web interface
             await SeedIncidentHistories(context);
             await SeedProductionOutputs(context);
         }
