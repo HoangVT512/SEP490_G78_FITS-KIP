@@ -14,11 +14,11 @@ namespace FITSKIP.API.Controllers
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
-    public class ReplacementHistoryController : ControllerBase
+    public class ReplacementHistoriesController : ControllerBase
     {
         private readonly IReplacementHistoryService _service;
 
-        public ReplacementHistoryController(
+        public ReplacementHistoriesController(
             IReplacementHistoryService service)
         {
             _service = service;
@@ -161,8 +161,8 @@ namespace FITSKIP.API.Controllers
                     return BadRequest(new { message = "Số lượng phụ tùng phải lớn hơn 0" });
                 }
 
-                var result = await _service.UpdateAsync( id,replacementHistory, cancellationToken);
-                    
+                var result = await _service.UpdateAsync(id, replacementHistory, cancellationToken);
+
 
                 return NoContent();
             }

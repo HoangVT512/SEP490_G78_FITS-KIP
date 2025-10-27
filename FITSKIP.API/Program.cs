@@ -125,6 +125,10 @@ namespace FITSKIP.API
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IProductionOutputRepository, FITSKIP.Infrastructure.Repositories.ProductionOutputRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IProductionOutputService, FITSKIP.Application.Services.ProductionOutputService>();
 
+            // Replacement History services
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IReplacementHistoryRepository, FITSKIP.Infrastructure.Repositories.ReplacementHistoryRepository>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IReplacementHistoryService, FITSKIP.Application.Services.ReplacementHistoryService>();
+
             // Maintenance services
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IMaintenancePlanRepository, FITSKIP.Infrastructure.Repositories.MaintenancePlanRepository>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IMaintenanceChecklistItemRepository, FITSKIP.Infrastructure.Repositories.MaintenanceChecklistItemRepository>();
@@ -143,7 +147,7 @@ namespace FITSKIP.API
             // SMS Service - Use Mock for testing to avoid Twilio rate limits
             // Change back to TwilioSmsService when ready for production
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.ISmsService, FITSKIP.Application.Services.TwilioSmsService>();
-            
+
             // Azure Storage Service
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IAzureStorageService, FITSKIP.Application.Services.AzureStorageService>();
 
