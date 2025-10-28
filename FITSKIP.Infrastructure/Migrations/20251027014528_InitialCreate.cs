@@ -264,9 +264,9 @@ namespace FITSKIP.Infrastructure.Migrations
                     Date = table.Column<DateTime>(type: "datetime", nullable: false),
                     ShiftID = table.Column<int>(type: "int", nullable: false),
                     SlotTime = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    LoadingTime = table.Column<decimal>(type: "decimal(10,2)", nullable: true),
-                    TargetAmount = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    ResultAmount = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    LoadingTime = table.Column<int>(type: "int", nullable: true),
+                    TargetAmount = table.Column<int>(type: "int", nullable: true),
+                    ResultAmount = table.Column<int>(type: "int", nullable: true),
                     OEE = table.Column<decimal>(type: "decimal(5,2)", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
                     UpdatedAt = table.Column<DateTime>(type: "datetime", nullable: true)

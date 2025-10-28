@@ -1,103 +1,3 @@
-// using FITSKIP.Application.Interfaces;
-// using FITSKIP.Domain.DTO;
-// using FITSKIP.Domain.Entities;
-// using FITSKIP.Domain.Interfaces;
-// using Microsoft.EntityFrameworkCore;
-// using Microsoft.Extensions.Logging;
-
-// namespace FITSKIP.Application.Services;
-
-// public class DashboardService : IDashboardService
-// {
-//     private readonly IDashboardRepository _repository;
-//     private readonly ILogger<DashboardService> _logger;
-
-//     // Hardcoded total minutes per day based on Slots (1275 minutes)
-//     private const double TotalMinutesPerDay = 1275.0;
-
-//     public DashboardService(IDashboardRepository repository, ILogger<DashboardService> logger)
-//     {
-//         _repository = repository;
-//         _logger = logger;
-//     }
-
-//     public async Task<object> GetDowntimeStatsAsync(int month, int year, int? lineId = null)
-//     {
-//         _logger.LogInformation($"Fetching downtime stats for month={month}, year={year}, lineId={lineId}");
-
-//         // Step 1: Calculate total operating minutes for the full month (30 days × 1275 minutes)
-//         var daysInMonth = DateTime.DaysInMonth(year, month);
-//         double totalOperatingMinutes = daysInMonth * TotalMinutesPerDay;
-//         _logger.LogInformation($"Total operating minutes (full month): {totalOperatingMinutes}");
-
-//         // Step 2: Define month range
-//         var startOfMonth = new DateTime(year, month, 1);
-//         var endOfMonth = startOfMonth.AddMonths(1);
-
-//         // Step 3: Query downtime by type, filtered by month and optional lineId (from IncidentHistory.StartTime)
-//         var downtimeQuery = from ih in _repository.IncidentHistories
-//                             where ih.StartTime >= startOfMonth && ih.StartTime < endOfMonth
-//                             && (lineId == null || ih.LineId == lineId)
-//                             && ih.TypeId.HasValue
-//                             select new
-//                             {
-//                                 TypeId = (int)ih.TypeId!,
-//                                 DurationMinutes = ih.Duration ?? 0
-//                             };
-
-//         var downtimeByTypeRaw = await downtimeQuery
-//             .GroupBy(x => x.TypeId)
-//             .Select(g => new
-//             {
-//                 TypeID = g.Key,
-//                 TotalMinutes = g.Sum(x => (double)x.DurationMinutes)
-//             })
-//             .ToListAsync();
-
-//         double totalDowntimeMinutes = downtimeByTypeRaw.Sum(x => x.TotalMinutes);
-//         _logger.LogInformation($"Total downtime minutes: {totalDowntimeMinutes}");
-
-//         // Step 4: Fetch all StopTypes
-//         var allStopTypes = await _repository.StopTypes.ToListAsync();
-//         var typeNames = allStopTypes.ToDictionary(t => t.TypeId, t => t.TypeName);
-
-//         // Step 5: Calculate operating time
-//         double operatingMinutes = totalOperatingMinutes - totalDowntimeMinutes;
-//         double operatingTimePercentage = totalOperatingMinutes > 0
-//             ? Math.Round((operatingMinutes / totalOperatingMinutes) * 100, 2)  // Changed to 2 decimal places
-//             : 0.0;
-
-//         // Step 6: Build downtime by type (include ALL StopTypes + Operating Time)
-//         var downtimeByType = new List<object>
-//         {
-//             new
-//             {
-//                 typeId = 0,  // Special ID for operating time
-//                 typeName = "Thời gian hoạt động",
-//                 percentage = operatingTimePercentage
-//             }
-//         };
-//         downtimeByType.AddRange(allStopTypes.Select(st => new
-//         {
-//             typeId = st.TypeId,
-//             typeName = st.TypeName,
-//             percentage = totalOperatingMinutes > 0
-//                 ? Math.Round((downtimeByTypeRaw.FirstOrDefault(dt => dt.TypeID == st.TypeId)?.TotalMinutes ?? 0) / totalOperatingMinutes * 100, 2)  // Changed to 2 decimal places
-//                 : 0.0
-//         }));
-
-//         // Step 7: Return structured data
-//         return new
-//         {
-//             totalOperatingMinutes = totalOperatingMinutes,
-//             operatingTimePercentage = operatingTimePercentage,
-//             totalDowntime = totalDowntimeMinutes,
-//             downtimeByType = downtimeByType
-//         };
-//     }
-// }
-
-
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
@@ -121,7 +21,7 @@ public class DashboardService : IDashboardService
 
     public async Task<object> GetDowntimeStatsAsync(int month, int year, int? lineId = null)
     {
-        _logger.LogInformation($"Fetching downtime stats for month={month}, year={year}, lineId={lineId}");
+        _logger.LogInformation($"Đang lấy thống kê thời gian ngừng hoạt động cho tháng={month}, năm={year}, lineId={lineId}");
 
         // Step 1: Define month range
         var startOfMonth = new DateTime(year, month, 1);
@@ -134,7 +34,7 @@ public class DashboardService : IDashboardService
                                          select po.LoadingTime ?? 0;
 
         double totalOperatingMinutes = await totalOperatingMinutesQuery.SumAsync(x => (double)x);
-        _logger.LogInformation($"Total operating minutes (from ProductionOutput): {totalOperatingMinutes}");
+        _logger.LogInformation($"Tổng thời gian hoạt động (từ sản lượng sản xuất): {totalOperatingMinutes}");
 
         // Step 3: Query downtime by type from IncidentHistory
         var downtimeQuery = from ih in _repository.IncidentHistories
@@ -156,8 +56,9 @@ public class DashboardService : IDashboardService
             })
             .ToListAsync();
 
-        double totalDowntimeMinutes = downtimeByTypeRaw.Sum(x => x.TotalMinutes);
-        _logger.LogInformation($"Total downtime minutes: {totalDowntimeMinutes}");
+        // double totalDowntimeMinutes = downtimeByTypeRaw.Sum(x => x.TotalMinutes);
+        double totalDowntimeMinutes = downtimeByTypeRaw.Where(x => x.TypeID != 3).Sum(x => x.TotalMinutes);  // Loại trừ defects (TypeId=3)
+        _logger.LogInformation($"Tổng thời gian ngừng hoạt động: {totalDowntimeMinutes}");
 
         // Step 4: Fetch all StopTypes
         var allStopTypes = await _repository.StopTypes.ToListAsync();
@@ -201,7 +102,7 @@ public class DashboardService : IDashboardService
     // Cập nhật method mới
     public async Task<object> GetDailyDowntimeStatsAsync(int month, int year, int? lineId = null, string? date = null)
     {
-        _logger.LogInformation($"Fetching daily downtime stats for month={month}, year={year}, lineId={lineId}, date={date}");
+        _logger.LogInformation($"Đang lấy thống kê thời gian ngừng hoạt động hàng ngày cho tháng={month}, năm={year}, lineId={lineId}, date={date}");
 
         DateTime startDate, endDate;
         if (!string.IsNullOrEmpty(date))
@@ -209,7 +110,7 @@ public class DashboardService : IDashboardService
             // Lọc theo ngày cụ thể (dd/mm/yyyy)
             if (!DateTime.TryParseExact(date, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out startDate))
             {
-                throw new ArgumentException("Invalid date format. Use dd/MM/yyyy.");
+                throw new ArgumentException("Lỗi định dạng ngày. Sử dụng dd/MM/yyyy.");
             }
             endDate = startDate.AddDays(1);
         }
@@ -313,29 +214,56 @@ public class DashboardService : IDashboardService
             }
         }
 
-        // Build response: For each unique date-line, include data
+        // Thêm query Target và Result per day per line
+        var dailyProduction = await _repository.ProductionOutputs
+            .Where(po => po.Date >= startDate && po.Date < endDate && (lineId == null || po.LineId == lineId))
+            .GroupBy(po => new { po.Date.Date, po.LineId })
+            .Select(g => new
+            {
+                Date = g.Key.Date,
+                LineId = (int)g.Key.LineId,
+                AvgTargetAmount = g.Average(po => (double)(po.TargetAmount ?? 0)),
+                AvgResultAmount = g.Average(po => (double)(po.ResultAmount ?? 0))
+            })
+            .ToListAsync();
+
+
+        // Trong phần build result, cập nhật lossPercentage
         var result = allDays
             .GroupBy(d => d.LineId)
             .Select(lineGroup => new
             {
                 lineId = lineGroup.Key,
                 lineName = lineNames.ContainsKey(lineGroup.Key) ? lineNames[lineGroup.Key] : "Unknown Line",
-                dailyStats = lineGroup.Select(d => new
+                dailyStats = lineGroup.Select(d =>
                 {
-                    date = d.Date.ToString("yyyy-MM-dd"),
-                    oee = Math.Round(dailyOee.FirstOrDefault(oe => oe.Date == d.Date && oe.LineId == d.LineId)?.AvgOee ?? 0, 2),
-                    lossPercentage = Math.Round((dailyOperatingMinutes.FirstOrDefault(dom => dom.Date == d.Date && dom.LineId == d.LineId)?.TotalOperatingMinutes ?? 0) > 0
-                        ? (dailyDowntime.Where(dd => dd.Date == d.Date && dd.LineId == d.LineId).Sum(dd => dd.TotalDuration) /
-                           (dailyOperatingMinutes.FirstOrDefault(dom => dom.Date == d.Date && dom.LineId == d.LineId)?.TotalOperatingMinutes ?? 0)) * 100
-                        : 0.0, 2),
-                    downDetails = new
+                    var prodData = dailyProduction.FirstOrDefault(p => p.Date == d.Date && p.LineId == d.LineId);
+                    var operatingMinutes = dailyOperatingMinutes.FirstOrDefault(dom => dom.Date == d.Date && dom.LineId == d.LineId)?.TotalOperatingMinutes ?? 0;
+                    var aLossMinutes = dailyDowntime.Where(dd => dd.Date == d.Date && dd.LineId == d.LineId && new[] { 1, 2, 4, 5 }.Contains(dd.TypeId)).Sum(dd => dd.TotalDuration);
+                    var defectiveCount = dailyDowntime.FirstOrDefault(dd => dd.Date == d.Date && dd.LineId == d.LineId && dd.TypeId == 3)?.Occurrences ?? 0;
+                    var idealCycleTime = prodData != null && prodData.AvgTargetAmount > 0 ? 60.0 / prodData.AvgTargetAmount : 0; // Giả định 60 phút per slot
+                    var qLossMinutes = defectiveCount * idealCycleTime;
+                    var totalLossPercentage = operatingMinutes > 0 ? ((aLossMinutes + qLossMinutes) / operatingMinutes) * 100 : 0; // Tỷ lệ mất mát = (A Loss + Q Loss) / Operating Minutes × 100
+                    return new
                     {
-                        dungNgan = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 1, dailyOperatingMinutes.FirstOrDefault(dom => dom.Date == d.Date && dom.LineId == d.LineId)?.TotalOperatingMinutes ?? 0),
-                        dungDai = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 2, dailyOperatingMinutes.FirstOrDefault(dom => dom.Date == d.Date && dom.LineId == d.LineId)?.TotalOperatingMinutes ?? 0),
-                        phePham = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 3, dailyOperatingMinutes.FirstOrDefault(dom => dom.Date == d.Date && dom.LineId == d.LineId)?.TotalOperatingMinutes ?? 0),
-                        veSinhDauCuoiCa = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 4, dailyOperatingMinutes.FirstOrDefault(dom => dom.Date == d.Date && dom.LineId == d.LineId)?.TotalOperatingMinutes ?? 0),
-                        doiMa = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 5, dailyOperatingMinutes.FirstOrDefault(dom => dom.Date == d.Date && dom.LineId == d.LineId)?.TotalOperatingMinutes ?? 0)
-                    }
+                        date = d.Date.ToString("yyyy-MM-dd"),
+                        oee = Math.Round(dailyOee.FirstOrDefault(oe => oe.Date == d.Date && oe.LineId == d.LineId)?.AvgOee ?? 0, 2),
+                        lossPercentage = Math.Round(totalLossPercentage, 2), // Cập nhật tỷ lệ mất mát
+                        // Sửa downDetails để Phe Pham (TypeId=3) không tính percentage như downtime:
+                        downDetails = new
+                        {
+                            dungNgan = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 1, operatingMinutes),
+                            dungDai = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 2, operatingMinutes),
+                            phePham = new  // Tính riêng như Q Loss, không như downtime
+                            {
+                                percentage = operatingMinutes > 0 ? Math.Round((qLossMinutes / operatingMinutes) * 100, 2) : 0.00,  // Q Loss percentage
+                                duration = Math.Round(qLossMinutes, 2),  // Thời gian Q Loss
+                                occurrences = defectiveCount
+                            },
+                            veSinhDauCuoiCa = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 4, operatingMinutes),
+                            doiMa = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 5, operatingMinutes)
+                        }
+                    };
                 }).ToList()
             })
             .ToList();

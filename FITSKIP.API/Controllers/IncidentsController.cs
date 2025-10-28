@@ -67,6 +67,41 @@ public class IncidentsController : ControllerBase
         }
     }
 
+    [HttpGet("line/{lineId}/date")]
+    public async Task<IActionResult> GetIncidentsByLineAndDate(int lineId, [FromQuery] string date)
+    {
+        try
+        {
+            // Parse date string to DateTime with DD/MM/YYYY format
+            Console.WriteLine($"Đang parse date string: '{date}'");
+            var vietnameseCulture = new System.Globalization.CultureInfo("vi-VN");
+            if (!DateTime.TryParse(date, vietnameseCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
+            {
+                Console.WriteLine($"Không thể parse date: '{date}' với culture vi-VN");
+                return BadRequest(new { success = false, message = "Định dạng ngày không hợp lệ. Định dạng mong đợi: DD/MM/YYYY" });
+            }
+
+            Console.WriteLine($"Đang lấy incidents cho line {lineId} vào ngày {parsedDate:dd/MM/yyyy}");
+
+            // Get all incidents and filter by LineId and date (safely handle nullable StartTime)
+            var allIncidents = await _incidentService.GetIncidentsAsync();
+            var filteredIncidents = allIncidents.Where(i =>
+                i.LineId == lineId &&
+                i.StartTime.HasValue &&  // Ensure StartTime is not null
+                i.StartTime.Value.Date == parsedDate.Date  // Access .Date on the non-null value
+            ).ToList();
+
+            Console.WriteLine($"Tìm thấy {filteredIncidents.Count} incidents");
+
+            return Ok(new { success = true, data = filteredIncidents, message = "Lấy danh sách incidents theo line và ngày thành công" });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Lỗi khi lấy incidents: {ex.Message}");
+            return BadRequest(new { success = false, message = "Có lỗi xảy ra khi lấy danh sách incidents theo line và ngày", details = ex.Message });
+        }
+    }
+
     /// <summary>
     /// Lấy danh sách loại dừng
     /// </summary>

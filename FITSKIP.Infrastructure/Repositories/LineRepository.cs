@@ -31,6 +31,16 @@ public class LineRepository : ILineRepository
             .FirstOrDefaultAsync(l => l.LineId == id, cancellationToken);
     }
 
+    public async Task<Line?> GetByLineCodeAsync(string lineCode, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrEmpty(lineCode))
+            return null;
+
+        return await _context.Lines
+            .Include(l => l.Department)
+            .FirstOrDefaultAsync(l => l.LineCode != null && l.LineCode.ToUpper() == lineCode.ToUpper(), cancellationToken);
+    }
+
     public async Task<Line> CreateAsync(Line line, CancellationToken cancellationToken = default)
     {
         await _context.Lines.AddAsync(line, cancellationToken);

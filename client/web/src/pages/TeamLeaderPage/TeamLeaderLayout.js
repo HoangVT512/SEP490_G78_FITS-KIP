@@ -36,8 +36,6 @@ import ProductionManagement from "./ProductionManagement";
 import ReplacementComponents from "./ReplacementComponents";
 import IncidentManagement from "./IncidentManagement";
 import EFormSystem from "./EFormSystem";
-import FactoryMap from "./FactoryMap";
-import OEEDashboard from "./OEEDashboard";
 import DowntimeChartDashboard from "../ManagerPage/DowntimeChartDashboard";
 
 const { Header, Sider, Content } = AntLayout;
@@ -111,10 +109,6 @@ const TeamLeaderLayout = () => {
       return <ReplacementComponents />;
     } else if (path.includes("/incidents")) {
       return <IncidentManagement />;
-    } else if (path.includes("/factory-map")) {
-      return <FactoryMap />;
-    } else if (path.includes("/oee-dashboard")) {
-      return <OEEDashboard />;
     } else if (path.includes("/downtime-chart")) {
       return <DowntimeChartDashboard />;
     } else if (path === "/team-leader" || path.includes("/dashboard")) {
@@ -130,16 +124,6 @@ const TeamLeaderLayout = () => {
       key: "dashboard",
       icon: <DashboardOutlined />,
       label: "Tổng quan",
-    },
-    {
-      key: "factory-map",
-      icon: <AppstoreOutlined />,
-      label: "Sơ đồ nhà máy",
-    },
-    {
-      key: "oee-dashboard",
-      icon: <BarChartOutlined />,
-      label: "Biểu đồ OEE",
     },
     {
       key: "downtime-chart",
@@ -183,12 +167,6 @@ const TeamLeaderLayout = () => {
     switch (key) {
       case "dashboard":
         navigate("/team-leader/dashboard");
-        break;
-      case "factory-map":
-        navigate("/team-leader/factory-map");
-        break;
-      case "oee-dashboard":
-        navigate("/team-leader/oee-dashboard");
         break;
       case "downtime-chart":
         navigate("/team-leader/downtime-chart");

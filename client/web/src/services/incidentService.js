@@ -13,6 +13,18 @@ export const incidentService = {
     return res?.data || res;
   },
 
+  async getIncidentsByLineAndDate(lineId, date) {
+    try {
+      // date should be in DD/MM/YYYY format
+      const url = `/Incidents/line/${lineId}/date?date=${encodeURIComponent(date)}`;
+      const data = await apiRequest(url);
+      return data?.data || [];
+    } catch (error) {
+      console.error('Lỗi lấy những sự cố theo dây chuyền và ngày:', error);
+      throw error;
+    }
+  },
+
   async getById(id) {
     const res = await apiRequest(`/Incidents/${encodeURIComponent(id)}`, {
       method: "GET",

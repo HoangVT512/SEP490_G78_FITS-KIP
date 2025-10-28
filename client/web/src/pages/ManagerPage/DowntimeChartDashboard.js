@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Select, DatePicker, Tabs, Statistic, Progress, Space, Tag } from 'antd';
+import { Card, Row, Col, Select, DatePicker, Tabs, Statistic, Progress, Space, Tag, Alert  } from 'antd';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart, Area, AreaChart, Scatter, ScatterChart } from 'recharts';
-import { ArrowUpOutlined, ArrowDownOutlined, ThunderboltOutlined, ClockCircleOutlined, DashboardOutlined } from '@ant-design/icons';
+import { ArrowUpOutlined, ArrowDownOutlined, ThunderboltOutlined, ClockCircleOutlined, DashboardOutlined, LoadingOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { name } from 'dayjs/locale/vi';
 import { authService } from '../../services/authService';
@@ -27,6 +27,7 @@ const DowntimeChartDashboard = () => {
     const [productionLines, setProductionLines] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [dataLoaded, setDataLoaded] = useState(false);
 
     const [selectedMonth, setSelectedMonth] = useState(dayjs().format('MM/YYYY'));
     const [selectedLines, setSelectedLines] = useState([]);
@@ -37,12 +38,16 @@ const DowntimeChartDashboard = () => {
     // State cho daily downtime data từ API
     const [dailyDowntimeData, setDailyDowntimeData] = useState([]);
 
+    // State cho thông báo khi không có quyền truy cập
+    const [notificationMessage, setNotificationMessage] = useState(null);
+
     // Fetch user và lines data khi component mount
     useEffect(() => {
         const fetchUserAndLines = async () => {
             try {
                 setLoading(true);
                 setError(null);
+                setDataLoaded(false);
 
                 // Lấy thông tin user hiện tại
                 let user = authService.getStoredUser();
@@ -88,32 +93,31 @@ const DowntimeChartDashboard = () => {
                 console.log('Is manager:', isManager);
 
                 if (isManager) {
-                    // Nếu là quản lý, lấy tất cả lines trong phòng ban của họ
-                    // Giả sử user có departmentId, lấy lines theo department
+                    // Nếu là quản lý và có departmentId, lấy tất cả lines trong phòng ban của họ
                     if (user.departmentId) {
                         try {
-                            console.log('Getting lines by department for manager...');
+                            console.log('Đang lấy danh sách dây chuyền theo phòng ban...');
                             // Sử dụng API endpoint để lấy lines theo department
                             const departmentLines = await lineService.getLinesByDepartment(user.departmentId);
                             console.log('Department lines for manager:', departmentLines);
                             allowedLines = departmentLines;
                         } catch (lineError) {
                             console.error('Lỗi lấy dánh sách dây chuyền theo phòng ban:', lineError);
-                            // Fallback: lấy tất cả lines active
-                            allowedLines = await lineService.getActiveLines();
+                            // Không lấy gì cả nếu lỗi
+                            allowedLines = [];
                         }
                     } else {
-                        console.log('Manager has no departmentId, getting all active lines as fallback');
-                        // Nếu không có departmentId, lấy tất cả lines active
-                        allowedLines = await lineService.getActiveLines();
+                        console.log('Quản lý không được phân công vào phòng ban nào, nên không lấy được dây chuyền.');
+                        // Nếu là quản lý nhưng chưa có departmentId, không hiển thị dây chuyền nào
+                        allowedLines = [];
                     }
                 } else {
                     // Nếu không phải quản lý, chỉ lấy lines mà user được phân công
                     try {
-                        console.log('Getting user-specific lines...');
+                        console.log('Đang lấy dây chuyền theo người dùng...');
                         const userLines = await lineService.getLinesByUser(user.id);
                         allowedLines = userLines || [];
-                        console.log('User lines:', allowedLines);
+                        console.log('Dây chuyền của người dùng:', allowedLines);
                     } catch (lineError) {
                         console.error('Lỗi lấy danh sách người dùng với dây chuyền:', lineError);
                         allowedLines = [];
@@ -135,6 +139,27 @@ const DowntimeChartDashboard = () => {
                 // Set selectedLines mặc định là tất cả lines được phép
                 const lineIds = transformedLines.map(line => line.id);
                 setSelectedLines(lineIds);
+
+                // Set thông báo dựa trên quyền truy cập
+                if (transformedLines.length === 0) {
+                    if (isManager && !user.departmentId) {
+                        setNotificationMessage({
+                            type: 'manager-no-department',
+                            title: 'Chưa được phân công phòng ban',
+                            message: 'Bạn có vai trò quản lý nhưng chưa được phân công quản lý phòng ban nào. Vui lòng liên hệ quản trị viên hệ thống để được phân công phòng ban.',
+                            icon: 'UserOutlined'
+                        });
+                    } else if (!isManager) {
+                        setNotificationMessage({
+                            type: 'user-no-lines',
+                            title: 'Chưa được phân công dây chuyền',
+                            message: 'Bạn chưa được phân công giám sát dây chuyền sản xuất nào. Vui lòng liên hệ quản lý phòng ban để được phân công.',
+                            icon: 'SettingOutlined'
+                        });
+                    }
+                } else {
+                    setNotificationMessage(null);
+                }
 
                 // Cập nhật barVisibility và pieVisibility dựa trên các dây chuyền được phép
                 const barInitial = {};
@@ -162,6 +187,11 @@ const DowntimeChartDashboard = () => {
                 setBarVisibility(barInitial);
                 setPieVisibility(pieInitial);
 
+                // Check if we have actual data to display
+                if (transformedLines.length > 0) {
+                    setDataLoaded(true);
+                }
+
             } catch (error) {
                 console.error('Lỗi lấy dữ liệu:', error);
                 setError('Không thể tải dữ liệu. Vui lòng thử lại sau.');
@@ -176,7 +206,7 @@ const DowntimeChartDashboard = () => {
     // Fetch downtime data khi selectedMonth hoặc selectedLines thay đổi
     useEffect(() => {
         const fetchDowntimeData = async () => {
-            if (!selectedLines.length) return;
+            if (!selectedLines.length || !dataLoaded) return;
 
             try {
                 const [monthNum, year] = selectedMonth.split('/');
@@ -213,12 +243,12 @@ const DowntimeChartDashboard = () => {
         };
 
         fetchDowntimeData();
-    }, [selectedMonth, selectedLines]);
+    }, [selectedMonth, selectedLines, dataLoaded]);
 
     // Fetch daily downtime data khi selectedMonth hoặc selectedLines thay đổi
     useEffect(() => {
         const fetchDailyDowntimeData = async () => {
-            if (!selectedLines.length) return;
+            if (!selectedLines.length || !dataLoaded) return;
 
             try {
                 const [monthNum, year] = selectedMonth.split('/');
@@ -237,7 +267,7 @@ const DowntimeChartDashboard = () => {
         };
 
         fetchDailyDowntimeData();
-    }, [selectedMonth, selectedLines]);
+    }, [selectedMonth, selectedLines, dataLoaded]);
 
     // State để control visibility của các bar series cho từng dây chuyền
     const [barVisibility, setBarVisibility] = useState({});
@@ -592,7 +622,7 @@ const DowntimeChartDashboard = () => {
                                             }}
                                         >
                                             {details.percentage > 0
-                                                ? `${details.percentage.toFixed(1)}% | Thời lượng: ${details.duration} phút | Số lần: ${details.occurrences}`
+                                                ? `${details.percentage.toFixed(2)}% | Thời lượng: ${details.duration} phút | Số lần: ${details.occurrences}`
                                                 : '0% | Thời lượng: 0 phút | Số lần: 0'}
                                         </div>
                                     )}
@@ -609,7 +639,7 @@ const DowntimeChartDashboard = () => {
                                         >
                                             {isNaN(item.value)
                                                 ? '—'
-                                                : `${item.value.toFixed(1)}%`}
+                                                : `${item.value.toFixed(2)}%`}
                                         </div>
                                     )}
                                 </div>
@@ -904,7 +934,7 @@ const DowntimeChartDashboard = () => {
                                     {barVisibility[line.id].dauCuoiCa && <Bar yAxisId="left" dataKey="dauCuoiCa" stackId="a" fill="#fa8c16" name="Vệ sinh dầu/cuối ca" barSize={20} />}
                                     {barVisibility[line.id].doiMa && <Bar yAxisId="left" dataKey="doiMa" stackId="a" fill="#e8e8e8" name="Đổi mã" radius={[4, 4, 0, 0]} barSize={20} />}
                                     {barVisibility[line.id].oee && <Line
-                                        yAxisId="right"
+                                        yAxisId="left"
                                         type="monotone"
                                         dataKey="oee"
                                         stroke="#28170aff"
@@ -932,7 +962,7 @@ const DowntimeChartDashboard = () => {
                                                         fill="#28170aff"
                                                         style={{ textShadow: '1px 1px 1px rgba(255,255,255,0.8)' }}
                                                     >
-                                                        {payload.oee.toFixed(1)}%
+                                                        {payload.oee.toFixed(2)}%
                                                     </text>
                                                 </g>
                                             );
@@ -978,7 +1008,7 @@ const DowntimeChartDashboard = () => {
                                                         fill="#ff4d4f"
                                                         style={{ textShadow: '1px 1px 1px rgba(255,255,255,0.8)' }}
                                                     >
-                                                        {payload.tyLeMat.toFixed(1)}%
+                                                        {payload.tyLeMat.toFixed(2)}%
                                                     </text>
                                                 </g>
                                             );
@@ -1110,8 +1140,75 @@ const DowntimeChartDashboard = () => {
 
             {/* Render các dây chuyền được chọn */}
             {loading && (
-                <div style={{ textAlign: 'center', padding: '50px' }}>
-                    <div>Đang tải dữ liệu...</div>
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '80px 20px',
+                    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+                    borderRadius: '16px',
+                    marginBottom: '24px',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    minHeight: '400px'
+                }}>
+                    <div style={{
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '24px'
+                    }}>
+                        {/* Bánh răng lớn */}
+                        <SettingOutlined
+                            style={{
+                                fontSize: '80px',
+                                color: '#1890ff',
+                                animation: 'spin-clockwise 2s linear infinite'
+                            }}
+                        />
+                        {/* Bánh răng nhỏ */}
+                        <SettingOutlined
+                            style={{
+                                fontSize: '40px',
+                                color: '#52c41a',
+                                position: 'absolute',
+                                top: '20px',
+                                right: '20px',
+                                animation: 'spin-counterclockwise 1.5s linear infinite'
+                            }}
+                        />
+                        {/* Icon loading ở giữa */}
+                        <LoadingOutlined
+                            style={{
+                                fontSize: '24px',
+                                color: '#fff',
+                                position: 'absolute',
+                                animation: 'pulse 1s ease-in-out infinite'
+                            }}
+                        />
+                    </div>
+
+                    <div style={{
+                        textAlign: 'center',
+                        color: '#334766',
+                        fontSize: '18px',
+                        fontWeight: '600',
+                        marginBottom: '12px'
+                    }}>
+                        🏭 Đang tải dữ liệu sản xuất...
+                    </div>
+
+                    <div style={{
+                        textAlign: 'center',
+                        color: '#666',
+                        fontSize: '14px',
+                        lineHeight: '1.5',
+                        maxWidth: '400px'
+                    }}>
+                        Hệ thống đang thu thập và phân tích dữ liệu hiệu suất từ các dây chuyền sản xuất.
+                        Vui lòng đợi trong giây lát...
+                    </div>
                 </div>
             )}
 
@@ -1121,9 +1218,43 @@ const DowntimeChartDashboard = () => {
                 </div>
             )}
 
+            {/* Thông báo khi không có quyền truy cập */}
+            {!loading && !error && notificationMessage && (
+                <div style={{ marginBottom: '24px' }}>
+                    <Alert
+                        message={notificationMessage.title}
+                        description={notificationMessage.message}
+                        type={notificationMessage.type === 'manager-no-department' ? 'warning' : 'info'}
+                        showIcon
+                        style={{
+                            borderRadius: '12px',
+                            fontSize: '14px'
+                        }}
+                    />
+                </div>
+            )}
+
             {!loading && !error && productionLines
                 .filter(line => selectedLines.includes(line.id))
                 .map(line => renderLineCard(line))}
+
+            {/* Global CSS for animations */}
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                    @keyframes spin-clockwise {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+                    @keyframes spin-counterclockwise {
+                        from { transform: rotate(360deg); }
+                        to { transform: rotate(0deg); }
+                    }
+                    @keyframes pulse {
+                        0%, 100% { opacity: 1; transform: scale(1); }
+                        50% { opacity: 0.7; transform: scale(1.1); }
+                    }
+                `
+            }} />
         </div>
     );
 };

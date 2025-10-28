@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251026141514_InitialCreate")]
+    [Migration("20251027014528_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -430,15 +430,14 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("LineID");
 
-                    b.Property<decimal?>("LoadingTime")
-                        .HasColumnType("decimal(10, 2)");
+                    b.Property<int?>("LoadingTime")
+                        .HasColumnType("int");
 
                     b.Property<decimal?>("OEE")
                         .HasColumnType("decimal(5, 2)");
 
-                    b.Property<string>("ResultAmount")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                    b.Property<int?>("ResultAmount")
+                        .HasColumnType("int");
 
                     b.Property<int>("ShiftId")
                         .HasColumnType("int")
@@ -449,9 +448,8 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("TargetAmount")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                    b.Property<int?>("TargetAmount")
+                        .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("datetime");

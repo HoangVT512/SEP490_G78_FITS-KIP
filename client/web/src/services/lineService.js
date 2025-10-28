@@ -7,7 +7,7 @@ export const lineService = {
       const response = await apiRequest("/Lines");
       return response.data || response; // Handle both wrapped and direct responses
     } catch (error) {
-      console.error("Get lines error:", error);
+      console.error("Lỗi lấy danh sách chuyền sản xuất:", error);
       throw new Error(
         error.message || "Lấy danh sách chuyền sản xuất thất bại"
       );
@@ -20,7 +20,7 @@ export const lineService = {
       const response = await apiRequest("/Lines/active");
       return response.data || response;
     } catch (error) {
-      console.error("Get active lines error:", error);
+      console.error("Lỗi lấy danh sách dây chuyền sản xuất đang hoạt động:", error);
       throw new Error(
         error.message || "Lấy danh sách dây chuyền sản xuất đang hoạt động thất bại"
       );
@@ -33,7 +33,7 @@ export const lineService = {
       const response = await apiRequest(`/Lines/${id}`);
       return response;
     } catch (error) {
-      console.error("Get line by id error:", error);
+      console.error("Lỗi lấy thông tin chuyền sản xuất theo ID:", error);
       throw new Error(
         error.message || "Lấy thông tin chuyền sản xuất thất bại"
       );
@@ -49,7 +49,7 @@ export const lineService = {
       });
       return response;
     } catch (error) {
-      console.error("Create line error:", error);
+      console.error("Lỗi tạo chuyền sản xuất:", error);
       // Throw lại error message từ API để UI có thể hiển thị
       throw new Error(error.message || "Tạo chuyền sản xuất thất bại");
     }
@@ -64,7 +64,7 @@ export const lineService = {
       });
       return response;
     } catch (error) {
-      console.error("Update line error:", error);
+      console.error("Lỗi cập nhật chuyền sản xuất:", error);
       // Throw lại error message từ API để UI có thể hiển thị
       throw new Error(error.message || "Cập nhật chuyền sản xuất thất bại");
     }
@@ -78,7 +78,7 @@ export const lineService = {
       });
       return response;
     } catch (error) {
-      console.error("Toggle line status error:", error);
+      console.error("Lỗi thay đổi trạng thái chuyền sản xuất:", error);
       throw new Error(
         error.message || "Thay đổi trạng thái chuyền sản xuất thất bại"
       );
@@ -91,7 +91,7 @@ export const lineService = {
       const response = await apiRequest(`/Lines/department/${departmentId}`);
       return response;
     } catch (error) {
-      console.error("Get lines by department error:", error);
+      console.error("Lỗi lấy chuyền sản xuất theo phòng ban:", error);
       throw new Error(
         error.message || "Lấy chuyền sản xuất theo phòng ban thất bại"
       );
@@ -104,7 +104,7 @@ export const lineService = {
       const response = await apiRequest(`/Lines/user/${encodeURIComponent(userId)}`);
       return response.data || response;
     } catch (error) {
-      console.error("Get lines by user error:", error);
+      console.error("Lỗi lấy danh sách dây chuyền theo người dùng:", error);
       throw new Error(
         error.message || "Lấy chuyền sản xuất của user thất bại"
       );
