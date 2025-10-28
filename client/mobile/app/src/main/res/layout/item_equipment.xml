@@ -39,7 +39,7 @@
                 android:id="@+id/tv_equipment_code"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Mã TB: TB001"
+                android:text="@string/equipment_code_sample"
                 android:textColor="@color/text_primary"
                 android:textSize="16sp"
                 android:textStyle="bold" />
@@ -50,7 +50,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Tên TB: Máy hàn tự động"
+                android:text="@string/equipment_name_sample"
                 android:textColor="@color/text_primary"
                 android:textSize="16sp" />
 
@@ -60,7 +60,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Công đoạn: Hàn khung xe"
+                android:text="@string/stage_sample"
                 android:textColor="@color/text_secondary"
                 android:textSize="14sp" />
 
@@ -70,7 +70,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Dây chuyền: Dây chuyền 2 - Hàn"
+                android:text="@string/line_sample"
                 android:textColor="@color/text_secondary"
                 android:textSize="14sp" />
 
@@ -80,7 +80,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
-                android:text="Vấn đề: Động cơ bị nóng, Tiếng ồn lớn"
+                android:text="@string/issues_sample"
                 android:textColor="@color/error"
                 android:textSize="14sp"
                 android:textStyle="italic" />

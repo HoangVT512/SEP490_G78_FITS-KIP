@@ -450,6 +450,68 @@ namespace FITSKIP.API.Controllers
                 });
             }
         }
+
+        /// <summary>
+        /// Send notification to all Technical Managers (Technician only)
+        /// </summary>
+        [HttpPost("send-to-technical-managers")]
+        [Authorize(Roles = "Kỹ thuật viên,Technician")]
+        public async Task<ActionResult<ApiResponse<bool>>> SendToTechnicalManagers([FromBody] SendSparePartRequestNotification request)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new ApiResponse<bool>
+                    {
+                        Success = false,
+                        Message = "User not authenticated"
+                    });
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new ApiResponse<bool>
+                    {
+                        Success = false,
+                        Message = "Invalid request data"
+                    });
+                }
+
+                // Send notification to all Technical Managers
+                await _notificationService.SendNotificationToRoleAsync(
+                    "Quản lý kỹ thuật",
+                    request.Message,
+                    request.Type ?? "partRequest"
+                );
+
+                return Ok(new ApiResponse<bool>
+                {
+                    Success = true,
+                    Message = "Notification sent to Technical Managers successfully",
+                    Data = true
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = $"Internal server error: {ex.Message}"
+                });
+            }
+        }
+    }
+
+    /// <summary>
+    /// Request model for sending spare part request notification
+    /// </summary>
+    public class SendSparePartRequestNotification
+    {
+        public string Message { get; set; } = string.Empty;
+        public string? Type { get; set; }
+        public object? Data { get; set; }
     }
 }
 

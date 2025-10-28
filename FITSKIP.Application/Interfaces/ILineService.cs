@@ -12,4 +12,5 @@ public interface ILineService
     Task<Line?> UpdateLineAsync(int id, UpdateLineRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Line>> GetLinesByDepartmentAsync(int departmentId, CancellationToken cancellationToken = default);
     Task<Line?> ToggleLineStatusAsync(int id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Line>> GetLinesByUserAsync(string userId, CancellationToken cancellationToken = default);
 }

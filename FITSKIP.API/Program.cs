@@ -41,6 +41,8 @@ namespace FITSKIP.API
         public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);            // Load optional local overrides without committing to git
+
+
             builder.Configuration
                 .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true)
                 .AddEnvironmentVariables();
@@ -117,7 +119,16 @@ namespace FITSKIP.API
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.ISparePartService, FITSKIP.Application.Services.SparePartService>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IIncidentRepository, FITSKIP.Infrastructure.Repositories.IncidentRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IIncidentService, FITSKIP.Application.Services.IncidentService>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IDashboardService, FITSKIP.Application.Services.DashboardService>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IShiftRepository, FITSKIP.Infrastructure.Repositories.ShiftRepository>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IDashboardRepository, FITSKIP.Infrastructure.Repositories.DashboardRepository>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IProductionOutputRepository, FITSKIP.Infrastructure.Repositories.ProductionOutputRepository>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IProductionOutputService, FITSKIP.Application.Services.ProductionOutputService>();
+
+            // Maintenance services
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IMaintenancePlanRepository, FITSKIP.Infrastructure.Repositories.MaintenancePlanRepository>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IMaintenanceChecklistItemRepository, FITSKIP.Infrastructure.Repositories.MaintenanceChecklistItemRepository>();
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IMaintenanceService, FITSKIP.Application.Services.MaintenanceService>();
 
             // Import Excel service
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IExcelImportService,
@@ -132,6 +143,11 @@ namespace FITSKIP.API
             // SMS Service - Use Mock for testing to avoid Twilio rate limits
             // Change back to TwilioSmsService when ready for production
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.ISmsService, FITSKIP.Application.Services.TwilioSmsService>();
+            
+            // Azure Storage Service
+            builder.Services.AddScoped<FITSKIP.Application.Interfaces.IAzureStorageService, FITSKIP.Application.Services.AzureStorageService>();
+
+            builder.Services.AddLogging();
 
             // JWT Authentication configuration
             var jwtSettings = builder.Configuration.GetSection("JwtSettings");
@@ -211,15 +227,37 @@ namespace FITSKIP.API
                 };
             });
 
+            // C1: Configure CORS
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend",
                     policy => policy
-                        .WithOrigins("http://localhost:3000") // React web
+                        //.WithOrigins("http://localhost:3000") // React web
+                        .SetIsOriginAllowed(origin => true) // Allow all origins - adjust for production
                         .AllowAnyHeader()
                         .AllowAnyMethod()
                         .AllowCredentials()); // Required for SignalR
             });
+
+            //C2: Giới hạn pattern IP nội bộ (tùy chọn nâng cao):
+            // builder.Services.AddCors(options =>
+            // {
+            //     options.AddPolicy("AllowFrontend",
+            //         policy => policy
+            //             .SetIsOriginAllowed(origin =>
+            //             {
+            //                 if (origin.StartsWith("http://localhost"))
+            //                     return true;
+            //                 if (origin.StartsWith("http://192.168."))
+            //                     return true;
+            //                 if (origin.StartsWith("http://10."))
+            //                     return true;
+            //                 return false;
+            //             })
+            //             .AllowAnyHeader()
+            //             .AllowAnyMethod()
+            //             .AllowCredentials());
+            // });
 
             // Add SignalR
             builder.Services.AddSignalR();
@@ -302,7 +340,18 @@ namespace FITSKIP.API
             using (var scope = app.Services.CreateScope())
             {
                 var context = scope.ServiceProvider.GetRequiredService<FitskipDbContext>();
-                await SeedData.SeedAllData(context);
+                try
+                {
+                    // Apply migrations
+                    await context.Database.MigrateAsync();
+                    // Seed data
+                    await SeedData.SeedAllData(context);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error during migration/seeding: {ex.Message}");
+                    throw;
+                }
             }
 
             app.Run();

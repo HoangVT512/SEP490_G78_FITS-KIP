@@ -14,6 +14,7 @@ public class EquipmentDTO
     public int? LineId { get; set; }
     public string? LineName { get; set; }
     public bool IsActive { get; set; }
+    public string? Issue { get; set; }
 
     public static EquipmentDTO FromEntity(Domain.Entities.Equipment equipment)
     {
@@ -30,7 +31,8 @@ public class EquipmentDTO
             StageName = equipment.Stage?.StageName,
             LineId = equipment.Stage?.LineId,
             LineName = equipment.Stage?.Line?.LineName,
-            IsActive = equipment.IsActive
+            IsActive = equipment.IsActive,
+            Issue = equipment.Issue
         };
     }
 }

@@ -9,13 +9,16 @@ namespace FITSKIP.Application.Services
     {
         private readonly INotificationRepository _notificationRepository;
         private readonly INotificationHubService _notificationHubService;
+        private readonly IUserRepository _userRepository;
 
         public NotificationService(
             INotificationRepository notificationRepository,
-            INotificationHubService notificationHubService)
+            INotificationHubService notificationHubService,
+            IUserRepository userRepository)
         {
             _notificationRepository = notificationRepository;
             _notificationHubService = notificationHubService;
+            _userRepository = userRepository;
         }
 
         public async Task<NotificationDTO> CreateNotificationAsync(CreateNotificationRequest request)
@@ -119,9 +122,70 @@ namespace FITSKIP.Application.Services
             await _notificationHubService.SendToAllAsync(notificationData);
         }
 
+        public async Task SendNotificationToRoleAsync(string roleName, string message, string type = "info")
+        {
+            // Get all users with this role
+            var users = await _userRepository.GetUsersByRoleAsync(roleName);
+
+            // Create notification in database for each user
+            foreach (var user in users)
+            {
+                var notification = new Notification
+                {
+                    UserId = user.Id, // IdentityUser uses Id, not UserId
+                    Message = message,
+                    Title = "Yêu cầu phụ tùng", // Default title for spare part requests
+                    IsRead = false,
+                    CreatedDate = DateTime.UtcNow
+                };
+
+                await _notificationRepository.CreateAsync(notification);
+            }
+
+            // Send real-time notification to SignalR group based on role
+            var groupName = roleName == "Quản lý kỹ thuật" ? "TechnicalManagers" : roleName;
+            var notificationData = new
+            {
+                Message = message,
+                Type = type,
+                Timestamp = DateTime.UtcNow
+            };
+
+            await _notificationHubService.SendToGroupAsync(groupName, notificationData);
+        }
+
         public async Task DeleteAllReadNotificationsAsync(string userId)
         {
             await _notificationRepository.DeleteAllReadByUserIdAsync(userId);
+        }
+
+        // Department-specific notification methods
+        public async Task SendIncidentNotificationToDepartmentAsync(int departmentId, string title, string message)
+        {
+            var groupName = $"TechnicalManagers_Department_{departmentId}";
+            var notificationData = new
+            {
+                Title = title,
+                Message = message,
+                Type = "incident",
+                DepartmentId = departmentId,
+                Timestamp = DateTime.UtcNow
+            };
+
+            await _notificationHubService.SendToGroupAsync(groupName, notificationData);
+        }
+
+        public async Task RefreshIncidentsForDepartmentAsync(int departmentId)
+        {
+            var groupName = $"TechnicalManagers_Department_{departmentId}";
+            var refreshData = new
+            {
+                Type = "refresh",
+                DepartmentId = departmentId,
+                Timestamp = DateTime.UtcNow
+            };
+
+            await _notificationHubService.SendToGroupAsync(groupName, refreshData);
         }
 
         private NotificationDTO MapToDTO(Notification notification)

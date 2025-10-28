@@ -9,6 +9,8 @@ public partial class IncidentHistory
 
     public int? EquipmentId { get; set; }
 
+    public int? LineId { get; set; }
+
     public DateTime? StartTime { get; set; }
 
     public DateTime? EndTime { get; set; }
@@ -29,9 +31,19 @@ public partial class IncidentHistory
 
     public string? ReportedByUserId { get; set; }
 
+    public string? AssignedTo { get; set; }
+
+    public bool IsTechSupport { get; set; } = false;
+
     public virtual Equipment? Equipment { get; set; }
+
+    public virtual Line? Line { get; set; }
 
     public virtual StopType? Type { get; set; }
 
     public virtual User? ReportedByUser { get; set; }
+
+    public virtual ICollection<IncidentShift> IncidentShifts { get; set; } = new List<IncidentShift>();
+
+    public virtual ICollection<IncidentImage> IncidentImages { get; set; } = new List<IncidentImage>();
 }

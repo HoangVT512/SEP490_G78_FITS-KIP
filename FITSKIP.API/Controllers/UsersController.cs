@@ -24,6 +24,7 @@ public class UsersController : ControllerBase
         this.roleService = roleService;
         this.db = db;
     }
+
     // GET: https://localhost:7003/api/Users
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<UserDTO>>> Get(CancellationToken cancellationToken)
@@ -31,6 +32,7 @@ public class UsersController : ControllerBase
         var users = await userService.GetUsersWithRolesAsync(cancellationToken);
         return Ok(users);
     }
+
     // GET: https://localhost:7003/api/Users/{fullName}
     [HttpGet]
     [Route("{fullName}")]
@@ -96,49 +98,76 @@ public class UsersController : ControllerBase
         };
         return Ok(response);
     }
+
     // DELETE: https://localhost:7003/api/Users/{id}
     [HttpDelete]
     [Route("{id}")]
     public async Task<IActionResult> DeleteUser(string id, CancellationToken cancellationToken)
     {
-        var user = await userService.DeleteUserAsync(id, cancellationToken);
-        if (user == null)
+        try
         {
-            return NotFound();
+
+
+            var user = await userService.DeleteUserAsync(id, cancellationToken);
+            if (user == null)
+            {
+                return NotFound();
+            }
+            var response = new UserDTO
+            {
+                UserName = user.UserName,
+                NormalizedUserName = user.NormalizedUserName,
+                NormalizedEmail = user.NormalizedEmail,
+                Email = user.Email,
+                EmailConfirmed = user.EmailConfirmed,
+                PasswordHash = user.PasswordHash,
+                SecurityStamp = user.SecurityStamp,
+                ConcurrencyStamp = user.ConcurrencyStamp,
+                PhoneNumber = user.PhoneNumber,
+                PhoneNumberConfirmed = user.PhoneNumberConfirmed,
+                TwoFactorEnabled = user.TwoFactorEnabled,
+                LockoutEnd = user.LockoutEnd,
+                LockoutEnabled = user.LockoutEnabled,
+                AccessFailedCount = user.AccessFailedCount,
+                FullName = user.FullName,
+                EmployeeCode = user.EmployeeCode,
+            };
+            return Ok(response);
         }
-        var response = new UserDTO
+        catch(Exception ex)
         {
-            UserName = user.UserName,
-            NormalizedUserName = user.NormalizedUserName,
-            NormalizedEmail = user.NormalizedEmail,
-            Email = user.Email,
-            EmailConfirmed = user.EmailConfirmed,
-            PasswordHash = user.PasswordHash,
-            SecurityStamp = user.SecurityStamp,
-            ConcurrencyStamp = user.ConcurrencyStamp,
-            PhoneNumber = user.PhoneNumber,
-            PhoneNumberConfirmed = user.PhoneNumberConfirmed,
-            TwoFactorEnabled = user.TwoFactorEnabled,
-            LockoutEnd = user.LockoutEnd,
-            LockoutEnabled = user.LockoutEnabled,
-            AccessFailedCount = user.AccessFailedCount,
-            FullName = user.FullName,
-            EmployeeCode = user.EmployeeCode,
-        };
-        return Ok(response);
+            return BadRequest(new { success = false, message = $"Error: {ex.Message}" });
+        }
     }
+
     // PUT: https://localhost:7003/api/Users/{id}
     [HttpPut]
     [Route("{id}")]
     public async Task<IActionResult> UpdateUser(string id, [FromBody] UpdateUserRequest request, CancellationToken cancellationToken)
     {
-        var updatedUser = await userService.UpdateUserAsync(id, request, cancellationToken);
-        if (updatedUser == null)
+        try
         {
-            return NotFound();
+            var updatedUser = await userService.UpdateUserAsync(id, request, cancellationToken);
+            if (updatedUser == null)
+            {
+                return NotFound();
+            }
+            return Ok(updatedUser);
         }
-        return Ok(updatedUser);
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = $"Error: {ex.Message}" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { success = false, message = $"Error: {ex.Message}" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = "Error: Có lỗi xảy ra khi cập nhật người dùng", details = ex.Message });
+        }
     }
+
     // POST: https://localhost:7003/api/Users
     [HttpPost]
     public async Task<ActionResult<UserDTO>> CreateUser([FromBody] CreateUserRequest request, CancellationToken cancellationToken)
@@ -155,80 +184,6 @@ public class UsersController : ControllerBase
                 return BadRequest(new { success = false, message = $"Error: Validation failed - {string.Join(", ", errors)}" });
             }
 
-            // Validate required fields
-            if (string.IsNullOrWhiteSpace(request.EmployeeCode))
-            {
-                return BadRequest(new { success = false, message = "Error: Employee code is required" });
-            }
-
-            if (string.IsNullOrWhiteSpace(request.FullName))
-            {
-                return BadRequest(new { success = false, message = "Error: Full name is required" });
-            }
-
-            // Basic validation - UserName is now auto-generated from EmployeeCode
-            var userName = string.IsNullOrEmpty(request.UserName) ? request.EmployeeCode : request.UserName;
-            
-            // Validation 1: Check if username already exists (will be EmployeeCode)
-            if (!string.IsNullOrEmpty(userName))
-            {
-                var existingUserByUsername = await userService.GetByUsernameAsync(userName, cancellationToken);
-                if (existingUserByUsername != null)
-                {
-                    return BadRequest(new { success = false, message = $"Error: Tên đăng nhập '{userName}' đã tồn tại trong hệ thống" });
-                }
-            }
-
-            // Validation 2: Check if email already exists (only if email is provided)
-            if (!string.IsNullOrEmpty(request.Email))
-            {
-                var existingUserByEmail = await userService.GetByEmailAsync(request.Email, cancellationToken);
-                if (existingUserByEmail != null)
-                {
-                    return BadRequest(new { success = false, message = $"Error: Email '{request.Email}' đã tồn tại trong hệ thống" });
-                }
-            }
-
-            // Validation 3: Check if employee code already exists
-            if (!string.IsNullOrEmpty(request.EmployeeCode))
-            {
-                var existingUserByEmployeeCode = await userService.GetByEmployeeCodeAsync(request.EmployeeCode, cancellationToken);
-                if (existingUserByEmployeeCode != null)
-                {
-                    return BadRequest(new { success = false, message = $"Error: Mã nhân viên '{request.EmployeeCode}' đã tồn tại trong hệ thống" });
-                }
-            }
-
-            // Validation 4: Check email format (only if email is provided)
-            if (!string.IsNullOrEmpty(request.Email) && !IsValidEmail(request.Email))
-            {
-                return BadRequest(new { success = false, message = "Error: Email không hợp lệ" });
-            }
-
-            // Validation 5: Check phone number format (only if phone number is provided)
-            if (!string.IsNullOrEmpty(request.PhoneNumber) && !IsValidVietnamPhoneNumber(request.PhoneNumber))
-            {
-                return BadRequest(new { success = false, message = "Error: Số điện thoại không hợp lệ" });
-            }
-
-            // Password will be handled by Identity in the service layer
-
-            var user = new User
-            {
-                Id = Guid.NewGuid().ToString(),
-                UserName = userName,
-                NormalizedUserName = userName?.ToUpperInvariant(),
-                Email = request.Email,
-                NormalizedEmail = !string.IsNullOrEmpty(request.Email) ? request.Email.ToUpperInvariant() : null,
-                FullName = request.FullName,
-                EmployeeCode = request.EmployeeCode,
-                PhoneNumber = request.PhoneNumber,
-                EmailConfirmed = !string.IsNullOrEmpty(request.Email), // Only confirm if email is provided
-                LockoutEnabled = true,
-                SecurityStamp = Guid.NewGuid().ToString(),
-                ConcurrencyStamp = Guid.NewGuid().ToString()
-            };
-
             var createdUser = await userService.CreateUserWithAssignmentsAsync(request, cancellationToken);
 
             var response = new UserDTO
@@ -242,7 +197,6 @@ public class UsersController : ControllerBase
                 EmailConfirmed = createdUser.EmailConfirmed,
                 LockoutEnabled = createdUser.LockoutEnabled,
                 IsActive = true
-
             };
 
             return Ok(new { success = true, data = response, message = "Tạo người dùng thành công" });
@@ -259,30 +213,6 @@ public class UsersController : ControllerBase
         {
             return StatusCode(500, new { success = false, message = "Error: Có lỗi xảy ra khi tạo người dùng", details = ex.Message });
         }
-    }
-
-    private bool IsValidEmail(string email)
-    {
-        if (string.IsNullOrWhiteSpace(email))
-            return false;
-
-        try
-        {
-            var addr = new System.Net.Mail.MailAddress(email);
-            return addr.Address == email;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-    public static bool IsValidVietnamPhoneNumber(string phoneNumber)
-    {
-        if (string.IsNullOrWhiteSpace(phoneNumber))
-            return false;
-
-        string pattern = @"^(?:\+84|0)(?:3|5|7|8|9)[0-9]{8}$";
-        return Regex.IsMatch(phoneNumber, pattern);
     }
 
     [HttpPost("import-excel")]
@@ -329,71 +259,6 @@ public class UsersController : ControllerBase
                 {
                     try
                     {
-                        // Validation 1: Check if username already exists
-                        var existingUserByUsername = await userService.GetByUsernameAsync(request.UserName, cancellationToken);
-                        if (existingUserByUsername != null)
-                        {
-                            failedUsers.Add(new
-                            {
-                                UserName = request.UserName,
-                                Email = request.Email,
-                                Error = $"Tên đăng nhập '{request.UserName}' đã tồn tại trong hệ thống"
-                            });
-                            continue;
-                        }
-
-                        // Validation 2: Check if email already exists
-                        var existingUserByEmail = await userService.GetByEmailAsync(request.Email, cancellationToken);
-                        if (existingUserByEmail != null)
-                        {
-                            failedUsers.Add(new
-                            {
-                                UserName = request.UserName,
-                                Email = request.Email,
-                                Error = $"Email '{request.Email}' đã tồn tại trong hệ thống"
-                            });
-                            continue;
-                        }
-
-                        // Validation 3: Check if employee code already exists
-                        if (!string.IsNullOrEmpty(request.EmployeeCode))
-                        {
-                            var existingUserByEmployeeCode = await userService.GetByEmployeeCodeAsync(request.EmployeeCode, cancellationToken);
-                            if (existingUserByEmployeeCode != null)
-                            {
-                                failedUsers.Add(new
-                                {
-                                    UserName = request.UserName,
-                                    Email = request.Email,
-                                    Error = $"Mã nhân viên '{request.EmployeeCode}' đã tồn tại trong hệ thống"
-                                });
-                                continue;
-                            }
-                        }
-
-                        // Validation 4: Check email format (only if email is provided)
-                        if (!string.IsNullOrEmpty(request.Email) && !IsValidEmail(request.Email))
-                        {
-                            failedUsers.Add(new
-                            {
-                                UserName = request.UserName,
-                                Email = request.Email,
-                                Error = "Email không hợp lệ"
-                            });
-                            continue;
-                        }
-                        // Validation 5: Check phone number format (only if phone number is provided)
-                        if (!string.IsNullOrEmpty(request.PhoneNumber) && !IsValidVietnamPhoneNumber(request.PhoneNumber))
-                        {
-                            failedUsers.Add(new
-                            {
-                                UserName = request.UserName,
-                                Email = request.Email,
-                                Error = "Số điện thoại không hợp lệ"
-                            });
-                            continue;
-                        }
-
                         var user = new User
                         {
                             Id = Guid.NewGuid().ToString(),
@@ -410,14 +275,21 @@ public class UsersController : ControllerBase
                             ConcurrencyStamp = Guid.NewGuid().ToString()
                         };
 
-                        // Sử dụng password từ Excel hoặc default password
                         var password = !string.IsNullOrWhiteSpace(request.Password)
                             ? request.Password
                             : defaultPassword;
 
-                        // Truyền RoleIds vào CreateUserAsync
                         await userService.CreateUserAsync(user, password, request.RoleIds, cancellationToken);
                         successCount++;
+                    }
+                    catch (ArgumentException ex)
+                    {
+                        failedUsers.Add(new
+                        {
+                            UserName = request.UserName,
+                            Email = request.Email,
+                            Error = ex.Message
+                        });
                     }
                     catch (Exception ex)
                     {
@@ -446,7 +318,6 @@ public class UsersController : ControllerBase
         }
     }
 
-
     [HttpGet("download-template")]
     public async Task<IActionResult> DownloadExcelTemplate()
     {
@@ -454,18 +325,14 @@ public class UsersController : ControllerBase
         {
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
-            // Lấy danh sách roles từ hệ thống
             var roles = await roleService.GetRolesWithUserCountAsync();
 
             using (var package = new ExcelPackage())
             {
                 var worksheet = package.Workbook.Worksheets.Add("Users");
-
-                // Tạo sheet ẩn chứa danh sách roles
                 var rolesSheet = package.Workbook.Worksheets.Add("RolesList");
                 rolesSheet.Hidden = eWorkSheetHidden.Hidden;
 
-                // Thêm danh sách roles vào sheet ẩn
                 for (int i = 0; i < roles.Count; i++)
                 {
                     rolesSheet.Cells[i + 1, 1].Value = roles[i].Name;
@@ -484,10 +351,8 @@ public class UsersController : ControllerBase
                     range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
                 }
 
-                // Định dạng cột PhoneNumber là Text để tránh mất số 0 ở đầu
                 worksheet.Column(5).Style.Numberformat.Format = "@";
 
-                // Tạo dropdown validation cho cột Role (cột 4)
                 var roleValidation = worksheet.DataValidations.AddListValidation("E2:E1000");
                 roleValidation.Formula.ExcelFormula = $"=RolesList!$A$1:$A${roles.Count}";
                 roleValidation.ShowErrorMessage = true;
@@ -525,15 +390,12 @@ public class UsersController : ControllerBase
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
 
             var users = await userService.GetUsersWithRolesAsync(cancellationToken);
-
-            // Get all lines for mapping
             var allLines = await db.Lines.AsNoTracking().ToDictionaryAsync(l => l.LineId, l => l.LineName, cancellationToken);
 
             using (var package = new ExcelPackage())
             {
                 var worksheet = package.Workbook.Worksheets.Add("Users");
 
-                // Headers
                 worksheet.Cells[1, 1].Value = "Người dùng";
                 worksheet.Cells[1, 2].Value = "Email";
                 worksheet.Cells[1, 3].Value = "Họ và tên";
@@ -544,7 +406,6 @@ public class UsersController : ControllerBase
                 worksheet.Cells[1, 8].Value = "Phòng ban";
                 worksheet.Cells[1, 9].Value = "Dây chuyền";
 
-                // Style headers
                 using (var range = worksheet.Cells[1, 1, 1, 9])
                 {
                     range.Style.Font.Bold = true;
@@ -556,13 +417,11 @@ public class UsersController : ControllerBase
                     range.Style.Border.Right.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
                 }
 
-                // Data rows
                 for (int i = 0; i < users.Count; i++)
                 {
                     var user = users[i];
                     var row = i + 2;
 
-                    // Get line names from LineIds
                     var lineNames = user.LineIds != null && user.LineIds.Any()
                         ? string.Join(", ", user.LineIds.Select(id => allLines.ContainsKey(id) ? allLines[id] : $"Line {id}"))
                         : "Không có dây chuyền";
@@ -579,7 +438,6 @@ public class UsersController : ControllerBase
                     worksheet.Cells[row, 8].Value = user.DepartmentName ?? "Chưa có PB";
                     worksheet.Cells[row, 9].Value = lineNames;
 
-                    // Add borders to data rows
                     using (var range = worksheet.Cells[row, 1, row, 9])
                     {
                         range.Style.Border.Top.Style = OfficeOpenXml.Style.ExcelBorderStyle.Thin;
@@ -608,7 +466,6 @@ public class UsersController : ControllerBase
         }
     }
 
-    // GET: https://localhost:7003/api/Users/managers
     [HttpGet("managers")]
     public async Task<ActionResult<IReadOnlyList<UserDTO>>> GetManagers()
     {
@@ -633,7 +490,6 @@ public class UsersController : ControllerBase
         }
     }
 
-    // GET: https://localhost:7003/api/Users/active-team-leads/{lineId}
     [HttpGet]
     [Route("active-team-leads/{lineId}")]
     public async Task<IActionResult> GetActiveTeamLeadsByLine(int lineId, CancellationToken cancellationToken)
@@ -663,6 +519,50 @@ public class UsersController : ControllerBase
         catch (Exception ex)
         {
             return StatusCode(500, $"Lỗi: {ex.Message}");
+        }
+    }
+
+    [HttpPost]
+    [Route("{id}/reset-password")]
+    public async Task<IActionResult> ResetPassword(string id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var user = await userService.GetUserByIdAsync(id, cancellationToken);
+            if (user == null)
+            {
+                return NotFound(new { success = false, message = "Người dùng không tồn tại" });
+            }
+
+            const string defaultPassword = "123456";
+            var result = await userService.ResetPasswordAsync(id, defaultPassword, cancellationToken);
+
+            if (!result)
+            {
+                return BadRequest(new { success = false, message = "Không thể đặt lại mật khẩu" });
+            }
+
+            return Ok(new { success = true, message = "Đặt lại mật khẩu thành công. Mật khẩu mới là: 123456" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = $"Lỗi: {ex.Message}" });
+        }
+    }
+
+    // GET: https://localhost:7003/api/Users/{userId}/lines
+    [HttpGet]
+    [Route("{userId}/lines")]
+    public async Task<IActionResult> GetUserLines(string userId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var userLines = await userService.GetUserLinesAsync(userId, cancellationToken);
+            return Ok(userLines);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { success = false, message = $"Lỗi: {ex.Message}" });
         }
     }
 }

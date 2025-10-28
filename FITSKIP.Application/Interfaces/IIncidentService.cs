@@ -1,5 +1,6 @@
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using Microsoft.AspNetCore.Http;
 
 namespace FITSKIP.Application.Interfaces
 {
@@ -8,9 +9,15 @@ namespace FITSKIP.Application.Interfaces
         Task<IReadOnlyList<IncidentHistory>> GetIncidentsAsync(CancellationToken cancellationToken = default);
         Task<IncidentHistory?> GetIncidentByIdAsync(int id, CancellationToken cancellationToken = default);
         Task<IncidentHistory> CreateIncidentAsync(CreateIncidentRequest request, CancellationToken cancellationToken = default);
+        Task<BulkIncidentResponse> CreateBulkIncidentsAsync(CreateBulkIncidentRequest request, CancellationToken cancellationToken = default);
         Task<IncidentHistory?> UpdateIncidentAsync(int id, UpdateIncidentRequest request, CancellationToken cancellationToken = default);
         Task<bool> DeleteIncidentAsync(int id, CancellationToken cancellationToken = default);
         Task<DowntimeStatsDTO> GetDowntimeStatsAsync(string period, DateTime? startDate = null, DateTime? endDate = null, int? lineId = null, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<dynamic>> GetStopTypesAsync(CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<IncidentShift>> GetIncidentShiftsAsync(int incidentId, CancellationToken cancellationToken = default);
+        Task<bool> AssignTechnicianAsync(int incidentId, string technicianId, bool updateStatus = false, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<IncidentHistory>> GetIncidentsByUserLinesAsync(string userId, CancellationToken cancellationToken = default);
+        Task<IReadOnlyList<IncidentHistory>> GetIncidentsAssignedToTechnicianAsync(string technicianId, CancellationToken cancellationToken = default);
+        Task<string> UploadIncidentImageAsync(IFormFile imageFile, CancellationToken cancellationToken = default);
     }
 }

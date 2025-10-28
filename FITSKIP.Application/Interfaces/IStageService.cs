@@ -12,4 +12,5 @@ public interface IStageService
     Task<Stage?> UpdateStageAsync(int id, UpdateStageRequest request, CancellationToken cancellationToken = default);
     Task<Stage?> ToggleStageStatusAsync(int id, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Stage>> GetStagesByLineAsync(int lineId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<Stage>> GetStagesByUserLinesAsync(string userId, CancellationToken cancellationToken = default);
 }

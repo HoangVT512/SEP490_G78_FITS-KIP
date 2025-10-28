@@ -50,8 +50,6 @@ namespace FITSKIP.API.Controllers
         {
             try
             {
-                var validationError = await ValidateManagerAsync(request.ManagerId, false);
-                if (validationError != null) return BadRequest(new { message = validationError });
                 var created = await departmentService.CreateAsync(request, cancellationToken);
                 return CreatedAtAction(nameof(GetById), new { id = created.DepartmentId }, created);
             }
@@ -71,8 +69,6 @@ namespace FITSKIP.API.Controllers
         {
             try
             {
-                var validationError = await ValidateManagerAsync(request.ManagerId, false);
-                if (validationError != null) return BadRequest(new { message = validationError });
                 var updated = await departmentService.UpdateAsync(id, request, cancellationToken);
                 if (updated == null) return NotFound();
                 return Ok(updated);
@@ -88,24 +84,6 @@ namespace FITSKIP.API.Controllers
             }
         }
 
-        private async Task<string?> ValidateManagerAsync(string? managerId, bool isRequired = true)
-        {
-            if (string.IsNullOrWhiteSpace(managerId))
-            {
-                return isRequired ? "ManagerId là bắt buộc." : null;
-            }
-            var user = await userManager.FindByIdAsync(managerId);
-            if (user == null) return "Manager không tồn tại.";
-            if (!user.IsActive) return "Manager đã bị vô hiệu hóa.";
-
-            // Check if user has QUAN LY role
-            var roleName = user.RoleId != null
-                ? (await roleManager.FindByIdAsync(user.RoleId))?.Name
-                : null;
-            if (roleName != "Quản lý") return "Manager phải có role 'Quản lý'.";
-
-            return null;
-        }
 
         [HttpPatch("{id:int}/toggle-status")]
         public async Task<ActionResult<DepartmentDTO>> ToggleStatus(int id, CancellationToken cancellationToken)

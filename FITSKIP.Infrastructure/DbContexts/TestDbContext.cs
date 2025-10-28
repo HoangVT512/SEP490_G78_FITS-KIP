@@ -26,7 +26,6 @@ public class TestDbContext : IdentityDbContext<User>
     public virtual DbSet<PurchaseRequest> PurchaseRequests { get; set; }
     public virtual DbSet<ReplacementHistory> ReplacementHistories { get; set; }
     public virtual DbSet<Shift> Shifts { get; set; }
-    public virtual DbSet<ShiftSlot> ShiftSlots { get; set; }
     public virtual DbSet<SparePart> SpareParts { get; set; }
     public virtual DbSet<Stage> Stages { get; set; }
     public virtual DbSet<StopType> StopTypes { get; set; }
@@ -117,6 +116,7 @@ public class TestDbContext : IdentityDbContext<User>
             entity.Property(e => e.Duration).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.EndTime).HasColumnType("datetime");
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
+            entity.Property(e => e.LineId).HasColumnName("LineID");
             entity.Property(e => e.StartTime).HasColumnType("datetime");
             entity.Property(e => e.TypeId).HasColumnName("TypeID");
             entity.Property(e => e.Issue).HasMaxLength(500);
@@ -125,6 +125,10 @@ public class TestDbContext : IdentityDbContext<User>
             entity.HasOne(d => d.Equipment).WithMany()
                 .HasForeignKey(d => d.EquipmentId)
                 .HasConstraintName("FK__IncidentH__Equip__7B5B524B");
+
+            entity.HasOne(d => d.Line).WithMany()
+                .HasForeignKey(d => d.LineId)
+                .HasConstraintName("FK__IncidentH__LineI__8C5B6A4C");
 
             entity.HasOne(d => d.Type).WithMany(p => p.IncidentHistories)
                 .HasForeignKey(d => d.TypeId)
@@ -185,19 +189,25 @@ public class TestDbContext : IdentityDbContext<User>
             entity.HasKey(e => e.OutputId).HasName("PK__Producti__CE7609460B69FF1F");
             entity.Property(e => e.OutputId).HasColumnName("OutputID");
             entity.Property(e => e.LineId).HasColumnName("LineID");
-            entity.Property(e => e.ShiftSlotId).HasColumnName("ShiftSlotID");
-            entity.Property(e => e.TargetQuantity).HasColumnType("decimal(10, 2)");
-            entity.Property(e => e.IdealCycleTime).HasColumnType("decimal(10, 4)");
+            entity.Property(e => e.ShiftId).HasColumnName("ShiftID");
+            entity.Property(e => e.Date).HasColumnType("datetime");
+            entity.Property(e => e.SlotTime).HasMaxLength(50);
+            entity.Property(e => e.LoadingTime).HasColumnType("decimal(10, 2)");
+            entity.Property(e => e.TargetAmount).HasMaxLength(50);
+            entity.Property(e => e.ResultAmount).HasMaxLength(50);
+            entity.Property(e => e.OEE).HasColumnType("decimal(5, 2)");
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
 
             entity.HasOne(d => d.Line).WithMany(p => p.ProductionOutputs)
                 .HasForeignKey(d => d.LineId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Productio__LineI__08B54D69");
 
-            entity.HasOne(d => d.ShiftSlot).WithMany()
-                .HasForeignKey(d => d.ShiftSlotId)
+            entity.HasOne(d => d.Shift).WithMany()
+                .HasForeignKey(d => d.ShiftId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Productio__ShiftSlot__0A9D95DB");
+                .HasConstraintName("FK__Productio__Shift__0A9D95DB");
         });
 
         modelBuilder.Entity<PurchaseRequest>(entity =>
@@ -267,21 +277,6 @@ public class TestDbContext : IdentityDbContext<User>
             entity.HasKey(e => e.ShiftId).HasName("PK__Shifts__C0A838E1E127179C");
             entity.Property(e => e.ShiftId).HasColumnName("ShiftID");
             entity.Property(e => e.ShiftName).HasMaxLength(50);
-            entity.Ignore(e => e.ProductionOutputs);
-        });
-
-        modelBuilder.Entity<ShiftSlot>(entity =>
-        {
-            entity.HasKey(e => e.SlotId).HasName("PK__ShiftSlo__0A124A4FF4CC8D65");
-            entity.Property(e => e.SlotId).HasColumnName("SlotID");
-            entity.Property(e => e.ShiftId).HasColumnName("ShiftID");
-
-            entity.HasOne(d => d.Shift).WithMany(p => p.ShiftSlots)
-                .HasForeignKey(d => d.ShiftId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__ShiftSlot__Shift__76969D2E");
-
-            entity.Ignore(e => e.ProductionOutputs);
         });
 
         modelBuilder.Entity<SparePart>(entity =>

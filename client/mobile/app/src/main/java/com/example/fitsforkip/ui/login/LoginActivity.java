@@ -1,7 +1,9 @@
 package com.example.fitsforkip.ui.login;
 
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.util.Log;
 
 import com.example.fitsforkip.ui.home.HomeActivity;
 import com.google.android.material.button.MaterialButton;
@@ -21,6 +23,19 @@ import com.google.android.material.textfield.TextInputLayout;
 import java.util.ArrayList;
 import java.util.List;
 
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+import com.example.fitsforkip.data.remote.ApiClient;
+import com.example.fitsforkip.data.remote.ApiService;
+import com.example.fitsforkip.data.model.ApiResponse;
+import com.example.fitsforkip.data.model.Line;
+import com.example.fitsforkip.data.model.UserDTO;
+import com.example.fitsforkip.data.model.MobileLoginRequest;
+import com.example.fitsforkip.data.model.MobileLoginResponse;
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+
 public class LoginActivity extends AppCompatActivity {
 
     private TextInputLayout tilEmployeeId;
@@ -30,6 +45,7 @@ public class LoginActivity extends AppCompatActivity {
     private MaterialButton btnLogin;
 
     private List<String> productionLines;
+    private List<Line> linesList;
     private ArrayAdapter<String> productionLineAdapter;
 
     @Override
@@ -48,25 +64,43 @@ public class LoginActivity extends AppCompatActivity {
         tilProductionLine = findViewById(R.id.til_production_line);
         actvProductionLine = findViewById(R.id.actv_production_line);
         btnLogin = findViewById(R.id.btn_login);
+        // Remove password views if they exist
+        // tilPassword = findViewById(R.id.til_password);
+        // etPassword = findViewById(R.id.et_password);
     }
 
     private void setupProductionLineData() {
-        // Dữ liệu mẫu các dây chuyền sản xuất
-        productionLines = new ArrayList<>();
-        productionLines.add("Dây chuyền 1 - Lắp ráp");
-        productionLines.add("Dây chuyền 2 - Hàn");
-        productionLines.add("Dây chuyền 3 - Sơn");
-        productionLines.add("Dây chuyền 4 - Đóng gói");
-        productionLines.add("Dây chuyền 5 - Kiểm tra chất lượng");
-        productionLines.add("Dây chuyền 6 - Gia công cơ khí");
+        // Fetch production lines from API
+        ApiService apiService = ApiClient.getClient().create(ApiService.class);
+        Call<ApiResponse<List<Line>>> call = apiService.getAllLines();
+        call.enqueue(new Callback<ApiResponse<List<Line>>>() {
+            @Override
+            public void onResponse(Call<ApiResponse<List<Line>>> call, Response<ApiResponse<List<Line>>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    List<Line> lines = response.body().getData();
+                    productionLines = new ArrayList<>();
+                    linesList = lines; // Save the full Line objects
+                    for (Line line : lines) {
+                        productionLines.add(line.getName());
+                    }
+                    productionLineAdapter = new ArrayAdapter<>(
+                            LoginActivity.this,
+                            android.R.layout.simple_dropdown_item_1line,
+                            productionLines
+                    );
+                    actvProductionLine.setAdapter(productionLineAdapter);
+                } else {
+                    Log.e("LoginActivity", "API response not successful: " + response.code() + " " + response.message());
+                    Toast.makeText(LoginActivity.this, "Không thể tải danh sách dây chuyền", Toast.LENGTH_SHORT).show();
+                }
+            }
 
-        // Setup adapter cho AutoCompleteTextView
-        productionLineAdapter = new ArrayAdapter<>(
-                this,
-                android.R.layout.simple_dropdown_item_1line,
-                productionLines
-        );
-        actvProductionLine.setAdapter(productionLineAdapter);
+            @Override
+            public void onFailure(Call<ApiResponse<List<Line>>> call, Throwable t) {
+                Log.e("LoginActivity", "API call failed", t);
+                Toast.makeText(LoginActivity.this, "Lỗi: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void setupListeners() {
@@ -138,35 +172,89 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         if (isValid) {
-            // Hiển thị loading (có thể thêm ProgressBar)
+            // Hiển thị loading
             btnLogin.setEnabled(false);
             btnLogin.setText("Đang đăng nhập...");
 
-            // TODO: Gọi API login thông qua ViewModel
-            // Giả lập đăng nhập thành công sau 1.5s
-            btnLogin.postDelayed(() -> {
-                // Lưu thông tin đăng nhập (SharedPreferences)
-                saveLoginInfo(employeeId, productionLine);
+            // Find the selected line
+            Line selectedLine = null;
+            for (Line line : linesList) {
+                if (line.getName().equals(productionLine)) {
+                    selectedLine = line;
+                    break;
+                }
+            }
 
-                // Chuyển đến HomeActivity
-                Intent intent = new Intent(LoginActivity.this, HomeActivity.class);
-                intent.putExtra("employee_id", employeeId);
-                intent.putExtra("production_line", productionLine);
-                startActivity(intent);
-                finish();
+            if (selectedLine != null) {
+                // Create login request
+                MobileLoginRequest request = new MobileLoginRequest(employeeId, selectedLine.getLineId());
 
-                Toast.makeText(this, "Đăng nhập thành công!", Toast.LENGTH_SHORT).show();
-            }, 1500);
+                // Call API
+                ApiService apiService = ApiClient.getClient().create(ApiService.class);
+                Call<ApiResponse<MobileLoginResponse>> call = apiService.mobileLogin(request);
+                call.enqueue(new Callback<ApiResponse<MobileLoginResponse>>() {
+                    @Override
+                    public void onResponse(Call<ApiResponse<MobileLoginResponse>> call, Response<ApiResponse<MobileLoginResponse>> response) {
+                        // Reset button
+                        btnLogin.setEnabled(true);
+                        btnLogin.setText("Đăng nhập");
+
+                        if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                            MobileLoginResponse loginResponse = response.body().getData();
+                            // Save token, user, line to SharedPreferences
+                            SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+                            SharedPreferences.Editor editor = prefs.edit();
+                            editor.putString("token", loginResponse.getToken());
+                            editor.putString("employee_id", loginResponse.getUser().getEmployeeCode());
+                            editor.putString("production_line", loginResponse.getLine().getLineName());
+                            editor.putInt("line_id", loginResponse.getLine().getLineId());
+                            editor.commit();
+
+                            // Navigate to HomeActivity
+                            Intent intent = new Intent(LoginActivity.this, HomeActivity.class);
+                            intent.putExtra("user", loginResponse.getUser());
+                            intent.putExtra("line", loginResponse.getLine());
+                            startActivity(intent);
+                            finish();
+                        } else {
+                            String message = "Đăng nhập thất bại";
+                            if (response.body() != null && response.body().getMessage() != null) {
+                                message = response.body().getMessage();
+                            } else if (response.errorBody() != null) {
+                                try (okhttp3.ResponseBody errorBody = response.errorBody()) {
+                                    String errorString = errorBody.string();
+                                    try {
+                                        ApiResponse<MobileLoginResponse> errorResponse = new Gson().fromJson(errorString, new TypeToken<ApiResponse<MobileLoginResponse>>(){}.getType());
+                                        if (errorResponse != null && errorResponse.getMessage() != null) {
+                                            message = errorResponse.getMessage();
+                                        }
+                                    } catch (Exception e) {
+                                        // If not JSON, use the string directly
+                                        message = errorString;
+                                    }
+                                } catch (Exception e) {
+                                    Log.e("LoginActivity", "Error reading error body", e);
+                                }
+                            }
+                            Toast.makeText(LoginActivity.this, message, Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<ApiResponse<MobileLoginResponse>> call, Throwable t) {
+                        // Reset button
+                        btnLogin.setEnabled(true);
+                        btnLogin.setText("Đăng nhập");
+
+                        Toast.makeText(LoginActivity.this, "Lỗi: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+            } else {
+                // Reset button
+                btnLogin.setEnabled(true);
+                btnLogin.setText("Đăng nhập");
+                Toast.makeText(LoginActivity.this, "Không tìm thấy dây chuyền", Toast.LENGTH_SHORT).show();
+            }
         }
-    }
-
-    private void saveLoginInfo(String employeeId, String productionLine) {
-        // TODO: Lưu vào SharedPreferences hoặc Room Database
-        getSharedPreferences("AppPrefs", MODE_PRIVATE)
-                .edit()
-                .putString("employee_id", employeeId)
-                .putString("production_line", productionLine)
-                .putBoolean("is_logged_in", true)
-                .apply();
     }
 }

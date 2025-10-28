@@ -231,6 +231,24 @@ namespace FITSKIP.Infrastructure.SeedData
                 };
                 technician2.PasswordHash = _passwordHasher.HashPassword(technician2, "123456");
                 users.Add(technician2);
+
+                // Additional Team Leader - Tổ trưởng (Hoàng)
+                var teamLeader2 = new User
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    UserName = "TT002",
+                    NormalizedUserName = "TT002",
+                    Email = "hoangdz512@gmail.com",
+                    NormalizedEmail = "HOANGDZ512@GMAIL.COM",
+                    EmailConfirmed = true,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    ConcurrencyStamp = Guid.NewGuid().ToString(),
+                    FullName = "Vũ Tuấn Hoàng",
+                    EmployeeCode = "TT002",
+                    PhoneNumber = "0912345678"
+                };
+                teamLeader2.PasswordHash = _passwordHasher.HashPassword(teamLeader2, "123456");
+                users.Add(teamLeader2);
                 await context.Users.AddRangeAsync(users);
                 await context.SaveChangesAsync();
             }
@@ -327,6 +345,14 @@ namespace FITSKIP.Infrastructure.SeedData
                     new StopType
                     {
                         TypeName = "Phế phẩm"
+                    },
+                    new StopType
+                    {
+                        TypeName = "Vệ sinh đầu/cuối ca"
+                    },
+                    new StopType
+                    {
+                        TypeName = "Đổi mã"
                     }
                 };
 
@@ -349,18 +375,21 @@ namespace FITSKIP.Infrastructure.SeedData
                         new Line
                         {
                             LineName = "Dây chuyền sản xuất 1",
+                            LineCode = "LINE001",
                             DepartmentId = productionDept.DepartmentId,
                             IsActive = true
                         },
                         new Line
                         {
                             LineName = "Dây chuyền sản xuất 2",
+                            LineCode = "LINE002",
                             DepartmentId = productionDept.DepartmentId,
                             IsActive = true
                         },
                         new Line
                         {
                             LineName = "Dây chuyền đóng gói",
+                            LineCode = "LINE003",
                             DepartmentId = productionDept.DepartmentId,
                             IsActive = true
                         }
@@ -598,21 +627,15 @@ namespace FITSKIP.Infrastructure.SeedData
                 {
                     new Shift
                     {
-                        ShiftName = "Ca sáng",
-                        StartTime = new TimeOnly(6, 0),
-                        EndTime = new TimeOnly(14, 0)
+                        ShiftName = "Ca 1",
+                        StartTime = new TimeOnly(7, 0),
+                        EndTime = new TimeOnly(15, 0)
                     },
                     new Shift
                     {
-                        ShiftName = "Ca chiều",
-                        StartTime = new TimeOnly(14, 0),
-                        EndTime = new TimeOnly(22, 0)
-                    },
-                    new Shift
-                    {
-                        ShiftName = "Ca đêm",
-                        StartTime = new TimeOnly(22, 0),
-                        EndTime = new TimeOnly(6, 0)
+                        ShiftName = "Ca 2",
+                        StartTime = new TimeOnly(15, 0),
+                        EndTime = new TimeOnly(23, 0)
                     }
                 };
 
@@ -621,63 +644,570 @@ namespace FITSKIP.Infrastructure.SeedData
             }
         }
 
+        public static async Task SeedSpareParts(FitskipDbContext context)
+        {
+            if (!await context.SpareParts.AnyAsync())
+            {
+                var spareParts = new List<SparePart>
+                {
+                    new SparePart
+                    {
+                        PartNumber = "SP001",
+                        PartName = "Dây chuyền truyền động",
+                        PartType = "Cơ khí",
+                        Material = "Thép không gỉ",
+                        Specifications = "Chiều dài 1500mm, Đường kính 50mm",
+                        Supplier = "Công ty Cơ khí Việt",
+                        PurchasePrice = 125.50m,
+                        Quantity = 15,
+                        MinQuantity = 5,
+                        Location = "Kệ A1",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "12 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-6),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP001_datasheet.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP002",
+                        PartName = "Đầu cảm biến",
+                        PartType = "Điện tử",
+                        Material = "Nhôm",
+                        Specifications = "Loại cảm biến quang học, Đầu ra: 4-20mA",
+                        Supplier = "Công ty Siemens Việt Nam",
+                        PurchasePrice = 89.75m,
+                        Quantity = 8,
+                        MinQuantity = 3,
+                        Location = "Kệ B2",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "24 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-4),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP002_manual.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP003",
+                        PartName = "Động cơ điện",
+                        PartType = "Điện",
+                        Material = "Đồng, Thép",
+                        Specifications = "Công suất 2.2kW, Tốc độ 1500 RPM, 3 pha",
+                        Supplier = "ABB Việt Nam",
+                        PurchasePrice = 350.00m,
+                        Quantity = 4,
+                        MinQuantity = 2,
+                        Location = "Kệ C1",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "36 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-8),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP003_spec.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP004",
+                        PartName = "Silinder thủy lực",
+                        PartType = "Cơ khí",
+                        Material = "Thép cán lạnh",
+                        Specifications = "Đường kính 63mm, Hành trình 500mm",
+                        Supplier = "Bosch Rexroth",
+                        PurchasePrice = 215.25m,
+                        Quantity = 6,
+                        MinQuantity = 2,
+                        Location = "Kệ D3",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "18 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-3),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP004_drawing.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP005",
+                        PartName = "Bộ lọc dầu",
+                        PartType = "Cơ khí",
+                        Material = "Giấy lọc, Nhôm",
+                        Specifications = "Kích thước 120x80mm, Đường kính ngoài 100mm",
+                        Supplier = "Mann Filter",
+                        PurchasePrice = 45.00m,
+                        Quantity = 25,
+                        MinQuantity = 10,
+                        Location = "Kệ E2",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "6 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-2),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP005_spec.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP006",
+                        PartName = "Van điều khiển pneumatic",
+                        PartType = "Điều khiển",
+                        Material = "Hợp kim nhôm",
+                        Specifications = "5/3 van, Nguồn 4-8 bar",
+                        Supplier = "Festo Vietnam",
+                        PurchasePrice = 178.50m,
+                        Quantity = 7,
+                        MinQuantity = 3,
+                        Location = "Kệ F1",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "24 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-5),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP006_catalog.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP007",
+                        PartName = "Dây đai tan curoa",
+                        PartType = "Truyền động",
+                        Material = "Cao su reinforce",
+                        Specifications = "Rộng 50mm, Chiều dài 2000mm",
+                        Supplier = "Gates Corporation",
+                        PurchasePrice = 65.75m,
+                        Quantity = 18,
+                        MinQuantity = 8,
+                        Location = "Kệ A2",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "12 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-1),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP007_technical.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP008",
+                        PartName = "Vòng bi chuyên dụng",
+                        PartType = "Cơ khí",
+                        Material = "Thép carbon",
+                        Specifications = "Bạc vòng bi: 30mm, Đường kính ngoài: 72mm",
+                        Supplier = "SKF Việt Nam",
+                        PurchasePrice = 52.30m,
+                        Quantity = 12,
+                        MinQuantity = 4,
+                        Location = "Kệ B1",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "8 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-7),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP008_spec.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP009",
+                        PartName = "Bộ niêm phong cơ học",
+                        PartType = "Cơ khí",
+                        Material = "Graphite, Carbon, PTFE",
+                        Specifications = "Đường kính: 50mm, Chiều cao: 20mm",
+                        Supplier = "John Crane",
+                        PurchasePrice = 95.00m,
+                        Quantity = 5,
+                        MinQuantity = 2,
+                        Location = "Kệ C2",
+                        Warehouse = "Kho chính",
+                        UoM = "Bộ",
+                        ReplacementCycle = "36 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-9),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP009_guide.pdf",
+                        IsActive = true
+                    },
+                    new SparePart
+                    {
+                        PartNumber = "SP010",
+                        PartName = "Relay điều khiển",
+                        PartType = "Điện",
+                        Material = "Hợp kim, Đồng",
+                        Specifications = "24VDC, 8A",
+                        Supplier = "Schneider Electric",
+                        PurchasePrice = 28.50m,
+                        Quantity = 32,
+                        MinQuantity = 15,
+                        Location = "Kệ E1",
+                        Warehouse = "Kho chính",
+                        UoM = "Cái",
+                        ReplacementCycle = "60 tháng",
+                        DateAdded = DateTime.Now.AddMonths(-11),
+                        Status = "Available",
+                        DocumentUrl = "/documents/SP010_datasheet.pdf",
+                        IsActive = true
+                    }
+                };
+
+                await context.SpareParts.AddRangeAsync(spareParts);
+                await context.SaveChangesAsync();
+            }
+        }
+
         public static async Task SeedIncidentHistories(FitskipDbContext context)
         {
             if (!await context.IncidentHistories.AnyAsync())
             {
-                var equipment = await context.Equipment.ToListAsync();
-                var stopTypes = await context.StopTypes.ToListAsync();
-
-                if (!equipment.Any() || !stopTypes.Any())
-                    return;
-
-                var incidents = new List<IncidentHistory>();
-                var random = new Random();
-
-                // Tạo 15 incidents mẫu
-                for (int i = 0; i < 15; i++)
+                var incidents = new List<IncidentHistory>
                 {
-                    var selectedEquipment = equipment[random.Next(equipment.Count)];
-                    var selectedStopType = stopTypes[random.Next(stopTypes.Count)];
-
-                    // Random thời gian trong 7 ngày qua
-                    var daysAgo = random.Next(0, 7);
-                    var incidentDate = DateTime.Now.AddDays(-daysAgo);
-
-                    // Random thời gian trong ngày
-                    var startHour = random.Next(6, 20);
-                    var startMinute = random.Next(0, 60);
-                    var startTime = new DateTime(incidentDate.Year, incidentDate.Month, incidentDate.Day, startHour, startMinute, 0);
-
-                    // Duration từ 5 phút đến 2 giờ (120 phút)
-                    var durationMinutes = random.Next(5, 121);
-                    var endTime = startTime.AddMinutes(durationMinutes);
-
-                    // Đảm bảo không vượt quá thời gian hiện tại
-                    if (endTime > DateTime.Now)
+                    new IncidentHistory
                     {
-                        endTime = DateTime.Now;
-                        var actualDuration = (endTime - startTime).TotalMinutes;
-                        durationMinutes = (int)Math.Max(1, actualDuration);
+                        EquipmentId = 6,
+                        LineId = 3,
+                        StartTime = new DateTime(2025, 8, 27, 11, 9, 0),
+                        EndTime = new DateTime(2025, 8, 27, 11, 14, 0),
+                        Duration = 5.00m,
+                        TypeId = 1,
+                        Reason = "Điều chỉnh thông số máy",
+                        Solution = "Ghi nhận và theo dõi",
+                        Issue = "Tạm dừng để điều chỉnh",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 8, 27, 11, 21, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "e76c056a-a38e-42e1-9d82-e0a225a0653e",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 14,
+                        LineId = 3,
+                        StartTime = new DateTime(2025, 9, 27, 13, 17, 0),
+                        EndTime = new DateTime(2025, 9, 27, 13, 18, 0),
+                        Duration = 1.00m,
+                        TypeId = 1,
+                        Reason = "Vệ sinh máy nhanh",
+                        Solution = "Ghi nhận và theo dõi",
+                        Issue = "Tạm dừng để điều chỉnh",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 27, 13, 27, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "dbd2d565-42fb-41c5-9fed-f84170488e5b",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 1,
+                        LineId = 1,
+                        StartTime = new DateTime(2025, 10, 10, 7, 9, 0),
+                        EndTime = new DateTime(2025, 10, 10, 7, 18, 0),
+                        Duration = 9.00m,
+                        TypeId = 2,
+                        Reason = "Vấn đề kỹ thuật nghiêm trọng",
+                        Solution = "Thay thế phụ tùng hỏng",
+                        Issue = "Vấn đề kỹ thuật nghiêm trọng",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 10, 10, 7, 15, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "57a6ea0d-1f03-49ad-8510-266733100913",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 7,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 8, 31, 21, 17, 0),
+                        EndTime = new DateTime(2025, 8, 31, 21, 30, 0),
+                        Duration = 13.00m,
+                        TypeId = 2,
+                        Reason = "Vấn đề kỹ thuật nghiêm trọng",
+                        Solution = "Thay thế phụ tùng hỏng",
+                        Issue = "Máy hỏng nặng cần sửa chữa",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 8, 31, 21, 28, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "79fffa03-0b7b-4f2c-9137-7cc2137dcdf0",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 4,
+                        LineId = 1,
+                        StartTime = new DateTime(2025, 8, 27, 8, 42, 0),
+                        EndTime = new DateTime(2025, 8, 27, 8, 51, 0),
+                        Duration = 9.00m,
+                        TypeId = 2,
+                        Reason = "Thiếu phụ tùng thay thế",
+                        Solution = "Liên hệ kỹ thuật viên",
+                        Issue = "Bảo trì định kỳ kéo dài",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 8, 27, 8, 47, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "c439f9c9-a2e4-4d67-b376-2e4717927f14",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 7,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 9, 6, 17, 44, 0),
+                        EndTime = new DateTime(2025, 9, 6, 17, 48, 0),
+                        Duration = 4.00m,
+                        TypeId = 1,
+                        Reason = "Thay đổi setup sản phẩm",
+                        Solution = "Điều chỉnh lại thông số",
+                        Issue = "Tạm nghỉ giữa ca",
+
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 6, 17, 49, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "dbd2d565-42fb-41c5-9fed-f84170488e5b",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 7,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 9, 24, 18, 18, 0),
+                        EndTime = new DateTime(2025, 9, 24, 18, 33, 0),
+                        Duration = 15.00m,
+                        TypeId = 2,
+                        Reason = "Vấn đề kỹ thuật nghiêm trọng",
+                        Solution = "Chuẩn bị máy dự phòng",
+                        Issue = "Thiếu phụ tùng thay thế",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 24, 18, 19, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "e76c056a-a38e-42e1-9d82-e0a225a0653e",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 13,
+                        LineId = 3,
+                        StartTime = new DateTime(2025, 10, 7, 12, 14, 0),
+                        EndTime = new DateTime(2025, 10, 7, 12, 20, 0),
+                        Duration = 6.00m,
+                        TypeId = 2,
+                        Reason = "Bảo trì định kỳ kéo dài",
+                        Solution = "Sửa chữa chuyên sâu",
+                        Issue = "Vấn đề kỹ thuật nghiêm trọng",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 10, 7, 12, 28, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "e76c056a-a38e-42e1-9d82-e0a225a0653e",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 12,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 10, 1, 17, 10, 0),
+                        EndTime = new DateTime(2025, 10, 1, 17, 16, 0),
+                        Duration = 6.00m,
+                        TypeId = 2,
+                        Reason = "Hỏng hóc nặng cần sửa chữa",
+                        Solution = "Chuẩn bị máy dự phòng",
+                        Issue = "Vấn đề kỹ thuật nghiêm trọng",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 10, 1, 17, 11, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "c439f9c9-a2e4-4d67-b376-2e4717927f14",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 7,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 10, 7, 21, 10, 0),
+                        EndTime = new DateTime(2025, 10, 7, 21, 12, 0),
+                        Duration = 2.00m,
+                        TypeId = 1,
+                        Reason = "Thay đổi setup sản phẩm",
+                        Solution = "Tiếp tục sản xuất",
+                        Issue = "Máy dừng hoạt động ngắn",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 10, 7, 21, 15, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "79fffa03-0b7b-4f2c-9137-7cc2137dcdf0",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 10,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 10, 20, 14, 12, 0),
+                        EndTime = new DateTime(2025, 10, 20, 14, 19, 0),
+                        Duration = 7.00m,
+                        TypeId = 2,
+                        Reason = "Hỏng hóc nặng cần sửa chữa",
+                        Solution = "Sửa chữa chuyên sâu",
+                        Issue = "Vấn đề kỹ thuật nghiêm trọng",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 10, 20, 14, 16, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "7a650883-383e-4c6f-b015-fce620aa7443",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 2,
+                        LineId = 1,
+                        StartTime = new DateTime(2025, 9, 14, 14, 53, 0),
+                        EndTime = new DateTime(2025, 9, 14, 14, 54, 0),
+                        Duration = 1.00m,
+                        TypeId = 1,
+                        Reason = "Điều chỉnh thông số máy",
+                        Solution = "Tiếp tục sản xuất",
+                        Issue = "Máy dừng hoạt động ngắn",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 14, 14, 55, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "57a6ea0d-1f03-49ad-8510-266733100913",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 6,
+                        LineId = 1,
+                        StartTime = new DateTime(2025, 9, 3, 16, 21, 0),
+                        EndTime = new DateTime(2025, 9, 3, 16, 30, 0),
+                        Duration = 9.00m,
+                        TypeId = 2,
+                        Reason = "Hỏng hóc nặng cần sửa chữa",
+                        Solution = "Thay thế phụ tùng hỏng",
+                        Issue = "Bảo trì định kỳ kéo dài",
+
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 3, 16, 24, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "7a650883-383e-4c6f-b015-fce620aa7443",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 6,
+                        LineId = 1,
+                        StartTime = new DateTime(2025, 9, 12, 8, 17, 0),
+                        EndTime = new DateTime(2025, 9, 12, 8, 25, 0),
+                        Duration = 8.00m,
+                        TypeId = 2,
+                        Reason = "Hỏng hóc nặng cần sửa chữa",
+                        Solution = "Thay thế phụ tùng hỏng",
+                        Issue = "Bảo trì định kỳ kéo dài",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 12, 8, 23, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "e76c056a-a38e-42e1-9d82-e0a225a0653e",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 12,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 9, 29, 16, 0, 0),
+                        EndTime = new DateTime(2025, 9, 29, 16, 12, 0),
+                        Duration = 12.00m,
+                        TypeId = 2,
+                        Reason = "Hỏng hóc nặng cần sửa chữa",
+                        Solution = "Sửa chữa chuyên sâu",
+                        Issue = "Bảo trì định kỳ kéo dài",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 29, 16, 7, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "57a6ea0d-1f03-49ad-8510-266733100913",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 5,
+                        LineId = 3,
+                        StartTime = new DateTime(2025, 9, 8, 16, 6, 0),
+                        EndTime = new DateTime(2025, 9, 8, 16, 13, 0),
+                        Duration = 7.00m,
+                        TypeId = 2,
+                        Reason = "Sự cố hệ thống điện",
+                        Solution = "Chuẩn bị máy dự phòng",
+                        Issue = "Sự cố hệ thống điện",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 8, 16, 11, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "09b0abd2-dea5-43d6-81d7-24410558a0a7",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 6,
+                        LineId = 1,
+                        StartTime = new DateTime(2025, 9, 9, 11, 39, 0),
+                        EndTime = new DateTime(2025, 9, 9, 11, 40, 0),
+                        Duration = 1.00m,
+                        TypeId = 1,
+                        Reason = "Thay đổi setup sản phẩm",
+                        Solution = "Điều chỉnh lại thông số",
+                        Issue = "Máy dừng hoạt động ngắn",
+
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 9, 11, 44, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "7a650883-383e-4c6f-b015-fce620aa7443",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 14,
+                        LineId = 3,
+                        StartTime = new DateTime(2025, 10, 10, 18, 8, 0),
+                        EndTime = new DateTime(2025, 10, 10, 19, 17, 0),
+                        Duration = 47.00m,
+                        TypeId = 2,
+                        Reason = "Vấn đề kỹ thuật nghiêm trọng",
+                        Solution = "Thay thế phụ tùng hỏng",
+                        Issue = "Vấn đề kỹ thuật nghiêm trọng",
+
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 10, 10, 18, 12, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "c439f9c9-a2e4-4d67-b376-2e4717927f14",
+                        IsTechSupport = true
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 7,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 9, 16, 10, 22, 0),
+                        EndTime = new DateTime(2025, 9, 16, 11, 26, 0),
+                        Duration = 38.00m,
+                        TypeId = 2,
+                        Reason = "Thay đổi setup sản phẩm",
+                        Solution = "Hoàn thành kiểm tra nhanh",
+                        Issue = "Dừng để vệ sinh nhanh",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 16, 10, 26, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "79fffa03-0b7b-4f2c-9137-7cc2137dcdf0",
+                        IsTechSupport = false
+                    },
+                    new IncidentHistory
+                    {
+                        EquipmentId = 7,
+                        LineId = 2,
+                        StartTime = new DateTime(2025, 9, 7, 9, 25, 0),
+                        EndTime = new DateTime(2025, 9, 7, 9, 40, 0),
+                        Duration = 15.00m,
+                        TypeId = 2,
+                        Reason = "Bảo trì định kỳ kéo dài",
+                        Solution = "Thay thế phụ tùng hỏng",
+                        Issue = "Thiếu phụ tùng thay thế",
+                        Status = "Hoàn thành",
+                        CreatedDate = new DateTime(2025, 9, 7, 9, 34, 0),
+                        ReportedByUserId = null,
+                        AssignedTo = "7a650883-383e-4c6f-b015-fce620aa7443",
+                        IsTechSupport = true
                     }
-
-                    var finalDuration = Math.Max(1, (decimal)durationMinutes);
-
-                    var incident = new IncidentHistory
-                    {
-                        EquipmentId = selectedEquipment.EquipmentId,
-                        StartTime = startTime,
-                        EndTime = endTime,
-                        Duration = finalDuration,
-                        TypeId = selectedStopType.TypeId,
-                        Issue = GetRandomIssue(selectedStopType.TypeName, random),
-                        Reason = GetRandomReason(selectedStopType.TypeName, random),
-                        Solution = GetRandomSolution(selectedStopType.TypeName, random),
-                        CreatedDate = startTime.AddMinutes(random.Next(1, 15))
-                    };
-
-                    incidents.Add(incident);
-                }
+                };
 
                 await context.IncidentHistories.AddRangeAsync(incidents);
                 await context.SaveChangesAsync();
@@ -688,7 +1218,14 @@ namespace FITSKIP.Infrastructure.SeedData
         {
             var issues = stopTypeName switch
             {
-                "dừng ngắn" => new[]
+                "Vệ sinh đầu/cuối ca" => new[]
+                {
+                    "Vệ sinh máy đầu ca",
+                    "Vệ sinh máy cuối ca",
+                    "Dọn dẹp khu vực sản xuất",
+                    "Kiểm tra vệ sinh"
+                },
+                "Dừng ngắn" => new[]
                 {
                     "Máy dừng hoạt động ngắn",
                     "Tạm dừng để điều chỉnh",
@@ -696,7 +1233,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Tạm nghỉ giữa ca",
                     "Dừng để vệ sinh nhanh"
                 },
-                "dừng dài" => new[]
+                "Dừng dài" => new[]
                 {
                     "Máy hỏng nặng cần sửa chữa",
                     "Bảo trì định kỳ kéo dài",
@@ -704,13 +1241,19 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Sự cố hệ thống điện",
                     "Vấn đề kỹ thuật nghiêm trọng"
                 },
-                "phế phẩm" => new[]
+                "Phế phẩm" => new[]
                 {
                     "Sản phẩm không đạt chất lượng",
                     "Lỗi lắp ráp",
                     "Vấn đề nguyên liệu",
                     "Hỏng trong quá trình sản xuất",
                     "Không đạt tiêu chuẩn kỹ thuật"
+                },
+                "Đổi mã" => new[]
+                {
+                    "Đổi mã sản phẩm",
+                    "Thay đổi model sản xuất",
+                    "Chuyển đổi dây chuyền"
                 },
                 _ => new[] { "Sự cố không xác định", "Cần kiểm tra thêm", "Vấn đề kỹ thuật" }
             };
@@ -722,7 +1265,13 @@ namespace FITSKIP.Infrastructure.SeedData
         {
             var reasons = stopTypeName switch
             {
-                "dừng ngắn" => new[]
+                "Vệ sinh đầu/cuối ca" => new[]
+                {
+                    "Dọn dẹp sau sản xuất",
+                    "Kiểm tra vệ sinh an toàn",
+                    "Chuẩn bị cho ca tiếp theo"
+                },
+                "Dừng ngắn" => new[]
                 {
                     "Điều chỉnh thông số máy",
                     "Kiểm tra chất lượng nhanh",
@@ -730,7 +1279,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Vệ sinh máy nhanh",
                     "Thay đổi setup sản phẩm"
                 },
-                "dừng dài" => new[]
+                "Dừng dài" => new[]
                 {
                     "Hỏng hóc nặng cần sửa chữa",
                     "Thiếu phụ tùng thay thế",
@@ -738,13 +1287,19 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Sự cố hệ thống điện",
                     "Vấn đề kỹ thuật nghiêm trọng"
                 },
-                "phế phẩm" => new[]
+                "Phế phẩm" => new[]
                 {
                     "Nguyên liệu không đạt chất lượng",
                     "Lỗi vận hành của công nhân",
                     "Thiết bị không chính xác",
                     "Thiếu kiểm soát chất lượng",
                     "Điều kiện môi trường sản xuất"
+                },
+                "Đổi mã" => new[]
+                {
+                    "Yêu cầu thay đổi sản phẩm",
+                    "Đơn hàng mới",
+                    "Chuyển đổi model theo kế hoạch"
                 },
                 _ => new[] { "Chưa xác định nguyên nhân", "Đang điều tra", "Cần phân tích thêm" }
             };
@@ -756,7 +1311,13 @@ namespace FITSKIP.Infrastructure.SeedData
         {
             var solutions = stopTypeName switch
             {
-                "dừng ngắn" => new[]
+                "Vệ sinh đầu/cuối ca" => new[]
+                {
+                    "Hoàn thành vệ sinh định kỳ",
+                    "Đảm bảo vệ sinh đạt chuẩn",
+                    "Chuẩn bị sẵn sàng cho sản xuất"
+                },
+                "Dừng ngắn" => new[]
                 {
                     "Điều chỉnh lại thông số",
                     "Hoàn thành kiểm tra nhanh",
@@ -764,7 +1325,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Ghi nhận và theo dõi",
                     "Đào tạo lại quy trình"
                 },
-                "dừng dài" => new[]
+                "Dừng dài" => new[]
                 {
                     "Thay thế phụ tùng hỏng",
                     "Sửa chữa chuyên sâu",
@@ -772,7 +1333,7 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Chuẩn bị máy dự phòng",
                     "Lên kế hoạch bảo trì"
                 },
-                "phế phẩm" => new[]
+                "Phế phẩm" => new[]
                 {
                     "Kiểm tra chất lượng nguyên liệu",
                     "Đào tạo lại công nhân",
@@ -780,10 +1341,426 @@ namespace FITSKIP.Infrastructure.SeedData
                     "Tăng cường kiểm soát chất lượng",
                     "Cải thiện quy trình sản xuất"
                 },
+                "Đổi mã" => new[]
+                {
+                    "Hoàn thành chuyển đổi model",
+                    "Cập nhật thông số sản xuất",
+                    "Đào tạo công nhân về model mới"
+                },
                 _ => new[] { "Tiếp tục theo dõi", "Báo cáo cấp trên", "Cần hỗ trợ chuyên gia" }
             };
 
             return solutions[random.Next(solutions.Length)];
+        }
+
+        public static async Task SeedProductionOutputs(FitskipDbContext context)
+        {
+            if (!await context.ProductionOutputs.AnyAsync())
+            {
+                var productionOutputs = new List<ProductionOutput>
+                {
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 8, 27),
+                        ShiftId = 1,
+                        SlotTime = "08:00–09:00",
+                        LoadingTime = 50,
+                        TargetAmount = 120,
+                        ResultAmount = 110,
+                        OEE = 91.7m,
+                        CreatedAt = new DateTime(2025, 8, 27, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 8, 27),
+                        ShiftId = 1,
+                        SlotTime = "11:30–12:30",
+                        LoadingTime = 50,
+                        TargetAmount = 100,
+                        ResultAmount = 95,
+                        OEE = 95.0m,
+                        CreatedAt = new DateTime(2025, 8, 27, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 8, 31),
+                        ShiftId = 2,
+                        SlotTime = "21:00–21:30",
+                        LoadingTime = 50,
+                        TargetAmount = 90,
+                        ResultAmount = 85,
+                        OEE = 94.4m,
+                        CreatedAt = new DateTime(2025, 8, 31, 22, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 9, 3),
+                        ShiftId = 2,
+                        SlotTime = "16:00–17:00",
+                        LoadingTime = 50,
+                        TargetAmount = 100,
+                        ResultAmount = 98,
+                        OEE = 98.0m,
+                        CreatedAt = new DateTime(2025, 9, 3, 18, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 9, 6),
+                        ShiftId = 2,
+                        SlotTime = "17:00–18:30",
+                        LoadingTime = 60,
+                        TargetAmount = 120,
+                        ResultAmount = 110,
+                        OEE = 91.7m,
+                        CreatedAt = new DateTime(2025, 9, 6, 19, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 9, 7),
+                        ShiftId = 1,
+                        SlotTime = "09:00–10:00",
+                        LoadingTime = 60,
+                        TargetAmount = 130,
+                        ResultAmount = 125,
+                        OEE = 96.1m,
+                        CreatedAt = new DateTime(2025, 9, 7, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 9, 8),
+                        ShiftId = 2,
+                        SlotTime = "16:00–17:00",
+                        LoadingTime = 50,
+                        TargetAmount = 100,
+                        ResultAmount = 95,
+                        OEE = 95.0m,
+                        CreatedAt = new DateTime(2025, 9, 8, 18, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 9, 9),
+                        ShiftId = 1,
+                        SlotTime = "11:00–12:00",
+                        LoadingTime = 50,
+                        TargetAmount = 100,
+                        ResultAmount = 90,
+                        OEE = 90.0m,
+                        CreatedAt = new DateTime(2025, 9, 9, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 9, 12),
+                        ShiftId = 1,
+                        SlotTime = "08:00–09:00",
+                        LoadingTime = 50,
+                        TargetAmount = 120,
+                        ResultAmount = 110,
+                        OEE = 91.7m,
+                        CreatedAt = new DateTime(2025, 9, 12, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 9, 14),
+                        ShiftId = 2,
+                        SlotTime = "14:00–15:00",
+                        LoadingTime = 60,
+                        TargetAmount = 150,
+                        ResultAmount = 145,
+                        OEE = 96.7m,
+                        CreatedAt = new DateTime(2025, 9, 14, 18, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 9, 16),
+                        ShiftId = 1,
+                        SlotTime = "10:00–11:00",
+                        LoadingTime = 60,
+                        TargetAmount = 140,
+                        ResultAmount = 130,
+                        OEE = 92.8m,
+                        CreatedAt = new DateTime(2025, 9, 16, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 9, 24),
+                        ShiftId = 2,
+                        SlotTime = "18:00–19:00",
+                        LoadingTime = 60,
+                        TargetAmount = 120,
+                        ResultAmount = 115,
+                        OEE = 95.8m,
+                        CreatedAt = new DateTime(2025, 9, 24, 20, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 9, 27),
+                        ShiftId = 1,
+                        SlotTime = "13:00–14:00",
+                        LoadingTime = 60,
+                        TargetAmount = 100,
+                        ResultAmount = 95,
+                        OEE = 95.0m,
+                        CreatedAt = new DateTime(2025, 9, 27, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 9, 29),
+                        ShiftId = 2,
+                        SlotTime = "16:00–17:00",
+                        LoadingTime = 50,
+                        TargetAmount = 110,
+                        ResultAmount = 100,
+                        OEE = 90.9m,
+                        CreatedAt = new DateTime(2025, 9, 29, 18, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 10, 1),
+                        ShiftId = 2,
+                        SlotTime = "17:00–18:00",
+                        LoadingTime = 60,
+                        TargetAmount = 120,
+                        ResultAmount = 115,
+                        OEE = 95.8m,
+                        CreatedAt = new DateTime(2025, 10, 1, 20, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 10, 7),
+                        ShiftId = 2,
+                        SlotTime = "21:00–21:30",
+                        LoadingTime = 50,
+                        TargetAmount = 100,
+                        ResultAmount = 92,
+                        OEE = 92.0m,
+                        CreatedAt = new DateTime(2025, 10, 7, 22, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 10, 7),
+                        ShiftId = 1,
+                        SlotTime = "12:00–12:30",
+                        LoadingTime = 50,
+                        TargetAmount = 80,
+                        ResultAmount = 75,
+                        OEE = 93.7m,
+                        CreatedAt = new DateTime(2025, 10, 7, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 10, 10),
+                        ShiftId = 1,
+                        SlotTime = "07:00–08:00",
+                        LoadingTime = 60,
+                        TargetAmount = 130,
+                        ResultAmount = 120,
+                        OEE = 92.3m,
+                        CreatedAt = new DateTime(2025, 10, 10, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 10, 10),
+                        ShiftId = 2,
+                        SlotTime = "18:00–19:00",
+                        LoadingTime = 60,
+                        TargetAmount = 110,
+                        ResultAmount = 105,
+                        OEE = 95.5m,
+                        CreatedAt = new DateTime(2025, 10, 10, 20, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 10, 20),
+                        ShiftId = 2,
+                        SlotTime = "14:00–15:00",
+                        LoadingTime = 60,
+                        TargetAmount = 120,
+                        ResultAmount = 115,
+                        OEE = 95.8m,
+                        CreatedAt = new DateTime(2025, 10, 20, 18, 0, 0)
+                    },
+                    // Các ngày chỉ có sản lượng, không có sự cố:
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 8, 20),
+                        ShiftId = 1,
+                        SlotTime = "06:00–07:00",
+                        LoadingTime = 60,
+                        TargetAmount = 100,
+                        ResultAmount = 95,
+                        OEE = 95.0m,
+                        CreatedAt = new DateTime(2025, 8, 20, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 9, 1),
+                        ShiftId = 2,
+                        SlotTime = "15:00–16:00",
+                        LoadingTime = 60,
+                        TargetAmount = 120,
+                        ResultAmount = 118,
+                        OEE = 98.3m,
+                        CreatedAt = new DateTime(2025, 9, 1, 20, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 9, 10),
+                        ShiftId = 2,
+                        SlotTime = "22:00–23:00",
+                        LoadingTime = 60,
+                        TargetAmount = 110,
+                        ResultAmount = 105,
+                        OEE = 95.5m,
+                        CreatedAt = new DateTime(2025, 9, 10, 23, 59, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 9, 20),
+                        ShiftId = 1,
+                        SlotTime = "09:00–10:00",
+                        LoadingTime = 60,
+                        TargetAmount = 130,
+                        ResultAmount = 125,
+                        OEE = 96.1m,
+                        CreatedAt = new DateTime(2025, 9, 20, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 9, 30),
+                        ShiftId = 2,
+                        SlotTime = "18:30–19:30",
+                        LoadingTime = 60,
+                        TargetAmount = 115,
+                        ResultAmount = 108,
+                        OEE = 93.9m,
+                        CreatedAt = new DateTime(2025, 9, 30, 20, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 10, 3),
+                        ShiftId = 2,
+                        SlotTime = "01:00–03:00",
+                        LoadingTime = 75,
+                        TargetAmount = 120,
+                        ResultAmount = 110,
+                        OEE = 91.6m,
+                        CreatedAt = new DateTime(2025, 10, 3, 6, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 10, 5),
+                        ShiftId = 1,
+                        SlotTime = "10:00–11:30",
+                        LoadingTime = 60,
+                        TargetAmount = 150,
+                        ResultAmount = 140,
+                        OEE = 93.3m,
+                        CreatedAt = new DateTime(2025, 10, 5, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 10, 12),
+                        ShiftId = 2,
+                        SlotTime = "19:30–20:30",
+                        LoadingTime = 50,
+                        TargetAmount = 90,
+                        ResultAmount = 85,
+                        OEE = 94.4m,
+                        CreatedAt = new DateTime(2025, 10, 12, 22, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 10, 15),
+                        ShiftId = 2,
+                        SlotTime = "05:00–06:00",
+                        LoadingTime = 60,
+                        TargetAmount = 100,
+                        ResultAmount = 97,
+                        OEE = 97.0m,
+                        CreatedAt = new DateTime(2025, 10, 15, 6, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 10, 18),
+                        ShiftId = 1,
+                        SlotTime = "11:30–12:30",
+                        LoadingTime = 50,
+                        TargetAmount = 120,
+                        ResultAmount = 118,
+                        OEE = 98.3m,
+                        CreatedAt = new DateTime(2025, 10, 18, 14, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 2,
+                        Date = new DateTime(2025, 10, 22),
+                        ShiftId = 2,
+                        SlotTime = "15:00–16:00",
+                        LoadingTime = 60,
+                        TargetAmount = 130,
+                        ResultAmount = 120,
+                        OEE = 92.3m,
+                        CreatedAt = new DateTime(2025, 10, 22, 18, 0, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 3,
+                        Date = new DateTime(2025, 10, 25),
+                        ShiftId = 2,
+                        SlotTime = "22:00–23:00",
+                        LoadingTime = 60,
+                        TargetAmount = 140,
+                        ResultAmount = 135,
+                        OEE = 96.4m,
+                        CreatedAt = new DateTime(2025, 10, 25, 23, 59, 0)
+                    },
+                    new ProductionOutput
+                    {
+                        LineId = 1,
+                        Date = new DateTime(2025, 10, 28),
+                        ShiftId = 1,
+                        SlotTime = "08:00–09:00",
+                        LoadingTime = 50,
+                        TargetAmount = 120,
+                        ResultAmount = 115,
+                        OEE = 95.8m,
+                        CreatedAt = new DateTime(2025, 10, 28, 14, 0, 0)
+                    }
+                };
+
+                await context.ProductionOutputs.AddRangeAsync(productionOutputs);
+                await context.SaveChangesAsync();
+            }
         }
 
         public static async Task SeedAllData(FitskipDbContext context)
@@ -797,7 +1774,9 @@ namespace FITSKIP.Infrastructure.SeedData
             await SeedStages(context);
             await SeedEquipment(context);
             await SeedShifts(context);
+            // await SeedSpareParts(context); // Removed: User will add spare parts via web interface
             await SeedIncidentHistories(context);
+            await SeedProductionOutputs(context);
         }
     }
 }

@@ -21,13 +21,19 @@ public partial class PurchaseRequest
 
     public string? RejectedBy { get; set; }
 
+    public string? ReceivedBy { get; set; }
+
     public DateTime? ApprovedAt { get; set; }
 
     public DateTime? RejectedAt { get; set; }
 
+    public DateTime? ReceivedAt { get; set; }
+
     public virtual User? ApprovedByNavigation { get; set; }
 
     public virtual User? RejectedByNavigation { get; set; }
+
+    public virtual User? ReceivedByNavigation { get; set; }
 
     public virtual SparePart Part { get; set; } = null!;
 

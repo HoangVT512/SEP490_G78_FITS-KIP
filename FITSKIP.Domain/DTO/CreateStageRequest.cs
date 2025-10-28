@@ -12,5 +12,4 @@ public class CreateStageRequest
     public int LineId { get; set; }
 
     public string? Description { get; set; }
-
 }

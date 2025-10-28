@@ -60,14 +60,42 @@
                     android:textSize="12sp"
                     android:textStyle="bold" />
 
-                <TextView
-                    android:id="@+id/tv_equipment_code"
+                <LinearLayout
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="2"
-                    android:textColor="@color/text_primary"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical">
+
+                    <TextView
+                        android:id="@+id/tv_equipment_code"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:textColor="@color/text_primary"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+
+                    <ImageView
+                        android:id="@+id/iv_tech_support"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginStart="8dp"
+                        android:src="@drawable/ic_tech_support"
+                        android:visibility="gone"
+                        android:contentDescription="@string/need_tech_support" />
+
+                    <TextView
+                        android:id="@+id/tv_tech_support_label"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="@string/need_tech_support"
+                        android:textSize="6sp"
+                        android:textColor="@color/text_primary"
+                        android:visibility="gone" />
+
+                </LinearLayout>
 
             </LinearLayout>
 
@@ -284,7 +312,7 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="Đồng bộ: "
+                    android:text="@string/synced_label"
                     android:textColor="@color/primary_color"
                     android:textSize="12sp"
                     android:textStyle="bold" />

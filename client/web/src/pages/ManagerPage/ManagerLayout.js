@@ -41,11 +41,16 @@ import ManagerDashboard from "./ManagerDashboard";
 import PurchaseApproval from "./PurchaseApproval";
 import MaintenanceReports from "./MaintenanceReports";
 import ReplacementHistory from "./ReplacementHistory";
+import DisplayScreenReplaceItem from "./DisplayScreenReplaceItem";
 import InventoryDashboard from "./InventoryDashboard";
 import ProductionManagement from "./ProductionManagement";
 import ProductionDetailReport from "./ProductionDetailReport";
 import ManagerIncidentList from "./ManagerIncidentList";
 import NotificationsList from "./NotificationsList";
+import FactoryMap from "./FactoryMap";
+import OEEDashboard from "./OEEDashboard";
+import DowntimeChartDashboard from "./DowntimeChartDashboard";
+import OEE from "./OEE";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -105,11 +110,10 @@ const ManagerLayout = () => {
 
           // Hiển thị message toast (LUÔN LUÔN hiển thị)
           antdMessage.success({
-            content: `🔔 ${
-              notificationData.title ||
+            content: `🔔 ${notificationData.title ||
               notificationData.message ||
               "Bạn có thông báo mới"
-            }`,
+              }`,
             duration: 5,
           });
 
@@ -142,11 +146,10 @@ const ManagerLayout = () => {
 
           // Hiển thị message toast
           antdMessage.info({
-            content: `📢 ${
-              broadcastData.title ||
+            content: `📢 ${broadcastData.title ||
               broadcastData.message ||
               "Thông báo hệ thống mới"
-            }`,
+              }`,
             duration: 5,
           });
 
@@ -194,6 +197,8 @@ const ManagerLayout = () => {
       setSelectedKey("purchase-approval");
     } else if (path.includes("/maintenance-reports")) {
       setSelectedKey("maintenance-reports");
+    } else if (path.includes("/DisplayScreenReplaceItem")) {
+      setSelectedKey("DisplayScreenReplaceItem");
     } else if (path.includes("/replacement-history")) {
       setSelectedKey("replacement-history");
     } else if (path.includes("/inventory-dashboard")) {
@@ -202,6 +207,14 @@ const ManagerLayout = () => {
       setSelectedKey("production-management");
     } else if (path.includes("/production-report")) {
       setSelectedKey("production-report");
+    } else if (path.includes("/factory-map")) {
+      setSelectedKey("factory-map");
+    } else if (path.includes("/oee-dashboard")) {
+      setSelectedKey("oee-dashboard");
+    } else if (path.includes("/downtime-chart")) {
+      setSelectedKey("downtime-chart");
+    } else if (path.includes("/oee")) {
+      setSelectedKey("oee");
     } else if (path.includes("/incidents")) {
       setSelectedKey("incidents");
     } else {
@@ -217,6 +230,8 @@ const ManagerLayout = () => {
       return <PurchaseApproval />;
     } else if (path.includes("/maintenance-reports")) {
       return <MaintenanceReports />;
+    } else if (path.includes("/DisplayScreenReplaceItem")) {
+      return <DisplayScreenReplaceItem />;
     } else if (path.includes("/replacement-history")) {
       return <ReplacementHistory />;
     } else if (path.includes("/inventory-dashboard")) {
@@ -225,6 +240,15 @@ const ManagerLayout = () => {
       return <ProductionManagement />;
     } else if (path.includes("/production-report")) {
       return <ProductionDetailReport />;
+    } else if (path.includes("/factory-map")) {
+      return <FactoryMap />;
+    } else if (path.includes("/oee-dashboard")) {
+      return <OEEDashboard />;
+    } else if (path.includes("/downtime-chart")) {
+      return <DowntimeChartDashboard />;
+    } else if (path.includes("/oee")) {
+      // Return null for OEE - it will be rendered in fullscreen mode
+      return null;
     } else if (path.includes("/incidents")) {
       return <ManagerIncidentList />;
     } else if (path === "/manager" || path.includes("/dashboard")) {
@@ -242,6 +266,26 @@ const ManagerLayout = () => {
       label: "Tổng quan",
     },
     {
+      key: "factory-map",
+      icon: <FundOutlined />,
+      label: "Sơ đồ nhà máy",
+    },
+    {
+      key: "oee-dashboard",
+      icon: <FundOutlined />,
+      label: "Biểu đồ OEE",
+    },
+    {
+      key: "downtime-chart",
+      icon: <FundOutlined />,
+      label: "Biểu đồ thời gian ngừng",
+    },
+    {
+      key: "oee",
+      icon: <FundOutlined />,
+      label: "OEE",
+    },
+    {
       key: "purchase-approval",
       icon: <ShoppingOutlined />,
       label: "Duyệt yêu cầu mua hàng",
@@ -250,6 +294,11 @@ const ManagerLayout = () => {
       key: "maintenance-reports",
       icon: <ToolOutlined />,
       label: "Báo cáo bảo trì",
+    },
+    {
+      key: "DisplayScreenReplaceItem",
+      icon: <SwapOutlined />,
+      label: "Thay thế linh kiện",
     },
     {
       key: "replacement-history",
@@ -284,11 +333,27 @@ const ManagerLayout = () => {
       case "dashboard":
         navigate("/manager/dashboard");
         break;
+      case "factory-map":
+        navigate("/manager/factory-map");
+        break;
+      case "oee-dashboard":
+        navigate("/manager/oee-dashboard");
+        break;
+      case "downtime-chart":
+        navigate("/manager/downtime-chart");
+        break;
+      case "oee":
+        // Mở OEE trong tab mới
+        window.open("/manager/oee", "_blank");
+        break;
       case "purchase-approval":
         navigate("/manager/purchase-approval");
         break;
       case "maintenance-reports":
         navigate("/manager/maintenance-reports");
+        break;
+      case "DisplayScreenReplaceItem":
+        navigate("/manager/DisplayScreenReplaceItem");
         break;
       case "replacement-history":
         navigate("/manager/replacement-history");
@@ -396,6 +461,20 @@ const ManagerLayout = () => {
     border: "none",
     fontSize: "14px",
   };
+
+  // Check if current page is OEE fullscreen
+  const isOEEFullscreen = location.pathname.includes("manager/oee");
+
+  // If OEE fullscreen, render without sidebar and header
+  if (isOEEFullscreen) {
+    return (
+      <App>
+        <div style={{ height: '100vh', overflow: 'hidden', position: 'relative' }}>
+          <OEE />
+        </div>
+      </App>
+    );
+  }
 
   return (
     <App>
@@ -531,7 +610,12 @@ const ManagerLayout = () => {
           open={notificationDrawerOpen}
           styles={{ body: { padding: 0 } }}
         >
-          <NotificationsList onClose={() => setNotificationDrawerOpen(false)} />
+          <NotificationsList
+            onClose={() => setNotificationDrawerOpen(false)}
+            onNotificationCountChange={(newCount) =>
+              setNotificationCount(newCount)
+            }
+          />
         </Drawer>
       </AntLayout>
     </App>

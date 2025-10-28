@@ -41,7 +41,7 @@ public class LineService : ILineService
 
         // Check duplicate line name in same department
         var existingLines = await _lineRepository.GetByDepartmentIdAsync(request.DepartmentId, cancellationToken);
-        var duplicateLine = existingLines.FirstOrDefault(l => 
+        var duplicateLine = existingLines.FirstOrDefault(l =>
             System.Text.RegularExpressions.Regex.Replace(l.LineName.Trim(), @"\s+", " ").ToLower() == normalizedLineName.ToLower());
         if (duplicateLine != null)
         {
@@ -52,7 +52,6 @@ public class LineService : ILineService
         {
             LineName = normalizedLineName, // Sử dụng tên đã chuẩn hóa
             DepartmentId = request.DepartmentId,
-            IsActive = request.IsActive
         };
 
         return await _lineRepository.CreateAsync(line, cancellationToken);
@@ -83,11 +82,17 @@ public class LineService : ILineService
 
         // Check duplicate line name in same department (exclude current line)
         var existingLines = await _lineRepository.GetByDepartmentIdAsync(request.DepartmentId, cancellationToken);
-        var duplicateLine = existingLines.FirstOrDefault(l => l.LineId != id && 
+        var duplicateLine = existingLines.FirstOrDefault(l => l.LineId != id &&
             System.Text.RegularExpressions.Regex.Replace(l.LineName.Trim(), @"\s+", " ").ToLower() == normalizedLineName.ToLower());
         if (duplicateLine != null)
         {
             throw new InvalidOperationException($"Phòng ban '{department.DepartmentName}' đã có chuyền sản xuất tên '{duplicateLine.LineName}'");
+        }
+
+        // Nếu department thay đổi, remove tất cả UserLines cho line này
+        if (existingLine.DepartmentId != request.DepartmentId)
+        {
+            await _lineRepository.RemoveUserLinesForLineAsync(id, cancellationToken);
         }
 
         existingLine.LineName = normalizedLineName; // Sử dụng tên đã chuẩn hóa
@@ -105,5 +110,10 @@ public class LineService : ILineService
     public Task<Line?> ToggleLineStatusAsync(int id, CancellationToken cancellationToken = default)
     {
         return _lineRepository.ToggleLineStatusAsync(id, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<Line>> GetLinesByUserAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return _lineRepository.GetLinesByUserAsync(userId, cancellationToken);
     }
 }

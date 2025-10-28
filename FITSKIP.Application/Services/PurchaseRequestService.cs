@@ -10,19 +10,19 @@ public class PurchaseRequestService : IPurchaseRequestService
     private readonly IPurchaseRequestRepository _purchaseRequestRepository;
     private readonly IUserRepository _userRepository;
     private readonly INotificationService _notificationService;
-    //private readonly ISparePartRepository _sparePartRepository;
+    private readonly ISparePartRepository _sparePartRepository;
 
     public PurchaseRequestService(
         IPurchaseRequestRepository purchaseRequestRepository,
         IUserRepository userRepository,
-        INotificationService notificationService
-        //ISparePartRepository sparePartRepository
+        INotificationService notificationService,
+        ISparePartRepository sparePartRepository
         )
     {
         _purchaseRequestRepository = purchaseRequestRepository;
         _userRepository = userRepository;
         _notificationService = notificationService;
-        //_sparePartRepository = sparePartRepository;
+        _sparePartRepository = sparePartRepository;
     }
 
     public async Task<IReadOnlyList<PurchaseRequestDTO>> GetAllPurchaseRequestsAsync(CancellationToken cancellationToken = default)
@@ -292,6 +292,66 @@ public class PurchaseRequestService : IPurchaseRequestService
                 Message = $"Đơn yêu cầu mua hàng (Mã: {id}) của bạn đã bị {manager.FullName} từ chối. Lý do: {reason}"
             });
         }
+
+        return updatedRequest == null ? null : PurchaseRequestDTO.FromEntity(updatedRequest);
+    }
+
+    public async Task<PurchaseRequestDTO?> MarkAsReceivedAsync(
+        int id,
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        var existingRequest = await _purchaseRequestRepository.GetByIdAsync(id, cancellationToken);
+        if (existingRequest == null)
+        {
+            return null;
+        }
+
+        // Validate user exists
+        var user = await _userRepository.GetUserByIdAsync(userId, cancellationToken);
+        if (user == null)
+        {
+            throw new InvalidOperationException("Không tìm thấy người dùng");
+        }
+
+        // Only allow marking as received if status is Approved
+        if (existingRequest.Status != "Đã duyệt")
+        {
+            throw new InvalidOperationException($"Chỉ có thể đánh dấu đã nhập kho cho yêu cầu đã được duyệt");
+        }
+
+        // Update spare part quantity in inventory
+        var sparePart = await _sparePartRepository.GetByIdAsync(existingRequest.PartId, cancellationToken);
+        if (sparePart == null)
+        {
+            throw new InvalidOperationException("Không tìm thấy phụ tùng trong kho");
+        }
+
+        // Increase quantity
+        sparePart.Quantity += existingRequest.Quantity;
+
+        // Update spare part status based on new quantity
+        if (sparePart.Quantity == 0)
+        {
+            sparePart.Status = "Hết hàng";
+        }
+        else if (sparePart.Quantity < sparePart.MinQuantity)
+        {
+            sparePart.Status = "Sắp hết";
+        }
+        else
+        {
+            sparePart.Status = "Đủ hàng";
+        }
+
+        await _sparePartRepository.UpdateAsync(sparePart, cancellationToken);
+
+        // Update purchase request status
+        existingRequest.Status = "Đã nhập";
+        existingRequest.ReceivedAt = DateTime.UtcNow;
+        existingRequest.ReceivedBy = userId;
+
+        var updatedRequest = await _purchaseRequestRepository.UpdateAsync(existingRequest, cancellationToken);
 
         return updatedRequest == null ? null : PurchaseRequestDTO.FromEntity(updatedRequest);
     }

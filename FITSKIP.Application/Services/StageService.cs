@@ -51,7 +51,6 @@ public class StageService : IStageService
         {
             StageName = normalizedStageName, // Sử dụng tên đã chuẩn hóa
             LineId = request.LineId,
-            IsActive = request.IsActive
         };
 
         return await _stageRepository.CreateAsync(stage, cancellationToken);
@@ -111,5 +110,10 @@ public class StageService : IStageService
     public Task<IReadOnlyList<Stage>> GetStagesByLineAsync(int lineId, CancellationToken cancellationToken = default)
     {
         return _stageRepository.GetByLineIdAsync(lineId, cancellationToken);
+    }
+
+    public Task<IReadOnlyList<Stage>> GetStagesByUserLinesAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        return _stageRepository.GetStagesByUserLinesAsync(userId, cancellationToken);
     }
 }

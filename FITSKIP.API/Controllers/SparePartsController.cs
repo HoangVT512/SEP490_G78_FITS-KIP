@@ -16,7 +16,7 @@ namespace FITSKIP.API.Controllers
             _service = service;
         }
 
-        // GET: api/SparePart
+        // GET: https://localhost:7003/api/SpareParts
         [HttpGet]
         public async Task<ActionResult<IEnumerable<SparePartDTO>>> GetAllSpareParts(CancellationToken cancellationToken = default)
         {
@@ -30,10 +30,20 @@ namespace FITSKIP.API.Controllers
                     PartId = sp.PartId,
                     PartNumber = sp.PartNumber,
                     PartName = sp.PartName,
+                    PartType = sp.PartType,
+                    Material = sp.Material,
+                    Specifications = sp.Specifications,
+                    Supplier = sp.Supplier,
+                    PurchasePrice = sp.PurchasePrice,
                     Quantity = sp.Quantity,
                     MinQuantity = sp.MinQuantity,
                     Location = sp.Location,
+                    Warehouse = sp.Warehouse,
+                    UoM = sp.UoM,
+                    ReplacementCycle = sp.ReplacementCycle,
+                    DateAdded = sp.DateAdded,
                     Status = sp.Status,
+                    DocumentUrl = sp.DocumentUrl,
                     IsActive = sp.IsActive,
                     TotalPurchaseRequest = sp.PurchaseRequests?.Count ?? 0,
                     TotalReplacementHistory = sp.ReplacementHistories?.Count ?? 0
@@ -47,7 +57,7 @@ namespace FITSKIP.API.Controllers
             }
         }
 
-        // GET: api/SparePart/5
+        // GET: https://localhost:7003/api/SpareParts/{id}
         [HttpGet("{id}")]
         public async Task<ActionResult<SparePartDTO>> GetSparePartById(int id, CancellationToken cancellationToken = default)
         {
@@ -56,7 +66,7 @@ namespace FITSKIP.API.Controllers
                 var sparePart = await _service.GetSparePartByIdAsync(id, cancellationToken);
 
                 if (sparePart == null)
-                    return NotFound(new { message = $"Spare part with ID {id} not found" });
+                    return NotFound(new { message = $"Spare part với ID {id} không tồn tại" });
 
                 // Mapping Entity to DTO
                 var sparePartDTO = new SparePartDTO
@@ -64,10 +74,20 @@ namespace FITSKIP.API.Controllers
                     PartId = sparePart.PartId,
                     PartNumber = sparePart.PartNumber,
                     PartName = sparePart.PartName,
+                    PartType = sparePart.PartType,
+                    Material = sparePart.Material,
+                    Specifications = sparePart.Specifications,
+                    Supplier = sparePart.Supplier,
+                    PurchasePrice = sparePart.PurchasePrice,
                     Quantity = sparePart.Quantity,
                     MinQuantity = sparePart.MinQuantity,
                     Location = sparePart.Location,
+                    Warehouse = sparePart.Warehouse,
+                    UoM = sparePart.UoM,
+                    ReplacementCycle = sparePart.ReplacementCycle,
+                    DateAdded = sparePart.DateAdded,
                     Status = sparePart.Status,
+                    DocumentUrl = sparePart.DocumentUrl,
                     IsActive = sparePart.IsActive,
                     TotalPurchaseRequest = sparePart.PurchaseRequests?.Count ?? 0,
                     TotalReplacementHistory = sparePart.ReplacementHistories?.Count ?? 0
@@ -81,7 +101,7 @@ namespace FITSKIP.API.Controllers
             }
         }
 
-        // POST: api/SparePart
+        // POST: https://localhost:7003/api/SpareParts
         [HttpPost]
         public async Task<ActionResult<SparePartDTO>> CreateSparePart([FromBody] CreateSparePartRequest request, CancellationToken cancellationToken = default)
         {
@@ -95,10 +115,24 @@ namespace FITSKIP.API.Controllers
                 {
                     PartNumber = request.PartNumber,
                     PartName = request.PartName,
+                    PartType = request.PartType,
+                    Material = request.Material,
+                    Specifications = request.Specifications,
+                    Supplier = request.Supplier,
+                    PurchasePrice = request.PurchasePrice,
                     Quantity = request.Quantity,
                     MinQuantity = request.MinQuantity,
-                    Location = request.Location
+                    Location = request.Location,
+                    Warehouse = request.Warehouse,
+                    UoM = request.UoM,
+                    ReplacementCycle = request.ReplacementCycle,
+                    DateAdded = request.DateAdded ?? DateTime.Now,
+                    DocumentUrl = request.DocumentUrl
                 };
+                if (request.Quantity <= 0)
+                {
+                    return BadRequest(new { message = "Số lượng phụ tùng phải lớn hơn 0" });
+                }
 
                 var created = await _service.CreateSparePartAsync(sparePart, cancellationToken);
 
@@ -108,10 +142,20 @@ namespace FITSKIP.API.Controllers
                     PartId = created.PartId,
                     PartNumber = created.PartNumber,
                     PartName = created.PartName,
+                    PartType = created.PartType,
+                    Material = created.Material,
+                    Specifications = created.Specifications,
+                    Supplier = created.Supplier,
+                    PurchasePrice = created.PurchasePrice,
                     Quantity = created.Quantity,
                     MinQuantity = created.MinQuantity,
                     Location = created.Location,
+                    Warehouse = created.Warehouse,
+                    UoM = created.UoM,
+                    ReplacementCycle = created.ReplacementCycle,
+                    DateAdded = created.DateAdded,
                     Status = created.Status,
+                    DocumentUrl = created.DocumentUrl,
                     IsActive = created.IsActive,
                     TotalPurchaseRequest = 0,
                     TotalReplacementHistory = 0
@@ -129,7 +173,7 @@ namespace FITSKIP.API.Controllers
             }
         }
 
-        // PUT: api/SparePart/5
+        // PUT: https://localhost:7003/api/SpareParts/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateSparePart(int id, [FromBody] UpdateSparePartRequest request, CancellationToken cancellationToken = default)
         {
@@ -143,11 +187,25 @@ namespace FITSKIP.API.Controllers
                 {
                     PartNumber = request.PartNumber,
                     PartName = request.PartName,
+                    PartType = request.PartType,
+                    Material = request.Material,
+                    Specifications = request.Specifications,
+                    Supplier = request.Supplier,
+                    PurchasePrice = request.PurchasePrice,
                     Quantity = request.Quantity,
                     MinQuantity = request.MinQuantity,
                     Location = request.Location,
-                    Status = request.Status
+                    Warehouse = request.Warehouse,
+                    UoM = request.UoM,
+                    ReplacementCycle = request.ReplacementCycle,
+                    DateAdded = request.DateAdded,
+                    Status = request.Status,
+                    DocumentUrl = request.DocumentUrl
                 };
+                if(request.Quantity <= 0)
+                {
+                    return BadRequest(new { message = "Số lượng phụ tùng phải lớn hơn 0" });    
+                }
 
                 var result = await _service.UpdateSparePartAsync(id, sparePart, cancellationToken);
 
@@ -166,7 +224,7 @@ namespace FITSKIP.API.Controllers
             }
         }
 
-        // DELETE: api/SparePart/5
+        // DELETE: https://localhost:7003/api/SpareParts/{id}
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteSparePart(int id, CancellationToken cancellationToken = default)
         {
@@ -189,7 +247,7 @@ namespace FITSKIP.API.Controllers
             }
         }
 
-        // GET: api/SparePart/top5-most-used
+        // GET: https://localhost:7003/api/SpareParts/top5-most-used
         [HttpGet("top5-most-used")]
         public async Task<ActionResult<IEnumerable<SparePartDTO>>> GetTop5MostUsed(CancellationToken cancellationToken = default)
         {
@@ -221,7 +279,7 @@ namespace FITSKIP.API.Controllers
             }
         }
 
-        // GET: api/SparePart/usage/weekly?week=5&year=2024
+        // GET: api/SpareParts/usage/weekly?week=5&year=2024
         [HttpGet("usage/weekly")]
         public async Task<ActionResult<UsageByWeekResponseDTO>> GetTotalUsageByWeek([FromQuery] int week, [FromQuery] int year, CancellationToken cancellationToken = default)
         {
@@ -266,7 +324,7 @@ namespace FITSKIP.API.Controllers
             }
         }
 
-        // GET: api/SparePart/usage/monthly?month=12&year=2024
+        // GET: api/SpareParts/usage/monthly?month=12&year=2024
         [HttpGet("usage/monthly")]
         public async Task<ActionResult<UsageByMonthResponseDTO>> GetTotalUsageByMonth([FromQuery] int month, [FromQuery] int year, CancellationToken cancellationToken = default)
         {
@@ -311,7 +369,7 @@ namespace FITSKIP.API.Controllers
             }
         }
 
-        // GET: api/SparePart/usage/current-week
+        // GET: api/SpareParts/usage/current-week
         [HttpGet("usage/current-week")]
         public async Task<ActionResult<UsageByWeekResponseDTO>> GetUsageByCurrentWeek(CancellationToken cancellationToken = default)
         {
@@ -360,7 +418,7 @@ namespace FITSKIP.API.Controllers
             }
         }
 
-        // GET: api/SparePart/usage/current-month
+        // GET: api/SpareParts/usage/current-month
         [HttpGet("usage/current-month")]
         public async Task<ActionResult<UsageByMonthResponseDTO>> GetUsageByCurrentMonth(CancellationToken cancellationToken = default)
         {
