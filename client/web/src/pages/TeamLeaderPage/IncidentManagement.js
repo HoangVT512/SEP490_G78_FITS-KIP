@@ -1246,8 +1246,10 @@ const IncidentManagement = () => {
             issue: issue?.trim() || null,
             reason: reason?.trim() || null,
             solution: solution?.trim() || null,
-            reportedByUserId:
-              reporter || currentUser?.id || currentUser?.userId || null, // Fallback to current user
+            // Only send reportedByUserId when the user explicitly selected a reporter.
+            // Do NOT fallback to currentUser here — otherwise an empty reporter field
+            // will be interpreted as "reported by the current user" on the server.
+            reportedByUserId: reporter && reporter !== "" ? reporter : null,
             isTechSupport: isTechSupport || false,
             imageUrls: uploadedImageUrls[formId] || null, // Send array of image URLs
           };
