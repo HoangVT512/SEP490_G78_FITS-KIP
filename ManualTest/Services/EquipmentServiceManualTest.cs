@@ -94,40 +94,52 @@ public class EquipmentServiceManualTest
 
     private async Task TestGetEquipmentsAsync()
     {
-        Console.WriteLine("\nTesting GetEquipmentsAsync...");
+        Console.WriteLine("\n=========================================");
+        Console.WriteLine("TEST: GetEquipmentsAsync");
+        Console.WriteLine("=========================================");
 
         // Setup mock
         _mockEquipmentRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testData);
 
         // Execute
+        Console.WriteLine("[STATUS] Executing GetEquipmentsAsync...");
         var result = await _service.GetEquipmentsAsync();
 
         // Verify
-        Console.WriteLine($"Result: Found {result.Count} equipments");
+        Console.WriteLine($"[SUCCESS] Result: Found {result.Count} equipments");
+        Console.WriteLine("\n[DATA] Equipment List:");
+        Console.WriteLine("----------------------------------------");
         foreach (var equipment in result)
         {
-            Console.WriteLine($"   - {equipment.EquipmentName} (Code: {equipment.EquipmentCode}, ID: {equipment.EquipmentId}, Active: {equipment.IsActive})");
+            Console.WriteLine(FormatEquipment(equipment));
         }
 
         // Verify repository call
         _mockEquipmentRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
+        Console.WriteLine("[VERIFY] Repository method called exactly once");
     }
 
     private async Task TestGetEquipmentByIdAsync()
     {
-        Console.WriteLine("\nTesting GetEquipmentByIdAsync ()...");
-        Console.WriteLine("=============================================");
+        Console.WriteLine("\n=========================================");
+        Console.WriteLine("TEST: GetEquipmentByIdAsync");
+        Console.WriteLine("=========================================");
 
-        Console.Write("Enter Equipment ID to test: ");
+        Console.Write("[INPUT] Enter Equipment ID to test: ");
         int.TryParse(Console.ReadLine(), out int id);
         
         var equipment = _testData.FirstOrDefault(e => e.EquipmentId == id);
         
+        if (equipment == null)
+        {
+            Console.WriteLine($"[WARNING] Test data not found for ID: {id}");
+        }
+        
         _mockEquipmentRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(equipment);
 
-        Console.WriteLine($"Executing GetEquipmentByIdAsync with ID: {id}...");
+        Console.WriteLine($"[STATUS] Executing GetEquipmentByIdAsync with ID: {id}...");
         
         try
         {
@@ -135,40 +147,33 @@ public class EquipmentServiceManualTest
             
             if (result != null)
             {
-                Console.WriteLine("Equipment found:");
-                Console.WriteLine($"   Name: {result.EquipmentName}");
-                Console.WriteLine($"   Code: {result.EquipmentCode}");
-                Console.WriteLine($"   ID: {result.EquipmentId}");
-                Console.WriteLine($"   Date Use: {result.DateUse}");
-                Console.WriteLine($"   Origin: {result.Origin ?? "None"}");
-                Console.WriteLine($"   Year of Manufacture: {result.Yom ?? 0}");
-                Console.WriteLine($"   Stage: {result.StageName ?? "None"}");
-                Console.WriteLine($"   Active: {result.IsActive}");
-                Console.WriteLine($"   QR Code: {result.Qrcode ?? "None"}");
+                Console.WriteLine("[SUCCESS] Equipment found:");
+                Console.WriteLine(FormatEquipment(result));
             }
             else
             {
-                Console.WriteLine($"No equipment found with ID: {id}");
+                Console.WriteLine($"[NOT FOUND] No equipment found with ID: {id}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
         }
     }
 
     private async Task TestCreateEquipmentAsync()
     {
-        Console.WriteLine("\nTesting CreateEquipmentAsync ()...");
-        Console.WriteLine("=============================================");
+        Console.WriteLine("\n=========================================");
+        Console.WriteLine("TEST: CreateEquipmentAsync");
+        Console.WriteLine("=========================================");
 
-        Console.Write("Enter Equipment Code: ");
+        Console.Write("[INPUT] Enter Equipment Code: ");
         var code = Console.ReadLine();
         
-        Console.Write("Enter Equipment Name: ");
+        Console.Write("[INPUT] Enter Equipment Name: ");
         var name = Console.ReadLine();
         
-        Console.Write("Enter Date Use (yyyy-mm-dd) or press Enter for null: ");
+        Console.Write("[INPUT] Enter Date Use (yyyy-mm-dd) or press Enter for null: ");
         var dateUseInput = Console.ReadLine();
         DateOnly? dateUse = null;
         if (!string.IsNullOrWhiteSpace(dateUseInput) && DateOnly.TryParse(dateUseInput, out DateOnly parsedDate))
@@ -176,10 +181,10 @@ public class EquipmentServiceManualTest
             dateUse = parsedDate;
         }
         
-        Console.Write("Enter Origin: ");
+        Console.Write("[INPUT] Enter Origin: ");
         var origin = Console.ReadLine();
         
-        Console.Write("Enter Year of Manufacture: ");
+        Console.Write("[INPUT] Enter Year of Manufacture: ");
         var yomInput = Console.ReadLine();
         int? yom = null;
         if (!string.IsNullOrWhiteSpace(yomInput) && int.TryParse(yomInput, out int parsedYom))
@@ -187,7 +192,7 @@ public class EquipmentServiceManualTest
             yom = parsedYom;
         }
         
-        Console.Write("Enter Stage ID (or press Enter for null): ");
+        Console.Write("[INPUT] Enter Stage ID (or press Enter for null): ");
         var stageIdInput = Console.ReadLine();
         int? stageId = null;
         if (!string.IsNullOrWhiteSpace(stageIdInput) && int.TryParse(stageIdInput, out int parsedStageId))
@@ -195,10 +200,7 @@ public class EquipmentServiceManualTest
             stageId = parsedStageId;
         }
         
-        Console.Write("Enter Issue: ");
-        var issue = Console.ReadLine();
-        
-        Console.Write("Enter Active status (true/false, default true): ");
+        Console.Write("[INPUT] Enter Active status (true/false, default true): ");
         var activeInput = Console.ReadLine();
         bool isActive = true;
         if (!string.IsNullOrWhiteSpace(activeInput) && bool.TryParse(activeInput, out bool parsedActive))
@@ -206,6 +208,7 @@ public class EquipmentServiceManualTest
             isActive = parsedActive;
         }
 
+        Console.WriteLine("\n[INPUT] Creating request object...");
         var request = new CreateEquipmentRequest
         {
             EquipmentCode = code ?? "",
@@ -214,9 +217,9 @@ public class EquipmentServiceManualTest
             Origin = origin,
             Yom = yom,
             StageId = stageId,
-            Issue = issue,
             IsActive = isActive
         };
+        Console.WriteLine($"[INPUT DATA] Code: {request.EquipmentCode}, Name: {request.EquipmentName}, DateUse: {request.DateUse?.ToString() ?? "null"}, Origin: {request.Origin ?? "null"}, Yom: {request.Yom?.ToString() ?? "null"}, StageId: {request.StageId?.ToString() ?? "null"}, IsActive: {request.IsActive}");
 
         // Setup mock for stage validation if stageId is provided
         if (stageId.HasValue)
@@ -239,7 +242,6 @@ public class EquipmentServiceManualTest
             Origin = request.Origin,
             Yom = request.Yom,
             StageId = request.StageId,
-            Issue = request.Issue,
             IsActive = request.IsActive,
             Qrcode = "{\"equipmentCode\":\"" + request.EquipmentCode.ToUpper() + "\"}"
         };
@@ -249,43 +251,46 @@ public class EquipmentServiceManualTest
 
         try
         {
-            Console.WriteLine("Executing CreateEquipmentAsync...");
+            Console.WriteLine("[STATUS] Executing CreateEquipmentAsync...");
             var result = await _service.CreateEquipmentAsync(request);
             
-            Console.WriteLine("Equipment created successfully:");
-            Console.WriteLine($"   Name: {result.EquipmentName}");
-            Console.WriteLine($"   Code: {result.EquipmentCode}");
-            Console.WriteLine($"   ID: {result.EquipmentId}");
-            Console.WriteLine($"   Date Use: {result.DateUse}");
-            Console.WriteLine($"   Origin: {result.Origin ?? "None"}");
-            Console.WriteLine($"   Year of Manufacture: {result.Yom ?? 0}");
-            Console.WriteLine($"   Stage: {result.StageName ?? "None"}");
-            Console.WriteLine($"   Active: {result.IsActive}");
+            Console.WriteLine("[SUCCESS] Equipment created successfully:");
+            Console.WriteLine(FormatEquipment(result));
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
         }
     }
 
     private async Task TestUpdateEquipmentAsync()
     {
-        Console.WriteLine("\nTesting UpdateEquipmentAsync ()...");
-        Console.WriteLine("============================================");
+        Console.WriteLine("\n=========================================");
+        Console.WriteLine("TEST: UpdateEquipmentAsync");
+        Console.WriteLine("=========================================");
 
-        Console.Write("Enter Equipment ID to update: ");
+        Console.Write("[INPUT] Enter Equipment ID to update: ");
         int.TryParse(Console.ReadLine(), out int id);
 
         var existingEquipment = _testData.FirstOrDefault(e => e.EquipmentId == id);
         
-        Console.WriteLine($"Current equipment: {existingEquipment?.EquipmentName ?? "Not found"}");
-        Console.Write("Enter new Equipment Code: ");
+        if (existingEquipment == null)
+        {
+            Console.WriteLine($"[NOT FOUND] Equipment with ID {id} not found in test data");
+        }
+        else
+        {
+            Console.WriteLine($"[CURRENT DATA] Existing equipment:");
+            Console.WriteLine(FormatEquipmentEntity(existingEquipment));
+        }
+        
+        Console.Write("\n[INPUT] Enter new Equipment Code: ");
         var code = Console.ReadLine();
         
-        Console.Write("Enter new Equipment Name: ");
+        Console.Write("[INPUT] Enter new Equipment Name: ");
         var name = Console.ReadLine();
         
-        Console.Write("Enter new Date Use (yyyy-mm-dd) or press Enter to keep current: ");
+        Console.Write("[INPUT] Enter new Date Use (yyyy-mm-dd) or press Enter to keep current: ");
         var dateUseInput = Console.ReadLine();
         DateOnly? dateUse = existingEquipment?.DateUse;
         if (!string.IsNullOrWhiteSpace(dateUseInput) && DateOnly.TryParse(dateUseInput, out DateOnly parsedDate))
@@ -293,10 +298,10 @@ public class EquipmentServiceManualTest
             dateUse = parsedDate;
         }
         
-        Console.Write("Enter new Origin: ");
+        Console.Write("[INPUT] Enter new Origin: ");
         var origin = Console.ReadLine();
         
-        Console.Write("Enter new Year of Manufacture: ");
+        Console.Write("[INPUT] Enter new Year of Manufacture: ");
         var yomInput = Console.ReadLine();
         int? yom = existingEquipment?.Yom;
         if (!string.IsNullOrWhiteSpace(yomInput) && int.TryParse(yomInput, out int parsedYom))
@@ -304,7 +309,7 @@ public class EquipmentServiceManualTest
             yom = parsedYom;
         }
         
-        Console.Write("Enter new Stage ID (or press Enter to keep current): ");
+        Console.Write("[INPUT] Enter new Stage ID (or press Enter to keep current): ");
         var stageIdInput = Console.ReadLine();
         int? stageId = existingEquipment?.StageId;
         if (!string.IsNullOrWhiteSpace(stageIdInput) && int.TryParse(stageIdInput, out int parsedStageId))
@@ -312,10 +317,10 @@ public class EquipmentServiceManualTest
             stageId = parsedStageId;
         }
         
-        Console.Write("Enter new Issue: ");
+        Console.Write("[INPUT] Enter new Issue: ");
         var issue = Console.ReadLine();
         
-        Console.Write("Enter new Active status (true/false, or press Enter to keep current): ");
+        Console.Write("[INPUT] Enter new Active status (true/false, or press Enter to keep current): ");
         var activeInput = Console.ReadLine();
         bool isActive = existingEquipment?.IsActive ?? true;
         if (!string.IsNullOrWhiteSpace(activeInput) && bool.TryParse(activeInput, out bool parsedActive))
@@ -323,6 +328,7 @@ public class EquipmentServiceManualTest
             isActive = parsedActive;
         }
 
+        Console.WriteLine("\n[INPUT] Creating update request...");
         var request = new UpdateEquipmentRequest
         {
             EquipmentCode = code ?? existingEquipment?.EquipmentCode ?? "",
@@ -334,6 +340,7 @@ public class EquipmentServiceManualTest
             Issue = issue ?? existingEquipment?.Issue,
             IsActive = isActive
         };
+        Console.WriteLine($"[INPUT DATA] Code: {request.EquipmentCode}, Name: {request.EquipmentName}, DateUse: {request.DateUse?.ToString() ?? "null"}, Origin: {request.Origin ?? "null"}, Yom: {request.Yom?.ToString() ?? "null"}, StageId: {request.StageId?.ToString() ?? "null"}, Issue: {request.Issue ?? "null"}, IsActive: {request.IsActive}");
 
         // Setup mock for stage validation if stageId is provided
         if (stageId.HasValue)
@@ -368,43 +375,47 @@ public class EquipmentServiceManualTest
 
         try
         {
-            Console.WriteLine("Executing UpdateEquipmentAsync...");
+            Console.WriteLine("[STATUS] Executing UpdateEquipmentAsync...");
             var result = await _service.UpdateEquipmentAsync(id, request);
             
             if (result != null)
             {
-                Console.WriteLine("Equipment updated successfully:");
-                Console.WriteLine($"   Name: {result.EquipmentName}");
-                Console.WriteLine($"   Code: {result.EquipmentCode}");
-                Console.WriteLine($"   ID: {result.EquipmentId}");
-                Console.WriteLine($"   Date Use: {result.DateUse}");
-                Console.WriteLine($"   Origin: {result.Origin ?? "None"}");
-                Console.WriteLine($"   Year of Manufacture: {result.Yom ?? 0}");
-                Console.WriteLine($"   Stage: {result.StageName ?? "None"}");
-                Console.WriteLine($"   Active: {result.IsActive}");
+                Console.WriteLine("[SUCCESS] Equipment updated successfully:");
+                Console.WriteLine(FormatEquipment(result));
             }
             else
             {
-                Console.WriteLine("Update returned null");
+                Console.WriteLine("[WARNING] Update returned null");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
         }
     }
 
     private async Task TestToggleEquipmentStatusAsync()
     {
-        Console.WriteLine("\nTesting ToggleEquipmentStatusAsync ()...");
-        Console.WriteLine("==================================================");
+        Console.WriteLine("\n=========================================");
+        Console.WriteLine("TEST: ToggleEquipmentStatusAsync");
+        Console.WriteLine("=========================================");
 
-        Console.Write("Enter Equipment ID to toggle status: ");
+        Console.Write("[INPUT] Enter Equipment ID to toggle status: ");
         int.TryParse(Console.ReadLine(), out int id);
 
         var existingEquipment = _testData.FirstOrDefault(e => e.EquipmentId == id);
         
-        Console.WriteLine($"Current status: {existingEquipment?.IsActive ?? false}");
+        if (existingEquipment == null)
+        {
+            Console.WriteLine($"[NOT FOUND] Equipment with ID {id} not found in test data");
+        }
+        else
+        {
+            Console.WriteLine($"[CURRENT DATA] Equipment:");
+            Console.WriteLine(FormatEquipmentEntity(existingEquipment));
+            Console.WriteLine($"[CURRENT STATUS] IsActive: {existingEquipment.IsActive}");
+            Console.WriteLine($"[EXPECTED STATUS] Will toggle to: {!existingEquipment.IsActive}");
+        }
 
         // Setup mock
         _mockEquipmentRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
@@ -429,70 +440,80 @@ public class EquipmentServiceManualTest
 
         try
         {
-            Console.WriteLine("Executing ToggleEquipmentStatusAsync...");
+            Console.WriteLine("[STATUS] Executing ToggleEquipmentStatusAsync...");
             var result = await _service.ToggleEquipmentStatusAsync(id);
             
             if (result != null)
             {
-                Console.WriteLine("Status toggled successfully:");
-                Console.WriteLine($"   Equipment: {result.EquipmentName}");
-                Console.WriteLine($"   Code: {result.EquipmentCode}");
-                Console.WriteLine($"   ID: {result.EquipmentId}");
-                Console.WriteLine($"   New Status: {result.IsActive}");
+                Console.WriteLine("[SUCCESS] Status toggled successfully:");
+                Console.WriteLine(FormatEquipment(result));
             }
             else
             {
-                Console.WriteLine("Toggle returned null");
+                Console.WriteLine("[WARNING] Toggle returned null");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
         }
     }
 
     private async Task TestDeleteEquipmentAsync()
     {
-        Console.WriteLine("\nTesting DeleteEquipmentAsync ()...");
-        Console.WriteLine("===========================================");
+        Console.WriteLine("\n=========================================");
+        Console.WriteLine("TEST: DeleteEquipmentAsync");
+        Console.WriteLine("=========================================");
 
-        Console.Write("Enter Equipment ID to delete: ");
+        Console.Write("[INPUT] Enter Equipment ID to delete: ");
         int.TryParse(Console.ReadLine(), out int id);
 
-        Console.Write($"Are you sure you want to delete equipment with ID {id}? (y/n): ");
+        var existingEquipment = _testData.FirstOrDefault(e => e.EquipmentId == id);
+        if (existingEquipment != null)
+        {
+            Console.WriteLine($"[WARNING] Will delete: {existingEquipment.EquipmentName} (ID: {id})");
+        }
+        else
+        {
+            Console.WriteLine($"[NOT FOUND] Equipment with ID {id} not found in test data");
+        }
+
+        Console.Write($"[CONFIRM] Are you sure you want to delete equipment with ID {id}? (y/n): ");
         var confirm = Console.ReadLine();
         
         if (confirm?.ToLower() != "y")
         {
-            Console.WriteLine("Delete cancelled");
+            Console.WriteLine("[CANCELLED] Delete operation cancelled");
             return;
         }
 
         // Setup mock
         _mockEquipmentRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testData.FirstOrDefault(e => e.EquipmentId == id));
+            .ReturnsAsync(existingEquipment);
         _mockEquipmentRepository.Setup(x => x.DeleteAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         try
         {
-            Console.WriteLine("Executing DeleteEquipmentAsync...");
+            Console.WriteLine("[STATUS] Executing DeleteEquipmentAsync...");
             var result = await _service.DeleteEquipmentAsync(id);
             
-            Console.WriteLine($"Delete result: {result}");
+            Console.WriteLine($"[SUCCESS] Delete result: {result}");
+            Console.WriteLine($"[RESULT] {(result ? "Equipment deleted successfully" : "Failed to delete equipment")}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
         }
     }
 
     private async Task TestGetEquipmentsByStageAsync()
     {
-        Console.WriteLine("\nTesting GetEquipmentsByStageAsync ()...");
-        Console.WriteLine("================================================");
+        Console.WriteLine("\n=========================================");
+        Console.WriteLine("TEST: GetEquipmentsByStageAsync");
+        Console.WriteLine("=========================================");
 
-        Console.Write("Enter Stage ID to get equipments: ");
+        Console.Write("[INPUT] Enter Stage ID to get equipments: ");
         int.TryParse(Console.ReadLine(), out int stageId);
 
         var equipmentsInStage = _testData.Where(e => e.StageId == stageId).ToList();
@@ -502,30 +523,38 @@ public class EquipmentServiceManualTest
 
         try
         {
-            Console.WriteLine($"Executing GetEquipmentsByStageAsync with Stage ID: {stageId}...");
+            Console.WriteLine($"[STATUS] Executing GetEquipmentsByStageAsync with Stage ID: {stageId}...");
             var result = await _service.GetEquipmentsByStageAsync(stageId);
             
-            Console.WriteLine($"Found {result.Count} equipments in stage {stageId}:");
+            Console.WriteLine($"[SUCCESS] Found {result.Count} equipments in stage {stageId}:");
+            Console.WriteLine("\n[DATA] Equipment List:");
+            Console.WriteLine("----------------------------------------");
             foreach (var equipment in result)
             {
-                Console.WriteLine($"   - {equipment.EquipmentName} (Code: {equipment.EquipmentCode}, Active: {equipment.IsActive})");
+                Console.WriteLine(FormatEquipment(equipment));
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
         }
     }
 
     private async Task TestGenerateQRCodeAsync()
     {
-        Console.WriteLine("\nTesting GenerateQRCodeAsync ()...");
-        Console.WriteLine("===========================================");
+        Console.WriteLine("\n=========================================");
+        Console.WriteLine("TEST: GenerateQRCodeAsync");
+        Console.WriteLine("=========================================");
 
-        Console.Write("Enter Equipment ID to generate QR code: ");
+        Console.Write("[INPUT] Enter Equipment ID to generate QR code: ");
         int.TryParse(Console.ReadLine(), out int id);
 
         var existingEquipment = _testData.FirstOrDefault(e => e.EquipmentId == id);
+        
+        if (existingEquipment == null)
+        {
+            Console.WriteLine($"[NOT FOUND] Equipment with ID {id} not found in test data");
+        }
         
         _mockEquipmentRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingEquipment);
@@ -538,33 +567,34 @@ public class EquipmentServiceManualTest
 
         try
         {
-            Console.WriteLine($"Executing GenerateQRCodeAsync with Equipment ID: {id}...");
+            Console.WriteLine($"[STATUS] Executing GenerateQRCodeAsync with Equipment ID: {id}...");
             var result = await _service.GenerateQRCodeAsync(id);
             
             if (result != null)
             {
-                Console.WriteLine("QR Code generated successfully:");
+                Console.WriteLine("[SUCCESS] QR Code generated successfully:");
                 Console.WriteLine($"   Equipment: {existingEquipment?.EquipmentName}");
                 Console.WriteLine($"   Code: {existingEquipment?.EquipmentCode}");
                 Console.WriteLine($"   QR Code: {result}");
             }
             else
             {
-                Console.WriteLine("QR Code generation returned null");
+                Console.WriteLine("[WARNING] QR Code generation returned null");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
         }
     }
 
     private async Task TestGetEquipmentsByTeamLeaderAsync()
     {
-        Console.WriteLine("\nTesting GetEquipmentsByTeamLeaderAsync ()...");
-        Console.WriteLine("=====================================================");
+        Console.WriteLine("\n=========================================");
+        Console.WriteLine("TEST: GetEquipmentsByTeamLeaderAsync");
+        Console.WriteLine("=========================================");
 
-        Console.Write("Enter User ID (Team Leader): ");
+        Console.Write("[INPUT] Enter User ID (Team Leader): ");
         var userId = Console.ReadLine();
 
         var equipmentsByTeamLeader = _testData.Where(e => e.Stage?.LineId != null).ToList();
@@ -574,18 +604,20 @@ public class EquipmentServiceManualTest
 
         try
         {
-            Console.WriteLine($"Executing GetEquipmentsByTeamLeaderAsync with User ID: {userId}...");
+            Console.WriteLine($"[STATUS] Executing GetEquipmentsByTeamLeaderAsync with User ID: {userId}...");
             var result = await _service.GetEquipmentsByTeamLeaderAsync(userId ?? "");
             
-            Console.WriteLine($"Found {result.Count} equipments for team leader {userId}:");
+            Console.WriteLine($"[SUCCESS] Found {result.Count} equipments for team leader {userId}:");
+            Console.WriteLine("\n[DATA] Equipment List:");
+            Console.WriteLine("----------------------------------------");
             foreach (var equipment in result)
             {
-                Console.WriteLine($"   - {equipment.EquipmentName} (Code: {equipment.EquipmentCode}, Stage: {equipment.StageName})");
+                Console.WriteLine(FormatEquipment(equipment));
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
         }
     }
 
@@ -698,5 +730,19 @@ public class EquipmentServiceManualTest
                 Line = new Line { LineId = 2, LineName = "Production Line B" }
             }
         };
+    }
+
+    private string FormatEquipment(EquipmentDTO eq)
+    {
+        if (eq == null) return "[NULL]";
+        
+        return $"{{{eq.EquipmentId},\"{eq.EquipmentCode}\",\"{eq.EquipmentName}\",{(eq.DateUse.HasValue ? $"new DateOnly({eq.DateUse.Value.Year},{eq.DateUse.Value.Month},{eq.DateUse.Value.Day})" : "null")},\"{(eq.Origin ?? "null")}\",{(eq.Yom?.ToString() ?? "null")},\"{eq.Qrcode ?? "null"}\",{(eq.StageId?.ToString() ?? "null")},\"{(eq.StageName ?? "null")}\",{(eq.LineId?.ToString() ?? "null")},\"{(eq.LineName ?? "null")}\",{eq.IsActive.ToString().ToLower()}}}";
+    }
+
+    private string FormatEquipmentEntity(Equipment eq)
+    {
+        if (eq == null) return "[NULL]";
+        
+        return $"{{{eq.EquipmentId},\"{eq.EquipmentCode ?? "null"}\",\"{eq.EquipmentName ?? "null"}\",{(eq.DateUse.HasValue ? $"new DateOnly({eq.DateUse.Value.Year},{eq.DateUse.Value.Month},{eq.DateUse.Value.Day})" : "null")},\"{(eq.Origin ?? "null")}\",{(eq.Yom?.ToString() ?? "null")},\"{eq.Qrcode ?? "null"}\",{(eq.StageId?.ToString() ?? "null")},\"{(eq.Stage?.StageName ?? "null")}\",{(eq.Stage?.LineId?.ToString() ?? "null")},\"{(eq.Stage?.Line?.LineName ?? "null")}\",{eq.IsActive.ToString().ToLower()}}}";
     }
 }
