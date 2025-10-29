@@ -34,6 +34,7 @@ import IncidentAssignList from "./IncidentAssignList";
 import MaintenanceTasks from "./MaintenanceTasks";
 import MaintenanceSchedule from "./MaintenanceSchedule";
 import MaintenanceChecklist from "./MaintenanceChecklist";
+import ReplacementCreate from "./ReplacementCreate";
 // SparePartRequest is embedded inside IncidentAssignList; remove standalone route/menu
 
 const { Header, Sider, Content } = AntLayout;
@@ -77,6 +78,8 @@ const TechnicianLayout = () => {
 
     if (path.includes("/incident-list")) {
       return <IncidentAssignList />;
+    } else if (path.includes("/replacement/create")) {
+      return <ReplacementCreate />;
     } else if (path.includes("/maintenance-tasks")) {
       return <MaintenanceTasks />;
     } else if (path.includes("/maintenance-schedule")) {

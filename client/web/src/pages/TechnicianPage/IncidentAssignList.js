@@ -33,6 +33,8 @@ import {
 import dayjs from "dayjs";
 import { incidentService } from "../../services/incidentService";
 import SparePartRequest from "./SparePartRequest";
+import ReplacementCreate from "./ReplacementCreate";
+import ReplacementHistoryList from "./ReplacementHistoryList";
 import styles from "../../styles/pages/IncidentAssignList.module.css";
 
 const { TextArea } = Input;
@@ -46,6 +48,10 @@ const IncidentAssignList = () => {
   const [updateModalVisible, setUpdateModalVisible] = useState(false);
   const [spareModalVisible, setSpareModalVisible] = useState(false);
   const [spareForIncident, setSpareForIncident] = useState(null);
+  const [replacementModalVisible, setReplacementModalVisible] = useState(false);
+  const [replacementForIncident, setReplacementForIncident] = useState(null);
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [historyEquipmentId, setHistoryEquipmentId] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
   const [form] = Form.useForm();
 
@@ -238,6 +244,24 @@ const IncidentAssignList = () => {
             onClick: () => handleViewDetail(record),
           },
           {
+            key: "recordReplacement",
+            icon: <ToolOutlined />,
+            label: "Ghi nhận thay thế",
+            onClick: () => {
+              setReplacementForIncident(record);
+              setReplacementModalVisible(true);
+            },
+          },
+          {
+            key: "history",
+            icon: <ToolOutlined />,
+            label: "Lịch sử thay thế",
+            onClick: () => {
+              setHistoryEquipmentId(record?.equipmentId || record.equipmentId);
+              setHistoryModalVisible(true);
+            },
+          },
+          {
             key: "spare",
             icon: <ToolOutlined />,
             label: "Phụ tùng",
@@ -416,6 +440,32 @@ const IncidentAssignList = () => {
         <SparePartRequest incident={spareForIncident} />
       </Modal>
 
+      {/* Replacement create modal (embedded form) */}
+      <Modal
+        title={<span>Ghi nhận thay thế (liên quan sự cố)</span>}
+        open={replacementModalVisible}
+        onCancel={() => {
+          setReplacementModalVisible(false);
+          setReplacementForIncident(null);
+        }}
+        footer={null}
+        width={900}
+        destroyOnClose
+      >
+        <ReplacementCreate
+          incidentId={replacementForIncident?.incidentId}
+          onSuccess={() => {
+            setReplacementModalVisible(false);
+            setReplacementForIncident(null);
+            fetchIncidents();
+          }}
+          onCancel={() => {
+            setReplacementModalVisible(false);
+            setReplacementForIncident(null);
+          }}
+        />
+      </Modal>
+
       {/* Detail Modal */}
       <Modal
         title={
@@ -429,6 +479,18 @@ const IncidentAssignList = () => {
         footer={[
           <Button key="close" onClick={() => setDetailModalVisible(false)}>
             Đóng
+          </Button>,
+          <Button
+            key="history"
+            icon={<ToolOutlined />}
+            onClick={() => {
+              setHistoryEquipmentId(
+                selectedIncident?.equipmentId || selectedIncident?.equipmentId
+              );
+              setHistoryModalVisible(true);
+            }}
+          >
+            Lịch sử thay thế
           </Button>,
           selectedIncident?.status !== "Hoàn thành" && (
             <Button
@@ -512,6 +574,31 @@ const IncidentAssignList = () => {
             </Descriptions>
           </div>
         )}
+      </Modal>
+
+      {/* Replacement history modal */}
+      <Modal
+        title={<span>Lịch sử thay thế</span>}
+        open={historyModalVisible}
+        onCancel={() => {
+          setHistoryModalVisible(false);
+          setHistoryEquipmentId(null);
+        }}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => {
+              setHistoryModalVisible(false);
+              setHistoryEquipmentId(null);
+            }}
+          >
+            Đóng
+          </Button>,
+        ]}
+        width={1100}
+        destroyOnClose
+      >
+        <ReplacementHistoryList equipmentId={historyEquipmentId} />
       </Modal>
 
       {/* Update Modal */}

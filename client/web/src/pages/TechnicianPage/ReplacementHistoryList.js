@@ -1,0 +1,127 @@
+import React, { useEffect, useState } from "react";
+import { Card, Table, message, Empty, Tag, Tooltip } from "antd";
+import { replacementHistoryService } from "../../services/replacementHistoryService";
+
+const ReplacementHistoryList = ({ equipmentId }) => {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState([]);
+
+  useEffect(() => {
+    if (!equipmentId) return;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const res = await replacementHistoryService.getByEquipmentId(
+          equipmentId
+        );
+        setData(Array.isArray(res) ? res : res?.data || []);
+      } catch (err) {
+        console.error("Failed to load replacement history:", err);
+        message.error(
+          "Không thể tải lịch sử thay thế: " + (err?.message || String(err))
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+    load();
+  }, [equipmentId]);
+
+  const columns = [
+    {
+      title: "ID",
+      dataIndex: "replacementID",
+      key: "replacementID",
+      width: 80,
+    },
+    {
+      title: "Mã phụ tùng",
+      dataIndex: "partNumber",
+      key: "partNumber",
+      width: 140,
+    },
+    {
+      title: "Tên phụ tùng",
+      dataIndex: "partName",
+      key: "partName",
+      width: 220,
+    },
+    { title: "Số lượng", dataIndex: "quantity", key: "quantity", width: 100 },
+    {
+      title: "Ngày thay thế",
+      dataIndex: "replacedDate",
+      key: "replacedDate",
+      width: 180,
+      render: (d) => (d ? new Date(d).toLocaleString() : ""),
+    },
+    {
+      title: "Người thực hiện",
+      dataIndex: "replacedByUserName",
+      key: "replacedByUserName",
+      width: 160,
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 120,
+      render: (s) => {
+        const color =
+          s === "Completed" ? "green" : s === "Pending" ? "orange" : "default";
+        return <Tag color={color}>{s}</Tag>;
+      },
+    },
+    {
+      title: "Ghi chú",
+      dataIndex: "remarks",
+      key: "remarks",
+      width: 360,
+      render: (r) => {
+        if (!r) return "";
+        const short =
+          String(r).length > 250 ? String(r).slice(0, 250) + "..." : r;
+        return (
+          <Tooltip
+            title={
+              <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                {r}
+              </div>
+            }
+          >
+            <div
+              style={{
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                maxHeight: 120,
+                overflow: "auto",
+              }}
+            >
+              {short}
+            </div>
+          </Tooltip>
+        );
+      },
+    },
+  ];
+
+  if (!equipmentId) return <Empty description="Không có thiết bị được chọn" />;
+
+  return (
+    <Card title={`Lịch sử thay thế - Thiết bị ${equipmentId}`} bordered={false}>
+      <Table
+        columns={columns}
+        dataSource={data}
+        rowKey={(r) => r.replacementID || r.replacementId}
+        loading={loading}
+        locale={{
+          emptyText: <Empty description="Không có bản ghi thay thế" />,
+        }}
+        pagination={{ pageSize: 8 }}
+        scroll={{ x: 1200, y: 480 }}
+        size="small"
+      />
+    </Card>
+  );
+};
+
+export default ReplacementHistoryList;
