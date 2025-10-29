@@ -34,15 +34,17 @@ import { incidentService } from "../../services/incidentService";
 import { userService } from "../../services/userService";
 import signalRService from "../../services/signalRService";
 import { useAuth } from "../../contexts/AuthContext";
+import ReplacementApprovalModal from "./ReplacementApprovalModal";
 
 const { Option } = Select;
-
 const IncidentList = () => {
   const [loading, setLoading] = useState(false);
   const [incidents, setIncidents] = useState([]);
   const [filteredIncidents, setFilteredIncidents] = useState([]);
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [approvalModalVisible, setApprovalModalVisible] = useState(false);
+  const [approvalEquipmentId, setApprovalEquipmentId] = useState(null);
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [activeTab, setActiveTab] = useState("pending");
@@ -588,6 +590,16 @@ const IncidentList = () => {
             icon: <EyeOutlined />,
             onClick: () => handleViewDetail(record),
           },
+          {
+            key: "replacementRequests",
+            label: "Yêu cầu thay thế",
+            icon: <UserAddOutlined />,
+            onClick: () => {
+              setSelectedIncident(record);
+              setApprovalEquipmentId(record.equipmentId || record.equipmentId);
+              setApprovalModalVisible(true);
+            },
+          },
         ];
 
         return (
@@ -876,6 +888,16 @@ const IncidentList = () => {
 
   return (
     <div>
+      {/* Replacement approvals modal */}
+      <ReplacementApprovalModal
+        equipmentId={approvalEquipmentId}
+        open={approvalModalVisible}
+        onClose={() => {
+          setApprovalModalVisible(false);
+          setApprovalEquipmentId(null);
+        }}
+        onUpdated={() => fetchIncidents()}
+      />
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} lg={6}>

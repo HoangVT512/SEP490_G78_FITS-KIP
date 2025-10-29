@@ -90,18 +90,23 @@ namespace FITSKIP.Infrastructure.Repositories
                     throw new KeyNotFoundException($"Người dùng có ID {replacementHistory.ReplacedBy} không tồn tại.");
                 }
 
-                // Check if sufficient quantity is available
-                if (part.Quantity < replacementHistory.Quantity)
-                {
-                    throw new InvalidOperationException($"Số lượng không đủ cho Sparepart ID {replacementHistory.PartId}. Đã yêu cầu: {replacementHistory.Quantity}, Có sẵn: {part.Quantity}.");
-                }
-
                 // Create replacement history
                 _context.ReplacementHistories.Add(replacementHistory);
 
-                // Update part quantity
-                part.Quantity -= replacementHistory.Quantity;
-                _context.SpareParts.Update(part);
+                // If request is already 'Completed' at creation time, check inventory and deduct now.
+                // Otherwise (e.g., 'Pending'), defer inventory change until approval.
+                if (string.Equals(replacementHistory.Status, "Completed", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Check if sufficient quantity is available
+                    if (part.Quantity < replacementHistory.Quantity)
+                    {
+                        throw new InvalidOperationException($"Số lượng không đủ cho Sparepart ID {replacementHistory.PartId}. Đã yêu cầu: {replacementHistory.Quantity}, Có sẵn: {part.Quantity}.");
+                    }
+
+                    // Update part quantity
+                    part.Quantity -= replacementHistory.Quantity;
+                    _context.SpareParts.Update(part);
+                }
 
                 await _context.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
@@ -152,7 +157,36 @@ namespace FITSKIP.Infrastructure.Repositories
                     throw new KeyNotFoundException($"Người dùng với ID {replacementHistory.ReplacedBy} không tồn tại.");
                 }
 
-                // If quantity or part changed, adjust inventory
+                // Handle status transitions and part/quantity changes to adjust inventory correctly
+                var oldStatus = existingHistory.Status ?? string.Empty;
+                var newStatus = replacementHistory.Status ?? string.Empty;
+
+                // If previously not Completed and now Completed -> deduct inventory
+                if (!string.Equals(oldStatus, "Completed", StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(newStatus, "Completed", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Check new part quantity
+                    if (part.Quantity < replacementHistory.Quantity)
+                    {
+                        throw new InvalidOperationException($"Số lượng không đủ cho Sparepart ID {replacementHistory.PartId}. Đã yêu cầu: {replacementHistory.Quantity}, Có sẵn: {part.Quantity}.");
+                    }
+                    part.Quantity -= replacementHistory.Quantity;
+                    _context.SpareParts.Update(part);
+                }
+
+                // If previously Completed and now not Completed -> restore inventory
+                if (string.Equals(oldStatus, "Completed", StringComparison.OrdinalIgnoreCase) &&
+                    !string.Equals(newStatus, "Completed", StringComparison.OrdinalIgnoreCase))
+                {
+                    var prevPart = await _context.SpareParts.FindAsync(new object[] { existingHistory.PartId }, cancellationToken);
+                    if (prevPart != null)
+                    {
+                        prevPart.Quantity += existingHistory.Quantity;
+                        _context.SpareParts.Update(prevPart);
+                    }
+                }
+
+                // If quantity or part changed while both statuses are Completed (or both non-completed but part changed), handle adjustments
                 if (existingHistory.PartId != replacementHistory.PartId || existingHistory.Quantity != replacementHistory.Quantity)
                 {
                     // Restore old part quantity
@@ -163,15 +197,17 @@ namespace FITSKIP.Infrastructure.Repositories
                         _context.SpareParts.Update(oldPart);
                     }
 
-                    // Check new part quantity
-                    if (part.Quantity < replacementHistory.Quantity)
+                    // If new status is Completed, ensure new part has sufficient quantity and deduct
+                    if (string.Equals(newStatus, "Completed", StringComparison.OrdinalIgnoreCase))
                     {
-                        throw new InvalidOperationException($"Số lượng không đủ cho Sparepart ID {replacementHistory.PartId}. Đã yêu cầu: {replacementHistory.Quantity}, Có sẵn: {part.Quantity}.");
-                    }
+                        if (part.Quantity < replacementHistory.Quantity)
+                        {
+                            throw new InvalidOperationException($"Số lượng không đủ cho Sparepart ID {replacementHistory.PartId}. Đã yêu cầu: {replacementHistory.Quantity}, Có sẵn: {part.Quantity}.");
+                        }
 
-                    // Deduct new part quantity
-                    part.Quantity -= replacementHistory.Quantity;
-                    _context.SpareParts.Update(part);
+                        part.Quantity -= replacementHistory.Quantity;
+                        _context.SpareParts.Update(part);
+                    }
                 }
 
                 // Update history

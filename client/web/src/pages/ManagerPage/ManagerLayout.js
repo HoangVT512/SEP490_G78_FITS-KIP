@@ -41,6 +41,7 @@ import ManagerDashboard from "./ManagerDashboard";
 import PurchaseApproval from "./PurchaseApproval";
 import MaintenanceReports from "./MaintenanceReports";
 import ReplacementHistory from "./ReplacementHistory";
+import ReplacementApproval from "./ReplacementApproval";
 import DisplayScreenReplaceItem from "./DisplayScreenReplaceItem";
 import InventoryDashboard from "./InventoryDashboard";
 import ProductionManagement from "./ProductionManagement";
@@ -110,10 +111,11 @@ const ManagerLayout = () => {
 
           // Hiển thị message toast (LUÔN LUÔN hiển thị)
           antdMessage.success({
-            content: `🔔 ${notificationData.title ||
+            content: `🔔 ${
+              notificationData.title ||
               notificationData.message ||
               "Bạn có thông báo mới"
-              }`,
+            }`,
             duration: 5,
           });
 
@@ -146,10 +148,11 @@ const ManagerLayout = () => {
 
           // Hiển thị message toast
           antdMessage.info({
-            content: `📢 ${broadcastData.title ||
+            content: `📢 ${
+              broadcastData.title ||
               broadcastData.message ||
               "Thông báo hệ thống mới"
-              }`,
+            }`,
             duration: 5,
           });
 
@@ -228,6 +231,8 @@ const ManagerLayout = () => {
 
     if (path.includes("/purchase-approval")) {
       return <PurchaseApproval />;
+    } else if (path.includes("/replacement-approvals")) {
+      return <ReplacementApproval />;
     } else if (path.includes("/maintenance-reports")) {
       return <MaintenanceReports />;
     } else if (path.includes("/DisplayScreenReplaceItem")) {
@@ -291,6 +296,11 @@ const ManagerLayout = () => {
       label: "Duyệt yêu cầu mua hàng",
     },
     {
+      key: "replacement-approvals",
+      icon: <CheckCircleOutlined />,
+      label: "Duyệt thay thế",
+    },
+    {
       key: "maintenance-reports",
       icon: <ToolOutlined />,
       label: "Báo cáo bảo trì",
@@ -348,6 +358,9 @@ const ManagerLayout = () => {
         break;
       case "purchase-approval":
         navigate("/manager/purchase-approval");
+        break;
+      case "replacement-approvals":
+        navigate("/manager/replacement-approvals");
         break;
       case "maintenance-reports":
         navigate("/manager/maintenance-reports");
@@ -469,7 +482,9 @@ const ManagerLayout = () => {
   if (isOEEFullscreen) {
     return (
       <App>
-        <div style={{ height: '100vh', overflow: 'hidden', position: 'relative' }}>
+        <div
+          style={{ height: "100vh", overflow: "hidden", position: "relative" }}
+        >
           <OEE />
         </div>
       </App>

@@ -32,10 +32,13 @@ namespace FITSKIP.API.Controllers
                 var result = await _service.GetAllAsync(cancellationToken);
                 var responses = result.Select(s => new ReplacementHistoryDTO
                 {
+                    EquipmentID = s.EquipmentId,
+                    PartID = s.PartId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
                     EquipmentName = s.Equipment != null ? s.Equipment.EquipmentName : null,
                     EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
+                    ReplacedBy = s.ReplacedBy,
                     ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     ReplacementID = s.ReplacementId,
@@ -62,10 +65,13 @@ namespace FITSKIP.API.Controllers
                     return NotFound(new { message = $"Replacement History với ID {id} không tồn tại" });
                 var response = new ReplacementHistoryDTO
                 {
+                    EquipmentID = result.EquipmentId,
+                    PartID = result.PartId,
                     PartName = result.Part != null ? result.Part.PartName : null,
                     PartNumber = result.Part != null ? result.Part.PartNumber : null,
                     EquipmentName = result.Equipment != null ? result.Equipment.EquipmentName : null,
                     EquipmentCode = result.Equipment != null ? result.Equipment.EquipmentCode : null,
+                    ReplacedBy = result.ReplacedBy,
                     ReplacedByUserName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.UserName : null,
                     ReplacedByEmail = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.Email : null,
                     ReplacementID = result.ReplacementId,
@@ -112,10 +118,13 @@ namespace FITSKIP.API.Controllers
                 // Mapping Entity to DTO
                 var response = new ReplacementHistoryDTO
                 {
+                    EquipmentID = created.EquipmentId,
+                    PartID = created.PartId,
                     PartName = created.Part != null ? created.Part.PartName : null,
                     PartNumber = created.Part != null ? created.Part.PartNumber : null,
                     EquipmentName = created.Equipment != null ? created.Equipment.EquipmentName : null,
                     EquipmentCode = created.Equipment != null ? created.Equipment.EquipmentCode : null,
+                    ReplacedBy = created.ReplacedBy,
                     ReplacedByUserName = created.ReplacedByNavigation != null ? created.ReplacedByNavigation.UserName : null,
                     ReplacedByEmail = created.ReplacedByNavigation != null ? created.ReplacedByNavigation.Email : null,
                     ReplacementID = created.ReplacementId,
@@ -127,9 +136,14 @@ namespace FITSKIP.API.Controllers
 
                 return Created();
             }
+            catch (KeyNotFoundException ex)
+            {
+                // Return BadRequest so client sees a readable validation error
+                return BadRequest(new { message = ex.Message });
+            }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(ex.Message);
+                return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
             {
@@ -166,6 +180,10 @@ namespace FITSKIP.API.Controllers
 
                 return NoContent();
             }
+            catch (KeyNotFoundException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -184,10 +202,13 @@ namespace FITSKIP.API.Controllers
                 var result = await _service.GetByEquipmentIdAsync(equipmentId, cancellationToken);
                 var responses = result.Select(s => new ReplacementHistoryDTO
                 {
+                    EquipmentID = s.EquipmentId,
+                    PartID = s.PartId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
                     EquipmentName = s.Equipment != null ? s.Equipment.EquipmentName : null,
                     EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
+                    ReplacedBy = s.ReplacedBy,
                     ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     ReplacementID = s.ReplacementId,
@@ -212,10 +233,13 @@ namespace FITSKIP.API.Controllers
                 var result = await _service.GetByPartIdAsync(partId, cancellationToken);
                 var responses = result.Select(s => new ReplacementHistoryDTO
                 {
+                    EquipmentID = s.EquipmentId,
+                    PartID = s.PartId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
                     EquipmentName = s.Equipment != null ? s.Equipment.EquipmentName : null,
                     EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
+                    ReplacedBy = s.ReplacedBy,
                     ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     ReplacementID = s.ReplacementId,

@@ -20,6 +20,24 @@ export const replacementHistoryService = {
     );
     return res?.data || res;
   },
+  async getByStatus(status) {
+    const res = await apiRequest(
+      `/ReplacementHistories/status/${encodeURIComponent(status)}`,
+      { method: "GET" }
+    );
+    return res?.data || res;
+  },
+
+  async update(id, payload) {
+    const res = await apiRequest(
+      `/ReplacementHistories/${encodeURIComponent(id)}`,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }
+    );
+    return res;
+  },
 };
 
 export default replacementHistoryService;
