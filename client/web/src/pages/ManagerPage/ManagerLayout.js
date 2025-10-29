@@ -48,10 +48,8 @@ import ProductionManagement from "./ProductionManagement";
 import ProductionDetailReport from "./ProductionDetailReport";
 import ManagerIncidentList from "./ManagerIncidentList";
 import NotificationsList from "./NotificationsList";
-import FactoryMap from "./FactoryMap";
 import OEEDashboard from "./OEEDashboard";
 import DowntimeChartDashboard from "./DowntimeChartDashboard";
-import OEE from "./OEE";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -247,13 +245,11 @@ const ManagerLayout = () => {
       return <ProductionDetailReport />;
     } else if (path.includes("/factory-map")) {
       return <FactoryMap />;
-    } else if (path.includes("/oee-dashboard")) {
-      return <OEEDashboard />;
-    } else if (path.includes("/downtime-chart")) {
-      return <DowntimeChartDashboard />;
     } else if (path.includes("/oee")) {
       // Return null for OEE - it will be rendered in fullscreen mode
       return null;
+    } else if (path.includes("/downtime-chart")) {
+      return <DowntimeChartDashboard />;
     } else if (path.includes("/incidents")) {
       return <ManagerIncidentList />;
     } else if (path === "/manager" || path.includes("/dashboard")) {
@@ -271,11 +267,6 @@ const ManagerLayout = () => {
       label: "Tổng quan",
     },
     {
-      key: "factory-map",
-      icon: <FundOutlined />,
-      label: "Sơ đồ nhà máy",
-    },
-    {
       key: "oee-dashboard",
       icon: <FundOutlined />,
       label: "Biểu đồ OEE",
@@ -284,11 +275,6 @@ const ManagerLayout = () => {
       key: "downtime-chart",
       icon: <FundOutlined />,
       label: "Biểu đồ thời gian ngừng",
-    },
-    {
-      key: "oee",
-      icon: <FundOutlined />,
-      label: "OEE",
     },
     {
       key: "purchase-approval",
@@ -343,16 +329,10 @@ const ManagerLayout = () => {
       case "dashboard":
         navigate("/manager/dashboard");
         break;
-      case "factory-map":
-        navigate("/manager/factory-map");
-        break;
-      case "oee-dashboard":
-        navigate("/manager/oee-dashboard");
-        break;
       case "downtime-chart":
         navigate("/manager/downtime-chart");
         break;
-      case "oee":
+      case "oee-dashboard":
         // Mở OEE trong tab mới
         window.open("/manager/oee", "_blank");
         break;
@@ -485,7 +465,7 @@ const ManagerLayout = () => {
         <div
           style={{ height: "100vh", overflow: "hidden", position: "relative" }}
         >
-          <OEE />
+          <OEEDashboard />
         </div>
       </App>
     );

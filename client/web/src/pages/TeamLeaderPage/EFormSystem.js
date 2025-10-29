@@ -1,13 +1,46 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Form, Input, Select, DatePicker, Button, Table, Modal, Card, Row, Col, Typography, Tabs } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import '../../styles/pages/EFormSystem.css';
+import lineService from '../../services/lineService';
+import productionOutputService from '../../services/productionOutputService';
+import authService from '../../services/authService';
+import { incidentService } from '../../services/incidentService';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
+const { TextArea } = Input;
 
-const EFormSystem = () => {
+// Function to calculate OEE using API
+const calculateAndUpdateOEE = async (record, shift) => {
+  try {
+    const requestData = {
+      lineId: parseInt(selectedLine),
+      date: dayjs(currentFormData.date, 'DD/MM/YYYY').format('YYYY-MM-DD'),
+      shiftId: shift,
+      slotTime: record.time,
+      targetAmount: parseInt(record.targetAmount),
+      resultAmount: parseInt(record.resultAmount)
+    };
+
+    const response = await productionOutputService.calculateOEE(requestData);
+
+    if (response.success) {
+      // Update the OEE value in the shift data
+      const currentShiftData = getCurrentShiftData();
+      const updatedShiftData = currentShiftData.map(item =>
+        item.key === record.key
+          ? { ...item, oee: response.data.oeePercentage.toString() }
+          : item
+      );
+      setCurrentShiftData(updatedShiftData);
+    }
+  } catch (error) {
+    console.error('Lỗi khi tính toán OEE:', error);
+    // You might want to show an error notification to the user
+  }
+}; const EFormSystem = () => {
   const [searchForm] = Form.useForm();
   const [productionForm] = Form.useForm();
 
@@ -26,115 +59,811 @@ const EFormSystem = () => {
 
   const [showSuccessPage, setShowSuccessPage] = useState(false);
 
-  // Danh sách các form đã lưu
-  const [savedForms, setSavedForms] = useState([
-    {
-      id: 1,
-      stt: '04119824',
-      subtitle: 'Bảng quản lý sản lượng[04119824]',
-      created: '09/09/2025',
-      updated: '09/09/2025',
-      status: 'saved', // 'draft', 'saved', or 'temporary'
-      data: {
-        line: 'TZ',
-        process: 'Lắp Sleeve S/A',
-        date: '09/09/2025',
-        actualTT: '8/4',
-        shifts: {
-          1: [
-            { key: '1', time: '06:00 - 07:00', loadingTime: '60', targetAmount: '177/377', resultAmount: '', oee: '78.4%', downDetails: [
-              { type: 'Dừng ngắn', minutes: 5 },
-              { type: 'Chuẩn bị sản xuất', minutes: 10 }
-            ] },
-            { key: '2', time: '07:00 - 08:00', loadingTime: '60', targetAmount: '377/754', resultAmount: '', oee: '80.63%', downDetails: [
-              { type: 'Phế phẩm', minutes: 8, count: 3 },
-              { type: 'Dừng ngắn', minutes: 12 }
-            ] },
-            { key: '3', time: '08:00 - 09:00', loadingTime: '50', targetAmount: '314/1068', resultAmount: '', oee: '85.0%', downDetails: '' },
-            { key: '4', time: '09:00 - 10:00', loadingTime: '60', targetAmount: '377/1445', resultAmount: '', oee: '87%', downDetails: '' },
-            { key: '5', time: '10:00 - 11:00', loadingTime: '60', targetAmount: '377/1822', resultAmount: '', oee: '85%', downDetails: '' },
-            { key: '6', time: '11:00 - 12:00', loadingTime: '50', targetAmount: '314/2136', resultAmount: '', oee: '67%', downDetails: '' },
-            { key: '7', time: '12:00 - 13:00', loadingTime: '80', targetAmount: '566/2702', resultAmount: '', oee: '53%', downDetails: '' },
-            { key: '8', time: '13:00 - 14:00', loadingTime: '60', targetAmount: '317/1425', resultAmount: '', oee: '', downDetails: '' },
-          ],
-          2: [
-            { key: '1', time: '14:00 - 15:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-            { key: '2', time: '15:00 - 16:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-            { key: '3', time: '16:00 - 17:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-            { key: '4', time: '17:00 - 18:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-            { key: '5', time: '18:00 - 19:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-            { key: '6', time: '19:00 - 20:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-            { key: '7', time: '20:00 - 21:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-            { key: '8', time: '21:00 - 22:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-          ],
-          3: [
-            { key: '1', time: '22:00 - 23:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-            { key: '2', time: '23:00 - 00:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-            { key: '3', time: '00:00 - 01:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-            { key: '4', time: '01:00 - 02:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-            { key: '5', time: '02:00 - 03:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-            { key: '6', time: '03:00 - 04:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-            { key: '7', time: '04:00 - 05:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-            { key: '8', time: '05:00 - 06:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-          ]
+  // State for selected criteria
+  const [selectedLine, setSelectedLine] = useState(null);
+  const [selectedFormType, setSelectedFormType] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(null);
+
+  // State for lines and loading
+  const [lines, setLines] = useState([]);
+  const [loadingLines, setLoadingLines] = useState(false);
+
+  // State for production outputs
+  const [productionOutputs, setProductionOutputs] = useState([]);
+  const [loadingOutputs, setLoadingOutputs] = useState(false);
+  const [outputsLoaded, setOutputsLoaded] = useState(false);
+  const [currentLoadedDate, setCurrentLoadedDate] = useState(null); // Track which date the data is loaded for
+
+  // State for incidents 
+  const [incidents, setIncidents] = useState([]);
+  const [loadingIncidents, setLoadingIncidents] = useState(false);
+
+  // Thêm state cho validation modal
+  const [validationModalVisible, setValidationModalVisible] = useState(false);
+  const [validationErrors, setValidationErrors] = useState([]);
+
+  // Generate preview STT for form title
+  const previewStt = useMemo(() => {
+    if (selectedLine && selectedFormType && selectedDate) {
+      return String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
+    }
+    return '';
+  }, [selectedLine, selectedFormType, selectedDate]);
+
+  // Default shift data for new drafts
+  const defaultShift1Data = [
+    { key: '1-1', time: '07:00 - 08:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '1-2', time: '08:00 - 09:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '1-3', time: '09:00 - 10:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '1-4', time: '10:00 - 11:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '1-5', time: '11:00 - 12:00', loadingTime: '30', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '1-6', time: '12:00 - 13:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '1-7', time: '13:00 - 14:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '1-8', time: '14:00 - 15:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+  ];
+
+  const defaultShift2Data = [
+    { key: '2-1', time: '15:00 - 16:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '2-2', time: '16:00 - 17:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '2-3', time: '17:00 - 18:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '2-4', time: '18:00 - 19:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '2-5', time: '19:00 - 20:00', loadingTime: '30', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '2-6', time: '20:00 - 21:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '2-7', time: '21:00 - 22:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '2-8', time: '22:00 - 23:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+  ];
+
+
+  // Thêm hàm normalizeSlotTime ở cấp độ component (trước slotTimeMappings)
+  const normalizeSlotTime = (slotTime) => {
+    if (!slotTime) return '';
+    // Chuẩn hóa: loại bỏ space, chuyển tất cả dấu gạch về -, format: HH:MM-HH:MM
+    const cleaned = slotTime
+      .replace(/\s+/g, '')           // Remove spaces
+      .replace(/[–—−]/g, '-')         // Convert all dashes to regular dash
+      .replace(/h/g, ':00');          // Convert 'h' to ':00'
+
+    const parts = cleaned.split('-');
+    if (parts.length === 2) {
+      const start = parts[0].padStart(5, '0'); // "7:00" -> "07:00"
+      const end = parts[1].padStart(5, '0');
+      return `${start}-${end}`;
+    }
+    return cleaned;
+  };
+
+  // Slot time mappings for API data conversion - UPDATED KEYS AND EXTENDED SLOTS
+  const slotTimeMappings = useMemo(() => {
+    const mappings = {};
+
+    const shift1Times = [
+      '07:00 - 08:00', '08:00 - 09:00', '09:00 - 10:00', '10:00 - 11:00',
+      '11:00 - 12:00', '12:00 - 13:00', '13:00 - 14:00', '14:00 - 15:00'
+    ];
+
+    const shift2Times = [
+      '15:00 - 16:00', '16:00 - 17:00', '17:00 - 18:00', '18:00 - 19:00',
+      '19:00 - 20:00', '20:00 - 21:00', '21:00 - 22:00', '22:00 - 23:00'
+    ];
+
+    // Generate all possible formats for standard slots
+    [...shift1Times, ...shift2Times].forEach(time => {
+      const [start, end] = time.split(' - ');
+      const shiftId = shift1Times.includes(time) ? 1 : 2;
+      const index = shiftId === 1 ? shift1Times.indexOf(time) : shift2Times.indexOf(time);
+      const key = `${shiftId}-${index + 1}`;
+      const mapping = { key, time, shiftId };
+
+      // Register all possible formats
+      mappings[time] = mapping;                          // "07:00 - 08:00"
+      mappings[`${start}-${end}`] = mapping;             // "07:00-08:00"
+      mappings[`${start}–${end}`] = mapping;             // "07:00–08:00" (en-dash)
+      mappings[`${start}—${end}`] = mapping;             // "07:00—08:00" (em-dash)
+      mappings[`${start}−${end}`] = mapping;             // "07:00−08:00" (minus)
+
+      const startHour = start.split(':')[0];
+      const endHour = end.split(':')[0];
+      mappings[`${startHour}h-${endHour}h`] = mapping;   // "7h-8h"
+    });
+
+    // Extended slots (for non-standard times in database)
+    const extendedSlots = [
+      { api: '06:00–07:00', map: '07:00 - 08:00', shift: 1, key: '1' },
+      { api: '07:00–08:30', map: '07:00 - 08:00', shift: 1, key: '1' },
+      { api: '11:30–12:30', map: '11:00 - 12:00', shift: 1, key: '5' },  // ✅ Map 11:30-12:30 to 11:00-12:00
+      { api: '14:00–15:00', map: '14:00 - 15:00', shift: 1, key: '8' },
+      { api: '14:00–15:30', map: '14:00 - 15:00', shift: 1, key: '8' },
+      { api: '15:00–16:30', map: '15:00 - 16:00', shift: 2, key: '1' },
+      { api: '22:00–23:00', map: '22:00 - 23:00', shift: 2, key: '8' },
+      { api: '22:00–23:30', map: '22:00 - 23:00', shift: 2, key: '8' },
+    ];
+
+    extendedSlots.forEach(slot => {
+      mappings[slot.api] = { key: slot.key, time: slot.map, shiftId: slot.shift };
+    });
+
+    // Add flexible lookup function
+    mappings.lookup = (slotTime) => {
+      if (!slotTime) return null;
+
+      // Direct lookup first
+      if (mappings[slotTime]) {
+        return mappings[slotTime];
+      }
+
+      // Normalized lookup
+      const normalized = normalizeSlotTime(slotTime);
+      console.log('Đã chuẩn hóa khung thời gian :', slotTime, '->', normalized);
+
+      // Find by normalized format
+      for (const key in mappings) {
+        if (typeof mappings[key] === 'object' && mappings[key].time) {
+          const normalizedKey = normalizeSlotTime(key);
+          if (normalizedKey === normalized) {
+            console.log('Đã tìm thấy theo định dạng chuẩn hóa:', mappings[key]);
+            return mappings[key];
+          }
         }
       }
-    }
-  ]);
+
+      // Try matching by start time
+      const startTime = slotTime.split(/[-–—−]/)[0].trim().split(':')[0];
+      for (const key in mappings) {
+        if (typeof mappings[key] === 'object' && mappings[key].time) {
+          const keyStart = mappings[key].time.split(' - ')[0].split(':')[0];
+          if (keyStart === startTime) {
+            console.log('Đã tìm thấy theo thời gian bắt đầu:', mappings[key]);
+            return mappings[key];
+          }
+        }
+      }
+
+      console.warn('❌ Không tìm thấy ánh xạ cho thời gian slot:', slotTime);
+      return null;
+    };
+
+    return mappings;
+  }, []);
+
+  // Danh sách các form đã lưu
+  const [savedForms, setSavedForms] = useState([]);
 
   // Dữ liệu form hiện tại đang được edit
   const [currentFormData, setCurrentFormData] = useState({
-    line: 'TZ',
+    line: '',
     process: 'Lắp Sleeve S/A',
     date: dayjs().format('DD/MM/YYYY'),
-    actualTT: '8/4'
+    actualCycleTime: '0.00',  // ✅ THÊM
+    idealCycleTime: '0.00'     // ✅ THÊM
   });
 
-  // Data cho 3 ca
-  const [shift1Data, setShift1Data] = useState([
-    { key: '1', time: '06:00 - 07:00', loadingTime: '60', targetAmount: '177/377', resultAmount: '', oee: '78.4%', downDetails: [
-      { type: 'Lỗi điểm ra', minutes: 5 },
-      { type: 'Chuyển mới mở', minutes: 10 }
-    ] },
-    { key: '2', time: '07:00 - 08:00', loadingTime: '60', targetAmount: '377/754', resultAmount: '', oee: '80.63%', downDetails: [
-      { type: 'Phế phẩm', minutes: 8, count: 3 },
-      { type: 'Dừng ngắn', minutes: 12 }
-    ] },
-    { key: '3', time: '08:00 - 09:00', loadingTime: '50', targetAmount: '314/1068', resultAmount: '', oee: '85.0%', downDetails: '' },
-    { key: '4', time: '09:00 - 10:00', loadingTime: '60', targetAmount: '377/1445', resultAmount: '', oee: '87%', downDetails: '' },
-    { key: '5', time: '10:00 - 11:00', loadingTime: '60', targetAmount: '377/1822', resultAmount: '', oee: '85%', downDetails: '' },
-    { key: '6', time: '11:00 - 12:00', loadingTime: '50', targetAmount: '314/2136', resultAmount: '', oee: '67%', downDetails: '' },
-    { key: '7', time: '12:00 - 13:00', loadingTime: '80', targetAmount: '566/2702', resultAmount: '', oee: '53%', downDetails: '' },
-    { key: '8', time: '13:00 - 14:00', loadingTime: '60', targetAmount: '566/2702', resultAmount: '', oee: '', downDetails: '' },
-  ]);
+  // Data cho 2 ca
+  const [shift1Data, setShift1Data] = useState([...defaultShift1Data]);
+  const [shift2Data, setShift2Data] = useState([...defaultShift2Data]);
 
-  const [shift2Data, setShift2Data] = useState([
-    { key: '1', time: '14:00 - 15:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '2', time: '15:00 - 16:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '3', time: '16:00 - 17:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '4', time: '17:00 - 18:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '5', time: '18:00 - 19:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '6', time: '19:00 - 20:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '7', time: '20:00 - 21:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '8', time: '21:00 - 22:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-  ]);
+  // Load lines assigned to current user on mount
+  useEffect(() => {
+    const loadLines = async () => {
+      setLoadingLines(true);
+      try {
+        const currentUser = authService.getStoredUser();
+        if (!currentUser || !currentUser.id) {
+          console.error('Không người dùng nào được tìm thấy, hoặc mã người dùng bị bỏ lỡ');
+          setLines([]);
+          return;
+        }
 
-  const [shift3Data, setShift3Data] = useState([
-    { key: '1', time: '22:00 - 23:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '2', time: '23:00 - 00:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '3', time: '00:00 - 01:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '4', time: '01:00 - 02:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '5', time: '02:00 - 03:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '6', time: '03:00 - 04:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '7', time: '04:00 - 05:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '8', time: '05:00 - 06:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-  ]);
+        const data = await lineService.getLinesByUser(currentUser.id);
+        setLines(data);
+      } catch (error) {
+        console.error('Tải danh sách dây chuyền bị lỗi:', error);
+        setLines([]);
+      } finally {
+        setLoadingLines(false);
+      }
+    };
+    loadLines();
+  }, []);
+
+  // Load production outputs when line and date are selected - FIXED VERSION
+  useEffect(() => {
+    const loadProductionOutputs = async () => {
+      if (!selectedLine || !selectedDate) {
+        // CRITICAL: Reset productionOutputs immediately when date changes to prevent race conditions
+        setProductionOutputs([]); // Đặt thành mảng rỗng thay vì cố gắng map dataArray (không tồn tại)
+        setOutputsLoaded(false);
+        setCurrentLoadedDate(null);
+        // Reset về default data khi không có line hoặc date
+        setShift1Data([...defaultShift1Data]);
+        setShift2Data([...defaultShift2Data]);
+        return;
+      }
+
+      // CRITICAL: Reset productionOutputs immediately when date changes to prevent race conditions
+      setProductionOutputs([]);
+      setCurrentLoadedDate(null);
+
+      // CRITICAL: Reset shift data trước khi load data mới
+      console.log('Đang cài đặt dữ liệu ca trước khi tải dữ liệu mới...');
+      setShift1Data([...defaultShift1Data]);
+      setShift2Data([...defaultShift2Data]);
+
+      setLoadingOutputs(true);
+
+      // Khai báo formattedDate ở đây để có phạm vi trong cả try và catch
+      let formattedDate;
+      try {
+        formattedDate = dayjs(selectedDate).format('YYYY-MM-DD');
+        console.log('Đang tải sản lượng sản xuất cho chuyền:', selectedLine, 'ngày:', formattedDate);
+
+        const response = await productionOutputService.getByLineAndDate(selectedLine, formattedDate);
+        console.log('Đã tải sản lượng sản xuất:', response);
+
+        // Extract data array from response
+        const dataArray = response?.data || [];
+
+        if (dataArray.length > 0) {
+          console.log('Tìm thấy', dataArray.length, 'sản lượng sản xuất');
+          setProductionOutputs(dataArray.map(item => ({
+            ...item,
+            id: item.outputId,
+            slotTime: normalizeSlotTime(item.slotTime) // Bây giờ có thể truy cập
+          })));
+        } else {
+          console.log('Không tìm thấy sản lượng sản xuất cho ngày này');
+          setProductionOutputs([]);
+        }
+
+        setOutputsLoaded(true);
+        setCurrentLoadedDate(formattedDate); // Mark that data is loaded for this specific date
+      } catch (error) {
+        console.error('Tải dữ liệu sản xuất bị lỗi:', error);
+        setProductionOutputs([]);
+        setOutputsLoaded(true);
+        setCurrentLoadedDate(formattedDate); // Bây giờ có thể truy cập
+      } finally {
+        setLoadingOutputs(false);
+      }
+    };
+
+    loadProductionOutputs();
+  }, [selectedLine, selectedDate]); // Chỉ phụ thuộc vào selectedLine và selectedDate
+
+  // Calculate Actual TT based on production data
+  // const calculateActualTT = (shift1Data, shift2Data) => {
+  //   let totalLoadingTime = 0;
+  //   let totalResultAmount = 0;
+
+  //   // Calculate for shift 1
+  //   shift1Data.forEach(slot => {
+  //     if (slot.resultAmount && parseInt(slot.resultAmount) > 0) {
+  //       totalLoadingTime += parseInt(slot.loadingTime) || 0;
+  //       totalResultAmount += parseInt(slot.resultAmount);
+  //     }
+  //   });
+
+  //   // Calculate for shift 2
+  //   shift2Data.forEach(slot => {
+  //     if (slot.resultAmount && parseInt(slot.resultAmount) > 0) {
+  //       totalLoadingTime += parseInt(slot.loadingTime) || 0;
+  //       totalResultAmount += parseInt(slot.resultAmount);
+  //     }
+  //   });
+
+  //   if (totalResultAmount > 0) {
+  //     // Calculate average cycle time in seconds (assuming loadingTime is in minutes, convert to seconds)
+  //     const averageCycleTime = (totalLoadingTime * 60) / totalResultAmount;
+  //     return averageCycleTime.toFixed(1); // Round to 1 decimal place
+  //   }
+
+  //   return '0.0'; // Default value if no data
+  // };
+
+  // Load incidents when line and date are selected
+  useEffect(() => {
+    const loadIncidents = async () => {
+      if (!selectedLine || !selectedDate) {
+        setIncidents([]);
+        return;
+      }
+
+      setLoadingIncidents(true);
+      try {
+        const formattedDate = dayjs(selectedDate).format('DD/MM/YYYY');
+        console.log('Đang tải những sự cố cho dây chuyền:', selectedLine, 'ngày:', formattedDate);
+        const response = await incidentService.getIncidentsByLineAndDate(selectedLine, formattedDate);
+        console.log('Đã tải danh sách sự cố:', response);
+        setIncidents(response);
+      } catch (error) {
+        console.error('Tải những sự cố bị lỗi:', error);
+        setIncidents([]);
+      } finally {
+        setLoadingIncidents(false);
+      }
+    };
+
+    loadIncidents();
+  }, [selectedLine, selectedDate]);
+
+
+  // Create or update form based on API data - FIXED VERSION
+  // useEffect(() => {
+  //   if (!selectedLine || !selectedFormType || !selectedDate || !currentLoadedDate) {
+  //     return;
+  //   }
+
+  //   const formattedDate = dayjs(selectedDate).format('YYYY-MM-DD');
+
+  //   // Only process if the loaded data is for the current selected date
+  //   if (currentLoadedDate !== formattedDate) {
+  //     console.log('Data not yet loaded for current date, skipping form creation');
+  //     return;
+  //   }
+
+  //   const existingForm = savedForms.find(form =>
+  //     form.data.line === selectedLine &&
+  //     form.data.date === dayjs(selectedDate).format('DD/MM/YYYY')
+  //   );
+
+  //   const nextId = existingForm ? existingForm.id : Math.max(...savedForms.map(f => f.id), 0) + 1;
+  //   const stt = existingForm ? existingForm.stt : String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
+
+  //   if (productionOutputs.length > 0) {
+  //     console.log('Processing', productionOutputs.length, 'production outputs...');
+
+  //     // Extract dates from API data if available
+  //     const apiItem = productionOutputs[0];
+  //     // Always use selected date as created date to avoid API inconsistencies
+  //     const apiCreatedDate = dayjs(selectedDate).format('DD/MM/YYYY');
+  //     const apiUpdatedDate = apiItem.updatedAt ? dayjs(apiItem.updatedAt).format('DD/MM/YYYY') : apiCreatedDate;
+
+  //     // CRITICAL: Bắt đầu với default data sạch
+  //     let shift1DataForForm = [...defaultShift1Data];
+  //     let shift2DataForForm = [...defaultShift2Data];
+
+  //     // Populate shift 1 data from API
+  //     const shift1ApiData = productionOutputs.filter(item => item.shiftId === 1);
+  //     console.log('Processing', shift1ApiData.length, 'shift 1 items...');
+
+  //     shift1ApiData.forEach(item => {
+  //       console.log('Processing shift 1 item:', item);
+  //       console.log('SlotTime from API:', item.slotTime, 'Type:', typeof item.slotTime);
+
+  //       // Use lookup function
+  //       const mapping = slotTimeMappings.lookup(item.slotTime);
+  //       console.log('Slot time mapping result:', mapping);
+
+  //       if (mapping) {
+  //         const index = parseInt(mapping.key) - 1;
+  //         console.log('Updating shift1 index:', index);
+
+  //         if (index >= 0 && index < shift1DataForForm.length) {
+  //           shift1DataForForm[index] = {
+  //             ...shift1DataForForm[index],
+  //             loadingTime: item.loadingTime?.toString() || '',
+  //             targetAmount: item.targetAmount?.toString() || '',
+  //             resultAmount: item.resultAmount?.toString() || '',
+  //             oee: item.oee ? item.oee.toString() : '',
+  //             downDetails: ''
+  //           };
+  //           console.log('Updated shift1 slot', index + 1, ':', shift1DataForForm[index]);
+  //         } else {
+  //           console.warn('Index out of bounds:', index);
+  //         }
+  //       } else {
+  //         console.warn('No mapping found for slot time:', item.slotTime);
+  //       }
+  //     });
+
+  //     // Populate shift 2 data from API
+  //     const shift2ApiData = productionOutputs.filter(item => item.shiftId === 2);
+  //     console.log('Processing', shift2ApiData.length, 'shift 2 items...');
+
+  //     shift2ApiData.forEach(item => {
+  //       console.log('Processing shift 2 item:', item);
+  //       console.log('SlotTime from API:', item.slotTime, 'Type:', typeof item.slotTime);
+
+  //       // Use lookup function
+  //       const mapping = slotTimeMappings.lookup(item.slotTime);
+  //       console.log('Slot time mapping result:', mapping);
+
+  //       if (mapping) {
+  //         const index = parseInt(mapping.key) - 1;
+  //         console.log('Updating shift2 index:', index);
+
+  //         if (index >= 0 && index < shift2DataForForm.length) {
+  //           shift2DataForForm[index] = {
+  //             ...shift2DataForForm[index],
+  //             loadingTime: item.loadingTime?.toString() || '',
+  //             targetAmount: item.targetAmount?.toString() || '',
+  //             resultAmount: item.resultAmount?.toString() || '',
+  //             oee: item.oee ? item.oee.toString() : '',
+  //             downDetails: ''
+  //           };
+  //           console.log('Updated shift2 slot', index + 1, ':', shift2DataForForm[index]);
+  //         } else {
+  //           console.warn('Index out of bounds:', index);
+  //         }
+  //       } else {
+  //         console.warn('No mapping found for slot time:', item.slotTime);
+  //       }
+  //     });
+
+  //     // Update shift data states
+  //     console.log('Setting shift1Data with', shift1DataForForm);
+  //     console.log('Setting shift2Data with', shift2DataForForm);
+  //     setShift1Data(shift1DataForForm);
+  //     setShift2Data(shift2DataForForm);
+
+  //     const formData = {
+  //       id: nextId,
+  //       stt: stt,
+  //       subtitle: `Bảng quản lý sản lượng - ${selectedLine} [${stt}]`,
+  //       created: existingForm ? existingForm.created : apiCreatedDate,
+  //       updated: apiUpdatedDate,
+  //       status: 'saved',
+  //       data: {
+  //         line: selectedLine,
+  //         process: 'Lắp Sleeve S/A',
+  //         date: dayjs(selectedDate).format('DD/MM/YYYY'),
+  //         actualTT: '8.4',
+  //         shifts: {
+  //           1: shift1DataForForm,
+  //           2: shift2DataForForm
+  //         }
+  //       }
+  //     };
+
+  //     if (existingForm) {
+  //       setSavedForms(prev => prev.map(form =>
+  //         form.id === existingForm.id ? formData : form
+  //       ));
+  //     } else {
+  //       setSavedForms(prev => [...prev, formData]);
+  //     }
+  //   } else {
+  //     // No data from API - create draft form
+  //     console.log('No production outputs, creating draft form...');
+
+  //     if (!existingForm) {
+  //       const newForm = {
+  //         id: nextId,
+  //         stt: stt,
+  //         subtitle: `Bảng quản lý sản lượng - ${selectedLine} [${stt}]`,
+  //         created: dayjs(selectedDate).format('DD/MM/YYYY'),
+  //         updated: '',
+  //         status: 'draft',
+  //         data: {
+  //           line: selectedLine,
+  //           process: 'Lắp Sleeve S/A',
+  //           date: dayjs(selectedDate).format('DD/MM/YYYY'),
+  //           actualTT: '8.4',
+  //           shifts: {
+  //             1: [...defaultShift1Data],
+  //             2: [...defaultShift2Data]
+  //           }
+  //         }
+  //       };
+
+  //       setSavedForms(prev => [...prev, newForm]);
+  //     }
+
+  //     // Reset to default data
+  //     setShift1Data([...defaultShift1Data]);
+  //     setShift2Data([...defaultShift2Data]);
+  //   }
+  // }, [selectedLine, selectedFormType, selectedDate, productionOutputs, slotTimeMappings, currentLoadedDate]);
+
+
+  // Calculate cycle times based on production data
+  const calculateCycleTimes = (shift1Data, shift2Data) => {
+    let totalLoadingTime = 0;
+    let totalDowntime = 0;
+    let totalResultAmount = 0;
+
+    // Calculate for shift 1
+    shift1Data.forEach(slot => {
+      if (slot.resultAmount && parseInt(slot.resultAmount) > 0) {
+        const loadingTime = parseInt(slot.loadingTime) || 0;
+        totalLoadingTime += loadingTime;
+        totalResultAmount += parseInt(slot.resultAmount);
+
+        if (Array.isArray(slot.downDetails) && slot.downDetails.length > 0) {
+          const slotDowntime = slot.downDetails.reduce((sum, detail) =>
+            sum + (parseFloat(detail.minutes) || 0), 0
+          );
+          totalDowntime += slotDowntime;
+        }
+      }
+    });
+
+    // Calculate for shift 2
+    shift2Data.forEach(slot => {
+      if (slot.resultAmount && parseInt(slot.resultAmount) > 0) {
+        const loadingTime = parseInt(slot.loadingTime) || 0;
+        totalLoadingTime += loadingTime;
+        totalResultAmount += parseInt(slot.resultAmount);
+
+        if (Array.isArray(slot.downDetails) && slot.downDetails.length > 0) {
+          const slotDowntime = slot.downDetails.reduce((sum, detail) =>
+            sum + (parseFloat(detail.minutes) || 0), 0
+          );
+          totalDowntime += slotDowntime;
+        }
+      }
+    });
+
+    if (totalResultAmount > 0) {
+      const operatingTime = totalLoadingTime - totalDowntime;
+      const actualCycleTime = (operatingTime * 60) / totalResultAmount;
+      const idealCycleTime = (totalLoadingTime * 60) / totalResultAmount;
+
+      return {
+        actual: actualCycleTime.toFixed(2),
+        ideal: idealCycleTime.toFixed(2)
+      };
+    }
+
+    return { actual: '0.00', ideal: '0.00' };
+  };
+
+  // Function to calculate OEE using API
+  const calculateAndUpdateOEE = async (record, shift) => {
+    try {
+      const requestData = {
+        lineId: parseInt(selectedLine),
+        date: dayjs(currentFormData.date, 'DD/MM/YYYY').format('YYYY-MM-DD'),
+        shiftId: shift,
+        slotTime: record.time,
+        targetAmount: parseInt(record.targetAmount),
+        resultAmount: parseInt(record.resultAmount)
+      };
+
+      const response = await productionOutputService.calculateOEE(requestData);
+
+      if (response.success) {
+        // Update the OEE value in the shift data
+        const currentShiftData = getCurrentShiftData();
+        const updatedShiftData = currentShiftData.map(item =>
+          item.key === record.key
+            ? { ...item, oee: response.data.oeePercentage.toString() }
+            : item
+        );
+        setCurrentShiftData(updatedShiftData);
+      }
+    } catch (error) {
+      console.error('Lỗi khi tính toán OEE:', error);
+      // You might want to show an error notification to the user
+    }
+  };
+
+
+  // Create or update form based on API data - FIXED VERSION
+  useEffect(() => {
+    if (!selectedLine || !selectedFormType || !selectedDate || !currentLoadedDate) {
+      return;
+    }
+
+    const formattedDate = dayjs(selectedDate).format('YYYY-MM-DD');
+
+    // Only process if the loaded data is for the current selected date
+    if (currentLoadedDate !== formattedDate) {
+      console.log('Dữ liệu chưa được tải cho ngày hiện tại, bỏ qua việc tạo biểu mẫu');
+      return;
+    }
+
+    const existingForm = savedForms.find(form =>
+      form.data.line === selectedLine &&
+      form.data.date === dayjs(selectedDate).format('DD/MM/YYYY')
+    );
+
+    const nextId = existingForm ? existingForm.id : Math.max(...savedForms.map(f => f.id), 0) + 1;
+    const stt = existingForm ? existingForm.stt : String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
+
+    // CRITICAL: Bắt đầu với default data sạch (ALWAYS do this)
+    let shift1DataForForm = [...defaultShift1Data];
+    let shift2DataForForm = [...defaultShift2Data];
+
+    // Function to check if incident overlaps with slot (FIXED: Use lowercase startTime/endTime)
+    const doesIncidentOverlapSlot = (incident, slotTime, date) => {
+      const [slotStartStr, slotEndStr] = slotTime.split(' - ');
+      const slotStart = dayjs(`${date} ${slotStartStr}`, 'DD/MM/YYYY HH:mm');
+      const slotEnd = dayjs(`${date} ${slotEndStr}`, 'DD/MM/YYYY HH:mm');
+      const incidentStart = dayjs(incident.startTime);  // ✅ FIXED: lowercase
+      const incidentEnd = dayjs(incident.endTime);      // ✅ FIXED: lowercase
+      return incidentStart.isBefore(slotEnd) && incidentEnd.isAfter(slotStart);
+    };
+
+    // Populate downDetails for each slot in shift1 (ALWAYS RUN THIS, REGARDLESS OF PRODUCTION OUTPUTS)
+    if (incidents.length > 0) {
+      console.log('Populating downDetails for shift1 with', incidents.length, 'incidents');
+      shift1DataForForm.forEach(slot => {
+        const overlappingIncidents = incidents.filter(incident =>
+          doesIncidentOverlapSlot(incident, slot.time, dayjs(selectedDate).format('DD/MM/YYYY'))
+        );
+        console.log('Slot:', slot.time, 'Overlapping incidents:', overlappingIncidents);
+        slot.downDetails = overlappingIncidents.map(incident => ({
+          type: incident.type?.typeName || 'Unknown',
+          minutes: incident.duration || 0,
+          issue: incident.issue || '',  // ✅ THÊM: Thêm issue từ incident
+          count: null // Set to null or calculate if scrap count is available
+        }));
+        console.log('Set downDetails for slot:', slot.time, 'to:', slot.downDetails);
+      });
+    }
+
+    // Populate downDetails for each slot in shift2 (ALWAYS RUN THIS, REGARDLESS OF PRODUCTION OUTPUTS)
+    if (incidents.length > 0) {
+      console.log('Populating downDetails for shift2 with', incidents.length, 'incidents');
+      shift2DataForForm.forEach(slot => {
+        const overlappingIncidents = incidents.filter(incident =>
+          doesIncidentOverlapSlot(incident, slot.time, dayjs(selectedDate).format('DD/MM/YYYY'))
+        );
+        console.log('Overlapping incidents for slot', slot.time, ':', overlappingIncidents);
+        slot.downDetails = overlappingIncidents.map(incident => ({
+          type: incident.type?.typeName || 'Unknown',
+          minutes: incident.duration || 0,
+          issue: incident.issue || '',  // ✅ THÊM: Thêm issue từ incident
+          count: null // Set to null or calculate if scrap count is available
+        }));
+      });
+    }
+
+    if (productionOutputs.length > 0) {
+      console.log('Tiến hành xử lý', productionOutputs.length, 'dữ liệu sản xuất...');
+
+      // Extract dates from API data if available
+      const apiItem = productionOutputs[0];
+      // Always use selected date as created date to avoid API inconsistencies
+      const apiCreatedDate = dayjs(selectedDate).format('DD/MM/YYYY');
+      const apiUpdatedDate = apiItem.updatedAt ? dayjs(apiItem.updatedAt).format('DD/MM/YYYY') : apiCreatedDate;
+
+      // Populate shift 1 data from API (PRESERVE downDetails - don't overwrite!)
+      const shift1ApiData = productionOutputs.filter(item => item.shiftId === 1);
+      console.log('Tiến hành xử lý', shift1ApiData.length, 'dữ liệu ca 1...');
+
+      shift1ApiData.forEach(item => {
+        console.log('Tiến hành xử lý ca 1 item:', item);
+        console.log('Khung thời gian API:', item.slotTime, 'Loại:', typeof item.slotTime);
+
+        // Use lookup function
+        const mapping = slotTimeMappings.lookup(item.slotTime);
+        console.log('Kết quả ánh xạ khung thời gian:', mapping);
+
+        if (mapping) {
+          // CẬP NHẬT: Tách slot number từ key dạng 'shift-slot'
+          const slotNumber = parseInt(mapping.key.split('-')[1]);
+          const index = slotNumber - 1; // Index 0-based
+          console.log('Cập nhật chỉ mục ca 1:', index);
+
+          if (index >= 0 && index < shift1DataForForm.length) {
+            shift1DataForForm[index] = {
+              ...shift1DataForForm[index],
+              loadingTime: item.loadingTime?.toString() || '',
+              targetAmount: item.targetAmount?.toString() || '',
+              resultAmount: item.resultAmount?.toString() || '',
+              oee: item.oee ? item.oee.toString() : '',
+              // ✅ PRESERVE downDetails - don't set it to ''!
+            };
+            console.log('Cập nhật ca 1 slot', index + 1, ':', shift1DataForForm[index]);
+          } else {
+            console.warn('Chỉ mục ngoài phạm vi:', index);
+          }
+        } else {
+          console.warn('Không tìm thấy ánh xạ cho khung thời gian:', item.slotTime);
+        }
+      });
+
+      // Populate shift 2 data from API (PRESERVE downDetails - don't overwrite!)
+      const shift2ApiData = productionOutputs.filter(item => item.shiftId === 2);
+      console.log('Tiến hành xử lý', shift2ApiData.length, 'dữ liệu ca 2...');
+
+      shift2ApiData.forEach(item => {
+        console.log('Tiến hành xử lý ca 2 item:', item);
+        console.log('Khung thời gian API:', item.slotTime, 'Loại:', typeof item.slotTime);
+
+        // Use lookup function
+        const mapping = slotTimeMappings.lookup(item.slotTime);
+        console.log('Kết quả ánh xạ khung thời gian:', mapping);
+
+        if (mapping) {
+          // CẬP NHẬT: Tách slot number từ key dạng 'shift-slot'
+          const slotNumber = parseInt(mapping.key.split('-')[1]);
+          const index = slotNumber - 1; // Index 0-based
+          console.log('Cập nhật chỉ mục ca 2:', index);
+
+          if (index >= 0 && index < shift2DataForForm.length) {
+            shift2DataForForm[index] = {
+              ...shift2DataForForm[index],
+              loadingTime: item.loadingTime?.toString() || '',
+              targetAmount: item.targetAmount?.toString() || '',
+              resultAmount: item.resultAmount?.toString() || '',
+              oee: item.oee ? item.oee.toString() : '',
+              // ✅ PRESERVE downDetails - don't set it to ''!
+            };
+            console.log('Cập nhật ca 2 slot', index + 1, ':', shift2DataForForm[index]);
+          } else {
+            console.warn('Chỉ mục ngoài phạm vi:', index);
+          }
+        } else {
+          console.warn('Không tìm thấy ánh xạ cho khung thời gian:', item.slotTime);
+        }
+      });
+
+      // Update shift data states
+      console.log('Setting shift1Data with', shift1DataForForm);
+      console.log('Setting shift2Data with', shift2DataForForm);
+      setShift1Data(shift1DataForForm);
+      setShift2Data(shift2DataForForm);
+
+      // Calculate cycle times based on the loaded data
+      const cycleTimes = calculateCycleTimes(shift1DataForForm, shift2DataForForm);
+
+      const formData = {
+        id: nextId,
+        stt: stt,
+        subtitle: `Bảng quản lý sản lượng - ${selectedLine} [${stt}]`,
+        created: existingForm ? existingForm.created : apiCreatedDate,
+        updated: apiUpdatedDate,
+        status: 'saved',
+        data: {
+          line: selectedLine,
+          process: 'Lắp Sleeve S/A',
+          date: dayjs(selectedDate).format('DD/MM/YYYY'),
+          actualCycleTime: cycleTimes.actual,
+          idealCycleTime: cycleTimes.ideal,
+          shifts: {
+            1: shift1DataForForm,
+            2: shift2DataForForm
+          }
+        }
+      };
+
+      if (existingForm) {
+        setSavedForms(prev => prev.map(form =>
+          form.id === existingForm.id ? formData : form
+        ));
+      } else {
+        setSavedForms(prev => [...prev, formData]);
+      }
+    } else {
+      // No data from API - create draft form
+      console.log('Không có dữ liệu từ API, tạo mẫu nháp...');
+
+      if (!existingForm) {
+        const newForm = {
+          id: nextId,
+          stt: stt,
+          subtitle: `Bảng quản lý sản lượng - ${selectedLine} [${stt}]`,
+          created: dayjs(selectedDate).format('DD/MM/YYYY'),
+          updated: '',
+          status: 'draft',
+          data: {
+            line: selectedLine,
+            process: 'Lắp Sleeve S/A',
+            date: dayjs(selectedDate).format('DD/MM/YYYY'),
+            actualTT: '0.0', // Default for draft
+            shifts: {
+              1: shift1DataForForm,  // Now includes populated downDetails
+              2: shift2DataForForm   // Now includes populated downDetails
+            }
+          }
+        };
+
+        setSavedForms(prev => [...prev, newForm]);
+      }
+
+      // Reset to default data (but now with downDetails populated)
+      setShift1Data(shift1DataForForm);  // Includes populated downDetails
+      setShift2Data(shift2DataForForm);  // Includes populated downDetails
+    }
+  }, [selectedLine, selectedFormType, selectedDate, productionOutputs, slotTimeMappings, currentLoadedDate, incidents]);  // ✅ 'incidents' is already in dependencies
+
 
   const getCurrentShiftData = () => {
     switch (activeShift) {
       case '1': return shift1Data;
       case '2': return shift2Data;
-      case '3': return shift3Data;
       default: return shift1Data;
     }
   };
@@ -143,55 +872,15 @@ const EFormSystem = () => {
     switch (activeShift) {
       case '1': setShift1Data(newData); break;
       case '2': setShift2Data(newData); break;
-      case '3': setShift3Data(newData); break;
     }
   };
 
   const handleDateChange = (date) => {
-    if (date) {
+    setSelectedDate(date);
+    if (date && selectedLine && selectedFormType) {
       setCurrentStep(2);
-      const currentDate = dayjs().format('DD/MM/YYYY');
-      const nextId = Math.max(...savedForms.map(f => f.id), 0) + 1;
-      const stt = String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
-
-      const newForm = {
-        id: nextId,
-        stt: stt,
-        subtitle: `Bảng quản lý sản lượng[${stt}]`,
-        created: currentDate,
-        updated: currentDate,
-        status: 'draft', // 'draft', 'saved', or 'temporary'
-        data: {
-          line: 'TZ',
-          process: 'Lắp Sleeve S/A',
-          date: dayjs(date).format('DD/MM/YYYY'),
-          actualTT: '8/4',
-          shifts: {
-            1: [...shift1Data],
-            2: [...shift2Data],
-            3: [...shift3Data]
-          }
-        }
-      };
-
-      setSavedForms(prev => [newForm, ...prev]);
-      setCurrentEditingFormId(nextId);
-      setSelectedFormData({
-        subtitle: newForm.subtitle,
-        created: newForm.created,
-        updated: newForm.updated
-      });
     } else {
       setCurrentStep(1);
-      setSelectedFormData(null);
-      setCurrentEditingFormId(null);
-    }
-  };
-
-  const handleFormSubtitleClick = () => {
-    // Tìm form đầu tiên trong danh sách để load
-    if (savedForms.length > 0) {
-      handleLoadForm(savedForms[0]);
     }
   };
 
@@ -199,52 +888,402 @@ const EFormSystem = () => {
     setCurrentStep(2);
   };
 
-  // ==========================================
-  // REGISTER DATA: Saves to database immediately
-  // ==========================================
+
+  // const handleRegisterData = async () => {
+  //   if (!currentEditingFormId) return;
+
+  //   try {
+  //     // Step 1: Reload fresh data
+  //     const formattedDate = dayjs(currentFormData.date, 'DD/MM/YYYY').format('YYYY-MM-DD');
+  //     const response = await productionOutputService.getByLineAndDate(selectedLine, formattedDate);
+  //     const freshProductionOutputs = response?.data || [];
+
+  //     console.log('Đã tải dữ liệu sản lượng sản xuất:', freshProductionOutputs);
+
+  //     const productionOutputsToProcess = [];
+
+  //     // Step 2: Process shift 1 data
+  //     shift1Data.forEach(slot => {
+  //       if (slot.targetAmount || slot.resultAmount) {
+  //         const normalizedSlotTime = normalizeSlotTime(slot.time);
+  //         const shiftId = 1;
+
+  //         const existingRecord = freshProductionOutputs.find(po =>
+  //           po.lineId === parseInt(selectedLine) &&
+  //           dayjs(po.date).format('YYYY-MM-DD') === formattedDate &&
+  //           po.shiftId === shiftId &&
+  //           normalizeSlotTime(po.slotTime) === normalizedSlotTime
+  //         );
+
+  //         if (existingRecord) {
+  //           productionOutputsToProcess.push({
+  //             id: existingRecord.outputId,  // ✅ USE outputId
+  //             loadingTime: slot.loadingTime ? parseInt(slot.loadingTime) : null,
+  //             targetAmount: slot.targetAmount ? parseInt(slot.targetAmount) : null,
+  //             resultAmount: slot.resultAmount ? parseInt(slot.resultAmount) : null,
+  //           });
+  //         } else {
+  //           productionOutputsToProcess.push({
+  //             lineId: parseInt(selectedLine),
+  //             date: dayjs(currentFormData.date, 'DD/MM/YYYY').format('YYYY-MM-DD'), // ✅ ĐÚNG
+  //             shiftId: shiftId,
+  //             slotTime: normalizedSlotTime,
+  //             loadingTime: slot.loadingTime ? parseInt(slot.loadingTime) : null,
+  //             targetAmount: slot.targetAmount ? parseInt(slot.targetAmount) : null,
+  //             resultAmount: slot.resultAmount ? parseInt(slot.resultAmount) : null,
+  //           });
+  //         }
+  //       }
+  //     });
+
+  //     // Step 3: Process shift 2 data
+  //     shift2Data.forEach(slot => {
+  //       if (slot.targetAmount || slot.resultAmount) {
+  //         const normalizedSlotTime = normalizeSlotTime(slot.time);
+  //         const shiftId = 2;
+
+  //         const existingRecord = freshProductionOutputs.find(po =>
+  //           po.lineId === parseInt(selectedLine) &&
+  //           dayjs(po.date).format('YYYY-MM-DD') === formattedDate &&
+  //           po.shiftId === shiftId &&
+  //           normalizeSlotTime(po.slotTime) === normalizedSlotTime
+  //         );
+
+  //         if (existingRecord) {
+  //           productionOutputsToProcess.push({
+  //             id: existingRecord.outputId,  // ✅ USE outputId
+  //             loadingTime: slot.loadingTime ? parseInt(slot.loadingTime) : null,
+  //             targetAmount: slot.targetAmount ? parseInt(slot.targetAmount) : null,
+  //             resultAmount: slot.resultAmount ? parseInt(slot.resultAmount) : null,
+  //           });
+  //         } else {
+  //           productionOutputsToProcess.push({
+  //             lineId: parseInt(selectedLine),
+  //             date: dayjs(currentFormData.date, 'DD/MM/YYYY').format('YYYY-MM-DD'), // ✅ ĐÚNG
+  //             shiftId: shiftId,
+  //             slotTime: normalizedSlotTime,
+  //             loadingTime: slot.loadingTime ? parseInt(slot.loadingTime) : null,
+  //             targetAmount: slot.targetAmount ? parseInt(slot.targetAmount) : null,
+  //             resultAmount: slot.resultAmount ? parseInt(slot.resultAmount) : null,
+  //           });
+  //         }
+  //       }
+  //     });
+
+  //     // Step 4: Send all create/update requests
+  //     const promises = productionOutputsToProcess.map(async (output) => {
+  //       if (output.id) {
+  //         console.log('Đang gửi yêu cầu CẬP NHẬT cho ID', output.id);
+  //         return productionOutputService.update(output.id, {
+  //           loadingTime: output.loadingTime,
+  //           targetAmount: output.targetAmount,
+  //           resultAmount: output.resultAmount
+  //         });
+  //       } else {
+  //         console.log('Đang gửi yêu cầu TẠO mới');
+  //         return productionOutputService.create(output);
+  //       }
+  //     });
+
+  //     await Promise.all(promises);
+
+  //     // ✅ Step 5: RELOAD ALL DATA FROM DATABASE TO GET UPDATED OEE
+  //     console.log('⏳ Đang tải lại tất cả dữ liệu sản lượng từ cơ sở dữ liệu...');
+  //     const updatedResponse = await productionOutputService.getByLineAndDate(selectedLine, formattedDate);
+  //     const updatedProductionOutputs = updatedResponse?.data || [];
+
+  //     // Update the state with fresh data from database
+  //     setProductionOutputs(updatedProductionOutputs.map(item => ({
+  //       ...item,
+  //       id: item.outputId,
+  //       slotTime: normalizeSlotTime(item.slotTime)
+  //     })));
+
+  //     // ✅ Step 6: Update shift data with latest values from database
+  //     const updatedShift1Data = [...defaultShift1Data];
+  //     const updatedShift2Data = [...defaultShift2Data];
+
+  //     updatedProductionOutputs.forEach(item => {
+  //       if (item.shiftId === 1) {
+  //         const mapping = slotTimeMappings.lookup(item.slotTime);
+  //         if (mapping) {
+  //           const index = parseInt(mapping.key.split('-')[1]) - 1;
+  //           if (index >= 0 && index < updatedShift1Data.length) {
+  //             updatedShift1Data[index] = {
+  //               ...updatedShift1Data[index],
+  //               loadingTime: item.loadingTime?.toString() || '',
+  //               targetAmount: item.targetAmount?.toString() || '',
+  //               resultAmount: item.resultAmount?.toString() || '',
+  //               oee: item.oee ? item.oee.toString() : '',  // ✅ GET UPDATED OEE FROM DB
+  //             };
+  //           }
+  //         }
+  //       } else if (item.shiftId === 2) {
+  //         const mapping = slotTimeMappings.lookup(item.slotTime);
+  //         if (mapping) {
+  //           const index = parseInt(mapping.key.split('-')[1]) - 1;
+  //           if (index >= 0 && index < updatedShift2Data.length) {
+  //             updatedShift2Data[index] = {
+  //               ...updatedShift2Data[index],
+  //               loadingTime: item.loadingTime?.toString() || '',
+  //               targetAmount: item.targetAmount?.toString() || '',
+  //               resultAmount: item.resultAmount?.toString() || '',
+  //               oee: item.oee ? item.oee.toString() : '',  // ✅ GET UPDATED OEE FROM DB
+  //             };
+  //           }
+  //         }
+  //       }
+  //     });
+
+  //     setShift1Data(updatedShift1Data);
+  //     setShift2Data(updatedShift2Data);
+
+  //     // Update saved forms
+  //     setSavedForms(prev => prev.map(form =>
+  //       form.id === currentEditingFormId
+  //         ? {
+  //           ...form,
+  //           status: 'saved',
+  //           updated: dayjs().format('DD/MM/YYYY'),
+  //           data: {
+  //             line: currentFormData.line,
+  //             process: currentFormData.process,
+  //             date: currentFormData.date,
+  //             actualTT: calculateActualTT(updatedShift1Data, updatedShift2Data),
+  //             shifts: {
+  //               1: updatedShift1Data,
+  //               2: updatedShift2Data
+  //             }
+  //           }
+  //         }
+  //         : form
+  //     ));
+
+  //     setShowSuccessPage(true);
+  //   } catch (error) {
+  //     console.error('Lỗi khi lưu vào cơ sở dữ liệu:', error);
+  //     if (error.response) {
+  //       console.error('API lỗi phản hồi:', error.response.data);
+  //     }
+  //   }
+  // };
+
   const handleRegisterData = async () => {
     if (!currentEditingFormId) return;
 
     try {
-      // Prepare data for API call
-      const formData = {
-        id: currentEditingFormId,
-        stt: savedForms.find(f => f.id === currentEditingFormId)?.stt,
-        subtitle: selectedFormData?.subtitle,
-        line: currentFormData.line,
-        process: currentFormData.process,
-        date: currentFormData.date,
-        actualTT: currentFormData.actualTT,
-        shifts: {
-          1: [...shift1Data],
-          2: [...shift2Data],
-          3: [...shift3Data]
+      // Step 1: Reload fresh data
+      const formattedDate = dayjs(currentFormData.date, 'DD/MM/YYYY').format('YYYY-MM-DD');
+      const response = await productionOutputService.getByLineAndDate(selectedLine, formattedDate);
+      const freshProductionOutputs = response?.data || [];
+
+      console.log('Đã tải dữ liệu sản lượng sản xuất:', freshProductionOutputs);
+
+      const productionOutputsToProcess = [];
+      const outputIdsToDelete = []; // ✅ THÊM ARRAY ĐỂ LƯU ID CẦN XÓA
+      const errors = []; // Array để lưu lỗi validation
+
+      // Step 2: Process shift 1 data
+      shift1Data.forEach(slot => {
+        const normalizedSlotTime = normalizeSlotTime(slot.time);
+        const shiftId = 1;
+
+        // ✅ VALIDATION: Kiểm tra targetAmount và resultAmount phải >0 và không âm
+        const target = parseInt(slot.targetAmount);
+        const result = parseInt(slot.resultAmount);
+        if (slot.targetAmount && (isNaN(target) || target <= 0)) {
+          errors.push(`Slot ${slot.time} (Ca 1): Số lượng mục tiêu phải là số dương (>0).`);
         }
-      };
+        if (slot.resultAmount && (isNaN(result) || result <= 0)) {
+          errors.push(`Slot ${slot.time} (Ca 1): Số lượng thực tế phải là số dương (>0).`);
+        }
+        // Nếu có lỗi, bỏ qua slot này
+        if (errors.length > 0) return;
 
-      // TODO: Replace with actual API call
-      console.log('Saving to database:', formData);
+        const existingRecord = freshProductionOutputs.find(po =>
+          po.lineId === parseInt(selectedLine) &&
+          dayjs(po.date).format('YYYY-MM-DD') === formattedDate &&
+          po.shiftId === shiftId &&
+          normalizeSlotTime(po.slotTime) === normalizedSlotTime
+        );
 
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+        // ✅ KIỂM TRA NẾU SLOT RỖNG (không có target và result)
+        const isEmpty = !slot.targetAmount && !slot.resultAmount;
 
-      // Update local state after successful API call
-      const currentDate = dayjs().format('DD/MM/YYYY');
+        if (existingRecord && isEmpty) {
+          // ✅ Nếu bản ghi ĐÃ TỒN TẠI và slot RỖNG → XÓA
+          outputIdsToDelete.push(existingRecord.outputId);
+          console.log(`Đánh dấu để xóa bản ghi ID ${existingRecord.outputId} (slot rỗng)`);
+        } else if (!isEmpty) {
+          // ✅ Nếu slot CÓ DỮ LIỆU → CREATE hoặc UPDATE
+          if (existingRecord) {
+            productionOutputsToProcess.push({
+              id: existingRecord.outputId,
+              loadingTime: slot.loadingTime ? parseInt(slot.loadingTime) : null,
+              targetAmount: slot.targetAmount ? parseInt(slot.targetAmount) : null,
+              resultAmount: slot.resultAmount ? parseInt(slot.resultAmount) : null,
+            });
+          } else {
+            productionOutputsToProcess.push({
+              lineId: parseInt(selectedLine),
+              date: dayjs(currentFormData.date, 'DD/MM/YYYY').format('YYYY-MM-DD'),
+              shiftId: shiftId,
+              slotTime: normalizedSlotTime,
+              loadingTime: slot.loadingTime ? parseInt(slot.loadingTime) : null,
+              targetAmount: slot.targetAmount ? parseInt(slot.targetAmount) : null,
+              resultAmount: slot.resultAmount ? parseInt(slot.resultAmount) : null,
+            });
+          }
+        }
+      });
+
+      // Step 3: Process shift 2 data (TƯƠNG TỰ)
+      shift2Data.forEach(slot => {
+        const normalizedSlotTime = normalizeSlotTime(slot.time);
+        const shiftId = 2;
+
+        const target = parseInt(slot.targetAmount);
+        const result = parseInt(slot.resultAmount);
+        if (slot.targetAmount && (isNaN(target) || target <= 0)) {
+          errors.push(`Slot ${slot.time} (Ca 2): Số lượng mục tiêu phải là số dương (>0).`);
+        }
+        if (slot.resultAmount && (isNaN(result) || result <= 0)) {
+          errors.push(`Slot ${slot.time} (Ca 2): Số lượng thực tế phải là số dương (>0).`);
+        }
+        if (errors.length > 0) return;
+
+        const existingRecord = freshProductionOutputs.find(po =>
+          po.lineId === parseInt(selectedLine) &&
+          dayjs(po.date).format('YYYY-MM-DD') === formattedDate &&
+          po.shiftId === shiftId &&
+          normalizeSlotTime(po.slotTime) === normalizedSlotTime
+        );
+
+        const isEmpty = !slot.targetAmount && !slot.resultAmount;
+
+        if (existingRecord && isEmpty) {
+          outputIdsToDelete.push(existingRecord.outputId);
+          console.log(`Đánh dấu để xóa bản ghi ID ${existingRecord.outputId} (slot rỗng)`);
+        } else if (!isEmpty) {
+          if (existingRecord) {
+            productionOutputsToProcess.push({
+              id: existingRecord.outputId,
+              loadingTime: slot.loadingTime ? parseInt(slot.loadingTime) : null,
+              targetAmount: slot.targetAmount ? parseInt(slot.targetAmount) : null,
+              resultAmount: slot.resultAmount ? parseInt(slot.resultAmount) : null,
+            });
+          } else {
+            productionOutputsToProcess.push({
+              lineId: parseInt(selectedLine),
+              date: dayjs(currentFormData.date, 'DD/MM/YYYY').format('YYYY-MM-DD'),
+              shiftId: shiftId,
+              slotTime: normalizedSlotTime,
+              loadingTime: slot.loadingTime ? parseInt(slot.loadingTime) : null,
+              targetAmount: slot.targetAmount ? parseInt(slot.targetAmount) : null,
+              resultAmount: slot.resultAmount ? parseInt(slot.resultAmount) : null,
+            });
+          }
+        }
+      });
+
+      // ✅ KIỂM TRA LỖI SAU VÒNG LẶP VÀ HIỂN THỊ MODAL
+      if (errors.length > 0) {
+        setValidationErrors(errors);
+        setValidationModalVisible(true);
+        return; // Dừng function nếu có lỗi
+      }
+
+      // ✅ Step 4: XÓA CÁC BẢN GHI RỖNG
+      const deletePromises = outputIdsToDelete.map(async (id) => {
+        console.log('Đang gửi yêu cầu XÓA cho ID', id);
+        return productionOutputService.delete(id);
+      });
+
+      // ✅ Step 5: CREATE/UPDATE CÁC BẢN GHI CÓ DỮ LIỆU
+      const processPromises = productionOutputsToProcess.map(async (output) => {
+        if (output.id) {
+          console.log('Đang gửi yêu cầu CẬP NHẬT cho ID', output.id);
+          return productionOutputService.update(output.id, {
+            loadingTime: output.loadingTime,
+            targetAmount: output.targetAmount,
+            resultAmount: output.resultAmount
+          });
+        } else {
+          console.log('Đang gửi yêu cầu TẠO mới');
+          return productionOutputService.create(output);
+        }
+      });
+
+      // ✅ Chờ tất cả operations hoàn thành
+      await Promise.all([...deletePromises, ...processPromises]);
+
+      // ✅ Step 6: RELOAD ALL DATA FROM DATABASE
+      console.log('⏳ Đang tải lại tất cả dữ liệu sản lượng từ cơ sở dữ liệu...');
+      const updatedResponse = await productionOutputService.getByLineAndDate(selectedLine, formattedDate);
+      const updatedProductionOutputs = updatedResponse?.data || [];
+
+      setProductionOutputs(updatedProductionOutputs.map(item => ({
+        ...item,
+        id: item.outputId,
+        slotTime: normalizeSlotTime(item.slotTime)
+      })));
+
+      // ✅ Step 7: Update shift data
+      const updatedShift1Data = [...defaultShift1Data];
+      const updatedShift2Data = [...defaultShift2Data];
+
+      updatedProductionOutputs.forEach(item => {
+        if (item.shiftId === 1) {
+          const mapping = slotTimeMappings.lookup(item.slotTime);
+          if (mapping) {
+            const index = parseInt(mapping.key.split('-')[1]) - 1;
+            if (index >= 0 && index < updatedShift1Data.length) {
+              updatedShift1Data[index] = {
+                ...updatedShift1Data[index],
+                loadingTime: item.loadingTime?.toString() || '',
+                targetAmount: item.targetAmount?.toString() || '',
+                resultAmount: item.resultAmount?.toString() || '',
+                oee: item.oee ? item.oee.toString() : '',
+              };
+            }
+          }
+        } else if (item.shiftId === 2) {
+          const mapping = slotTimeMappings.lookup(item.slotTime);
+          if (mapping) {
+            const index = parseInt(mapping.key.split('-')[1]) - 1;
+            if (index >= 0 && index < updatedShift2Data.length) {
+              updatedShift2Data[index] = {
+                ...updatedShift2Data[index],
+                loadingTime: item.loadingTime?.toString() || '',
+                targetAmount: item.targetAmount?.toString() || '',
+                resultAmount: item.resultAmount?.toString() || '',
+                oee: item.oee ? item.oee.toString() : '',
+              };
+            }
+          }
+        }
+      });
+
+      setShift1Data(updatedShift1Data);
+      setShift2Data(updatedShift2Data);
+
+      // Update saved forms
       setSavedForms(prev => prev.map(form =>
         form.id === currentEditingFormId
           ? {
             ...form,
             status: 'saved',
-            updated: currentDate,
+            updated: dayjs().format('DD/MM/YYYY'),
             data: {
               line: currentFormData.line,
               process: currentFormData.process,
               date: currentFormData.date,
-              actualTT: currentFormData.actualTT,
+              // actualTT: calculateActualTT(updatedShift1Data, updatedShift2Data),
+              actualCycleTime: calculateCycleTimes(updatedShift1Data, updatedShift2Data).actual,
+              idealCycleTime: calculateCycleTimes(updatedShift1Data, updatedShift2Data).ideal,
               shifts: {
-                1: [...shift1Data],
-                2: [...shift2Data],
-                3: [...shift3Data]
+                1: updatedShift1Data,
+                2: updatedShift2Data
               }
             }
           }
@@ -253,29 +1292,24 @@ const EFormSystem = () => {
 
       setShowSuccessPage(true);
     } catch (error) {
-      console.error('Error saving to database:', error);
-      // TODO: Show error message to user
+      console.error('Lỗi khi lưu vào cơ sở dữ liệu:', error);
+      if (error.response) {
+        console.error('API lỗi phản hồi:', error.response.data);
+      }
     }
   };
 
-  // ==========================================
-  // SAVE TEMPORARILY: Saves locally only (no database)
-  // ==========================================
   const handleSaveTemporarily = () => {
-    // Kiểm tra status hiện tại của form
     const currentForm = savedForms.find(form => form.id === currentEditingFormId);
     if (currentForm && currentForm.status === 'saved') {
-      // Nếu form đã saved, hiển thị confirmation khác
       setConfirmAction('saved-to-temporary');
       setConfirmModalVisible(true);
     } else {
-      // Nếu form chưa saved hoặc là draft/temporary, hiển thị confirmation thông thường
       setConfirmAction('temporary');
       setConfirmModalVisible(true);
     }
   };
 
-  // Function to save data locally only (no database insertion)
   const saveDataLocally = (status) => {
     const currentDate = dayjs().format('DD/MM/YYYY');
     setSavedForms(prev => prev.map(form =>
@@ -288,11 +1322,12 @@ const EFormSystem = () => {
             line: currentFormData.line,
             process: currentFormData.process,
             date: currentFormData.date,
-            actualTT: currentFormData.actualTT,
+            // actualTT: currentFormData.actualTT,
+            actualCycleTime: currentFormData.actualCycleTime,
+            idealCycleTime: currentFormData.idealCycleTime,
             shifts: {
               1: [...shift1Data],
-              2: [...shift2Data],
-              3: [...shift3Data]
+              2: [...shift2Data]
             }
           }
         }
@@ -301,29 +1336,24 @@ const EFormSystem = () => {
   };
 
   const handleLoadForm = (form) => {
-    // Load dữ liệu form đã lưu
     setSelectedFormData({
       subtitle: form.subtitle,
       created: form.created,
       updated: form.updated
     });
 
-    // Load dữ liệu form hiện tại
     setCurrentFormData({
       line: form.data.line,
       process: form.data.process,
       date: form.data.date,
-      actualTT: form.data.actualTT
+      actualCycleTime: form.data.actualCycleTime,
+      idealCycleTime: form.data.idealCycleTime
     });
 
-    // Load dữ liệu shifts
-    setShift1Data([...form.data.shifts[1]]);
-    setShift2Data([...form.data.shifts[2]]);
-    setShift3Data([...form.data.shifts[3]]);
+    setShift1Data(form.data.shifts[1] || [...defaultShift1Data]);
+    setShift2Data(form.data.shifts[2] || [...defaultShift2Data]);
 
-    // Set current editing form
     setCurrentEditingFormId(form.id);
-
     setCurrentStep(3);
   };
 
@@ -336,8 +1366,6 @@ const EFormSystem = () => {
   const handleConfirmYes = () => {
     if (confirmAction === 'temporary' || confirmAction === 'saved-to-temporary') {
       if (!currentEditingFormId) return;
-
-      // Save data locally only (no database insertion for temporary saves)
       saveDataLocally('temporary');
       setCurrentStep(2);
     }
@@ -365,7 +1393,6 @@ const EFormSystem = () => {
     const { record, dataIndex, shift } = editingCell;
     const updatedRecord = { ...record, [dataIndex]: editValue };
 
-    // Update the appropriate shift data
     const currentShiftData = getCurrentShiftData();
     const updatedShiftData = currentShiftData.map(item =>
       item.key === record.key ? updatedRecord : item
@@ -373,7 +1400,6 @@ const EFormSystem = () => {
 
     setCurrentShiftData(updatedShiftData);
 
-    // Close modal and reset state
     setEditModalVisible(false);
     setEditingCell(null);
     setEditValue('');
@@ -406,7 +1432,6 @@ const EFormSystem = () => {
       align: 'center',
       fixed: 'left',
       render: (text) => {
-        // Tách thời gian thành 2 dòng: "06:00 - 07:00" -> "06:00\n07:00"
         const timeParts = text.split(' - ');
         return (
           <div style={{
@@ -533,7 +1558,7 @@ const EFormSystem = () => {
       width: 180,
       align: 'center',
       render: (text, record) => {
-        const displayText = text || '0%';
+        const displayText = text || '0';
         const isLowPerformance = text && parseFloat(text) < 70;
         const isEmpty = !text;
 
@@ -555,7 +1580,7 @@ const EFormSystem = () => {
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
-            {displayText}
+            {displayText}%
           </div>
         );
       },
@@ -598,7 +1623,8 @@ const EFormSystem = () => {
           borderRadius: '12px',
           overflow: 'hidden',
           border: '1px solid #e5e7eb',
-          margin: 0
+          margin: 0,
+          height: '100vh'
         }}
         bodyStyle={{ padding: 0 }}
       >
@@ -641,14 +1667,15 @@ const EFormSystem = () => {
             layout="vertical"
             initialValues={{
               lineGroup: 'FZ / LGVAP 0143',
-              line: 'FZ / LNe5419',
-              formType: 'Production Amount (E-form)',
+              line: selectedLine,
+              formType: selectedFormType,
+              date: selectedDate
             }}
           >
             <Row gutter={24}>
               <Col span={24}>
                 <Form.Item
-                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px' }}>Dòng</span>}
+                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px' }}>Dây chuyền</span>}
                   name="line"
                 >
                   <Select
@@ -656,8 +1683,15 @@ const EFormSystem = () => {
                     placeholder="--Select--"
                     style={{ borderRadius: '8px' }}
                     suffixIcon={<span style={{ color: '#6b7280' }}>▼</span>}
+                    onChange={(value) => setSelectedLine(value)}
+                    value={selectedLine}
+                    loading={loadingLines}
                   >
-                    <Option value="FZ / LNe5419">FZ / LNe5419</Option>
+                    {lines.map(line => (
+                      <Option key={line.lineId} value={line.lineId}>
+                        {line.lineName}
+                      </Option>
+                    ))}
                   </Select>
                 </Form.Item>
               </Col>
@@ -672,6 +1706,8 @@ const EFormSystem = () => {
                     placeholder="No options"
                     style={{ borderRadius: '8px' }}
                     suffixIcon={<span style={{ color: '#6b7280' }}>▼</span>}
+                    onChange={(value) => setSelectedFormType(value)}
+                    value={selectedFormType}
                   >
                     <Option value="Production Amount (E-form)">Production Amount (E-form)</Option>
                   </Select>
@@ -687,7 +1723,15 @@ const EFormSystem = () => {
                     size="large"
                     format="DD/MM/YYYY"
                     style={{ width: '100%', borderRadius: '8px' }}
-                    onChange={handleDateChange}
+                    onChange={(date) => {
+                      setSelectedDate(date);
+                      if (date && selectedLine && selectedFormType) {
+                        setCurrentStep(2);
+                      } else {
+                        setCurrentStep(1);
+                      }
+                    }}
+                    value={selectedDate}
                     placeholder="09/09/2025"
                   />
                 </Form.Item>
@@ -699,7 +1743,7 @@ const EFormSystem = () => {
                 >
                   <Input
                     size="large"
-                    value={currentStep >= 2 && selectedFormData ? selectedFormData.subtitle : ''}
+                    value={selectedLine && selectedFormType && selectedDate ? `Bảng quản lý sản lượng - ${selectedLine} [${previewStt}]` : ''}
                     disabled
                     placeholder="Chọn tất cả các trường ở trên để tạo tiêu đề biểu mẫu"
                     style={{
@@ -712,123 +1756,146 @@ const EFormSystem = () => {
             </Row>
           </Form>
 
-          {/* Danh sách các form đã lưu dưới dạng bảng */}
-          {savedForms.length > 0 && (
+          {selectedLine && selectedFormType && selectedDate && (
             <div style={{ marginTop: '40px' }}>
-              <Table
-                dataSource={savedForms}
-                columns={[
-                  {
-                    title: 'Ngày Tạo',
-                    dataIndex: 'created',
-                    key: 'created',
-                    width: 150,
-                    align: 'center',
-                    render: (text) => (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                        <span style={{ fontWeight: 500 }}>{text}</span>
-                      </div>
-                    )
-                  },
-                  {
-                    title: 'Ngày Cập Nhật',
-                    dataIndex: 'updated',
-                    key: 'updated',
-                    width: 150,
-                    align: 'center',
-                    render: (text) => (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                        <span style={{ fontWeight: 500 }}>{text}</span>
-                      </div>
-                    )
-                  },
-                  {
-                    title: 'Tiêu Đề Biểu Mẫu',
-                    dataIndex: 'subtitle',
-                    key: 'subtitle',
-                    width: 300,
-                    render: (text) => (
-                      <div style={{
-                        fontWeight: 600,
-                        color: '#1e40af'
-                      }}>
-                        {text}
-                      </div>
-                    )
-                  },
-                  {
-                    title: 'Trạng Thái',
-                    dataIndex: 'status',
-                    key: 'status',
-                    width: 120,
-                    align: 'center',
-                    render: (status) => (
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        padding: '4px 8px',
-                        borderRadius: '12px',
-                        backgroundColor:
-                          status === 'temporary' ? '#fef3c7' :
-                            status === 'saved' ? '#d1fae5' :
-                              '#e0f2fe', // draft status
-                        color:
-                          status === 'temporary' ? '#f59e0b' :
-                            status === 'saved' ? '#10b981' :
-                              '#0369a1', // draft status
-                        fontWeight: 500,
-                        fontSize: '13px'
-                      }}>
-                        {status === 'temporary' ? 'Tạm Thời' : status === 'saved' ? 'Đã Lưu' : 'Bản Nháp'}
-                      </div>
-                    )
-                  },
-                  // {
-                  //   title: 'Hành Động',
-                  //   key: 'action',
-                  //   width: 100,
-                  //   align: 'center',
-                  //   render: (_, record) => (
-                  //     <Button
-                  //       type="primary"
-                  //       size="small"
-                  //       onClick={() => handleLoadForm(record)}
-                  //       style={{
-                  //         background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                  //         border: 'none',
-                  //         borderRadius: '6px'
-                  //       }}
-                  //     >
-                  //       Xem
-                  //     </Button>
-                  //   )
-                  // }
-                ]}
-                pagination={false}
-                size="middle"
-                bordered
-                style={{
-                  borderRadius: '8px',
-                  overflow: 'hidden',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
-                }}
-                rowClassName={(record, index) =>
-                  index % 2 === 0 ? 'eform-table-row-even' : 'eform-table-row-odd'
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                <Title level={4} style={{ margin: 0, color: '#283652' }}>
+                  Danh sách biểu mẫu đã lưu - {selectedLine}
+                </Title>
+              </div>
+              {(() => {
+                const filteredForms = savedForms.filter(form =>
+                  form.data.line === selectedLine &&
+                  form.data.date === dayjs(selectedDate).format('DD/MM/YYYY')
+                );
+
+                // If no forms for this date, create a draft entry for display
+                if (filteredForms.length === 0) {
+                  const draftForm = {
+                    id: 'draft',
+                    stt: previewStt,
+                    subtitle: `Bảng quản lý sản lượng - ${selectedLine} [${previewStt}]`,
+                    created: dayjs(selectedDate).format('DD/MM/YYYY'),
+                    updated: '',
+                    status: 'draft',
+                    data: {
+                      line: selectedLine,
+                      process: 'Lắp Sleeve S/A',
+                      date: dayjs(selectedDate).format('DD/MM/YYYY'),
+                      // actualTT: '8.4',
+                      actualCycleTime: '',
+                      idealCycleTime: '',
+                      shifts: {
+                        1: [...defaultShift1Data],
+                        2: [...defaultShift2Data]
+                      }
+                    }
+                  };
+                  filteredForms.push(draftForm);
                 }
-                onRow={(record) => ({
-                  onClick: () => handleLoadForm(record),
-                  style: { cursor: 'pointer' }
-                })}
-              />
+
+                return (
+                  <Table
+                    dataSource={filteredForms}
+                    columns={[
+                      {
+                        title: 'Ngày Tạo',
+                        dataIndex: 'created',
+                        key: 'created',
+                        width: 150,
+                        align: 'center',
+                        render: (text) => (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: 500 }}>{text}</span>
+                          </div>
+                        )
+                      },
+                      {
+                        title: 'Ngày Cập Nhật',
+                        dataIndex: 'updated',
+                        key: 'updated',
+                        width: 150,
+                        align: 'center',
+                        render: (text) => (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            <span style={{ fontWeight: 500 }}>{text || '-'}</span>
+                          </div>
+                        )
+                      },
+                      {
+                        title: 'Tiêu Đề Biểu Mẫu',
+                        dataIndex: 'subtitle',
+                        key: 'subtitle',
+                        width: 300,
+                        render: (text) => (
+                          <div style={{
+                            fontWeight: 600,
+                            color: '#1e40af'
+                          }}>
+                            {text}
+                          </div>
+                        )
+                      },
+                      {
+                        title: 'Trạng Thái',
+                        dataIndex: 'status',
+                        key: 'status',
+                        width: 120,
+                        align: 'center',
+                        render: (status) => (
+                          <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            padding: '4px 8px',
+                            borderRadius: '12px',
+                            backgroundColor:
+                              status === 'temporary' ? '#fef3c7' :
+                                status === 'saved' ? '#d1fae5' :
+                                  '#e0f2fe',
+                            color:
+                              status === 'temporary' ? '#f59e0b' :
+                                status === 'saved' ? '#10b981' :
+                                  '#0369a1',
+                            fontWeight: 500,
+                            fontSize: '13px'
+                          }}>
+                            {status === 'temporary' ? 'Tạm Thời' : status === 'saved' ? 'Đã Lưu' : 'Bản Nháp'}
+                          </div>
+                        )
+                      },
+                    ]}
+                    pagination={false}
+                    size="middle"
+                    bordered
+                    style={{
+                      borderRadius: '8px',
+                      overflow: 'hidden',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+                    }}
+                    rowClassName={(record, index) =>
+                      index % 2 === 0 ? 'eform-table-row-even' : 'eform-table-row-odd'
+                    }
+                    onRow={(record) => ({
+                      onClick: () => handleLoadForm(record),
+                      style: { cursor: 'pointer' }
+                    })}
+                  />
+                );
+              })()}
             </div>
           )}
-
         </div>
       </Card>
     </div>
   );
+
+  // Get line name by ID
+  const getLineName = (lineId) => {
+    const line = lines.find(l => l.lineId === lineId);
+    return line ? line.lineName : lineId;
+  };
 
   const renderProductionForm = () => (
     <div style={{ width: '100%', margin: 0, padding: 0 }}>
@@ -885,11 +1952,22 @@ const EFormSystem = () => {
           </Text>
         </div>
 
-        <div style={{ padding: '40px', paddingBottom: '120px' }}>
-          <Form layout="vertical" form={productionForm}>
+        <div style={{
+          paddingTop: '40px',
+          paddingRight: '40px',
+          paddingBottom: '120px',
+          paddingLeft: '40px'
+        }}>
+          <Form layout="horizontal" form={productionForm}>
             <Row gutter={32}>
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px' }}>Tiêu Đề Biểu Mẫu</span>}>
+              {/* First row: Tiêu Đề Biểu Mẫu - full width */}
+              <Col span={24}>
+                <Form.Item
+                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px', textAlign: 'left', display: 'block' }}>Tiêu Đề Biểu Mẫu</span>}
+                  colon={false}
+                  labelCol={{ span: 2 }}
+                  wrapperCol={{ span: 22 }}
+                >
                   <Input
                     value={selectedFormData?.subtitle || "Bảng quản lý sản lượng[04119824]"}
                     disabled
@@ -898,30 +1976,44 @@ const EFormSystem = () => {
                       backgroundColor: '#f9fafb',
                       borderRadius: '8px',
                       border: '1px solid #e5e7eb',
-                      fontWeight: 500
+                      fontWeight: 500,
+                      marginLeft: '20px'
                     }}
                   />
                 </Form.Item>
               </Col>
 
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px' }}>Dòng</span>}>
+              {/* Second row: Dây chuyền - full width */}
+              <Col span={24}>
+                <Form.Item
+                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px', textAlign: 'left', display: 'block', marginRight: '30px' }}>Dây chuyền</span>}
+                  colon={false}
+                  labelCol={{ span: 2 }}
+                  wrapperCol={{ span: 22 }}
+                >
                   <Input
-                    value={currentFormData.line}
+                    value={getLineName(currentFormData.line)}
                     disabled
                     size="large"
                     style={{
                       backgroundColor: '#f9fafb',
                       borderRadius: '8px',
                       border: '1px solid #e5e7eb',
-                      fontWeight: 500
+                      fontWeight: 500,
+                      marginLeft: '20px'
                     }}
                   />
                 </Form.Item>
               </Col>
 
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px' }}>Quy Trình</span>}>
+              {/* Third row: Quy trình - full width */}
+              <Col span={24}>
+                <Form.Item
+                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px', textAlign: 'left', display: 'block', marginRight: '42px' }}>Quy Trình</span>}
+                  colon={false}
+                  labelCol={{ span: 2 }}
+                  wrapperCol={{ span: 22 }}
+                >
                   <Input
                     value={currentFormData.process}
                     disabled
@@ -930,14 +2022,21 @@ const EFormSystem = () => {
                       backgroundColor: '#f9fafb',
                       borderRadius: '8px',
                       border: '1px solid #e5e7eb',
-                      fontWeight: 500
+                      fontWeight: 500,
+                      marginLeft: '20px'
                     }}
                   />
                 </Form.Item>
               </Col>
 
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px' }}>Ngày</span>}>
+              {/* Fourth row: Ngày - full width */}
+              <Col span={24}>
+                <Form.Item
+                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px', textAlign: 'left', display: 'block', marginRight: '70px' }}>Ngày</span>}
+                  colon={false}
+                  labelCol={{ span: 2 }}
+                  wrapperCol={{ span: 22 }}
+                >
                   <Input
                     value={currentFormData.date}
                     disabled
@@ -946,20 +2045,87 @@ const EFormSystem = () => {
                       backgroundColor: '#f9fafb',
                       borderRadius: '8px',
                       border: '1px solid #e5e7eb',
-                      fontWeight: 500
+                      fontWeight: 500,
+                      marginLeft: '20px'
                     }}
                   />
                 </Form.Item>
               </Col>
 
-              <Col xs={24} sm={12} lg={6}>
-                <Form.Item label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px' }}>TT Thực Tế</span>}>
+              {/* Fifth row: TT Thực Tế - full width to align */}
+              {/* <Col span={17}>
+                <Form.Item
+                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px', textAlign: 'left', display: 'block', marginRight: '50px' }}>TT Thực Tế</span>}
+                  colon={false}
+                  labelCol={{ span: 3 }}
+                  wrapperCol={{ span: 14 }}
+                >
                   <Input
-                    suffix={<Text type="secondary" style={{ fontSize: '13px' }}>8/4 | Giây</Text>}
-                    value={currentFormData.actualTT}
+                    // value={currentFormData.actualTT}
+                    suffix={<Text type="secondary" style={{ fontSize: '13px' }}>{currentFormData.actualTT} | Giây</Text>}
                     size="large"
-                    style={{ borderRadius: '8px' }}
+                    style={{ borderRadius: '8px', marginLeft: '10px' }}
                   />
+                </Form.Item>
+              </Col> */}
+              {/* Fifth row: Actual Cycle Time and Ideal Cycle Time side by side */}
+              <Col span={12}>
+                <Form.Item
+                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px' }}>Actual Cycle Time</span>}
+                  colon={false}
+                  labelCol={{ span: 4 }}
+                  wrapperCol={{ span: 16 }}
+                >
+                  <Input
+                    // value={currentFormData.actualCycleTime}
+                    disabled
+                    size="large"
+                    style={{
+                      borderRadius: '8px',
+                      backgroundColor: '#f0f9ff',
+                      border: '1px solid #bae6fd',
+                      fontWeight: 600,
+                      color: '#0369a1',
+                      marginLeft: '25px'
+                    }}
+                    suffix={<Text type="secondary" style={{ fontSize: '13px', fontWeight: 500 }}>{currentFormData.actualCycleTime} | giây</Text>}
+                  />
+                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: '4px', marginLeft: '25px', fontStyle: 'italic' }}>
+                    Thời gian thực tế để sản xuất 1 sản phẩm (Operating Time / Output)
+                  </Text>
+                  <Text type="secondary" style={{ marginLeft: '25px', fontSize: '12px', display: 'block', color: '#059669', fontWeight: 500 }}>
+                    Mục tiêu: Càng thấp càng tốt (hiệu suất cao)
+                  </Text>
+                </Form.Item>
+              </Col>
+
+              <Col span={12}>
+                <Form.Item
+                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px' }}>Ideal Cycle Time</span>}
+                  colon={false}
+                  labelCol={{ span: 8 }}
+                  wrapperCol={{ span: 16 }}
+                >
+                  <Input
+                    //value={currentFormData.idealCycleTime}
+                    disabled
+                    size="large"
+                    style={{
+                      borderRadius: '8px',
+                      backgroundColor: '#fef3c7',
+                      border: '1px solid #fde68a',
+                      fontWeight: 600,
+                      color: '#d97706',
+                      marginLeft: '22px'
+                    }}
+                    suffix={<Text type="secondary" style={{ fontSize: '13px', fontWeight: 500 }}>{currentFormData.idealCycleTime} | giây</Text>}
+                  />
+                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginTop: '4px', marginLeft: '22px', fontStyle: 'italic' }}>
+                    Thời gian lý tưởng không tính downtime (Loading Time / Output)
+                  </Text>
+                  <Text type="secondary" style={{ marginLeft: '22px', fontSize: '12px', display: 'block', color: '#0369a1', fontWeight: 500 }}>
+                    Dùng để so sánh: Ideal - Actual = Thời gian lãng phí/sản phẩm
+                  </Text>
                 </Form.Item>
               </Col>
             </Row>
@@ -987,7 +2153,7 @@ const EFormSystem = () => {
                       alignItems: 'center',
                       gap: '8px'
                     }}>
-                      Ca 1 (06:00 - 14:00)
+                      Ca 1 (07:00 - 15:00)
                     </span>
                   ),
                 },
@@ -1002,22 +2168,7 @@ const EFormSystem = () => {
                       alignItems: 'center',
                       gap: '8px'
                     }}>
-                      Ca 2 (14:00 - 22:00)
-                    </span>
-                  ),
-                },
-                {
-                  key: '3',
-                  label: (
-                    <span style={{
-                      fontSize: '15px',
-                      fontWeight: 600,
-                      color: activeShift === '3' ? '#283652' : '#6b7280',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      Ca 3 (22:00 - 06:00)
+                      Ca 2 (15:00 - 23:00)
                     </span>
                   ),
                 }
@@ -1156,7 +2307,7 @@ const EFormSystem = () => {
             marginBottom: '24px',
             color: '#10b981'
           }}>
-
+            ✓
           </div>
           <Title level={2} style={{
             color: '#059669',
@@ -1229,6 +2380,27 @@ const EFormSystem = () => {
     }}>
       {showSuccessPage ? renderSuccessPage() : currentStep < 3 ? renderSearchForm() : renderProductionForm()}
 
+      {/* Modal Validation */}
+      <Modal
+        title="Lỗi Validation"
+        visible={validationModalVisible}
+        onCancel={() => setValidationModalVisible(false)}
+        footer={[
+          <Button key="ok" type="primary" onClick={() => setValidationModalVisible(false)}>
+            OK
+          </Button>,
+        ]}
+      >
+        <div>
+          <p>Các lỗi sau cần được sửa trước khi lưu:</p>
+          <ul>
+            {validationErrors.map((error, index) => (
+              <li key={index}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      </Modal>
+
       <Modal
         title={
           <div style={{
@@ -1250,7 +2422,6 @@ const EFormSystem = () => {
           setEditValue('');
         }}
         okText={editingCell?.dataIndex === 'downDetails' ? "Đóng" : "Lưu"}
-        cancelText="Hủy"
         width={500}
         okButtonProps={{
           size: 'large',
@@ -1312,9 +2483,13 @@ const EFormSystem = () => {
                             display: 'flex',
                             gap: '16px',
                             fontSize: '13px',
-                            color: '#6b7280'
+                            color: '#6b7280',
+                            flexDirection: 'column'  // ✅ THAY ĐỔI: Dùng column để dễ thêm issue
                           }}>
                             <span>Thời gian: {detail.minutes} phút</span>
+                            {detail.issue && (  // ✅ THÊM: Chỉ hiển thị nếu có issue
+                              <span>Vấn đề: {detail.issue}</span>
+                            )}
                             {detail.type === 'Phế phẩm' && detail.count && (
                               <span>Số lượng: {detail.count}</span>
                             )}
