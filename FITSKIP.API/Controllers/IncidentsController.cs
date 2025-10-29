@@ -181,11 +181,11 @@ public class IncidentsController : ControllerBase
                 return BadRequest(new { success = false, message = "Thời lượng không được âm" });
             }
 
-            // Validate ReportedByUserId
-            if (string.IsNullOrWhiteSpace(request.ReportedByUserId))
-            {
-                return BadRequest(new { success = false, message = "ID người báo cáo là bắt buộc" });
-            }
+            // Validate ReportedByUserId - optional, can be null if not selected
+            // if (string.IsNullOrWhiteSpace(request.ReportedByUserId))
+            // {
+            //     return BadRequest(new { success = false, message = "ID người báo cáo là bắt buộc" });
+            // }
 
             // Validate time logic
             if (request.EndTime.HasValue && request.StartTime.HasValue && request.EndTime.Value <= request.StartTime.Value)
@@ -203,12 +203,18 @@ public class IncidentsController : ControllerBase
                 return BadRequest(new { success = false, message = "Thời gian bắt đầu không thể trong tương lai" });
             }
 
-            // Set ReportedByUserId from authenticated user if available
-            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!string.IsNullOrEmpty(userId))
+            // Validate Duration against actual time if both start and end times are provided
+            if (request.Duration.HasValue && request.EndTime.HasValue && request.StartTime.HasValue)
             {
-                request.ReportedByUserId = userId;
+                var actualDuration = (request.EndTime.Value - request.StartTime.Value).TotalMinutes;
+                if (request.Duration.Value > (decimal)actualDuration)
+                {
+                    return BadRequest(new { success = false, message = $"Thời lượng ({request.Duration.Value} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
+                }
             }
+
+            // Don't auto-set ReportedByUserId - allow it to be null if not selected
+            // If user doesn't select anyone, it should remain null in database
 
             var incident = await _incidentService.CreateIncidentAsync(request);
             // Note: Realtime notifications are already sent from IncidentService
@@ -278,20 +284,20 @@ public class IncidentsController : ControllerBase
                 {
                     return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Thời gian kết thúc không thể trong tương lai" });
                 }
-            }
 
-            // Set ReportedByUserId from authenticated user if not provided
-            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!string.IsNullOrEmpty(userId))
-            {
-                foreach (var incident in request.Incidents)
+                // Validate Duration against actual time if both start and end times are provided
+                if (incident.Duration.HasValue && incident.EndTime.HasValue && incident.StartTime.HasValue)
                 {
-                    if (string.IsNullOrEmpty(incident.ReportedByUserId))
+                    var actualDuration = (incident.EndTime.Value - incident.StartTime.Value).TotalMinutes;
+                    if (incident.Duration.Value > (decimal)actualDuration)
                     {
-                        incident.ReportedByUserId = userId;
+                        return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Thời lượng ({incident.Duration.Value} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
                     }
                 }
             }
+
+            // Don't auto-set ReportedByUserId - allow it to be null if not selected
+            // If user doesn't select anyone, it should remain null in database
 
             var result = await _incidentService.CreateBulkIncidentsAsync(request);
 
@@ -386,11 +392,6 @@ public class IncidentsController : ControllerBase
                 return BadRequest(new { success = false, message = "Thời lượng không được âm" });
             }
 
-            if (string.IsNullOrWhiteSpace(request.ReportedByUserId))
-            {
-                return BadRequest(new { success = false, message = "ID người báo cáo là bắt buộc" });
-            }
-
             if (request.StartTime > DateTime.Now)
             {
                 return BadRequest(new { success = false, message = "Thời gian bắt đầu không thể trong tương lai" });
@@ -404,6 +405,16 @@ public class IncidentsController : ControllerBase
             if (request.EndTime.HasValue && request.EndTime.Value > DateTime.Now)
             {
                 return BadRequest(new { success = false, message = "Thời gian kết thúc không thể trong tương lai" });
+            }
+
+            // Validate Duration against actual time if both start and end times are provided
+            if (request.Duration.HasValue && request.EndTime.HasValue)
+            {
+                var actualDuration = (request.EndTime.Value - request.StartTime).TotalMinutes;
+                if (request.Duration.Value > (decimal)actualDuration)
+                {
+                    return BadRequest(new { success = false, message = $"Thời lượng ({request.Duration.Value} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
+                }
             }
 
             var incident = await _incidentService.UpdateIncidentAsync(id, request);

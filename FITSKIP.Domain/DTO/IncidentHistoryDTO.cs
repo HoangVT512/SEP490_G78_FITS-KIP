@@ -53,9 +53,8 @@ namespace FITSKIP.Domain.DTO
         [MaxLength(500, ErrorMessage = "Giải pháp không được vượt quá 500 ký tự")]
         public string? Solution { get; set; } // Optional - có thể null
 
-        [Required(ErrorMessage = "ID người báo cáo là bắt buộc")]
         [StringLength(450, ErrorMessage = "ID người báo cáo không được vượt quá 450 ký tự")]
-        public string? ReportedByUserId { get; set; }
+        public string? ReportedByUserId { get; set; } // Optional - có thể null nếu không chọn
 
         public bool IsTechSupport { get; set; } = false;
 
@@ -120,9 +119,8 @@ namespace FITSKIP.Domain.DTO
         [MaxLength(50, ErrorMessage = "Trạng thái không được vượt quá 50 ký tự")]
         public string? Status { get; set; }
 
-        [Required(ErrorMessage = "ID người báo cáo là bắt buộc")]
         [StringLength(450, ErrorMessage = "ID người báo cáo không được vượt quá 450 ký tự")]
-        public string? ReportedByUserId { get; set; }
+        public string? ReportedByUserId { get; set; } // Optional - có thể null nếu không chọn
 
         public bool IsTechSupport { get; set; } = false;
 
