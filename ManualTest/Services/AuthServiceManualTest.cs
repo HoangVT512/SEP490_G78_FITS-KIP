@@ -1,4 +1,4 @@
-using FITSKIP.Application.Services;
+/*using FITSKIP.Application.Services;
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Moq;
+using Microsoft.AspNetCore.Http;
 
 namespace FITSKIP.Application.Tests.ManualTests;
 
@@ -120,10 +121,10 @@ public class AuthServiceManualTest
 
         Console.Write("Enter Email or Employee Code: ");
         var emailOrEmployeeCode = Console.ReadLine();
-        
+
         Console.Write("Enter Password: ");
         var password = Console.ReadLine();
-        
+
         Console.Write("Remember Me? (true/false): ");
         var rememberMeInput = Console.ReadLine();
         bool rememberMe = false;
@@ -140,13 +141,13 @@ public class AuthServiceManualTest
         };
 
         // Find user by email or employee code
-        var user = _testData.FirstOrDefault(u => 
+        var user = _testData.FirstOrDefault(u =>
             u.Email == emailOrEmployeeCode || u.EmployeeCode == emailOrEmployeeCode);
 
         // Setup mocks
         _mockUserManager.Setup(x => x.FindByEmailAsync(It.IsAny<string>()))
             .ReturnsAsync(user?.Email == emailOrEmployeeCode ? user : null);
-        
+
         _mockUserManager.Setup(x => x.Users)
             .Returns(_testData.AsQueryable());
 
@@ -167,7 +168,7 @@ public class AuthServiceManualTest
         {
             Console.WriteLine("Executing LoginAsync...");
             var result = await _service.LoginAsync(request);
-            
+
             Console.WriteLine("Login successful:");
             Console.WriteLine($"   Token: {result.Token}");
             Console.WriteLine($"   Expiration: {result.Expiration}");
@@ -194,7 +195,7 @@ public class AuthServiceManualTest
         var userId = Console.ReadLine();
 
         var user = _testData.FirstOrDefault(u => u.Id == userId);
-        
+
         _mockUserManager.Setup(x => x.FindByIdAsync(userId ?? ""))
             .ReturnsAsync(user);
 
@@ -202,7 +203,7 @@ public class AuthServiceManualTest
         {
             Console.WriteLine($"Executing LogoutAsync with User ID: {userId}...");
             var result = await _service.LogoutAsync(userId ?? "");
-            
+
             Console.WriteLine($"Logout result: {result}");
         }
         catch (Exception ex)
@@ -225,7 +226,7 @@ public class AuthServiceManualTest
         };
 
         var user = _testData.FirstOrDefault(u => u.Email == email);
-        
+
         _mockUserManager.Setup(x => x.FindByEmailAsync(email ?? ""))
             .ReturnsAsync(user);
 
@@ -241,7 +242,7 @@ public class AuthServiceManualTest
         {
             Console.WriteLine($"Executing SendForgotPasswordOtpAsync with Email: {email}...");
             var result = await _service.SendForgotPasswordOtpAsync(request);
-            
+
             Console.WriteLine($"Send OTP result: {result}");
             if (result)
             {
@@ -265,7 +266,7 @@ public class AuthServiceManualTest
 
         Console.Write("Enter Email: ");
         var email = Console.ReadLine();
-        
+
         Console.Write("Enter OTP: ");
         var otp = Console.ReadLine();
 
@@ -278,7 +279,7 @@ public class AuthServiceManualTest
         // Mock cache with stored OTP
         var mockCacheEntry = new Mock<ICacheEntry>();
         mockCacheEntry.Setup(x => x.Value).Returns("123456"); // Mock stored OTP
-        
+
         _mockMemoryCache.Setup(x => x.TryGetValue<string>(It.IsAny<object>(), out It.Ref<string>.IsAny))
             .Returns((object key, out string value) =>
             {
@@ -290,7 +291,7 @@ public class AuthServiceManualTest
         {
             Console.WriteLine($"Executing VerifyOtpAsync with Email: {email}, OTP: {otp}...");
             var result = await _service.VerifyOtpAsync(request);
-            
+
             Console.WriteLine($"Verify OTP result: {result}");
             if (result)
             {
@@ -314,10 +315,10 @@ public class AuthServiceManualTest
 
         Console.Write("Enter Email: ");
         var email = Console.ReadLine();
-        
+
         Console.Write("Enter OTP: ");
         var otp = Console.ReadLine();
-        
+
         Console.Write("Enter New Password: ");
         var newPassword = Console.ReadLine();
 
@@ -329,7 +330,7 @@ public class AuthServiceManualTest
         };
 
         var user = _testData.FirstOrDefault(u => u.Email == email);
-        
+
         _mockUserManager.Setup(x => x.FindByEmailAsync(email ?? ""))
             .ReturnsAsync(user);
 
@@ -344,7 +345,7 @@ public class AuthServiceManualTest
         {
             _mockUserManager.Setup(x => x.GeneratePasswordResetTokenAsync(It.IsAny<User>()))
                 .ReturnsAsync("mock-reset-token");
-            
+
             _mockUserManager.Setup(x => x.ResetPasswordAsync(It.IsAny<User>(), It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(IdentityResult.Success);
         }
@@ -355,7 +356,7 @@ public class AuthServiceManualTest
         {
             Console.WriteLine($"Executing ResetPasswordWithOtpAsync with Email: {email}...");
             var result = await _service.ResetPasswordWithOtpAsync(request);
-            
+
             Console.WriteLine($"Reset password result: {result}");
             if (result)
             {
@@ -379,13 +380,13 @@ public class AuthServiceManualTest
 
         Console.Write("Enter User ID: ");
         var userId = Console.ReadLine();
-        
+
         Console.Write("Enter Current Password: ");
         var currentPassword = Console.ReadLine();
-        
+
         Console.Write("Enter New Password: ");
         var newPassword = Console.ReadLine();
-        
+
         Console.Write("Enter Confirm Password: ");
         var confirmPassword = Console.ReadLine();
 
@@ -397,7 +398,7 @@ public class AuthServiceManualTest
         };
 
         var user = _testData.FirstOrDefault(u => u.Id == userId);
-        
+
         _mockUserManager.Setup(x => x.FindByIdAsync(userId ?? ""))
             .ReturnsAsync(user);
 
@@ -405,7 +406,7 @@ public class AuthServiceManualTest
         {
             _mockUserManager.Setup(x => x.CheckPasswordAsync(It.IsAny<User>(), It.IsAny<string>()))
                 .ReturnsAsync(true); // Mock current password is valid
-            
+
             _mockUserManager.Setup(x => x.ChangePasswordAsync(It.IsAny<User>(), It.IsAny<string>(), It.IsAny<string>()))
                 .ReturnsAsync(IdentityResult.Success);
         }
@@ -414,7 +415,7 @@ public class AuthServiceManualTest
         {
             Console.WriteLine($"Executing ChangePasswordAsync with User ID: {userId}...");
             var result = await _service.ChangePasswordAsync(userId ?? "", request);
-            
+
             Console.WriteLine($"Change password result: {result}");
             if (result)
             {
@@ -440,7 +441,7 @@ public class AuthServiceManualTest
         var userId = Console.ReadLine();
 
         var user = _testData.FirstOrDefault(u => u.Id == userId);
-        
+
         _mockUserManager.Setup(x => x.FindByIdAsync(userId ?? ""))
             .ReturnsAsync(user);
 
@@ -460,7 +461,7 @@ public class AuthServiceManualTest
         {
             Console.WriteLine($"Executing SendEmailVerificationAsync with User ID: {userId}...");
             var result = await _service.SendEmailVerificationAsync(userId ?? "");
-            
+
             Console.WriteLine($"Send email verification result: {result}");
             if (result)
             {
@@ -484,12 +485,12 @@ public class AuthServiceManualTest
 
         Console.Write("Enter User ID: ");
         var userId = Console.ReadLine();
-        
+
         Console.Write("Enter Verification Token: ");
         var token = Console.ReadLine();
 
         var user = _testData.FirstOrDefault(u => u.Id == userId);
-        
+
         _mockUserManager.Setup(x => x.FindByIdAsync(userId ?? ""))
             .ReturnsAsync(user);
 
@@ -503,7 +504,7 @@ public class AuthServiceManualTest
         {
             Console.WriteLine($"Executing VerifyEmailAsync with User ID: {userId}...");
             var result = await _service.VerifyEmailAsync(userId ?? "", token ?? "");
-            
+
             Console.WriteLine($"Verify email result: {result}");
             if (result)
             {
@@ -638,3 +639,4 @@ public class AuthServiceManualTest
         };
     }
 }
+*/

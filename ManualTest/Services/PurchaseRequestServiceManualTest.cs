@@ -1,3 +1,4 @@
+using FITSKIP.Application.Interfaces;
 using FITSKIP.Application.Services;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
@@ -11,6 +12,7 @@ public class PurchaseRequestServiceManualTest
     private readonly Mock<IPurchaseRequestRepository> _mockPurchaseRequestRepository;
     private readonly Mock<IUserRepository> _mockUserRepository;
     private readonly Mock<INotificationService> _mockNotificationService;
+    private readonly Mock<ISparePartRepository> _mockSparePartRepository;
     private readonly PurchaseRequestService _service;
     private readonly List<PurchaseRequest> _testData;
     private readonly List<User> _userTestData;
@@ -21,7 +23,13 @@ public class PurchaseRequestServiceManualTest
         _mockPurchaseRequestRepository = new Mock<IPurchaseRequestRepository>();
         _mockUserRepository = new Mock<IUserRepository>();
         _mockNotificationService = new Mock<INotificationService>();
-        _service = new PurchaseRequestService(_mockPurchaseRequestRepository.Object, _mockUserRepository.Object, _mockNotificationService.Object);
+        _mockSparePartRepository = new Mock<ISparePartRepository>();
+        _service = new PurchaseRequestService(
+            _mockPurchaseRequestRepository.Object,
+            _mockUserRepository.Object,
+            _mockNotificationService.Object,
+            _mockSparePartRepository.Object
+        );
         _testData = InitializeTestData();
         _userTestData = InitializeUserTestData();
         _sparePartTestData = InitializeSparePartTestData();

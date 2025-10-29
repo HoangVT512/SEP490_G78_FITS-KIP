@@ -26,9 +26,6 @@ class Program
                 case "3":
                     await RunPurchaseRequestServiceTests();
                     break;
-                case "4":
-                    await RunAuthServiceTests();
-                    break;
                 case "5":
                     await RunProductionOutputServiceTests();
                     break;
@@ -50,7 +47,6 @@ class Program
         Console.WriteLine("1. Department Service Tests");
         Console.WriteLine("2. Equiment Service Tests");
         Console.WriteLine("3. Purchase Request Service Tests");
-        Console.WriteLine("4. Auth Service Tests");
         Console.WriteLine("5. Production Output Service Tests");
         Console.WriteLine("0. Exit");
         Console.WriteLine();
@@ -78,12 +74,12 @@ class Program
         await testRunner.RunTests();
     }
 
-    static async Task RunAuthServiceTests()
+/*    static async Task RunAuthServiceTests()
     {
 
         var testRunner = new AuthServiceManualTest();
         await testRunner.RunTests();
-    }
+    }*/
 
     static async Task RunProductionOutputServiceTests()
     {

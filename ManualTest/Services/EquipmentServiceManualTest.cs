@@ -337,10 +337,9 @@ public class EquipmentServiceManualTest
             Origin = origin ?? existingEquipment?.Origin,
             Yom = yom,
             StageId = stageId,
-            Issue = issue ?? existingEquipment?.Issue,
             IsActive = isActive
         };
-        Console.WriteLine($"[INPUT DATA] Code: {request.EquipmentCode}, Name: {request.EquipmentName}, DateUse: {request.DateUse?.ToString() ?? "null"}, Origin: {request.Origin ?? "null"}, Yom: {request.Yom?.ToString() ?? "null"}, StageId: {request.StageId?.ToString() ?? "null"}, Issue: {request.Issue ?? "null"}, IsActive: {request.IsActive}");
+        Console.WriteLine($"[INPUT DATA] Code: {request.EquipmentCode}, Name: {request.EquipmentName}, DateUse: {request.DateUse?.ToString() ?? "null"}, Origin: {request.Origin ?? "null"}, Yom: {request.Yom?.ToString() ?? "null"}, StageId: {request.StageId?.ToString() ?? "null"}, IsActive: {request.IsActive}");
 
         // Setup mock for stage validation if stageId is provided
         if (stageId.HasValue)
@@ -365,7 +364,6 @@ public class EquipmentServiceManualTest
             Origin = request.Origin,
             Yom = request.Yom,
             StageId = request.StageId,
-            Issue = request.Issue,
             IsActive = request.IsActive,
             Qrcode = "{\"equipmentCode\":\"" + request.EquipmentCode.ToUpper() + "\"}"
         };
@@ -605,7 +603,7 @@ public class EquipmentServiceManualTest
         try
         {
             Console.WriteLine($"[STATUS] Executing GetEquipmentsByTeamLeaderAsync with User ID: {userId}...");
-            var result = await _service.GetEquipmentsByTeamLeaderAsync(userId ?? "");
+            var result = await _service.GetEquipmentsByUserLinesAsync(userId ?? "");
             
             Console.WriteLine($"[SUCCESS] Found {result.Count} equipments for team leader {userId}:");
             Console.WriteLine("\n[DATA] Equipment List:");

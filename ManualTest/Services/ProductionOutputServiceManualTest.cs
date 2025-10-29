@@ -218,9 +218,9 @@ public class ProductionOutputServiceManualTest
         Console.Write("[INPUT] Enter Result Amount (or press Enter for null): ");
         var resultInput = Console.ReadLine();
         int? resultAmount = null;
-        if (!string.IsNullOrWhiteSpace(resultInput) && int.TryParse(resultInput, out int result))
+        if (!string.IsNullOrWhiteSpace(resultInput) && int.TryParse(resultInput, out int r))
         {
-            resultAmount = result;
+            resultAmount = r;
         }
 
         Console.WriteLine("\n[INPUT] Creating request object...");
@@ -331,9 +331,9 @@ public class ProductionOutputServiceManualTest
         Console.Write("[INPUT] Enter new Result Amount (or press Enter to keep current): ");
         var resultInput = Console.ReadLine();
         int? resultAmount = existingOutput?.ResultAmount;
-        if (!string.IsNullOrWhiteSpace(resultInput) && int.TryParse(resultInput, out int result))
+        if (!string.IsNullOrWhiteSpace(resultInput) && int.TryParse(resultInput, out int r))
         {
-            resultAmount = result;
+            resultAmount = r;
         }
 
         Console.WriteLine("\n[INPUT] Creating update request...");
@@ -679,9 +679,9 @@ public class ProductionOutputServiceManualTest
         Console.Write("[INPUT] Enter Result Amount (or press Enter for null): ");
         var resultInput = Console.ReadLine();
         int? resultAmount = null;
-        if (!string.IsNullOrWhiteSpace(resultInput) && int.TryParse(resultInput, out int result))
+        if (!string.IsNullOrWhiteSpace(resultInput) && int.TryParse(resultInput, out int r))
         {
-            resultAmount = result;
+            resultAmount = r;
         }
 
         // Setup mock - Get incidents
