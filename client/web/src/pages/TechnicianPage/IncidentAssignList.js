@@ -18,6 +18,7 @@ import {
   Badge,
   Tooltip,
   Divider,
+  Dropdown,
 } from "antd";
 import {
   WarningOutlined,
@@ -27,9 +28,11 @@ import {
   EditOutlined,
   FileTextOutlined,
   ToolOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { incidentService } from "../../services/incidentService";
+import SparePartRequest from "./SparePartRequest";
 import styles from "../../styles/pages/IncidentAssignList.module.css";
 
 const { TextArea } = Input;
@@ -41,6 +44,8 @@ const IncidentAssignList = () => {
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [updateModalVisible, setUpdateModalVisible] = useState(false);
+  const [spareModalVisible, setSpareModalVisible] = useState(false);
+  const [spareForIncident, setSpareForIncident] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
   const [form] = Form.useForm();
 
@@ -222,30 +227,57 @@ const IncidentAssignList = () => {
     {
       title: "Thao tác",
       key: "action",
-      width: 150,
+      width: 120,
       fixed: "right",
-      render: (record) => (
-        <Space size="small">
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            size="small"
-            onClick={() => handleViewDetail(record)}
+      render: (record) => {
+        const items = [
+          {
+            key: "detail",
+            icon: <EyeOutlined />,
+            label: "Chi tiết",
+            onClick: () => handleViewDetail(record),
+          },
+          {
+            key: "spare",
+            icon: <ToolOutlined />,
+            label: "Phụ tùng",
+            onClick: () => {
+              setSpareForIncident(record);
+              setSpareModalVisible(true);
+            },
+          },
+        ];
+
+        if (record.status !== "Hoàn thành") {
+          items.push({
+            key: "update",
+            icon: <EditOutlined />,
+            label: "Cập nhật",
+            onClick: () => handleUpdateIncident(record),
+          });
+        }
+
+        return (
+          <Dropdown
+            menu={{ items }}
+            trigger={["click"]}
+            placement="bottomRight"
           >
-            Chi tiết
-          </Button>
-          {record.status !== "Hoàn thành" && (
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              size="small"
-              onClick={() => handleUpdateIncident(record)}
+            <span
+              style={{
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                padding: 4,
+              }}
+              aria-label="thao-tac"
+              title="Thao tác"
             >
-              Cập nhật
-            </Button>
-          )}
-        </Space>
-      ),
+              <DownOutlined style={{ fontSize: 16 }} />
+            </span>
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -368,6 +400,21 @@ const IncidentAssignList = () => {
           }}
         />
       </Card>
+
+      {/* Spare parts modal (embed SparePartRequest) */}
+      <Modal
+        title={<span>Yêu cầu phụ tùng (liên quan sự cố)</span>}
+        open={spareModalVisible}
+        onCancel={() => {
+          setSpareModalVisible(false);
+          setSpareForIncident(null);
+        }}
+        footer={null}
+        width={900}
+        destroyOnClose
+      >
+        <SparePartRequest incident={spareForIncident} />
+      </Modal>
 
       {/* Detail Modal */}
       <Modal
