@@ -60,6 +60,16 @@ public class ProductionOutputService : IProductionOutputService
         if (request.ResultAmount.HasValue && request.ResultAmount.Value <= 0)
             throw new ArgumentException("Số lượng thực tế phải là số dương (>0).");
 
+        // ✅ VALIDATION: Kiểm tra Loading Time không vượt quá thời gian slot
+        if (request.LoadingTime.HasValue)
+        {
+            int maxLoadingTime = CalculateMaxLoadingTime(request.SlotTime);
+            if (request.LoadingTime.Value > maxLoadingTime)
+                throw new ArgumentException($"Thời gian tải không được vượt quá {maxLoadingTime} phút cho slot {request.SlotTime}.");
+            if (request.LoadingTime.Value <= 0)
+                throw new ArgumentException("Thời gian tải phải là số dương (>0).");
+        }
+
         // Tính Run Time = Loading Time nhập - downtime
         int runTime = await CalculateLoadingTimeAsync(request.LineId, request.Date, request.ShiftId, request.SlotTime, request.LoadingTime, cancellationToken);
 
@@ -130,21 +140,28 @@ public class ProductionOutputService : IProductionOutputService
         var output = await _productionOutputRepository.GetByIdAsync(id, cancellationToken);
         if (output == null) return null;
 
-        // ✅ VALIDATION: Kiểm tra targetAmount và resultAmount phải >0
+        // ✅ VALIDATION: Kiểm tra targetAmount và resultAmount phải >0 nếu có giá trị
         if (request.TargetAmount.HasValue && request.TargetAmount.Value <= 0)
             throw new ArgumentException("Số lượng mục tiêu phải là số dương (>0).");
         if (request.ResultAmount.HasValue && request.ResultAmount.Value <= 0)
             throw new ArgumentException("Số lượng thực tế phải là số dương (>0).");
 
-        // Only update fields that are provided (not null)
+        // ✅ VALIDATION: Kiểm tra Loading Time không vượt quá thời gian slot
+        if (request.LoadingTime.HasValue)
+        {
+            int maxLoadingTime = CalculateMaxLoadingTime(output.SlotTime);
+            if (request.LoadingTime.Value > maxLoadingTime)
+                throw new ArgumentException($"Thời gian tải không được vượt quá {maxLoadingTime} phút cho slot {output.SlotTime}.");
+            if (request.LoadingTime.Value <= 0)
+                throw new ArgumentException("Thời gian tải phải là số dương (>0).");
+        }
+
+        // ✅ SỬA: Update fields - cho phép set thành null để xóa dữ liệu
         if (request.LoadingTime.HasValue)
             output.LoadingTime = request.LoadingTime.Value;
-
-        if (request.TargetAmount.HasValue)
-            output.TargetAmount = request.TargetAmount.Value;
-
-        if (request.ResultAmount.HasValue)
-            output.ResultAmount = request.ResultAmount.Value;
+        // TargetAmount và ResultAmount có thể set thành null
+        output.TargetAmount = request.TargetAmount;
+        output.ResultAmount = request.ResultAmount;
 
         // ✅ THÊM: Chỉ tính OEE nếu cả target và result đều có và >0
         if (output.TargetAmount.HasValue && output.ResultAmount.HasValue && output.TargetAmount.Value > 0 && output.ResultAmount.Value > 0)
@@ -237,7 +254,7 @@ public class ProductionOutputService : IProductionOutputService
         var slotEnd = date.Date.AddHours(endHour);
 
         // Tính downtime từ incidents
-        var incidents = await _incidentRepository.GetByLineIdAsync(lineId, slotStart, slotEnd, cancellationToken);
+        var incidents = await _incidentRepository.GetIncidentsByLineDateShiftSlotAsync(lineId, date, shiftId, slotStart, slotEnd, cancellationToken);
         // var totalIncidentDuration = incidents
         //     .Where(i => i.StartTime.HasValue && i.EndTime.HasValue && i.Duration.HasValue)
         //     .Sum(i => (int)i.Duration!.Value);
@@ -290,7 +307,7 @@ public class ProductionOutputService : IProductionOutputService
                 var slotEnd = date.Date.AddHours(endHour);
 
                 // Query Defective Count (TypeId=3) from IncidentHistory
-                var defectiveIncidents = await _incidentRepository.GetByLineIdAsync(lineId, slotStart, slotEnd, cancellationToken);
+                var defectiveIncidents = await _incidentRepository.GetIncidentsByLineDateShiftSlotAsync(lineId, date, shiftId, slotStart, slotEnd, cancellationToken);
                 int defectiveCount = defectiveIncidents.Count(i => i.TypeId == 3); // TypeId=3 for defects
 
                 int goodCount = resultAmount.Value - defectiveCount;
@@ -298,10 +315,9 @@ public class ProductionOutputService : IProductionOutputService
             }
         }
 
-        // 5. Calculate OEE with P capped at 1.0
-        decimal effectivePerformance = Math.Min(performance, 1.0m); // Giới hạn P ≤ 1.0 cho OEE
-        var oee = availability * effectivePerformance * quality;
-        var clampedOee = Math.Max(0, Math.Min(1, oee)); // Đảm bảo OEE ≤ 1.0
+        // 5. Calculate OEE without capping P
+        var oee = availability * performance * quality;
+        var clampedOee = Math.Max(0, Math.Min(1, oee)); // Đảm bảo OEE ≤ 1.0 nếu cần, nhưng theo logic, để P > 100% ảnh hưởng
 
         // Trả về phần trăm, làm tròn 2 chữ số
         return Math.Round(clampedOee * 100, 2);
@@ -393,7 +409,7 @@ public class ProductionOutputService : IProductionOutputService
             slotEnd = date.Date.AddHours(endHour);
         }
 
-        var incidents = await _incidentRepository.GetByLineIdAsync(lineId, slotStart, slotEnd, cancellationToken);
+        var incidents = await _incidentRepository.GetIncidentsByLineDateShiftSlotAsync(lineId, date, shiftId, slotStart, slotEnd, cancellationToken);
 
         // A Loss: Downtime from TypeId 1,2,4,5
         var aLossMinutes = incidents.Where(i => new[] { 1, 2, 4, 5 }.Contains(i.TypeId ?? 0)).Sum(i => (decimal)(i.Duration ?? 0));
@@ -432,5 +448,21 @@ public class ProductionOutputService : IProductionOutputService
         public decimal QLossPercentage { get; set; }
         public decimal PLossPercentage { get; set; }
         public decimal TotalLossPercentage { get; set; }
+    }
+
+    // Helper method to calculate max loading time based on slot time
+    private static int CalculateMaxLoadingTime(string slotTime)
+    {
+        // Chuẩn hóa slot time
+        var cleanedSlotTime = slotTime.Replace("h", "").Replace(":", "").Replace(" ", "").Replace("–", "-").Replace("—", "-").Replace("−", "-");
+        var slotParts = cleanedSlotTime.Split('-');
+        if (slotParts.Length != 2 ||
+            !int.TryParse(slotParts[0].Substring(0, 2), out var startHour) ||
+            !int.TryParse(slotParts[1].Substring(0, 2), out var endHour))
+        {
+            throw new ArgumentException("Định dạng slot time không hợp lệ.");
+        }
+        // Max loading time = (endHour - startHour) * 60
+        return (endHour - startHour) * 60;
     }
 }

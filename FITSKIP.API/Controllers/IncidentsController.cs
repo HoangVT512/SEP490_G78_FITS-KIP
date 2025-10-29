@@ -1,5 +1,6 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using FITSKIP.Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -14,11 +15,13 @@ namespace FITSKIP.API.Controllers;
 public class IncidentsController : ControllerBase
 {
     private readonly IIncidentService _incidentService;
+    private readonly IUserRepository _userRepository;
     private readonly IHubContext<NotificationHub> _hubContext;
 
-    public IncidentsController(IIncidentService incidentService, IHubContext<NotificationHub> hubContext)
+    public IncidentsController(IIncidentService incidentService, IUserRepository userRepository, IHubContext<NotificationHub> hubContext)
     {
         _incidentService = incidentService;
+        _userRepository = userRepository;
         _hubContext = hubContext;
     }
 
@@ -64,6 +67,73 @@ public class IncidentsController : ControllerBase
         catch (Exception ex)
         {
             return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi lấy danh sách sự cố", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lấy sự cố cần hỗ trợ kỹ thuật (IsTechSupport = true và Status chưa hoàn thành)
+    /// </summary>
+    [HttpGet("tech-support-pending")]
+    public async Task<IActionResult> GetTechSupportPendingIncidents([FromQuery] string? date = null)
+    {
+        try
+        {
+            var allIncidents = await _incidentService.GetIncidentsAsync();
+            
+            // Filter: IsTechSupport = true AND Status != "Hoàn thành"
+            var pendingIncidents = allIncidents.Where(i =>
+                i.IsTechSupport &&
+                i.Status != "Hoàn thành"
+            );
+
+            // If date is provided, filter by date
+            if (!string.IsNullOrEmpty(date))
+            {
+                if (!DateTime.TryParseExact(date, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
+                {
+                    return BadRequest(new { success = false, message = "Invalid date format. Use yyyy-MM-dd." });
+                }
+                pendingIncidents = pendingIncidents.Where(i =>
+                    i.StartTime.HasValue &&
+                    i.StartTime.Value.Date == parsedDate.Date
+                );
+            }
+
+            // Get all users for assignedTo lookup
+            var allUsers = await _userRepository.GetUsersWithRolesAsync();
+            var userLookup = allUsers.ToDictionary(u => u.Id, u => u.FullName);
+
+            // Group by LineId
+            var groupedByLine = pendingIncidents
+                .GroupBy(i => i.LineId)
+                .Select(g => new
+                {
+                    lineId = g.Key,
+                    incidentCount = g.Count(),
+                    totalDuration = g.Sum(i => i.Duration ?? 0),
+                    incidents = g.Select(i => new
+                    {
+                        incidentId = i.IncidentId,
+                        equipmentCode = i.Equipment?.EquipmentCode,
+                        equipmentName = i.Equipment?.EquipmentName,
+                        stage = i.Equipment?.Stage?.StageName,
+                        line = i.Line?.LineName,
+                        startTime = i.StartTime,
+                        duration = i.Duration,
+                        status = i.Status,
+                        issue = i.Issue,
+                        assignedTo = !string.IsNullOrEmpty(i.AssignedTo) 
+                            ? userLookup.GetValueOrDefault(i.AssignedTo, "Unknown User")
+                            : null
+                    }).ToList()
+                })
+                .ToList();
+
+            return Ok(new { success = true, data = groupedByLine });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Error fetching tech support incidents", details = ex.Message });
         }
     }
 

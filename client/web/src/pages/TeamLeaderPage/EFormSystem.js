@@ -329,35 +329,6 @@ const calculateAndUpdateOEE = async (record, shift) => {
     loadProductionOutputs();
   }, [selectedLine, selectedDate]); // Chỉ phụ thuộc vào selectedLine và selectedDate
 
-  // Calculate Actual TT based on production data
-  // const calculateActualTT = (shift1Data, shift2Data) => {
-  //   let totalLoadingTime = 0;
-  //   let totalResultAmount = 0;
-
-  //   // Calculate for shift 1
-  //   shift1Data.forEach(slot => {
-  //     if (slot.resultAmount && parseInt(slot.resultAmount) > 0) {
-  //       totalLoadingTime += parseInt(slot.loadingTime) || 0;
-  //       totalResultAmount += parseInt(slot.resultAmount);
-  //     }
-  //   });
-
-  //   // Calculate for shift 2
-  //   shift2Data.forEach(slot => {
-  //     if (slot.resultAmount && parseInt(slot.resultAmount) > 0) {
-  //       totalLoadingTime += parseInt(slot.loadingTime) || 0;
-  //       totalResultAmount += parseInt(slot.resultAmount);
-  //     }
-  //   });
-
-  //   if (totalResultAmount > 0) {
-  //     // Calculate average cycle time in seconds (assuming loadingTime is in minutes, convert to seconds)
-  //     const averageCycleTime = (totalLoadingTime * 60) / totalResultAmount;
-  //     return averageCycleTime.toFixed(1); // Round to 1 decimal place
-  //   }
-
-  //   return '0.0'; // Default value if no data
-  // };
 
   // Load incidents when line and date are selected
   useEffect(() => {
@@ -384,176 +355,6 @@ const calculateAndUpdateOEE = async (record, shift) => {
 
     loadIncidents();
   }, [selectedLine, selectedDate]);
-
-
-  // Create or update form based on API data - FIXED VERSION
-  // useEffect(() => {
-  //   if (!selectedLine || !selectedFormType || !selectedDate || !currentLoadedDate) {
-  //     return;
-  //   }
-
-  //   const formattedDate = dayjs(selectedDate).format('YYYY-MM-DD');
-
-  //   // Only process if the loaded data is for the current selected date
-  //   if (currentLoadedDate !== formattedDate) {
-  //     console.log('Data not yet loaded for current date, skipping form creation');
-  //     return;
-  //   }
-
-  //   const existingForm = savedForms.find(form =>
-  //     form.data.line === selectedLine &&
-  //     form.data.date === dayjs(selectedDate).format('DD/MM/YYYY')
-  //   );
-
-  //   const nextId = existingForm ? existingForm.id : Math.max(...savedForms.map(f => f.id), 0) + 1;
-  //   const stt = existingForm ? existingForm.stt : String(Math.floor(Math.random() * 100000000)).padStart(8, '0');
-
-  //   if (productionOutputs.length > 0) {
-  //     console.log('Processing', productionOutputs.length, 'production outputs...');
-
-  //     // Extract dates from API data if available
-  //     const apiItem = productionOutputs[0];
-  //     // Always use selected date as created date to avoid API inconsistencies
-  //     const apiCreatedDate = dayjs(selectedDate).format('DD/MM/YYYY');
-  //     const apiUpdatedDate = apiItem.updatedAt ? dayjs(apiItem.updatedAt).format('DD/MM/YYYY') : apiCreatedDate;
-
-  //     // CRITICAL: Bắt đầu với default data sạch
-  //     let shift1DataForForm = [...defaultShift1Data];
-  //     let shift2DataForForm = [...defaultShift2Data];
-
-  //     // Populate shift 1 data from API
-  //     const shift1ApiData = productionOutputs.filter(item => item.shiftId === 1);
-  //     console.log('Processing', shift1ApiData.length, 'shift 1 items...');
-
-  //     shift1ApiData.forEach(item => {
-  //       console.log('Processing shift 1 item:', item);
-  //       console.log('SlotTime from API:', item.slotTime, 'Type:', typeof item.slotTime);
-
-  //       // Use lookup function
-  //       const mapping = slotTimeMappings.lookup(item.slotTime);
-  //       console.log('Slot time mapping result:', mapping);
-
-  //       if (mapping) {
-  //         const index = parseInt(mapping.key) - 1;
-  //         console.log('Updating shift1 index:', index);
-
-  //         if (index >= 0 && index < shift1DataForForm.length) {
-  //           shift1DataForForm[index] = {
-  //             ...shift1DataForForm[index],
-  //             loadingTime: item.loadingTime?.toString() || '',
-  //             targetAmount: item.targetAmount?.toString() || '',
-  //             resultAmount: item.resultAmount?.toString() || '',
-  //             oee: item.oee ? item.oee.toString() : '',
-  //             downDetails: ''
-  //           };
-  //           console.log('Updated shift1 slot', index + 1, ':', shift1DataForForm[index]);
-  //         } else {
-  //           console.warn('Index out of bounds:', index);
-  //         }
-  //       } else {
-  //         console.warn('No mapping found for slot time:', item.slotTime);
-  //       }
-  //     });
-
-  //     // Populate shift 2 data from API
-  //     const shift2ApiData = productionOutputs.filter(item => item.shiftId === 2);
-  //     console.log('Processing', shift2ApiData.length, 'shift 2 items...');
-
-  //     shift2ApiData.forEach(item => {
-  //       console.log('Processing shift 2 item:', item);
-  //       console.log('SlotTime from API:', item.slotTime, 'Type:', typeof item.slotTime);
-
-  //       // Use lookup function
-  //       const mapping = slotTimeMappings.lookup(item.slotTime);
-  //       console.log('Slot time mapping result:', mapping);
-
-  //       if (mapping) {
-  //         const index = parseInt(mapping.key) - 1;
-  //         console.log('Updating shift2 index:', index);
-
-  //         if (index >= 0 && index < shift2DataForForm.length) {
-  //           shift2DataForForm[index] = {
-  //             ...shift2DataForForm[index],
-  //             loadingTime: item.loadingTime?.toString() || '',
-  //             targetAmount: item.targetAmount?.toString() || '',
-  //             resultAmount: item.resultAmount?.toString() || '',
-  //             oee: item.oee ? item.oee.toString() : '',
-  //             downDetails: ''
-  //           };
-  //           console.log('Updated shift2 slot', index + 1, ':', shift2DataForForm[index]);
-  //         } else {
-  //           console.warn('Index out of bounds:', index);
-  //         }
-  //       } else {
-  //         console.warn('No mapping found for slot time:', item.slotTime);
-  //       }
-  //     });
-
-  //     // Update shift data states
-  //     console.log('Setting shift1Data with', shift1DataForForm);
-  //     console.log('Setting shift2Data with', shift2DataForForm);
-  //     setShift1Data(shift1DataForForm);
-  //     setShift2Data(shift2DataForForm);
-
-  //     const formData = {
-  //       id: nextId,
-  //       stt: stt,
-  //       subtitle: `Bảng quản lý sản lượng - ${selectedLine} [${stt}]`,
-  //       created: existingForm ? existingForm.created : apiCreatedDate,
-  //       updated: apiUpdatedDate,
-  //       status: 'saved',
-  //       data: {
-  //         line: selectedLine,
-  //         process: 'Lắp Sleeve S/A',
-  //         date: dayjs(selectedDate).format('DD/MM/YYYY'),
-  //         actualTT: '8.4',
-  //         shifts: {
-  //           1: shift1DataForForm,
-  //           2: shift2DataForForm
-  //         }
-  //       }
-  //     };
-
-  //     if (existingForm) {
-  //       setSavedForms(prev => prev.map(form =>
-  //         form.id === existingForm.id ? formData : form
-  //       ));
-  //     } else {
-  //       setSavedForms(prev => [...prev, formData]);
-  //     }
-  //   } else {
-  //     // No data from API - create draft form
-  //     console.log('No production outputs, creating draft form...');
-
-  //     if (!existingForm) {
-  //       const newForm = {
-  //         id: nextId,
-  //         stt: stt,
-  //         subtitle: `Bảng quản lý sản lượng - ${selectedLine} [${stt}]`,
-  //         created: dayjs(selectedDate).format('DD/MM/YYYY'),
-  //         updated: '',
-  //         status: 'draft',
-  //         data: {
-  //           line: selectedLine,
-  //           process: 'Lắp Sleeve S/A',
-  //           date: dayjs(selectedDate).format('DD/MM/YYYY'),
-  //           actualTT: '8.4',
-  //           shifts: {
-  //             1: [...defaultShift1Data],
-  //             2: [...defaultShift2Data]
-  //           }
-  //         }
-  //       };
-
-  //       setSavedForms(prev => [...prev, newForm]);
-  //     }
-
-  //     // Reset to default data
-  //     setShift1Data([...defaultShift1Data]);
-  //     setShift2Data([...defaultShift2Data]);
-  //   }
-  // }, [selectedLine, selectedFormType, selectedDate, productionOutputs, slotTimeMappings, currentLoadedDate]);
-
 
   // Calculate cycle times based on production data
   const calculateCycleTimes = (shift1Data, shift2Data) => {
@@ -887,9 +688,6 @@ const calculateAndUpdateOEE = async (record, shift) => {
   const handleBack = () => {
     setCurrentStep(2);
   };
-
-
-  // const handleRegisterData = async () => {
   //   if (!currentEditingFormId) return;
 
   //   try {
@@ -1097,6 +895,16 @@ const calculateAndUpdateOEE = async (record, shift) => {
         if (slot.resultAmount && (isNaN(result) || result <= 0)) {
           errors.push(`Slot ${slot.time} (Ca 1): Số lượng thực tế phải là số dương (>0).`);
         }
+        // ✅ VALIDATION: Kiểm tra loadingTime không vượt quá max cho slot
+        //const maxLoadingTime = slot.time === '11:00 - 12:00' || slot.time === '19:00 - 20:00' ? 30 : 60;
+        const maxLoadingTime = 60;
+        if (slot.loadingTime && parseInt(slot.loadingTime) > maxLoadingTime) {
+          errors.push(`Slot ${slot.time} (Ca 1): Thời gian tải không được vượt quá ${maxLoadingTime} phút.`);
+        }
+        // ✅ VALIDATION: Kiểm tra loadingTime không giống resultAmount khi target > 0
+        if (slot.loadingTime && slot.resultAmount && slot.targetAmount && parseInt(slot.loadingTime) === parseInt(slot.resultAmount) && parseInt(slot.targetAmount) > 0) {
+          errors.push(`Slot ${slot.time} (Ca 1): Thời gian tải (${slot.loadingTime} phút) giống với số lượng sản xuất thực tế (${slot.resultAmount}). Vui lòng kiểm tra lại.`);
+        }
         // Nếu có lỗi, bỏ qua slot này
         if (errors.length > 0) return;
 
@@ -1149,6 +957,15 @@ const calculateAndUpdateOEE = async (record, shift) => {
         }
         if (slot.resultAmount && (isNaN(result) || result <= 0)) {
           errors.push(`Slot ${slot.time} (Ca 2): Số lượng thực tế phải là số dương (>0).`);
+        }
+        // ✅ VALIDATION: Kiểm tra loadingTime không vượt quá max cho slot
+        const maxLoadingTime = 60;
+        if (slot.loadingTime && parseInt(slot.loadingTime) > maxLoadingTime) {
+          errors.push(`Slot ${slot.time} (Ca 2): Thời gian tải không được vượt quá ${maxLoadingTime} phút.`);
+        }
+        // ✅ VALIDATION: Kiểm tra loadingTime không giống resultAmount khi target > 0
+        if (slot.loadingTime && slot.resultAmount && slot.targetAmount && parseInt(slot.loadingTime) === parseInt(slot.resultAmount) && parseInt(slot.targetAmount) > 0) {
+          errors.push(`Slot ${slot.time} (Ca 2): Thời gian tải (${slot.loadingTime} phút) giống với số lượng sản xuất thực tế (${slot.resultAmount}). Vui lòng kiểm tra lại.`);
         }
         if (errors.length > 0) return;
 
@@ -1576,7 +1393,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
               fontWeight: displayText ? 600 : 'normal',
               color: (isLowPerformance || isEmpty) ? '#ff4d4f' : '#000000'
             }}
-            onClick={() => handleCellClick(record, 'oee')}
+            //onClick={() => handleCellClick(record, 'oee')}
             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f5f5f5'}
             onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
           >
@@ -2382,7 +2199,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
 
       {/* Modal Validation */}
       <Modal
-        title="Lỗi Validation"
+        title="Cảnh Báo Xác Nhận Dữ Liệu"
         visible={validationModalVisible}
         onCancel={() => setValidationModalVisible(false)}
         footer={[
@@ -2392,7 +2209,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
         ]}
       >
         <div>
-          <p>Các lỗi sau cần được sửa trước khi lưu:</p>
+          <p>Các cảnh báo sau cần được kiểm tra:</p>
           <ul>
             {validationErrors.map((error, index) => (
               <li key={index}>{error}</li>

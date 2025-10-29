@@ -1,6 +1,6 @@
 // Base API configuration
 const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL || "https://localhost:7003/api";
+  process.env.REACT_APP_API_BASE_URL || "http://localhost:5201/api";
 
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;

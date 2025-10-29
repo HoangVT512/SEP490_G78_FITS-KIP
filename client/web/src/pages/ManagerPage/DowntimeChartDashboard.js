@@ -487,7 +487,7 @@ const DowntimeChartDashboard = () => {
                             dauCuoiCa: stat.downDetails.veSinhDauCuoiCa.percentage,
                             doiMa: stat.downDetails.doiMa.percentage,
                             oee: stat.oee > 0 ? stat.oee : null, // Chỉ set OEE nếu > 0, ngược lại null để không nối line
-                            tyLeMat: stat.lossPercentage,
+                            tyLeMat: stat.totalLoss,
                             mucTieu: 90
                         };
                     }
@@ -622,7 +622,7 @@ const DowntimeChartDashboard = () => {
                                             }}
                                         >
                                             {details.percentage > 0
-                                                ? `${details.percentage.toFixed(2)}% | Thời lượng: ${details.duration} phút | Số lần: ${details.occurrences}`
+                                                ? `${details.percentage.toFixed(2)}% | Thời lượng: ${details.totalDuration || details.duration} phút | Số lần: ${details.occurrences}`
                                                 : '0% | Thời lượng: 0 phút | Số lần: 0'}
                                         </div>
                                     )}
@@ -737,7 +737,7 @@ const DowntimeChartDashboard = () => {
         // Tính toán tỷ lệ mất mát từ dữ liệu thực
         let avgLoss = '0.00';
         if (lineDailyData && lineDailyData.dailyStats && lineDailyData.dailyStats.length > 0) {
-            const totalLoss = lineDailyData.dailyStats.reduce((sum, stat) => sum + stat.lossPercentage, 0);
+            const totalLoss = lineDailyData.dailyStats.reduce((sum, stat) => sum + stat.totalLoss, 0);
             avgLoss = (totalLoss / lineDailyData.dailyStats.length).toFixed(2);
         }
 

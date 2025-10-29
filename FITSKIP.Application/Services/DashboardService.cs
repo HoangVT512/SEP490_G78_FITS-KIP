@@ -239,25 +239,41 @@ public class DashboardService : IDashboardService
                 {
                     var prodData = dailyProduction.FirstOrDefault(p => p.Date == d.Date && p.LineId == d.LineId);
                     var operatingMinutes = dailyOperatingMinutes.FirstOrDefault(dom => dom.Date == d.Date && dom.LineId == d.LineId)?.TotalOperatingMinutes ?? 0;
+                    var totalTargetAmount = prodData?.AvgTargetAmount * 3 ?? 0; // Assuming 3 slots per day, adjust if needed
+                    var totalResultAmount = prodData?.AvgResultAmount * 3 ?? 0;
                     var aLossMinutes = dailyDowntime.Where(dd => dd.Date == d.Date && dd.LineId == d.LineId && new[] { 1, 2, 4, 5 }.Contains(dd.TypeId)).Sum(dd => dd.TotalDuration);
                     var defectiveCount = dailyDowntime.FirstOrDefault(dd => dd.Date == d.Date && dd.LineId == d.LineId && dd.TypeId == 3)?.Occurrences ?? 0;
-                    var idealCycleTime = prodData != null && prodData.AvgTargetAmount > 0 ? 60.0 / prodData.AvgTargetAmount : 0; // Giả định 60 phút per slot
+                    var phePhamTotalDuration = dailyDowntime.FirstOrDefault(dd => dd.Date == d.Date && dd.LineId == d.LineId && dd.TypeId == 3)?.TotalDuration ?? 0;
+                    var idealCycleTime = totalTargetAmount > 0 ? operatingMinutes / totalTargetAmount : 0;
+                    var actualRunTime = operatingMinutes - aLossMinutes;
+                    var availability = operatingMinutes > 0 ? actualRunTime / operatingMinutes : 0;
+                    var performance = actualRunTime > 0 && idealCycleTime > 0 ? (totalResultAmount * idealCycleTime) / actualRunTime : 0;
+                    var quality = totalResultAmount > 0 ? (totalResultAmount - defectiveCount) / totalResultAmount : 0;
+                    var oee = availability * performance * quality;
+                    var aLoss = (1 - availability) * 100;
+                    var pLoss = availability * (1 - performance) * 100;
+                    var qLoss = availability * performance * (1 - quality) * 100;
+                    var totalDetailedLoss = aLoss + pLoss + qLoss;
+                    var totalLoss = (1 - oee) * 100;
                     var qLossMinutes = defectiveCount * idealCycleTime;
-                    var totalLossPercentage = operatingMinutes > 0 ? ((aLossMinutes + qLossMinutes) / operatingMinutes) * 100 : 0; // Tỷ lệ mất mát = (A Loss + Q Loss) / Operating Minutes × 100
                     return new
                     {
                         date = d.Date.ToString("yyyy-MM-dd"),
-                        oee = Math.Round(dailyOee.FirstOrDefault(oe => oe.Date == d.Date && oe.LineId == d.LineId)?.AvgOee ?? 0, 2),
-                        lossPercentage = Math.Round(totalLossPercentage, 2), // Cập nhật tỷ lệ mất mát
-                        // Sửa downDetails để Phe Pham (TypeId=3) không tính percentage như downtime:
+                        oee = Math.Round(oee * 100, 2),
+                        aLoss = Math.Round(aLoss, 2),
+                        pLoss = Math.Round(pLoss, 2),
+                        qLoss = Math.Round(qLoss, 2),
+                        totalLoss = Math.Round(totalLoss, 2),
+                        totalDetailedLoss = Math.Round(totalDetailedLoss, 2),
                         downDetails = new
                         {
                             dungNgan = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 1, operatingMinutes),
                             dungDai = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 2, operatingMinutes),
-                            phePham = new  // Tính riêng như Q Loss, không như downtime
+                            phePham = new
                             {
-                                percentage = operatingMinutes > 0 ? Math.Round((qLossMinutes / operatingMinutes) * 100, 2) : 0.00,  // Q Loss percentage
-                                duration = Math.Round(qLossMinutes, 2),  // Thời gian Q Loss
+                                percentage = Math.Round(qLoss, 2),
+                                duration = Math.Round(qLossMinutes, 2),
+                                totalDuration = Math.Round(phePhamTotalDuration, 2),
                                 occurrences = defectiveCount
                             },
                             veSinhDauCuoiCa = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 4, operatingMinutes),
@@ -283,6 +299,189 @@ public class DashboardService : IDashboardService
             percentage = Math.Round(totalOperatingMinutes > 0 ? (typeData.TotalDuration / totalOperatingMinutes) * 100 : 0.0, 2),
             duration = Math.Round(typeData.TotalDuration, 2),
             occurrences = typeData.Occurrences
+        };
+    }
+
+    // New method for detailed OEE calculation per day per line
+    public async Task<object> GetDetailedOEEDailyStatsAsync(int lineId, DateTime date)
+    {
+        _logger.LogInformation($"Calculating detailed OEE stats for lineId={lineId}, date={date.ToString("yyyy-MM-dd")}");
+
+        // Define date range for the specific day
+        var startOfDay = date.Date;
+        var endOfDay = startOfDay.AddDays(1);
+
+        // Query all ProductionOutput for the day
+        var productionDataList = await _repository.ProductionOutputs
+            .Where(po => po.Date == startOfDay && po.LineId == lineId)
+            .ToListAsync();
+
+        if (!productionDataList.Any())
+        {
+            return new
+            {
+                success = false,
+                message = "No production data found for the specified date and line.",
+                data = (object?)null
+            };
+        }
+
+        // Aggregate data for the day
+        double totalPlannedProductionTime = productionDataList.Sum(po => (double)(po.LoadingTime ?? 0));
+        double totalTargetAmount = productionDataList.Sum(po => (double)(po.TargetAmount ?? 0));
+        double totalResultAmount = productionDataList.Sum(po => (double)(po.ResultAmount ?? 0));
+
+        // Query defective count (Phe Pham incidents) for the day
+        int totalDefectiveCount = await _repository.IncidentHistories
+            .Where(ih => ih.StartTime >= startOfDay && ih.StartTime < endOfDay
+                        && ih.LineId == lineId && ih.TypeId == 3)
+            .CountAsync();
+
+        // Query total downtime (excluding Phe Pham) for the day
+        double totalDowntime = await _repository.IncidentHistories
+            .Where(ih => ih.StartTime >= startOfDay && ih.StartTime < endOfDay
+                        && ih.LineId == lineId && ih.TypeId.HasValue && ih.TypeId != 3)
+            .SumAsync(ih => (double)(ih.Duration ?? 0));
+
+        // Calculations
+        double totalActualRunTime = totalPlannedProductionTime - totalDowntime;
+        double idealCycleTime = totalTargetAmount > 0 ? totalPlannedProductionTime / totalTargetAmount : 0;
+        double qLossTime = totalDefectiveCount * idealCycleTime;
+
+        double availability = totalPlannedProductionTime > 0 ? totalActualRunTime / totalPlannedProductionTime : 0;
+        double performance = totalActualRunTime > 0 && idealCycleTime > 0 ? (totalResultAmount * idealCycleTime) / totalActualRunTime : 0;
+        double quality = totalResultAmount > 0 ? (totalResultAmount - totalDefectiveCount) / totalResultAmount : 0;
+
+        double oee = availability * performance * quality;
+
+        // Corrected loss calculations using standard OEE formulas
+        double aLoss = (1 - availability) * 100;
+        double pLoss = availability * (1 - performance) * 100;
+        double qLoss = availability * performance * (1 - quality) * 100;
+        double totalLoss = (1 - oee) * 100;
+        double totalDetailedLoss = aLoss + pLoss + qLoss;
+
+        // Return structured data
+        return new
+        {
+            success = true,
+            data = new
+            {
+                plannedProductionTime = Math.Round(totalPlannedProductionTime, 2),
+                actualRunTime = Math.Round(totalActualRunTime, 2),
+                targetAmount = Math.Round(totalTargetAmount, 2),
+                resultAmount = Math.Round(totalResultAmount, 2),
+                defectiveCount = totalDefectiveCount,
+                totalDowntime = Math.Round(totalDowntime, 2),
+                idealCycleTime = Math.Round(idealCycleTime, 4),
+                qLossTime = Math.Round(qLossTime, 2),
+                availability = Math.Round(availability * 100, 2),
+                performance = Math.Round(performance * 100, 2),
+                quality = Math.Round(quality * 100, 2),
+                oee = Math.Round(oee * 100, 2),
+                aLoss = Math.Round(aLoss, 2),
+                pLoss = Math.Round(pLoss, 2),
+                qLoss = Math.Round(qLoss, 2),
+                totalLoss = Math.Round(totalLoss, 2),
+                totalDetailedLoss = Math.Round(totalDetailedLoss, 2) // A + P + Q Loss
+            }
+        };
+    }
+
+    // New method for detailed OEE calculation per slot per line
+    public async Task<object> GetDetailedOEESlotStatsAsync(int lineId, DateTime date, int shiftId, string slotTime)
+    {
+        _logger.LogInformation($"Calculating detailed OEE stats for lineId={lineId}, date={date.ToString("yyyy-MM-dd")}, shiftId={shiftId}, slotTime={slotTime}");
+
+        // Parse slot time to get start and end time
+        var slotParts = slotTime.Split('-');
+        if (slotParts.Length != 2 ||
+            !TimeSpan.TryParse(slotParts[0], out var startTimeSpan) ||
+            !TimeSpan.TryParse(slotParts[1], out var endTimeSpan))
+        {
+            return new
+            {
+                success = false,
+                message = "Invalid slot time format. Use HH:mm-HH:mm."
+            };
+        }
+
+        var slotStart = date.Date.Add(startTimeSpan);
+        var slotEnd = date.Date.Add(endTimeSpan);
+
+        // Query ProductionOutput for the slot
+        var productionData = await _repository.ProductionOutputs
+            .Where(po => po.Date == date.Date && po.LineId == lineId && po.ShiftId == shiftId && po.SlotTime == slotTime)
+            .FirstOrDefaultAsync();
+
+        if (productionData == null)
+        {
+            return new
+            {
+                success = false,
+                message = "No production data found for the specified slot."
+            };
+        }
+
+        double plannedProductionTime = productionData.LoadingTime ?? 0;
+        double targetAmount = productionData.TargetAmount ?? 0;
+        double resultAmount = productionData.ResultAmount ?? 0;
+
+        // Query defective count (Phe Pham incidents) within the slot
+        int defectiveCount = await _repository.IncidentHistories
+            .Where(ih => ih.StartTime >= slotStart && ih.StartTime < slotEnd
+                        && ih.LineId == lineId && ih.TypeId == 3)
+            .CountAsync();
+
+        // Query total downtime (excluding Phe Pham) within the slot
+        double totalDowntime = await _repository.IncidentHistories
+            .Where(ih => ih.StartTime >= slotStart && ih.StartTime < slotEnd
+                        && ih.LineId == lineId && ih.TypeId.HasValue && ih.TypeId != 3)
+            .SumAsync(ih => (double)(ih.Duration ?? 0));
+
+        // Calculations
+        double actualRunTime = plannedProductionTime - totalDowntime;
+        double idealCycleTime = targetAmount > 0 ? plannedProductionTime / targetAmount : 0;
+        double qLossTime = defectiveCount * idealCycleTime;
+
+        double availability = plannedProductionTime > 0 ? actualRunTime / plannedProductionTime : 0;
+        double performance = actualRunTime > 0 && idealCycleTime > 0 ? (resultAmount * idealCycleTime) / actualRunTime : 0;
+        double quality = resultAmount > 0 ? (resultAmount - defectiveCount) / resultAmount : 0;
+
+        double oee = availability * performance * quality;
+
+        // Corrected loss calculations using standard OEE formulas
+        double aLoss = (1 - availability) * 100;
+        double pLoss = availability * (1 - performance) * 100;
+        double qLoss = availability * performance * (1 - quality) * 100;
+        double totalLoss = (1 - oee) * 100;
+        double totalDetailedLoss = aLoss + pLoss + qLoss;
+
+        // Return structured data
+        return new
+        {
+            success = true,
+            data = new
+            {
+                slotTime = slotTime,
+                plannedProductionTime = Math.Round(plannedProductionTime, 2),
+                actualRunTime = Math.Round(actualRunTime, 2),
+                targetAmount = Math.Round(targetAmount, 2),
+                resultAmount = Math.Round(resultAmount, 2),
+                defectiveCount = defectiveCount,
+                totalDowntime = Math.Round(totalDowntime, 2),
+                idealCycleTime = Math.Round(idealCycleTime, 4),
+                qLossTime = Math.Round(qLossTime, 2),
+                availability = Math.Round(availability * 100, 2),
+                performance = Math.Round(performance * 100, 2),
+                quality = Math.Round(quality * 100, 2),
+                oee = Math.Round(oee * 100, 2),
+                aLoss = Math.Round(aLoss, 2),
+                pLoss = Math.Round(pLoss, 2),
+                qLoss = Math.Round(qLoss, 2),
+                totalLoss = Math.Round(totalLoss, 2),
+                totalDetailedLoss = Math.Round(totalDetailedLoss, 2) // A + P + Q Loss
+            }
         };
     }
 }

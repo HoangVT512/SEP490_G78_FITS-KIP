@@ -69,4 +69,70 @@ public class DashboardController : ControllerBase
             return StatusCode(500, new { success = false, message = "Internal server error", error = ex.Message });
         }
     }
+
+    // New endpoint for detailed OEE stats per day per line
+    [HttpGet("detailed-oee-daily-stats")]
+    public async Task<IActionResult> GetDetailedOEEDailyStats(int lineId, string date)
+    {
+        if (lineId <= 0)
+        {
+            return BadRequest(new { success = false, message = "Invalid lineId." });
+        }
+
+        if (!DateTime.TryParseExact(date, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
+        {
+            return BadRequest(new { success = false, message = "Invalid date format. Use yyyy-MM-dd." });
+        }
+
+        _logger.LogInformation($"API call: GetDetailedOEEDailyStats for lineId={lineId}, date={date}");
+
+        try
+        {
+            var result = await _dashboardService.GetDetailedOEEDailyStatsAsync(lineId, parsedDate);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in GetDetailedOEEDailyStats");
+            return StatusCode(500, new { success = false, message = "Internal server error", error = ex.Message });
+        }
+    }
+
+    // New endpoint for detailed OEE stats per slot per line
+    [HttpGet("detailed-oee-slot-stats")]
+    public async Task<IActionResult> GetDetailedOEESlotStats(int lineId, string date, int shiftId, string slotTime)
+    {
+        if (lineId <= 0)
+        {
+            return BadRequest(new { success = false, message = "Invalid lineId." });
+        }
+
+        if (!DateTime.TryParseExact(date, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
+        {
+            return BadRequest(new { success = false, message = "Invalid date format. Use yyyy-MM-dd." });
+        }
+
+        if (shiftId <= 0)
+        {
+            return BadRequest(new { success = false, message = "Invalid shiftId." });
+        }
+
+        if (string.IsNullOrEmpty(slotTime))
+        {
+            return BadRequest(new { success = false, message = "Invalid slotTime." });
+        }
+
+        _logger.LogInformation($"API call: GetDetailedOEESlotStats for lineId={lineId}, date={date}, shiftId={shiftId}, slotTime={slotTime}");
+
+        try
+        {
+            var result = await _dashboardService.GetDetailedOEESlotStatsAsync(lineId, parsedDate, shiftId, slotTime);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in GetDetailedOEESlotStats");
+            return StatusCode(500, new { success = false, message = "Internal server error", error = ex.Message });
+        }
+    }
 }

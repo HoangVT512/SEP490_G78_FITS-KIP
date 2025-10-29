@@ -74,4 +74,26 @@ export const dashboardService = {
       throw error;
     }
   },
+
+  // Lấy OEE stats cho tất cả lines theo ngày
+  getOEEStatsByDate: async (date) => {
+    try {
+      // date format: yyyy-MM-dd or dd/MM/yyyy
+      const formattedDate = date.includes('/') 
+        ? date.split('/').reverse().join('-') 
+        : date;
+      
+      const [year, month, day] = formattedDate.split('-');
+      const dateParam = `${day}/${month}/${year}`;
+      
+      const response = await apiRequest(
+        `/dashboard/daily-downtime-stats?month=${month}&year=${year}&date=${encodeURIComponent(dateParam)}`,
+        { method: "GET" }
+      );
+      return response;
+    } catch (error) {
+      console.error("Error fetching OEE stats by date:", error);
+      throw error;
+    }
+  },
 };

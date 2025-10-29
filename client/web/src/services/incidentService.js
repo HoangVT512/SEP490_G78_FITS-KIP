@@ -121,4 +121,12 @@ export const incidentService = {
     const data = res?.data || res;
     return data?.imageUrl || data;
   },
+
+  async getTechSupportPendingIncidents(date = null) {
+    const params = date ? `?date=${encodeURIComponent(date)}` : '';
+    const res = await apiRequest(`/Incidents/tech-support-pending${params}`, {
+      method: "GET",
+    });
+    return res;
+  },
 };

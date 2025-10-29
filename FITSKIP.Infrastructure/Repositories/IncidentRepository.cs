@@ -188,6 +188,31 @@ public class IncidentRepository : IIncidentRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlyList<IncidentHistory>> GetIncidentsByLineDateShiftSlotAsync(int lineId, DateTime date, int shiftId, DateTime startTime, DateTime endTime, CancellationToken cancellationToken = default)
+    {
+        return await _context.IncidentHistories
+            .Include(i => i.Equipment)
+                .ThenInclude(e => e!.Stage)
+                    .ThenInclude(s => s!.Line)
+            .Include(i => i.Line)
+            .Include(i => i.Type)
+            .Include(i => i.IncidentShifts)
+                .ThenInclude(ish => ish.Shift)
+            .Include(i => i.IncidentImages)
+            .Where(i =>
+                // Filter by line
+                (i.LineId == lineId ||
+                 (i.Equipment != null && i.Equipment.Stage != null && i.Equipment.Stage.LineId == lineId)) &&
+                // Filter by date
+                i.StartTime.HasValue && i.StartTime.Value.Date == date.Date &&
+                // Filter by shift through IncidentShifts
+                i.IncidentShifts.Any(ish => ish.ShiftId == shiftId) &&
+                // Overlap with slot time: incident starts before slot ends and ends after slot starts
+                i.StartTime < endTime && (i.EndTime == null || i.EndTime > startTime))
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<dynamic>> GetStopTypesAsync(CancellationToken cancellationToken = default)
     {
         return await _context.StopTypes
