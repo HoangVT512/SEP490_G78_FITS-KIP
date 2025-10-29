@@ -282,11 +282,10 @@ public class DepartmentServiceManualTest
         var request = new UpdateDepartmentRequest
         {
             DepartmentName = name ?? existingDept?.DepartmentName ?? "",
-            ManagerId = managerId,
             Description = description ?? existingDept?.Description ?? "",
             IsActive = isActive
         };
-        Console.WriteLine($"[INPUT DATA] Name: {request.DepartmentName}, ManagerId: {request.ManagerId ?? "None"}, Description: {request.Description}, IsActive: {request.IsActive}");
+        Console.WriteLine($"[INPUT DATA] Name: {request.DepartmentName}, Description: {request.Description}, IsActive: {request.IsActive}");
 
         // Setup mock
         _mockRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
@@ -298,7 +297,6 @@ public class DepartmentServiceManualTest
         {
             DepartmentId = id,
             DepartmentName = request.DepartmentName,
-            ManagerId = request.ManagerId,
             Description = request.Description,
             IsActive = request.IsActive
         };

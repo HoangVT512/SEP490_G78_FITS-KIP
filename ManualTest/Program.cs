@@ -29,6 +29,9 @@ class Program
                 case "4":
                     await RunAuthServiceTests();
                     break;
+                case "5":
+                    await RunProductionOutputServiceTests();
+                    break;
                 default:
                     Console.WriteLine("Invalid choice. Please try again.");
                     break;
@@ -48,6 +51,7 @@ class Program
         Console.WriteLine("2. Equiment Service Tests");
         Console.WriteLine("3. Purchase Request Service Tests");
         Console.WriteLine("4. Auth Service Tests");
+        Console.WriteLine("5. Production Output Service Tests");
         Console.WriteLine("0. Exit");
         Console.WriteLine();
         Console.Write("Enter your choice: ");
@@ -78,6 +82,13 @@ class Program
     {
 
         var testRunner = new AuthServiceManualTest();
+        await testRunner.RunTests();
+    }
+
+    static async Task RunProductionOutputServiceTests()
+    {
+
+        var testRunner = new ProductionOutputServiceManualTest();
         await testRunner.RunTests();
     }
 
