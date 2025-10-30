@@ -1192,8 +1192,8 @@ const MaintenanceManagement = () => {
       fixed: "right",
       width: 150,
       render: (_, record) => {
-        // Kiểm tra xem WorkOrder đã hoàn thành hoặc đã hủy chưa
-        const isFinished = record.status === "Completed" || record.status === "Cancelled";
+        // Kiểm tra xem WorkOrder đã hoàn thành, đã hủy, hoặc đang thực hiện
+        const isFinished = record.status === "Completed" || record.status === "Cancelled" || record.status === "InProgress";
         
         return (
           <Space size="small">
@@ -1489,7 +1489,7 @@ const MaintenanceManagement = () => {
   );
 
   // Tab: Upcoming Maintenance
-  const UpcomingMaintenanceTab = (
+  const UpcomingMaintenanceTab = (  
     <Card title="Bảo trì sắp đến hạn" bordered={false}>
       <Table
         columns={[
