@@ -16,6 +16,7 @@ public class IncidentService : IIncidentService
     private readonly INotificationService _notificationService;
     private readonly IUserService _userService;
     private readonly IAzureStorageService _azureStorageService;
+    private readonly IReplacementHistoryRepository _replacementHistoryRepository;
 
     public IncidentService(
         IIncidentRepository incidentRepository,
@@ -25,7 +26,8 @@ public class IncidentService : IIncidentService
         IUserRepository userRepository,
         INotificationService notificationService,
         IUserService userService,
-        IAzureStorageService azureStorageService)
+        IAzureStorageService azureStorageService,
+        IReplacementHistoryRepository replacementHistoryRepository)
     {
         _incidentRepository = incidentRepository;
         _equipmentRepository = equipmentRepository;
@@ -35,6 +37,7 @@ public class IncidentService : IIncidentService
         _notificationService = notificationService;
         _userService = userService;
         _azureStorageService = azureStorageService;
+        _replacementHistoryRepository = replacementHistoryRepository;
     }
 
     public Task<IReadOnlyList<IncidentHistory>> GetIncidentsAsync(CancellationToken cancellationToken = default)
@@ -975,6 +978,29 @@ public class IncidentService : IIncidentService
         catch (Exception ex)
         {
             throw new InvalidOperationException($"Có lỗi xảy ra khi upload ảnh: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Kiểm tra xem thiết bị có yêu cầu linh kiện không (dựa trên bảng ReplacementHistories)
+    /// </summary>
+    public async Task<bool> HasSparePartsRequiredAsync(int equipmentId, CancellationToken cancellationToken = default)
+    {
+        if (equipmentId <= 0)
+            return false;
+
+        try
+        {
+            // Get all replacement histories for this equipment
+            var replacements = await _replacementHistoryRepository.GetByEquipmentIdAsync(equipmentId, cancellationToken);
+
+            // If there are any replacement histories for this equipment, it means it has required spare parts
+            return replacements?.Any() ?? false;
+        }
+        catch
+        {
+            // If there's an error, return false
+            return false;
         }
     }
 }

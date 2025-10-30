@@ -79,7 +79,7 @@ public class IncidentsController : ControllerBase
         try
         {
             var allIncidents = await _incidentService.GetIncidentsAsync();
-            
+
             // Filter: IsTechSupport = true AND Status != "Hoàn thành"
             var pendingIncidents = allIncidents.Where(i =>
                 i.IsTechSupport &&
@@ -122,7 +122,7 @@ public class IncidentsController : ControllerBase
                         duration = i.Duration,
                         status = i.Status,
                         issue = i.Issue,
-                        assignedTo = !string.IsNullOrEmpty(i.AssignedTo) 
+                        assignedTo = !string.IsNullOrEmpty(i.AssignedTo)
                             ? userLookup.GetValueOrDefault(i.AssignedTo, "Unknown User")
                             : null
                     }).ToList()
@@ -796,6 +796,55 @@ public class IncidentsController : ControllerBase
         catch (Exception ex)
         {
             return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi upload ảnh", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Kiểm tra xem sự cố có yêu cầu linh kiện không
+    /// </summary>
+    [HttpGet("{incidentId}/has-spare-parts")]
+    public async Task<IActionResult> CheckIncidentHasSpareParts(int incidentId)
+    {
+        try
+        {
+            var incident = await _incidentService.GetIncidentByIdAsync(incidentId);
+            if (incident == null)
+            {
+                return NotFound(new { success = false, message = "Không tìm thấy sự cố" });
+            }
+
+            // Get equipment ID from incident
+            var equipmentId = incident.EquipmentId;
+            if (!equipmentId.HasValue || equipmentId <= 0)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        hasSpareParts = false,
+                        message = "Sự cố không liên kết với thiết bị"
+                    }
+                });
+            }
+
+            // Call the service method - this will check ReplacementHistories table
+            var hasSpareParts = await _incidentService.HasSparePartsRequiredAsync(equipmentId.Value);
+
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    hasSpareParts = hasSpareParts,
+                    incidentId = incidentId,
+                    equipmentId = equipmentId.Value
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi kiểm tra linh kiện", details = ex.Message });
         }
     }
 }
