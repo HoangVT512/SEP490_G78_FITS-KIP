@@ -339,11 +339,19 @@ namespace FITSKIP.Infrastructure.Repositories
         {
             try
             {
+                // Support both Vietnamese and English status names for backward compatibility
+                var statusList = new List<string> { status };
+
+                if (status == "Pending")
+                    statusList.Add("Chờ duyệt cấp phát");
+                else if (status == "Chờ duyệt cấp phát")
+                    statusList.Add("Pending");
+
                 return await _context.ReplacementHistories
                     .Include(r => r.Equipment)
                     .Include(r => r.Part)
                     .Include(r => r.ReplacedByNavigation)
-                    .Where(r => r.Status == status)
+                    .Where(r => statusList.Contains(r.Status))
                     .ToListAsync(cancellationToken);
             }
             catch (Exception ex)

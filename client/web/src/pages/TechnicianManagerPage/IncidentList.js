@@ -52,6 +52,8 @@ const IncidentList = () => {
   const [allUsers, setAllUsers] = useState([]);
   const [selectedTechnicianId, setSelectedTechnicianId] = useState(null);
   const [sparePartsRequiredMap, setSparePartsRequiredMap] = useState({}); // Track which incidents have spare parts
+  const [historyModalVisible, setHistoryModalVisible] = useState(false); // Xem lịch sử thay thế
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState(null); // Equipment ID để xem lịch sử
 
   // Get current user from auth context to filter by department
   const { user: currentUser } = useAuth();
@@ -639,6 +641,15 @@ const IncidentList = () => {
               setApprovalModalVisible(true);
             },
           },
+          {
+            key: "replacementHistory",
+            label: "Xem lịch sử thay thế",
+            icon: <EyeOutlined />,
+            onClick: () => {
+              setSelectedEquipmentId(record.equipmentId);
+              setHistoryModalVisible(true);
+            },
+          },
         ];
 
         return (
@@ -936,6 +947,18 @@ const IncidentList = () => {
           setApprovalEquipmentId(null);
         }}
         onUpdated={() => fetchIncidents()}
+      />
+
+      {/* Replacement History Modal */}
+      <ReplacementApprovalModal
+        equipmentId={selectedEquipmentId}
+        open={historyModalVisible}
+        onClose={() => {
+          setHistoryModalVisible(false);
+          setSelectedEquipmentId(null);
+        }}
+        onUpdated={fetchIncidents}
+        viewMode={true}
       />
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>

@@ -96,7 +96,7 @@ const ReplacementCreate = ({
           currentUser?.id ||
           currentUser?.username ||
           null,
-        Status: "Pending",
+        Status: "Chờ duyệt cấp phát", // Tiếng Việt
         Remarks: values.Remarks || null,
       };
 

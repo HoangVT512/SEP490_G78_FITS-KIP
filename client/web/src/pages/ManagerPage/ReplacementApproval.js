@@ -38,10 +38,34 @@ const ReplacementApproval = () => {
   const loadRequests = async () => {
     setLoading(true);
     try {
-      const res = await replacementHistoryService.getByStatus("Pending");
-      const items = Array.isArray(res) ? res : res?.data || [];
+      // Try both Vietnamese and English status names for backward compatibility
+      const res1 = await replacementHistoryService.getByStatus(
+        "Chờ duyệt cấp phát"
+      );
+      const res2 = await replacementHistoryService.getByStatus("Pending");
+
+      let items = [];
+      if (Array.isArray(res1)) {
+        items = items.concat(res1);
+      } else if (res1?.data) {
+        items = items.concat(res1.data);
+      }
+
+      if (Array.isArray(res2)) {
+        items = items.concat(res2);
+      } else if (res2?.data) {
+        items = items.concat(res2.data);
+      }
+
+      // Remove duplicates
+      const uniqueItems = Array.from(
+        new Map(
+          items.map((item) => [item.replacementID || item.replacementId, item])
+        ).values()
+      );
+
       // normalize fields
-      const mapped = items.map((it) => ({
+      const mapped = uniqueItems.map((it) => ({
         replacementId: it.replacementID || it.replacementId,
         equipmentId: it.equipmentId || it.equipmentID || it.EquipmentID,
         equipmentCode: it.equipmentCode || it.EquipmentCode || it.equipmentCode,
@@ -207,7 +231,10 @@ const ReplacementApproval = () => {
       width: 140,
       fixed: "right",
       render: (_, record) => {
-        if (record.status !== "Pending") {
+        if (
+          record.status !== "Pending" &&
+          record.status !== "Chờ duyệt cấp phát"
+        ) {
           return (
             <Button
               type="link"
