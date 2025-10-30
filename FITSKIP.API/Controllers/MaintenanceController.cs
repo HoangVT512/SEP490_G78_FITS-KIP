@@ -901,7 +901,7 @@ namespace FITSKIP.API.Controllers
             try
             {
                 var upcoming = await _maintenanceService.GetUpcomingMaintenanceAsync(days);
-                return Ok(ApiResponse<IEnumerable<UpcomingMaintenanceDTO>>.SuccessResponse(upcoming, $"Lấy danh sách bảo trì sắp đến hạn trong {days} ngày thành công"));
+                return Ok(ApiResponse<IEnumerable<MaintenancePlanDTO>>.SuccessResponse(upcoming, $"Lấy danh sách bảo trì sắp đến hạn trong {days} ngày thành công"));
             }
             catch (Exception ex)
             {

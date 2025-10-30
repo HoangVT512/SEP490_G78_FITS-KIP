@@ -192,7 +192,7 @@ namespace FITSKIP.Application.Interfaces
         /// <summary>
         /// Lấy danh sách bảo trì sắp đến hạn
         /// </summary>
-        Task<IEnumerable<UpcomingMaintenanceDTO>> GetUpcomingMaintenanceAsync(int days = 7);
+        Task<IEnumerable<MaintenancePlanDTO>> GetUpcomingMaintenanceAsync(int days = 7);
 
         // ===== TECHNICIAN MANAGEMENT =====
         

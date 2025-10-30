@@ -17,6 +17,7 @@ namespace FITSKIP.Application.Services
         private readonly IUserRepository _userRepository;
         private readonly IStageRepository _stageRepository;
         private readonly INotificationService _notificationService;
+        private readonly INotificationHubService _notificationHubService;
 
         public MaintenanceService(
             IMaintenanceTemplateRepository templateRepository,
@@ -27,7 +28,8 @@ namespace FITSKIP.Application.Services
             IEquipmentRepository equipmentRepository,
             IUserRepository userRepository,
             IStageRepository stageRepository,
-            INotificationService notificationService)
+            INotificationService notificationService,
+            INotificationHubService notificationHubService)
         {
             _templateRepository = templateRepository;
             _templateItemRepository = templateItemRepository;
@@ -38,6 +40,7 @@ namespace FITSKIP.Application.Services
             _userRepository = userRepository;
             _stageRepository = stageRepository;
             _notificationService = notificationService;
+            _notificationHubService = notificationHubService;
         }
 
         // ===== MAINTENANCE TEMPLATE MANAGEMENT =====
@@ -704,35 +707,200 @@ namespace FITSKIP.Application.Services
             if (workOrder.AssignedToElectrical != technicianId && workOrder.AssignedToMechanical != technicianId)
                 throw new InvalidOperationException("You are not assigned to this work order");
 
-            // Update checklist items
+            // Xác định loại công việc của technician hiện tại
+            bool isElectrical = workOrder.AssignedToElectrical == technicianId;
+            bool isMechanical = workOrder.AssignedToMechanical == technicianId;
+            
+            // Kiểm tra xem work order này có 2 KTV hay chỉ 1 KTV
+            bool hasBothTechnicians = !string.IsNullOrEmpty(workOrder.AssignedToElectrical) && 
+                                      !string.IsNullOrEmpty(workOrder.AssignedToMechanical);
+            
+            Console.WriteLine($"[DEBUG] CompleteWorkOrder - WorkOrderId: {workOrderId}");
+            Console.WriteLine($"[DEBUG] TechnicianId: {technicianId}");
+            Console.WriteLine($"[DEBUG] isElectrical: {isElectrical}, isMechanical: {isMechanical}");
+            Console.WriteLine($"[DEBUG] hasBothTechnicians: {hasBothTechnicians}");
+            
+            // CHỈ update những checklist items thuộc loại công việc của KTV này
             foreach (var itemCompletion in request.ChecklistItems)
             {
                 var checklistItem = await _checklistRepository.GetByIdAsync(itemCompletion.ChecklistId);
                 if (checklistItem != null && checklistItem.WorkOrderId == workOrderId)
                 {
-                    checklistItem.IsChecked = itemCompletion.IsChecked;
-                    checklistItem.Notes = itemCompletion.Notes;
-                    checklistItem.CompletedBy = technicianId;
-                    checklistItem.CompletedDate = DateTime.Now;
-                    await _checklistRepository.UpdateAsync(checklistItem);
+                    // Chỉ update nếu item này thuộc category của KTV hiện tại
+                    bool shouldUpdate = false;
+                    if (isElectrical && checklistItem.Category == "Electrical")
+                        shouldUpdate = true;
+                    if (isMechanical && checklistItem.Category == "Mechanical")
+                        shouldUpdate = true;
+                    
+                    if (shouldUpdate)
+                    {
+                        checklistItem.IsChecked = itemCompletion.IsChecked;
+                        if (!string.IsNullOrEmpty(itemCompletion.Notes))
+                        {
+                            checklistItem.Notes = itemCompletion.Notes;
+                        }
+                        checklistItem.CompletedBy = technicianId;
+                        checklistItem.CompletedDate = DateTime.Now;
+                        await _checklistRepository.UpdateAsync(checklistItem);
+                        
+                        Console.WriteLine($"[DEBUG] Updated checklist item {checklistItem.ChecklistId} - Category: {checklistItem.Category}, IsChecked: {checklistItem.IsChecked}");
+                    }
                 }
             }
 
-            workOrder.Status = "Completed";
-            workOrder.CompletedDate = DateTime.Now;
-            if (!string.IsNullOrEmpty(request.OverallNotes))
-                workOrder.Notes = (workOrder.Notes ?? "") + "\n" + request.OverallNotes;
-
-            await _workOrderRepository.UpdateAsync(workOrder);
-
-            // Update plan next due date
-            var plan = await _planRepository.GetByIdAsync(workOrder.PlanId);
-            if (plan != null)
+            // Lấy lại tất cả checklist items sau khi update
+            var allChecklistItems = await _checklistRepository.GetByWorkOrderIdAsync(workOrderId);
+            
+            Console.WriteLine($"[DEBUG] Total checklist items: {allChecklistItems.Count()}");
+            
+            // Logic quyết định xem có set WorkOrder.Status = "Completed" không
+            bool shouldCompleteWorkOrder = false;
+            
+            if (hasBothTechnicians)
             {
-                plan.NextDueDate = CalculateNextDueDate(DateTime.Now, plan.IntervalType, plan.IntervalValue);
-                plan.Status = "Completed";
-                await _planRepository.UpdateAsync(plan);
+                // Có 2 KTV: Kiểm tra RIÊNG từng category
+                var electricalItems = allChecklistItems.Where(i => i.Category == "Electrical").ToList();
+                var mechanicalItems = allChecklistItems.Where(i => i.Category == "Mechanical").ToList();
+                
+                bool electricalCompleted = electricalItems.Any() && electricalItems.All(i => i.IsChecked);
+                bool mechanicalCompleted = mechanicalItems.Any() && mechanicalItems.All(i => i.IsChecked);
+                
+                Console.WriteLine($"[DEBUG] Electrical items: {electricalItems.Count}, Completed: {electricalItems.Count(i => i.IsChecked)}/{electricalItems.Count}");
+                Console.WriteLine($"[DEBUG] Mechanical items: {mechanicalItems.Count}, Completed: {mechanicalItems.Count(i => i.IsChecked)}/{mechanicalItems.Count}");
+                Console.WriteLine($"[DEBUG] electricalCompleted: {electricalCompleted}, mechanicalCompleted: {mechanicalCompleted}");
+                
+                // CHỈ set Completed khi CẢ 2 category đều hoàn thành
+                shouldCompleteWorkOrder = electricalCompleted && mechanicalCompleted;
+                
+                Console.WriteLine($"[DEBUG] Has both technicians - shouldCompleteWorkOrder: {shouldCompleteWorkOrder}");
             }
+            else
+            {
+                // Chỉ có 1 KTV: Kiểm tra tất cả items đã done chưa
+                bool allItemsCompleted = allChecklistItems.All(item => item.IsChecked);
+                shouldCompleteWorkOrder = allItemsCompleted;
+                
+                Console.WriteLine($"[DEBUG] Single technician - allItemsCompleted: {allItemsCompleted}");
+            }
+            
+            if (shouldCompleteWorkOrder)
+            {
+                Console.WriteLine($"[DEBUG] ✅ Setting WorkOrder.Status = Completed");
+                workOrder.Status = "Completed";
+                workOrder.CompletedDate = DateTime.Now;
+                
+                // Lưu ghi chú tổng thể
+                if (!string.IsNullOrEmpty(request.OverallNotes))
+                {
+                    workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Hoàn thành: {request.OverallNotes}";
+                }
+                
+                // Update WorkOrder trước
+                await _workOrderRepository.UpdateAsync(workOrder);
+                
+                // Update plan: CHỈ cập nhật NextDueDate cho chu kỳ tiếp theo, Plan vẫn Active
+                var plan = await _planRepository.GetByIdAsync(workOrder.PlanId);
+                if (plan != null)
+                {
+                    // Tính ngày đến hạn tiếp theo dựa trên chu kỳ
+                    plan.NextDueDate = CalculateNextDueDate(DateTime.Now, plan.IntervalType, plan.IntervalValue);
+                    
+                    // Reset PostponedDueDate và lý do hoãn (nếu có)
+                    plan.PostponedDueDate = null;
+                    plan.PostponedReason = null;
+                    plan.PostponedDate = null;
+                    
+                    // Plan vẫn Active, KHÔNG set Status = "Completed"
+                    // Vì đây là chu kỳ định kỳ, Plan sẽ tiếp tục hoạt động cho lần bảo trì tiếp theo
+                    
+                    await _planRepository.UpdateAsync(plan);
+                    
+                    Console.WriteLine($"[DEBUG] Updated Plan {plan.PlanId} - NextDueDate: {plan.NextDueDate:dd/MM/yyyy}, Plan vẫn Active");
+                }
+                
+                // 🔥 GỬI SIGNALR NOTIFICATION KHI HOÀN THÀNH
+                try
+                {
+                    await _notificationHubService.SendWorkOrderCompletedAsync(new
+                    {
+                        workOrderId = workOrder.WorkOrderId,
+                        workOrderCode = workOrder.WorkOrderCode,
+                        equipmentName = workOrder.Equipment?.EquipmentName,
+                        equipmentCode = workOrder.Equipment?.EquipmentCode,
+                        completedDate = workOrder.CompletedDate,
+                        completedBy = technicianId,
+                        status = "Completed"
+                    });
+                    
+                    Console.WriteLine($"✅ Sent SignalR: WorkOrderCompleted for WorkOrder {workOrder.WorkOrderId}");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"⚠️ Failed to send SignalR notification: {ex.Message}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"[DEBUG] ⏳ Chưa hoàn thành - keeping status as InProgress");
+                
+                // Đảm bảo status là InProgress (nếu chưa phải Completed)
+                if (workOrder.Status != "Completed")
+                {
+                    workOrder.Status = "InProgress";
+                }
+                
+                // Ghi log cho KTV vừa hoàn thành phần của mình
+                if (!string.IsNullOrEmpty(request.OverallNotes))
+                {
+                    string techType = isElectrical ? "KTV Điện" : "KTV Cơ khí";
+                    workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] {techType} đã hoàn thành phần của mình: {request.OverallNotes}";
+                }
+                
+                // Update WorkOrder trước khi gửi notification
+                await _workOrderRepository.UpdateAsync(workOrder);
+                
+                // Gửi thông báo cho KTV còn lại (nếu có 2 KTV)
+                if (hasBothTechnicians)
+                {
+                    string? otherTechId = isElectrical ? workOrder.AssignedToMechanical : workOrder.AssignedToElectrical;
+                    string techType = isElectrical ? "điện" : "cơ khí";
+                    
+                    if (!string.IsNullOrEmpty(otherTechId))
+                    {
+                        await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+                        {
+                            UserId = otherTechId,
+                            Title = "Đồng nghiệp đã hoàn thành phần việc",
+                            Message = $"KTV {techType} đã hoàn thành phần của họ cho phiếu #{workOrder.WorkOrderCode}. Vui lòng hoàn thành phần việc của bạn."
+                        });
+                        
+                        Console.WriteLine($"[DEBUG] Sent notification to other technician: {otherTechId}");
+                        
+                        // 🔥 GỬI SIGNALR ĐỂ CẬP NHẬT REAL-TIME CHO KTV CÒN LẠI
+                        try
+                        {
+                            await _notificationHubService.SendWorkOrderProgressUpdatedAsync(new
+                            {
+                                workOrderId = workOrder.WorkOrderId,
+                                workOrderCode = workOrder.WorkOrderCode,
+                                status = "InProgress",
+                                completedCategory = isElectrical ? "Electrical" : "Mechanical",
+                                message = $"KTV {techType} đã hoàn thành phần của họ",
+                                otherTechnicianId = otherTechId
+                            });
+                            
+                            Console.WriteLine($"✅ Sent SignalR: WorkOrderProgressUpdated to {otherTechId}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"⚠️ Failed to send SignalR notification: {ex.Message}");
+                        }
+                    }
+                }
+            }
+            
+            Console.WriteLine($"[DEBUG] Final WorkOrder.Status: {workOrder.Status}");
 
             var result = await _workOrderRepository.GetByIdAsync(workOrderId);
             return MapWorkOrderToDTO(result!);
@@ -778,6 +946,36 @@ namespace FITSKIP.Application.Services
             item.CompletedDate = request.IsChecked ? DateTime.Now : null;
 
             await _checklistRepository.UpdateAsync(item);
+
+            // 🔥 GỬI THÔNG BÁO SIGNALR CHO TECHMANAGER KHI TECHNICIAN TICK CHECKBOX
+            try
+            {
+                var workOrder = await _workOrderRepository.GetByIdAsync(item.WorkOrderId);
+                if (workOrder != null)
+                {
+                    // Gửi thông báo real-time cho TechManager
+                    await _notificationHubService.SendChecklistItemUpdatedAsync(new
+                    {
+                        workOrderId = workOrder.WorkOrderId,
+                        checklistItemId = item.ChecklistId,
+                        stepName = item.StepName,
+                        isChecked = item.IsChecked,
+                        category = item.Category,
+                        completedBy = technicianId,
+                        completedDate = item.CompletedDate,
+                        notes = item.Notes,
+                        equipmentName = workOrder.Equipment?.EquipmentName,
+                        equipmentCode = workOrder.Equipment?.EquipmentCode
+                    });
+                    
+                    Console.WriteLine($"✅ Sent SignalR notification: ChecklistItemUpdated for WorkOrder {workOrder.WorkOrderId}");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"⚠️ Failed to send SignalR notification: {ex.Message}");
+                // Không throw exception để không ảnh hưởng đến việc update checklist
+            }
 
             return MapChecklistItemToDTO(item);
         }
@@ -841,32 +1039,32 @@ namespace FITSKIP.Application.Services
             return stats;
         }
 
-        public async Task<IEnumerable<UpcomingMaintenanceDTO>> GetUpcomingMaintenanceAsync(int days = 7)
+        public async Task<IEnumerable<MaintenancePlanDTO>> GetUpcomingMaintenanceAsync(int days = 7)
         {
             var plans = await _planRepository.GetDueWithinDaysAsync(days);
             var today = DateTime.Today;
 
-            // Lọc bỏ các plans đã có WorkOrder active (Pending, InProgress)
-            var plansWithoutActiveWorkOrder = plans.Where(p => 
-                p.IsActive && 
-                !(p.WorkOrders?.Any(wo => wo.Status == "Pending" || wo.Status == "InProgress") ?? false)
-            );
-
-            return plansWithoutActiveWorkOrder.Select(p => new UpcomingMaintenanceDTO
+            // Lọc các plans theo logic mới:
+            // - Nếu chưa hoãn: kiểm tra NextDueDate trong vòng 7 ngày
+            // - Nếu đã hoãn: kiểm tra PostponedDueDate trong vòng 7 ngày
+            var filteredPlans = plans.Where(p => 
             {
-                PlanId = p.PlanId,
-                EquipmentId = p.EquipmentId,
-                TemplateId = p.TemplateId,
-                EquipmentName = p.Equipment?.EquipmentName,
-                EquipmentCode = p.Equipment?.EquipmentCode,
-                LineName = p.Equipment?.Stage?.Line?.LineName,
-                StageName = p.Equipment?.Stage?.StageName,
-                NextDueDate = p.NextDueDate,
-                DaysUntilDue = (p.NextDueDate - today).Days,
-                AssignedToElectrical = p.AssignedToElectrical,
-                AssignedToMechanical = p.AssignedToMechanical,
-                HasActiveWorkOrder = false // Đã lọc rồi nên luôn là false
+                if (!p.IsActive) return false;
+                
+                // Kiểm tra đã có WorkOrder active chưa
+                var hasActiveWorkOrder = p.WorkOrders?.Any(wo => wo.Status == "Pending" || wo.Status == "InProgress") ?? false;
+                if (hasActiveWorkOrder) return false;
+                
+                // Xác định ngày đến hạn hiệu lực (PostponedDueDate nếu có, không thì NextDueDate)
+                var effectiveDueDate = p.PostponedDueDate ?? p.NextDueDate;
+                var daysUntil = (effectiveDueDate - today).Days;
+                
+                // Chỉ hiển thị nếu trong vòng 7 ngày tới
+                return daysUntil >= 0 && daysUntil <= days;
             });
+
+            // Sử dụng MapPlanToDTO để có đầy đủ thông tin chu kỳ, trạng thái, hoãn
+            return filteredPlans.Select(MapPlanToDTO);
         }
 
         // ===== TECHNICIAN MANAGEMENT =====

@@ -51,6 +51,7 @@ import {
   PlayCircleOutlined,
   StopOutlined,
   BellOutlined,
+  WifiOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
@@ -80,8 +81,10 @@ import {
   postponeMaintenancePlan,
 } from "../../services/maintenanceService";
 import { equipmentService } from "../../services/equipmentService";
-import { getAllStages } from "../../services/stageService";
+import { getAllStages, stageService } from "../../services/stageService";
+import { lineService } from "../../services/lineService";
 import styles from "../../styles/pages/MaintenanceManagement.module.css";
+import { useSignalR } from "../../contexts/SignalRContext";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -91,6 +94,9 @@ const { Step } = Steps;
 
 const MaintenanceManagement = () => {
   const [loading, setLoading] = useState(false);
+  
+  // SignalR integration
+  const { isConnected, subscribe } = useSignalR();
   
   // Modal states
   const [isPlanModalVisible, setIsPlanModalVisible] = useState(false);
@@ -118,6 +124,11 @@ const MaintenanceManagement = () => {
   
   const [searchText, setSearchText] = useState("");
   const [activeTab, setActiveTab] = useState("plans");
+  
+  // Filter & Sort states for Work Orders
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [technicianFilter, setTechnicianFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("newest");
 
   // Data states
   const [maintenancePlans, setMaintenancePlans] = useState([]);
@@ -143,6 +154,14 @@ const MaintenanceManagement = () => {
   const [mechanicalTechs, setMechanicalTechs] = useState([]);
   const [electricalTechs, setElectricalTechs] = useState([]);
   const [checklistItems, setChecklistItems] = useState([]);
+  
+  // Thêm state để lọc dữ liệu theo luồng chọn
+  const [lines, setLines] = useState([]);
+  const [selectedLine, setSelectedLine] = useState(null);
+  const [selectedStage, setSelectedStage] = useState(null);
+  const [filteredStages, setFilteredStages] = useState([]);
+  const [filteredEquipments, setFilteredEquipments] = useState([]);
+  const [filteredTemplates, setFilteredTemplates] = useState([]);
   
   // State cho assign multiple technicians
   const [selectedPlans, setSelectedPlans] = useState([]);
@@ -174,6 +193,7 @@ const MaintenanceManagement = () => {
         loadEquipments(),
         loadStages(),
         loadTechnicians(),
+        loadLines(),
       ]);
     } catch (error) {
       message.error("Tải dữ liệu thất bại: " + error.message);
@@ -245,7 +265,10 @@ const MaintenanceManagement = () => {
 
   const loadStats = async () => {
     try {
-      const response = await getMaintenanceStats();
+      const response = await getMaintenanceStats();      // Dựa vào lịch sử:
+      // - Work Order loại này thường mất bao lâu?
+      // - Technician này thường mất bao lâu?
+      // → Hiển thị "Dự kiến hoàn thành: 2.5 giờ"
       setStats(response?.data || {});
     } catch (error) {
       console.error("Load stats error:", error);
@@ -296,6 +319,71 @@ const MaintenanceManagement = () => {
     }
   };
 
+  const loadLines = async () => {
+    try {
+      const response = await lineService.getLines();
+      setLines(response?.data || response || []);
+    } catch (error) {
+      console.error("Load lines error:", error);
+    }
+  };
+
+  // Xử lý khi chọn Dây chuyền
+  const handleLineChange = async (lineId) => {
+    setSelectedLine(lineId);
+    setSelectedStage(null);
+    setFilteredStages([]);
+    setFilteredEquipments([]);
+    setFilteredTemplates([]);
+    
+    // Reset form fields
+    planForm.setFieldsValue({
+      stageId: undefined,
+      equipmentId: undefined,
+      templateId: undefined,
+    });
+
+    if (lineId) {
+      try {
+        // Load Stages theo Line
+        const stageResponse = await stageService.getStagesByLine(lineId);
+        setFilteredStages(stageResponse?.data || []);
+      } catch (error) {
+        console.error("Load stages by line error:", error);
+        message.error("Không thể tải danh sách công đoạn");
+      }
+    }
+  };
+
+  // Xử lý khi chọn Công đoạn
+  const handleStageChange = async (stageId) => {
+    setSelectedStage(stageId);
+    setFilteredEquipments([]);
+    setFilteredTemplates([]);
+    
+    // Reset form fields
+    planForm.setFieldsValue({
+      equipmentId: undefined,
+      templateId: undefined,
+    });
+
+    if (stageId) {
+      try {
+        // Load Equipment theo Stage
+        const allEquipments = equipments;
+        const filtered = allEquipments.filter(eq => eq.stageId === stageId);
+        setFilteredEquipments(filtered);
+
+        // Load Templates theo Stage
+        const templateResponse = await getTemplatesByStage(stageId);
+        setFilteredTemplates(templateResponse?.data || []);
+      } catch (error) {
+        console.error("Load by stage error:", error);
+        message.error("Không thể tải dữ liệu");
+      }
+    }
+  };
+
   // ===== PLAN MANAGEMENT =====
   
   const handleAddPlan = () => {
@@ -336,21 +424,26 @@ const MaintenanceManagement = () => {
   const handlePlanSubmit = async (values) => {
     setLoading(true);
     try {
-      const planData = {
-        equipmentId: values.equipmentId,
-        templateId: values.templateId,
-        intervalType: values.intervalType,
-        intervalValue: values.intervalValue,
-        startDate: values.startDate.toISOString(),
-      };
-
       if (editingPlan) {
+        // Khi EDIT: chỉ cập nhật trạng thái isActive
         await updateMaintenancePlan(editingPlan.planId, {
-          ...planData,
+          equipmentId: editingPlan.equipmentId,
+          templateId: editingPlan.templateId,
+          intervalType: editingPlan.intervalType,
+          intervalValue: editingPlan.intervalValue,
+          startDate: editingPlan.startDate,
           isActive: values.isActive ?? true,
         });
-        message.success("Cập nhật chu kỳ bảo trì thành công!");
+        message.success("Cập nhật trạng thái chu kỳ bảo trì thành công!");
       } else {
+        // Khi ADD: tạo mới với đầy đủ thông tin
+        const planData = {
+          equipmentId: values.equipmentId,
+          templateId: values.templateId,
+          intervalType: values.intervalType,
+          intervalValue: values.intervalValue,
+          startDate: values.startDate.toISOString(),
+        };
         await createMaintenancePlan(planData);
         message.success("Tạo chu kỳ bảo trì thành công!");
       }
@@ -472,15 +565,34 @@ const MaintenanceManagement = () => {
         planId: plan.planId,
         equipmentId: plan.equipmentId,
         templateId: plan.templateId,
-        dueDate: plan.nextDueDate ? dayjs(plan.nextDueDate) : dayjs().add(7, 'days'),
+        dueDate: plan.postponedDueDate ? dayjs(plan.postponedDueDate) : dayjs(plan.nextDueDate),
         // Không set assignedTo, để user chọn
       });
+      
+      // Load template checklist nếu có
+      if (plan.templateId) {
+        loadTemplateChecklist(plan.templateId);
+      }
     } else {
       workOrderForm.setFieldsValue({
         dueDate: dayjs().add(7, 'days'),
       });
     }
     setIsWorkOrderModalVisible(true);
+  };
+
+  const [templateChecklist, setTemplateChecklist] = useState([]);
+
+  const loadTemplateChecklist = async (templateId) => {
+    try {
+      const response = await getAllTemplates();
+      const template = response?.data?.find(t => t.templateId === templateId);
+      if (template && template.templateItems) {
+        setTemplateChecklist(template.templateItems);
+      }
+    } catch (error) {
+      console.error("Load template checklist error:", error);
+    }
   };
 
   const handleEditWorkOrder = (record) => {
@@ -730,8 +842,9 @@ const MaintenanceManagement = () => {
   };
 
   const getPlanStatusTag = (plan) => {
+    // Nếu không hoạt động (đã tắt)
     if (!plan.isActive) {
-      return <Tag color="default">Đã hoàn thành</Tag>;
+      return <Tag color="default" icon={<StopOutlined />}>Không hoạt động</Tag>;
     }
     
     // Kiểm tra xem plan có bị hoãn không
@@ -796,16 +909,23 @@ const MaintenanceManagement = () => {
       title: "Chu kỳ",
       key: "interval",
       width: 120,
-      render: (_, record) => (
-        <span>
-          {record.intervalValue}{" "}
-          {record.intervalType === "Days"
-            ? "ngày"
-            : record.intervalType === "Hours"
-            ? "giờ"
-            : "chu kỳ"}
-        </span>
-      ),
+      render: (_, record) => {
+        const intervalTypeMap = {
+          Days: "ngày",
+          days: "ngày",
+          Months: "tháng",
+          months: "tháng",
+          Hours: "giờ",
+          hours: "giờ",
+          UsageCycles: "chu kỳ",
+          usagecycles: "chu kỳ"
+        };
+        return (
+          <span>
+            {record.intervalValue} {intervalTypeMap[record.intervalType] || "chu kỳ"}
+          </span>
+        );
+      },
     },
     {
       title: "Ngày đến hạn",
@@ -814,8 +934,9 @@ const MaintenanceManagement = () => {
       width: 130,
       render: (date, record) => {
         const today = dayjs();
-        const dueDate = dayjs(date);
-        const daysUntilDue = dueDate.diff(today, "day");
+        // Sử dụng PostponedDueDate nếu có, không thì dùng NextDueDate
+        const effectiveDueDate = record.postponedDueDate ? dayjs(record.postponedDueDate) : dayjs(date);
+        const daysUntilDue = effectiveDueDate.diff(today, "day");
         const isOverdue = daysUntilDue < 0;
         const isUpcomingSoon = daysUntilDue <= 7 && daysUntilDue >= 0;
 
@@ -831,7 +952,7 @@ const MaintenanceManagement = () => {
                 fontWeight: isOverdue || isUpcomingSoon ? "bold" : "normal",
               }}
             >
-              {dueDate.format("DD/MM/YYYY")}
+              {effectiveDueDate.format("DD/MM/YYYY")}
             </div>
             {record.daysUntilDue !== null && (
               <Text type="secondary" style={{ fontSize: 12 }}>
@@ -842,16 +963,16 @@ const MaintenanceManagement = () => {
                   : `Quá ${Math.abs(record.daysUntilDue)} ngày`}
               </Text>
             )}
+            {record.postponedDueDate && (
+              <div>
+                <Tag color="purple" style={{ fontSize: 10, marginTop: 4 }}>
+                  Đã hoãn từ {dayjs(date).format("DD/MM/YYYY")}
+                </Tag>
+              </div>
+            )}
           </div>
         );
       },
-    },
-    {
-      title: "Người phụ trách",
-      dataIndex: "assignedToName",
-      key: "assignedToName",
-      width: 150,
-      render: (name) => name || <Text type="secondary">Chưa phân công</Text>,
     },
     {
       title: "Trạng thái",
@@ -863,7 +984,7 @@ const MaintenanceManagement = () => {
       title: "Thao tác",
       key: "action",
       fixed: "right",
-      width: 200,
+      width: 150,
       render: (_, record) => (
         <Space size="small">
           <Tooltip title="Chi tiết">
@@ -872,14 +993,6 @@ const MaintenanceManagement = () => {
               size="small"
               icon={<EyeOutlined />}
               onClick={() => handleViewDetail(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Giao việc">
-            <Button
-              type="link"
-              size="small"
-              icon={<UserAddOutlined />}
-              onClick={() => handleAssignTechnicians(record)}
             />
           </Tooltip>
           <Tooltip title="Sửa">
@@ -1023,6 +1136,7 @@ const MaintenanceManagement = () => {
       render: (_, record) => {
         const hasElectrical = record.electricalTechnicianName;
         const hasMechanical = record.mechanicalTechnicianName;
+        const isInProgress = record.status === "InProgress";
         
         if (!hasElectrical && !hasMechanical) {
           return <Text type="secondary">Chưa phân công</Text>;
@@ -1039,6 +1153,11 @@ const MaintenanceManagement = () => {
                     <Text type="secondary"> ({record.electricalEmployeeCode})</Text>
                   )}
                 </Text>
+                {isInProgress && (
+                  <Tag color="processing" style={{ marginLeft: 8, fontSize: 10 }}>
+                    Đang thực hiện
+                  </Tag>
+                )}
               </div>
             )}
             {hasMechanical && (
@@ -1050,6 +1169,11 @@ const MaintenanceManagement = () => {
                     <Text type="secondary"> ({record.mechanicalEmployeeCode})</Text>
                   )}
                 </Text>
+                {isInProgress && (
+                  <Tag color="processing" style={{ marginLeft: 8, fontSize: 10 }}>
+                    Đang thực hiện
+                  </Tag>
+                )}
               </div>
             )}
           </div>
@@ -1066,50 +1190,51 @@ const MaintenanceManagement = () => {
       title: "Thao tác",
       key: "action",
       fixed: "right",
-      width: 200,
-      render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="Chi tiết">
-            <Button
-              type="link"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewDetail(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Giao việc">
-            <Button
-              type="link"
-              size="small"
-              icon={<UserAddOutlined />}
-              onClick={() => handleAssignTechnicians(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Sửa">
-            <Button
-              type="link"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleEditWorkOrder(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Xác nhận hủy?"
-            onConfirm={() => handleCancelWorkOrder(record)}
-            okText="Hủy"
-            cancelText="Đóng"
-          >
-            <Tooltip title="Hủy">
+      width: 150,
+      render: (_, record) => {
+        // Kiểm tra xem WorkOrder đã hoàn thành hoặc đã hủy chưa
+        const isFinished = record.status === "Completed" || record.status === "Cancelled";
+        
+        return (
+          <Space size="small">
+            <Tooltip title="Chi tiết">
               <Button
                 type="link"
                 size="small"
-                danger
-                icon={<StopOutlined />}
+                icon={<EyeOutlined />}
+                onClick={() => handleViewDetail(record)}
               />
             </Tooltip>
-          </Popconfirm>
-        </Space>
-      ),
+            {!isFinished && (
+              <>
+                <Tooltip title="Giao việc">
+                  <Button
+                    type="link"
+                    size="small"
+                    icon={<UserAddOutlined />}
+                    onClick={() => handleAssignTechnicians(record)}
+                  />
+                </Tooltip>
+                <Popconfirm
+                  title="Xác nhận hủy?"
+                  onConfirm={() => handleCancelWorkOrder(record)}
+                  okText="Hủy"
+                  cancelText="Đóng"
+                >
+                  <Tooltip title="Hủy">
+                    <Button
+                      type="link"
+                      size="small"
+                      danger
+                      icon={<StopOutlined />}
+                    />
+                  </Tooltip>
+                </Popconfirm>
+              </>
+            )}
+          </Space>
+        );
+      },
     },
   ];
 
@@ -1120,19 +1245,54 @@ const MaintenanceManagement = () => {
       plan.equipmentCode?.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const filteredTemplates = templates.filter(
+  const searchedTemplates = templates.filter(
     (template) =>
       template.templateName?.toLowerCase().includes(searchText.toLowerCase()) ||
       template.description?.toLowerCase().includes(searchText.toLowerCase()) ||
       template.inspectionCode?.toLowerCase().includes(searchText.toLowerCase())
   );
 
-  const filteredWorkOrders = workOrders.filter(
-    (order) =>
-      order.equipmentName?.toLowerCase().includes(searchText.toLowerCase()) ||
-      order.assignedToName?.toLowerCase().includes(searchText.toLowerCase()) ||
-      order.equipmentCode?.toLowerCase().includes(searchText.toLowerCase())
-  );
+  // Apply filters and sorting for Work Orders
+  const getFilteredAndSortedWorkOrders = () => {
+    let filtered = workOrders.filter(
+      (order) =>
+        order.equipmentName?.toLowerCase().includes(searchText.toLowerCase()) ||
+        order.electricalTechnicianName?.toLowerCase().includes(searchText.toLowerCase()) ||
+        order.mechanicalTechnicianName?.toLowerCase().includes(searchText.toLowerCase()) ||
+        order.equipmentCode?.toLowerCase().includes(searchText.toLowerCase())
+    );
+
+    // Filter by status
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(order => order.status === statusFilter);
+    }
+
+    // Filter by technician
+    if (technicianFilter !== "all") {
+      filtered = filtered.filter(order => 
+        order.assignedToElectrical === technicianFilter || 
+        order.assignedToMechanical === technicianFilter
+      );
+    }
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sortOrder) {
+        case "newest":
+          return new Date(b.assignedDate) - new Date(a.assignedDate);
+        case "oldest":
+          return new Date(a.assignedDate) - new Date(b.assignedDate);
+        case "dueSoon":
+          return new Date(a.dueDate) - new Date(b.dueDate);
+        case "dueDate":
+          return new Date(b.dueDate) - new Date(a.dueDate);
+        default:
+          return 0;
+      }
+    });
+
+    return sorted;
+  };
 
   // Tab: Maintenance Plans
   const MaintenancePlansTab = (
@@ -1236,7 +1396,7 @@ const MaintenanceManagement = () => {
 
         <Table
           columns={templateColumns}
-          dataSource={filteredTemplates}
+          dataSource={searchedTemplates}
           rowKey="templateId"
           loading={loading}
           scroll={{ x: 1400 }}
@@ -1255,7 +1415,7 @@ const MaintenanceManagement = () => {
     <Card title="Phiếu bảo trì" bordered={false}>
       <Space direction="vertical" size="middle" style={{ width: "100%" }}>
         <Row gutter={16}>
-          <Col xs={24} sm={12}>
+          <Col xs={24} md={6}>
             <Search
               placeholder="Tìm theo thiết bị, mã thiết bị hoặc người phụ trách"
               prefix={<SearchOutlined />}
@@ -1263,16 +1423,58 @@ const MaintenanceManagement = () => {
               allowClear
             />
           </Col>
-          <Col xs={24} sm={12} style={{ textAlign: "right" }}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => handleCreateWorkOrder(null)}>
-              Thêm phiếu bảo trì
-            </Button>
+          <Col xs={24} md={5}>
+            <Select
+              placeholder="Trạng thái"
+              value={statusFilter}
+              onChange={setStatusFilter}
+              style={{ width: "100%" }}
+            >
+              <Option value="all">Tất cả trạng thái</Option>
+              <Option value="Pending">Chờ xử lý</Option>
+              <Option value="InProgress">Đang thực hiện</Option>
+              <Option value="Completed">Hoàn thành</Option>
+              <Option value="Cancelled">Đã hủy</Option>
+              <Option value="Overdue">Quá hạn</Option>
+            </Select>
+          </Col>
+          <Col xs={24} md={8}>
+            <Select
+              placeholder="Người phụ trách"
+              value={technicianFilter}
+              onChange={setTechnicianFilter}
+              style={{ width: "100%" }}
+              showSearch
+              filterOption={(input, option) =>
+                option.children.toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              <Option value="all">Tất cả KTV</Option>
+              {[...mechanicalTechs, ...electricalTechs].map((tech) => (
+                <Option key={tech.userId} value={tech.userId}>
+                  {tech.fullName} ({tech.employeeCode})
+                </Option>
+              ))}
+            </Select>
+          </Col>
+          <Col xs={24} md={5}>
+            <Select
+              placeholder="Sắp xếp"
+              value={sortOrder}
+              onChange={setSortOrder}
+              style={{ width: "100%" }}
+            >
+              <Option value="newest">Mới nhất</Option>
+              <Option value="oldest">Cũ nhất</Option>
+              <Option value="dueSoon">Gần đến hạn nhất</Option>
+              <Option value="dueDate">Hạn xa nhất</Option>
+            </Select>
           </Col>
         </Row>
 
         <Table
           columns={workOrderColumns}
-          dataSource={filteredWorkOrders}
+          dataSource={getFilteredAndSortedWorkOrders()}
           rowKey="workOrderId"
           loading={loading}
           scroll={{ x: 1400 }}
@@ -1283,24 +1485,6 @@ const MaintenanceManagement = () => {
           }}
         />
       </Space>
-    </Card>
-  );
-
-  // Tab: Pending Work Orders
-  const PendingWorkOrdersTab = (
-    <Card title="Phiếu chờ xử lý" bordered={false}>
-      <Table
-        columns={workOrderColumns}
-        dataSource={pendingWorkOrders}
-        rowKey="workOrderId"
-        loading={loading}
-        scroll={{ x: 1400 }}
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showTotal: (total) => `Tổng ${total} phiếu`,
-        }}
-      />
     </Card>
   );
 
@@ -1367,9 +1551,9 @@ const MaintenanceManagement = () => {
       children: MaintenancePlansTab,
     },
     {
-      key: "templates",
-      label: "Mẫu bảo trì",
-      children: TemplatesTab,
+      key: "upcoming",
+      label: "Lịch bảo trì sắp tới",
+      children: UpcomingMaintenanceTab,
     },
     {
       key: "workOrders",
@@ -1377,18 +1561,129 @@ const MaintenanceManagement = () => {
       children: WorkOrdersTab,
     },
     {
-      key: "pending",
-      label: `Chờ xử lý ${
-        pendingWorkOrders.length > 0 ? `(${pendingWorkOrders.length})` : ""
-      }`,
-      children: PendingWorkOrdersTab,
-    },
-    {
-      key: "upcoming",
-      label: "Sắp đến hạn",
-      children: UpcomingMaintenanceTab,
+      key: "templates",
+      label: "Mẫu hướng dẫn bảo trì",
+      children: TemplatesTab,
     },
   ];
+
+  // ===== REAL-TIME SIGNALR INTEGRATION =====
+  
+  useEffect(() => {
+    if (!isConnected) return;
+
+    console.log("✅ Setting up SignalR listeners for TechManager...");
+
+    // 1. Lắng nghe khi Technician bắt đầu công việc
+    const unsubscribeStarted = subscribe("WorkOrderStarted", (workOrder) => {
+      console.log("📢 TechManager received: WorkOrder started", workOrder);
+      
+      // Tự động reload Work Orders
+      loadWorkOrders();
+      loadStats();
+      
+      // Cập nhật trạng thái trong danh sách hiện tại
+      setWorkOrders((prev) =>
+        prev.map((wo) =>
+          wo.workOrderId === workOrder.workOrderId
+            ? { ...wo, status: "InProgress", startedDate: new Date().toISOString() }
+            : wo
+        )
+      );
+    });
+
+    // 2. Lắng nghe khi Technician hoàn thành công việc
+    const unsubscribeCompleted = subscribe("WorkOrderCompleted", (workOrder) => {
+      console.log("📢 TechManager received: WorkOrder completed", workOrder);
+      
+      // Tự động reload
+      loadWorkOrders();
+      loadStats();
+      loadUpcomingMaintenance();
+      loadMaintenancePlans();
+      
+      // Cập nhật trạng thái
+      setWorkOrders((prev) =>
+        prev.map((wo) =>
+          wo.workOrderId === workOrder.workOrderId
+            ? { ...wo, status: "Completed", completedDate: new Date().toISOString() }
+            : wo
+        )
+      );
+    });
+
+    // 3. Lắng nghe khi Technician cập nhật checklist
+    const unsubscribeChecklist = subscribe("ChecklistItemUpdated", (data) => {
+      console.log("📢 TechManager received: Checklist updated", data);
+      
+      // Nếu đang mở modal chi tiết, cập nhật real-time
+      if (selectedRecord && selectedRecord.workOrderId === data.workOrderId) {
+        setSelectedRecord((prev) => ({
+          ...prev,
+          checklistItems: prev.checklistItems?.map((item) =>
+            item.checklistItemId === data.checklistItemId
+              ? { ...item, ...data }
+              : item
+          ),
+        }));
+      }
+    });
+
+    // 4. Lắng nghe yêu cầu hỗ trợ từ Technician
+    const unsubscribeHelp = subscribe("TechnicianRequestHelp", (request) => {
+      console.log("📢 TechManager received: Technician request help", request);
+      
+      // Hiển thị modal hoặc notification đặc biệt
+      Modal.warning({
+        title: "🆘 Yêu cầu hỗ trợ",
+        content: (
+          <div>
+            <p><strong>Kỹ thuật viên:</strong> {request.technicianName}</p>
+            <p><strong>Thiết bị:</strong> {request.equipmentName}</p>
+            <p><strong>Lý do:</strong> {request.reason}</p>
+            <p><strong>Loại:</strong> {request.helpType}</p>
+          </div>
+        ),
+        okText: "Đã hiểu",
+      });
+    });
+
+    // Cleanup khi component unmount
+    return () => {
+      unsubscribeStarted();
+      unsubscribeCompleted();
+      unsubscribeChecklist();
+      unsubscribeHelp();
+      console.log("🧹 Cleaned up SignalR listeners for TechManager");
+    };
+  }, [isConnected, subscribe, selectedRecord]);
+
+  // ===== AUTO REFRESH khi có thay đổi =====
+  
+  useEffect(() => {
+    if (!isConnected) return;
+
+    // Subscribe to general data updates
+    const unsubscribeDataUpdate = subscribe("DataUpdated", (data) => {
+      console.log("📢 Data updated event:", data.type);
+      
+      // Reload dựa theo loại dữ liệu thay đổi
+      if (data.type === "MaintenancePlan") {
+        loadMaintenancePlans();
+        loadStats();
+      } else if (data.type === "WorkOrder") {
+        loadWorkOrders();
+        loadPendingWorkOrders();
+        loadStats();
+      } else if (data.type === "Template") {
+        loadTemplates();
+      } else if (data.type === "UpcomingMaintenance") {
+        loadUpcomingMaintenance();
+      }
+    });
+
+    return () => unsubscribeDataUpdate();
+  }, [isConnected, subscribe]);
 
   return (
     <div className={styles.container}>
@@ -1401,7 +1696,7 @@ const MaintenanceManagement = () => {
 
       {/* Plan Modal */}
       <Modal
-        title={editingPlan ? "Cập nhật chu kỳ bảo trì" : "Thêm chu kỳ bảo trì mới"}
+        title={editingPlan ? "Cập nhật trạng thái chu kỳ bảo trì" : "Thêm chu kỳ bảo trì mới"}
         open={isPlanModalVisible}
         onCancel={() => {
           setIsPlanModalVisible(false);
@@ -1411,91 +1706,196 @@ const MaintenanceManagement = () => {
         width={800}
       >
         <Form form={planForm} layout="vertical" onFinish={handlePlanSubmit}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="equipmentId"
-                label="Thiết bị"
-                rules={[{ required: true, message: "Vui lòng chọn thiết bị" }]}
-              >
-                <Select
-                  placeholder="Chọn thiết bị"
-                  showSearch
-                  filterOption={(input, option) =>
-                    option.children.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  {equipments.map((eq) => (
-                    <Option key={eq.equipmentId} value={eq.equipmentId}>
-                      {eq.equipmentCode} - {eq.equipmentName}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="templateId"
-                label="Mẫu bảo trì"
-                rules={[{ required: true, message: "Vui lòng chọn mẫu bảo trì" }]}
-              >
-                <Select
-                  placeholder="Chọn mẫu bảo trì"
-                  showSearch
-                  filterOption={(input, option) =>
-                    option.children.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  {templates.map((tpl) => (
-                    <Option key={tpl.templateId} value={tpl.templateId}>
-                      {tpl.templateName}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
+          {editingPlan ? (
+            // Khi EDIT: chỉ cho phép thay đổi trạng thái Active/Inactive
+            <>
+              <Alert
+                message="Chế độ chỉnh sửa trạng thái"
+                description="Bạn chỉ có thể bật/tắt trạng thái hoạt động của chu kỳ bảo trì. Không thể thay đổi các thông tin khác."
+                type="info"
+                showIcon
+                style={{ marginBottom: 24 }}
+              />
+              
+              <Descriptions bordered column={2} style={{ marginBottom: 24 }}>
+                <Descriptions.Item label="Thiết bị" span={2}>
+                  {editingPlan.equipmentName} ({editingPlan.equipmentCode})
+                </Descriptions.Item>
+                <Descriptions.Item label="Vị trí" span={2}>
+                  {editingPlan.lineName} - {editingPlan.stageName}
+                </Descriptions.Item>
+                <Descriptions.Item label="Chu kỳ">
+                  {editingPlan.intervalValue}{" "}
+                  {editingPlan.intervalType === "Days"
+                    ? "ngày"
+                    : editingPlan.intervalType === "Months"
+                    ? "tháng"
+                    : editingPlan.intervalType === "Hours"
+                    ? "giờ"
+                    : "chu kỳ"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Ngày bắt đầu">
+                  {dayjs(editingPlan.startDate).format("DD/MM/YYYY")}
+                </Descriptions.Item>
+              </Descriptions>
 
-          <Row gutter={16}>
-            <Col span={12}>
               <Form.Item
-                name="intervalType"
-                label="Loại chu kỳ"
-                rules={[
-                  { required: true, message: "Vui lòng chọn loại chu kỳ" },
-                ]}
+                name="isActive"
+                label="Trạng thái hoạt động"
+                valuePropName="checked"
               >
-                <Select placeholder="Chọn loại">
-                  <Option value="Months">Tháng</Option>
-                  <Option value="Days">Ngày</Option>
-                  <Option value="Hours">Giờ hoạt động</Option>
-                  <Option value="UsageCycles">Chu kỳ sử dụng</Option>
-                </Select>
+                <Switch 
+                  checkedChildren="Đang hoạt động" 
+                  unCheckedChildren="Đã tắt"
+                  style={{ width: 150 }}
+                />
               </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="intervalValue"
-                label="Giá trị chu kỳ"
-                rules={[{ required: true, message: "Vui lòng nhập giá trị" }]}
-              >
-                <InputNumber min={1} style={{ width: "100%" }} />
-              </Form.Item>
-            </Col>
-          </Row>
+            </>
+          ) : (
+            // Khi THÊM MỚI: hiển thị đầy đủ form
+            <>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="lineId"
+                    label="Dây chuyền"
+                    rules={[{ required: true, message: "Vui lòng chọn dây chuyền" }]}
+                  >
+                    <Select
+                      placeholder="Chọn dây chuyền"
+                      onChange={handleLineChange}
+                      showSearch
+                      filterOption={(input, option) =>
+                        option.children.toLowerCase().includes(input.toLowerCase())
+                      }
+                    >
+                      {lines.map((line) => (
+                        <Option key={line.lineId} value={line.lineId}>
+                          {line.lineName}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="stageId"
+                    label="Công đoạn"
+                    rules={[{ required: true, message: "Vui lòng chọn công đoạn" }]}
+                  >
+                    <Select
+                      placeholder="Chọn công đoạn"
+                      onChange={handleStageChange}
+                      showSearch
+                      filterOption={(input, option) =>
+                        option.children.toLowerCase().includes(input.toLowerCase())
+                      }
+                    >
+                      {filteredStages.map((stage) => (
+                        <Option key={stage.stageId} value={stage.stageId}>
+                          {stage.stageName}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="startDate"
-                label="Ngày bắt đầu"
-                initialValue={dayjs()}
-                rules={[{ required: true, message: "Vui lòng chọn ngày" }]}
-              >
-                <DatePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
-              </Form.Item>
-            </Col>
-          </Row>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="equipmentId"
+                    label="Thiết bị"
+                    rules={[{ required: true, message: "Vui lòng chọn thiết bị" }]}
+                  >
+                    <Select
+                      placeholder="Chọn thiết bị"
+                      showSearch
+                      filterOption={(input, option) =>
+                        option.children.toLowerCase().includes(input.toLowerCase())
+                      }
+                    >
+                      {filteredEquipments.map((eq) => (
+                        <Option key={eq.equipmentId} value={eq.equipmentId}>
+                          {eq.equipmentCode} - {eq.equipmentName}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="templateId"
+                    label="Mẫu bảo trì"
+                    rules={[{ required: true, message: "Vui lòng chọn mẫu bảo trì" }]}
+                  >
+                    <Select
+                      placeholder="Chọn mẫu bảo trì"
+                      showSearch
+                      filterOption={(input, option) =>
+                        option.children.toLowerCase().includes(input.toLowerCase())
+                      }
+                    >
+                      {filteredTemplates.map((tpl) => (
+                        <Option key={tpl.templateId} value={tpl.templateId}>
+                          {tpl.templateName}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="intervalType"
+                    label="Loại chu kỳ"
+                    rules={[
+                      { required: true, message: "Vui lòng chọn loại chu kỳ" },
+                    ]}
+                  >
+                    <Select placeholder="Chọn loại">
+                      <Option value="Months">Tháng</Option>
+                      <Option value="Days">Ngày</Option>
+                      <Option value="Hours">Giờ hoạt động</Option>
+                      <Option value="UsageCycles">Chu kỳ sử dụng</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="intervalValue"
+                    label="Giá trị chu kỳ"
+                    rules={[{ required: true, message: "Vui lòng nhập giá trị" }]}
+                  >
+                    <InputNumber min={1} style={{ width: "100%" }} />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="startDate"
+                    label="Ngày bắt đầu"
+                    initialValue={dayjs()}
+                    rules={[{ required: true, message: "Vui lòng chọn ngày" }]}
+                  >
+                    <DatePicker 
+                      format="DD/MM/YYYY" 
+                      style={{ width: "100%" }}
+                      disabledDate={(current) => {
+                        // Không cho chọn ngày trước hôm nay
+                        return current && current < dayjs().startOf('day');
+                      }}
+                      placeholder="Chọn ngày bắt đầu"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </>
+          )}
 
           <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
             <Space style={{ width: "100%", justifyContent: "flex-end" }}>
@@ -1508,7 +1908,7 @@ const MaintenanceManagement = () => {
                 Hủy
               </Button>
               <Button type="primary" htmlType="submit" loading={loading}>
-                {editingPlan ? "Cập nhật" : "Thêm mới"}
+                {editingPlan ? "Cập nhật trạng thái" : "Thêm mới"}
               </Button>
             </Space>
           </Form.Item>
@@ -1752,131 +2152,331 @@ const MaintenanceManagement = () => {
 
       {/* Work Order Modal */}
       <Modal
-        title={editingWorkOrder ? "Cập nhật phiếu bảo trì" : "Thêm phiếu bảo trì mới"}
+        title={selectedRecord && !editingWorkOrder ? "Tạo phiếu bảo trì" : "Cập nhật phiếu bảo trì"}
         open={isWorkOrderModalVisible}
         onCancel={() => {
           setIsWorkOrderModalVisible(false);
           workOrderForm.resetFields();
+          setTemplateChecklist([]);
         }}
         footer={null}
-        width={800}
+        width={1000}
       >
         <Form form={workOrderForm} layout="vertical" onFinish={handleWorkOrderSubmit}>
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="planId"
-                label="Chu kỳ bảo trì"
-                rules={[{ required: true, message: "Vui lòng chọn chu kỳ bảo trì" }]}
-              >
-                <Select
-                  placeholder="Chọn chu kỳ bảo trì"
-                  showSearch
-                  filterOption={(input, option) =>
-                    option.children.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  {maintenancePlans.map((plan) => (
-                    <Option key={plan.planId} value={plan.planId}>
-                      {plan.equipmentName} - {plan.equipmentCode}
-                    </Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="dueDate"
-                label="Ngày đến hạn"
-                rules={[{ required: true, message: "Vui lòng chọn ngày đến hạn" }]}
-              >
-                <DatePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
-              </Form.Item>
-            </Col>
-          </Row>
+          {selectedRecord && !editingWorkOrder ? (
+            // Khi TẠO từ plan: chỉ cho chọn kỹ thuật viên, hiển thị READ-ONLY thông tin khác
+            <>
+              <Alert
+                message="Tạo phiếu bảo trì từ chu kỳ"
+                description="Thông tin chu kỳ bảo trì và ngày đến hạn không thể thay đổi. Vui lòng chọn kỹ thuật viên để giao việc."
+                type="info"
+                showIcon
+                style={{ marginBottom: 24 }}
+              />
+              
+              <Descriptions bordered column={2} style={{ marginBottom: 24 }}>
+                <Descriptions.Item label="Thiết bị" span={2}>
+                  <Text strong>{selectedRecord.equipmentName}</Text>
+                  <Text type="secondary" style={{ marginLeft: 8 }}>({selectedRecord.equipmentCode})</Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Vị trí" span={2}>
+                  {selectedRecord.lineName} - {selectedRecord.stageName}
+                </Descriptions.Item>
+                <Descriptions.Item label="Chu kỳ bảo trì">
+                  {selectedRecord.intervalValue}{" "}
+                  {selectedRecord.intervalType === "Days"
+                    ? "ngày"
+                    : selectedRecord.intervalType === "Months"
+                    ? "tháng"
+                    : selectedRecord.intervalType === "Hours"
+                    ? "giờ"
+                    : "chu kỳ"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Ngày đến hạn">
+                  <Tag color={selectedRecord.postponedDueDate ? "purple" : "blue"}>
+                    {selectedRecord.postponedDueDate 
+                      ? dayjs(selectedRecord.postponedDueDate).format("DD/MM/YYYY")
+                      : dayjs(selectedRecord.nextDueDate).format("DD/MM/YYYY")
+                    }
+                  </Tag>
+                  {selectedRecord.postponedDueDate && (
+                    <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
+                      (Đã hoãn từ {dayjs(selectedRecord.nextDueDate).format("DD/MM/YYYY")})
+                    </Text>
+                  )}
+                </Descriptions.Item>
+              </Descriptions>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="assignedToElectrical"
-                label="Kỹ thuật viên điện"
-              >
-                <Select
-                  placeholder="Chọn kỹ thuật viên điện"
-                  showSearch
-                  allowClear
-                  filterOption={(input, option) =>
-                    option.children.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  {electricalTechs.map((tech) => (
-                    <Option key={tech.userId} value={tech.userId}>
-                      {tech.fullName} - {tech.employeeCode}
-                    </Option>
-                  ))}
-                </Select>
+              {/* Hidden fields để submit */}
+              <Form.Item name="planId" hidden>
+                <Input />
               </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="assignedToMechanical"
-                label="Kỹ thuật viên cơ khí"
-              >
-                <Select
-                  placeholder="Chọn kỹ thuật viên cơ khí"
-                  showSearch
-                  allowClear
-                  filterOption={(input, option) =>
-                    option.children.toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  {mechanicalTechs.map((tech) => (
-                    <Option key={tech.userId} value={tech.userId}>
-                      {tech.fullName} - {tech.employeeCode}
-                    </Option>
-                  ))}
-                </Select>
+              <Form.Item name="equipmentId" hidden>
+                <Input />
               </Form.Item>
-            </Col>
-          </Row>
+              <Form.Item name="templateId" hidden>
+                <Input />
+              </Form.Item>
+              <Form.Item name="dueDate" hidden>
+                <Input />
+              </Form.Item>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="usageUnit"
-                label="Đơn vị sử dụng"
-              >
-                <Input placeholder="Nhập đơn vị sử dụng (tùy chọn)" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="inspectionCode"
-                label="Mã kiểm tra"
-              >
-                <Input placeholder="Nhập mã kiểm tra (tùy chọn)" />
-              </Form.Item>
-            </Col>
-          </Row>
+              <Divider>Phân công kỹ thuật viên</Divider>
+              
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="assignedToElectrical"
+                    label={
+                      <span>
+                        <ThunderboltOutlined style={{ color: '#1890ff', marginRight: 4 }} />
+                        Kỹ thuật viên điện
+                      </span>
+                    }
+                  >
+                    <Select
+                      placeholder="Chọn kỹ thuật viên điện"
+                      showSearch
+                      allowClear
+                      filterOption={(input, option) =>
+                        option.children.toLowerCase().includes(input.toLowerCase())
+                      }
+                    >
+                      {electricalTechs.map((tech) => (
+                        <Option key={tech.userId} value={tech.userId}>
+                          {tech.fullName} - {tech.employeeCode}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="assignedToMechanical"
+                    label={
+                      <span>
+                        <ToolOutlined style={{ color: '#52c41a', marginRight: 4 }} />
+                        Kỹ thuật viên cơ khí
+                      </span>
+                    }
+                  >
+                    <Select
+                      placeholder="Chọn kỹ thuật viên cơ khí"
+                      showSearch
+                      allowClear
+                      filterOption={(input, option) =>
+                        option.children.toLowerCase().includes(input.toLowerCase())
+                      }
+                    >
+                      {mechanicalTechs.map((tech) => (
+                        <Option key={tech.userId} value={tech.userId}>
+                          {tech.fullName} - {tech.employeeCode}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
 
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="repairTime"
-                label="Thời gian sửa chữa (giờ)"
-              >
-                <InputNumber min={0} style={{ width: "100%" }} placeholder="Nhập thời gian sửa chữa (tùy chọn)" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="notes"
-                label="Ghi chú"
-              >
-                <TextArea rows={3} placeholder="Nhập ghi chú (tùy chọn)" />
-              </Form.Item>
-            </Col>
-          </Row>
+              {/* Hiển thị template checklist */}
+              {templateChecklist.length > 0 && (
+                <>
+                  <Divider>Chi tiết mẫu bảo trì</Divider>
+                  <Alert
+                    message={`Tổng cộng: ${templateChecklist.length} công việc kiểm tra (${templateChecklist.filter(i => i.category === 'Electrical').length} điện + ${templateChecklist.filter(i => i.category === 'Mechanical').length} cơ khí)`}
+                    type="success"
+                    showIcon
+                    style={{ marginBottom: 16 }}
+                  />
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <Card 
+                        title={
+                          <span style={{ color: '#1890ff' }}>
+                            <ThunderboltOutlined /> Công việc Điện ({templateChecklist.filter(item => item.category === 'Electrical').length})
+                          </span>
+                        } 
+                        size="small"
+                        style={{ maxHeight: 400, overflow: 'auto' }}
+                      >
+                        {templateChecklist.filter(item => item.category === 'Electrical').length > 0 ? (
+                          <List
+                            size="small"
+                            dataSource={templateChecklist.filter(item => item.category === 'Electrical').sort((a, b) => a.orderIndex - b.orderIndex)}
+                            renderItem={(item, index) => (
+                              <List.Item>
+                                <List.Item.Meta
+                                  avatar={<Badge count={index + 1} style={{ backgroundColor: '#1890ff' }} />}
+                                  title={item.stepName}
+                                  description={item.stepDescription}
+                                />
+                              </List.Item>
+                            )}
+                          />
+                        ) : (
+                          <Empty 
+                            image={Empty.PRESENTED_IMAGE_SIMPLE} 
+                            description="Không có công việc điện"
+                          />
+                        )}
+                      </Card>
+                    </Col>
+                    <Col span={12}>
+                      <Card 
+                        title={
+                          <span style={{ color: '#52c41a' }}>
+                            <ToolOutlined /> Công việc Cơ khí ({templateChecklist.filter(item => item.category === 'Mechanical').length})
+                          </span>
+                        } 
+                        size="small"
+                        style={{ maxHeight: 400, overflow: 'auto' }}
+                      >
+                        {templateChecklist.filter(item => item.category === 'Mechanical').length > 0 ? (
+                          <List
+                            size="small"
+                            dataSource={templateChecklist.filter(item => item.category === 'Mechanical').sort((a, b) => a.orderIndex - b.orderIndex)}
+                            renderItem={(item, index) => (
+                              <List.Item>
+                                <List.Item.Meta
+                                  avatar={<Badge count={index + 1} style={{ backgroundColor: '#52c41a' }} />}
+                                  title={item.stepName}
+                                  description={item.stepDescription}
+                                />
+                              </List.Item>
+                            )}
+                          />
+                        ) : (
+                          <Empty 
+                            image={Empty.PRESENTED_IMAGE_SIMPLE} 
+                            description="Không có công việc cơ khí"
+                          />
+                        )}
+                      </Card>
+                    </Col>
+                  </Row>
+                </>
+              )}
+            </>
+          ) : (
+            // Khi EDIT hoặc TẠO MANUAL: hiển thị form đầy đủ
+            <>
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="planId"
+                    label="Chu kỳ bảo trì"
+                    rules={[{ required: true, message: "Vui lòng chọn chu kỳ bảo trì" }]}
+                  >
+                    <Select
+                      placeholder="Chọn chu kỳ bảo trì"
+                      showSearch
+                      filterOption={(input, option) =>
+                        option.children.toLowerCase().includes(input.toLowerCase())
+                      }
+                    >
+                      {maintenancePlans.map((plan) => (
+                        <Option key={plan.planId} value={plan.planId}>
+                          {plan.equipmentName} - {plan.equipmentCode}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="dueDate"
+                    label="Ngày đến hạn"
+                    rules={[{ required: true, message: "Vui lòng chọn ngày đến hạn" }]}
+                  >
+                    <DatePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="assignedToElectrical"
+                    label="Kỹ thuật viên điện"
+                  >
+                    <Select
+                      placeholder="Chọn kỹ thuật viên điện"
+                      showSearch
+                      allowClear
+                      filterOption={(input, option) =>
+                        option.children.toLowerCase().includes(input.toLowerCase())
+                      }
+                    >
+                      {electricalTechs.map((tech) => (
+                        <Option key={tech.userId} value={tech.userId}>
+                          {tech.fullName} - {tech.employeeCode}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="assignedToMechanical"
+                    label="Kỹ thuật viên cơ khí"
+                  >
+                    <Select
+                      placeholder="Chọn kỹ thuật viên cơ khí"
+                      showSearch
+                      allowClear
+                      filterOption={(input, option) =>
+                        option.children.toLowerCase().includes(input.toLowerCase())
+                      }
+                    >
+                      {mechanicalTechs.map((tech) => (
+                        <Option key={tech.userId} value={tech.userId}>
+                          {tech.fullName} - {tech.employeeCode}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="usageUnit"
+                    label="Đơn vị sử dụng"
+                  >
+                    <Input placeholder="Nhập đơn vị sử dụng (tùy chọn)" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="inspectionCode"
+                    label="Mã kiểm tra"
+                  >
+                    <Input placeholder="Nhập mã kiểm tra (tùy chọn)" />
+                  </Form.Item>
+                </Col>
+              </Row>
+
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="repairTime"
+                    label="Thời gian sửa chữa (giờ)"
+                  >
+                    <InputNumber min={0} style={{ width: "100%" }} placeholder="Nhập thời gian sửa chữa (tùy chọn)" />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item
+                    name="notes"
+                    label="Ghi chú"
+                  >
+                    <TextArea rows={3} placeholder="Nhập ghi chú (tùy chọn)" />
+                  </Form.Item>
+                </Col>
+              </Row>
+            </>
+          )}
 
           <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
             <Space style={{ width: "100%", justifyContent: "flex-end" }}>
@@ -1884,12 +2484,13 @@ const MaintenanceManagement = () => {
                 onClick={() => {
                   setIsWorkOrderModalVisible(false);
                   workOrderForm.resetFields();
+                  setTemplateChecklist([]);
                 }}
               >
                 Hủy
               </Button>
               <Button type="primary" htmlType="submit" loading={loading}>
-                {editingWorkOrder ? "Cập nhật" : "Thêm mới"}
+                {editingWorkOrder ? "Cập nhật" : "Tạo phiếu bảo trì"}
               </Button>
             </Space>
           </Form.Item>
@@ -2152,6 +2753,8 @@ const MaintenanceManagement = () => {
                     {selectedRecord.intervalValue}{" "}
                     {selectedRecord.intervalType === "Days"
                       ? "ngày"
+                      : selectedRecord.intervalType === "Months"
+                      ? "tháng"
                       : selectedRecord.intervalType === "Hours"
                       ? "giờ"
                       : "chu kỳ"}
@@ -2197,11 +2800,6 @@ const MaintenanceManagement = () => {
                       </Descriptions.Item>
                     </>
                   )}
-                  <Descriptions.Item label="Người phụ trách" span={2}>
-                    {selectedRecord.assignedToName || (
-                      <Text type="secondary">Chưa phân công</Text>
-                    )}
-                  </Descriptions.Item>
                 </>
               )}
             </Descriptions>
