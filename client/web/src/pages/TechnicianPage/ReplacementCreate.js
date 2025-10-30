@@ -20,12 +20,14 @@ import { useAuth } from "../../contexts/AuthContext";
 const { TextArea } = Input;
 const ReplacementCreate = ({
   incidentId: propIncidentId = null,
+  replacementId: propReplacementId = null, // NEW: để load replacement có sẵn
   onSuccess = null,
   onCancel = null,
 }) => {
   // ReplacementCreate can be used as a standalone page or embedded in a modal.
   // Props:
   // - incidentId (optional) : if provided, prefill EquipmentId from that incident
+  // - replacementId (optional) : if provided, load existing replacement data (view/edit mode)
   // - onSuccess (optional) : callback when creation succeeds (embedded mode)
   // - onCancel (optional) : callback to close modal (embedded mode)
   const [form] = Form.useForm();
@@ -35,10 +37,15 @@ const ReplacementCreate = ({
 
   const [parts, setParts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [quantityToReturn, setQuantityToReturn] = useState(0); // Số lượng thừa cần trả
+  const [replacementData, setReplacementData] = useState(null); // Dữ liệu replacement đã tồn tại
+  const [equipmentName, setEquipmentName] = useState(""); // Tên thiết bị
+  const [partName, setPartName] = useState(""); // Tên phụ tùng
 
   useEffect(() => {
     const init = async () => {
       setLoading(true);
+
       // Load spare parts (non-fatal)
       try {
         const res = await sparePartService.getAll();
@@ -50,16 +57,173 @@ const ReplacementCreate = ({
         );
       }
 
-      // Load incident info (optional, non-fatal)
+      // NEW: Load existing replacement data if replacementId is provided
+      try {
+        const replacementId =
+          propReplacementId || searchParams.get("replacementId");
+        if (replacementId) {
+          console.log("Loading replacement ID:", replacementId);
+          const replacement = await replacementHistoryService.getById(
+            replacementId
+          );
+          console.log("Loaded replacement data:", replacement);
+          console.log(
+            "Keys in replacement object:",
+            Object.keys(replacement || {})
+          );
+
+          if (replacement) {
+            setReplacementData(replacement);
+
+            // Build display names - handle both PascalCase and camelCase
+            const equipName =
+              replacement.equipmentName ||
+              replacement.EquipmentName ||
+              `Thiết bị #${replacement.equipmentId || replacement.EquipmentID}`;
+            const partDisplayName = `${
+              replacement.partNumber || replacement.PartNumber
+            } - ${replacement.partName || replacement.PartName}`;
+
+            console.log("Equipment Name:", equipName);
+            console.log("Part Name:", partDisplayName);
+
+            setEquipmentName(equipName);
+            setPartName(partDisplayName);
+
+            // Fill form with existing data - handle both PascalCase and camelCase
+            const formValues = {
+              EquipmentName: equipName, // Display only
+              PartName: partDisplayName, // Display only
+              Quantity: replacement.quantity || replacement.Quantity,
+              ActualQuantityUsed:
+                replacement.actualQuantityUsed ||
+                replacement.ActualQuantityUsed,
+              ReplacedDate:
+                replacement.replacedDate || replacement.ReplacedDate
+                  ? dayjs(replacement.replacedDate || replacement.ReplacedDate)
+                  : dayjs(),
+              Remarks: replacement.remarks || replacement.Remarks,
+            };
+
+            console.log("Setting form values:", formValues);
+            form.setFieldsValue(formValues);
+
+            // Calculate quantity to return
+            if (
+              replacement.actualQuantityUsed &&
+              replacement.actualQuantityUsed < replacement.quantity
+            ) {
+              setQuantityToReturn(
+                replacement.quantity - replacement.actualQuantityUsed
+              );
+            }
+          }
+          setLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.error("Failed to load replacement data:", err);
+        message.error(
+          `Không thể tải dữ liệu thay thế: ${err?.message || String(err)}`
+        );
+      }
+
+      // Load incident info and find approved replacement
       try {
         const incidentId = propIncidentId || searchParams.get("incidentId");
         if (incidentId) {
+          console.log("Loading incident ID:", incidentId);
           const inc = await incidentService.getById(incidentId);
+          console.log("Loaded incident data:", inc);
+
           if (inc) {
-            form.setFieldsValue({
-              EquipmentId:
-                inc.equipmentId || inc.equipment?.equipmentId || null,
-            });
+            const equipId =
+              inc.equipmentId ||
+              inc.equipmentID ||
+              inc.equipment?.equipmentId ||
+              inc.equipment?.equipmentID;
+
+            // Try to find approved replacement for this equipment
+            console.log(
+              "Looking for approved replacement for equipment:",
+              equipId
+            );
+
+            try {
+              const allReplacements =
+                await replacementHistoryService.getByEquipmentId(equipId);
+              console.log("All replacements for equipment:", allReplacements);
+
+              // Find approved replacement (status "Đã duyệt cấp phát")
+              const approvedReplacement = Array.isArray(allReplacements)
+                ? allReplacements.find(
+                    (r) =>
+                      (r.status === "Đã duyệt cấp phát" ||
+                        r.Status === "Đã duyệt cấp phát") &&
+                      !r.actualQuantityUsed &&
+                      !r.ActualQuantityUsed // Chưa ghi nhận
+                  )
+                : null;
+
+              if (approvedReplacement) {
+                console.log("Found approved replacement:", approvedReplacement);
+
+                // Load this replacement as if user passed replacementId
+                setReplacementData(approvedReplacement);
+
+                const equipName =
+                  approvedReplacement.equipmentName ||
+                  approvedReplacement.EquipmentName ||
+                  inc.equipment?.equipmentName ||
+                  `Thiết bị #${equipId}`;
+                const partDisplayName = `${
+                  approvedReplacement.partNumber ||
+                  approvedReplacement.PartNumber
+                } - ${
+                  approvedReplacement.partName || approvedReplacement.PartName
+                }`;
+
+                setEquipmentName(equipName);
+                setPartName(partDisplayName);
+
+                form.setFieldsValue({
+                  EquipmentName: equipName,
+                  PartName: partDisplayName,
+                  Quantity:
+                    approvedReplacement.quantity ||
+                    approvedReplacement.Quantity,
+                  ActualQuantityUsed:
+                    approvedReplacement.actualQuantityUsed ||
+                    approvedReplacement.ActualQuantityUsed,
+                  ReplacedDate:
+                    approvedReplacement.replacedDate ||
+                    approvedReplacement.ReplacedDate
+                      ? dayjs(
+                          approvedReplacement.replacedDate ||
+                            approvedReplacement.ReplacedDate
+                        )
+                      : dayjs(),
+                  Remarks:
+                    approvedReplacement.remarks || approvedReplacement.Remarks,
+                });
+
+                setLoading(false);
+                return; // Found and loaded, exit
+              } else {
+                console.warn(
+                  "No approved replacement found for equipment:",
+                  equipId
+                );
+                message.warning(
+                  "Không tìm thấy yêu cầu cấp phát đã được duyệt cho thiết bị này. Vui lòng tạo yêu cầu cấp phát trước."
+                );
+              }
+            } catch (repErr) {
+              console.error(
+                "Failed to load replacements for equipment:",
+                repErr
+              );
+            }
           }
         }
       } catch (err) {
@@ -79,30 +243,62 @@ const ReplacementCreate = ({
       }
     };
     init();
-  }, [propIncidentId, searchParams]);
+  }, [propIncidentId, propReplacementId, searchParams]);
+
+  // Tính toán số lượng thừa khi ActualQuantityUsed thay đổi
+  const handleActualQuantityChange = (value) => {
+    const requestedQty = form.getFieldValue("Quantity") || 0;
+    if (value && value < requestedQty) {
+      setQuantityToReturn(requestedQty - value);
+    } else {
+      setQuantityToReturn(0);
+    }
+  };
 
   const handleSubmit = async (values) => {
+    if (!replacementData) {
+      message.error(
+        "Không thể tạo mới replacement từ form này. Vui lòng sử dụng chức năng yêu cầu cấp phát."
+      );
+      return;
+    }
+
     setLoading(true);
     try {
+      const requestedQty =
+        values.Quantity ||
+        replacementData.quantity ||
+        replacementData.Quantity ||
+        0;
+      const actualQty = values.ActualQuantityUsed;
+
+      if (actualQty === undefined || actualQty === null) {
+        message.error("Vui lòng nhập số lượng thực tế đã sử dụng");
+        setLoading(false);
+        return;
+      }
+
+      const toReturn = actualQty < requestedQty ? requestedQty - actualQty : 0;
+
       const payload = {
-        EquipmentId: values.EquipmentId || null,
-        PartId: values.PartId,
-        Quantity: values.Quantity,
-        ReplacedDate: values.ReplacedDate
-          ? values.ReplacedDate.toISOString()
-          : new Date().toISOString(),
-        ReplacedBy:
-          currentUser?.userId ||
-          currentUser?.id ||
-          currentUser?.username ||
-          null,
-        Status: "Chờ duyệt cấp phát", // Tiếng Việt
-        Remarks: values.Remarks || null,
+        ReplacementID:
+          replacementData.replacementID || replacementData.ReplacementID,
+        ActualQuantityUsed: actualQty, // Số lượng thực tế sử dụng
+        QuantityToReturn: toReturn, // Số lượng thừa (nếu có)
+        Remarks:
+          values.Remarks || replacementData.remarks || replacementData.Remarks,
       };
 
-      await replacementHistoryService.create(payload);
+      console.log("Updating replacement with payload:", payload);
 
-      message.success("Ghi nhận thay thế đã được gửi (Trạng thái: Chờ duyệt).");
+      await replacementHistoryService.update(payload.ReplacementID, payload);
+
+      const message_text =
+        toReturn > 0
+          ? `Đã ghi nhận số lượng sử dụng. Có ${toReturn} linh kiện cần trả lại kho.`
+          : "Đã ghi nhận số lượng sử dụng thành công.";
+
+      message.success(message_text);
 
       if (typeof onSuccess === "function") {
         onSuccess();
@@ -111,81 +307,174 @@ const ReplacementCreate = ({
       }
     } catch (err) {
       console.error(err);
-      message.error(err?.message || "Không thể gửi ghi nhận thay thế.");
+      message.error(err?.message || "Không thể cập nhật ghi nhận thay thế.");
     } finally {
       setLoading(false);
     }
   };
 
+  if (loading) {
+    return (
+      <Card title="Ghi nhận số lượng thực tế sử dụng" bordered={false}>
+        <div style={{ textAlign: "center", padding: "40px 0" }}>
+          <p>Đang tải dữ liệu...</p>
+        </div>
+      </Card>
+    );
+  }
+
   return (
-    <Card title="Ghi nhận thay thế mới" bordered={false}>
-      <Form
-        form={form}
-        layout="vertical"
-        onFinish={handleSubmit}
-        initialValues={{ Quantity: 1 }}
-      >
+    <Card title="Ghi nhận số lượng thực tế sử dụng" bordered={false}>
+      <Form form={form} layout="vertical" onFinish={handleSubmit}>
         <Form.Item label="Sự cố (tùy chọn)">
           {/* Incident is passed via query param or prop; showing readonly when present */}
         </Form.Item>
 
-        <Form.Item label="Thiết bị (EquipmentId)" name="EquipmentId">
-          <Input placeholder="EquipmentId (tùy chọn)" />
+        <Form.Item label="Thiết bị">
+          <Input
+            value={equipmentName}
+            disabled
+            placeholder="Thiết bị từ sự cố"
+            style={{ color: "#000", fontWeight: 500 }}
+          />
+        </Form.Item>
+
+        <Form.Item label="Phụ tùng">
+          <Input
+            value={partName}
+            disabled
+            placeholder="Phụ tùng đã được duyệt"
+            style={{ color: "#000", fontWeight: 500 }}
+          />
+        </Form.Item>
+
+        <Form.Item label="Số lượng đã lấy từ kho">
+          <InputNumber
+            value={replacementData?.quantity || replacementData?.Quantity}
+            disabled
+            style={{ width: "100%", color: "#000", fontWeight: 500 }}
+          />
         </Form.Item>
 
         <Form.Item
-          label="Phụ tùng"
-          name="PartId"
-          rules={[{ required: true, message: "Vui lòng chọn phụ tùng" }]}
+          label="Số lượng thực tế sử dụng"
+          name="ActualQuantityUsed"
+          rules={[
+            {
+              required: true,
+              message: "Vui lòng nhập số lượng thực tế đã sử dụng",
+            },
+            ({ getFieldValue }) => ({
+              validator(_, value) {
+                const quantity = getFieldValue("Quantity");
+                if (!value || value <= quantity) {
+                  return Promise.resolve();
+                }
+                return Promise.reject(
+                  new Error(`Số lượng sử dụng không được vượt quá ${quantity}`)
+                );
+              },
+            }),
+          ]}
+          tooltip="Nhập số lượng linh kiện đã thực sự sử dụng để sửa chữa"
         >
-          <Select
-            showSearch
-            placeholder="Chọn phụ tùng"
-            optionFilterProp="children"
-            filterOption={(input, option) =>
-              (option?.children || "")
-                .toLowerCase()
-                .indexOf(input.toLowerCase()) >= 0
-            }
+          <InputNumber
+            min={0}
+            style={{ width: "100%" }}
+            onChange={handleActualQuantityChange}
+            placeholder="Nhập số lượng thực tế đã sử dụng"
+          />
+        </Form.Item>
+
+        {replacementData && (
+          <Form.Item label="Trạng thái">
+            <Input
+              value={replacementData.status || replacementData.Status}
+              disabled
+              style={{ color: "#000", fontWeight: 500 }}
+            />
+          </Form.Item>
+        )}
+
+        {quantityToReturn > 0 && (
+          <div
+            style={{
+              padding: "12px",
+              backgroundColor: "#fff7e6",
+              border: "1px solid #ffc069",
+              borderRadius: "4px",
+              marginBottom: "16px",
+              color: "#ad6800",
+            }}
           >
-            {parts.map((p) => (
-              <Select.Option key={p.partId} value={p.partId}>
-                {p.partNumber} - {p.partName} (Tồn: {p.quantity})
-              </Select.Option>
-            ))}
-          </Select>
-        </Form.Item>
-
-        <Form.Item
-          label="Số lượng"
-          name="Quantity"
-          rules={[{ required: true, message: "Vui lòng nhập số lượng" }]}
-        >
-          <InputNumber min={1} style={{ width: "100%" }} />
-        </Form.Item>
+            <strong>
+              ⚠️ Số lượng thừa cần trả lại kho: {quantityToReturn}
+            </strong>
+            <p style={{ marginTop: "8px", marginBottom: 0 }}>
+              Sau khi QLKT duyệt, vui lòng đến kho để trả {quantityToReturn}{" "}
+              linh kiện.
+            </p>
+          </div>
+        )}
 
         <Form.Item label="Ngày thay thế" name="ReplacedDate">
-          <DatePicker showTime style={{ width: "100%" }} />
+          <DatePicker
+            showTime
+            style={{ width: "100%" }}
+            disabled={!!replacementData}
+          />
         </Form.Item>
 
         <Form.Item label="Ghi chú" name="Remarks">
-          <TextArea rows={4} placeholder="Ghi chú (tùy chọn)" />
+          <TextArea
+            rows={4}
+            placeholder="Ghi chú (tùy chọn)"
+            disabled={!!replacementData}
+          />
         </Form.Item>
 
-        <Form.Item>
-          <Space style={{ display: "flex", justifyContent: "flex-end" }}>
-            <Button
-              onClick={() =>
-                typeof onCancel === "function" ? onCancel() : navigate(-1)
-              }
+        {replacementData && (
+          <Form.Item>
+            <Space
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                width: "100%",
+              }}
             >
-              Hủy
-            </Button>
-            <Button type="primary" htmlType="submit" loading={loading}>
-              Gửi (Chờ duyệt)
-            </Button>
-          </Space>
-        </Form.Item>
+              <Button
+                onClick={() =>
+                  typeof onCancel === "function" ? onCancel() : navigate(-1)
+                }
+              >
+                Hủy
+              </Button>
+              <Button type="primary" htmlType="submit" loading={loading}>
+                Lưu ghi nhận
+              </Button>
+            </Space>
+          </Form.Item>
+        )}
+
+        {!replacementData && (
+          <div
+            style={{
+              padding: "16px",
+              backgroundColor: "#fff7e6",
+              border: "1px solid #ffc069",
+              borderRadius: "4px",
+              textAlign: "center",
+            }}
+          >
+            <p style={{ margin: 0, color: "#ad6800" }}>
+              ⚠️ Form này dùng để ghi nhận số lượng thực tế sử dụng sau khi sửa
+              chữa.
+              <br />
+              Để yêu cầu cấp phát linh kiện mới, vui lòng sử dụng chức năng "Yêu
+              cầu cấp phát" trong danh sách sự cố.
+            </p>
+          </div>
+        )}
       </Form>
     </Card>
   );

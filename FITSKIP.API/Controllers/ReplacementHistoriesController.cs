@@ -76,7 +76,11 @@ namespace FITSKIP.API.Controllers
                     ReplacedByEmail = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.Email : null,
                     ReplacementID = result.ReplacementId,
                     Quantity = result.Quantity,
+                    ActualQuantityUsed = result.ActualQuantityUsed,
+                    QuantityToReturn = result.QuantityToReturn,
                     ReplacedDate = result.ReplacedDate,
+                    ReturnedDate = result.ReturnedDate,
+                    ReturnRemarks = result.ReturnRemarks,
                     Status = result.Status,
                     Remarks = result.Remarks
                 };
@@ -169,6 +173,8 @@ namespace FITSKIP.API.Controllers
                     ReplacedBy = request.ReplacedBy,
                     Status = request.Status,
                     Remarks = request.Remarks,
+                    ActualQuantityUsed = request.ActualQuantityUsed,
+                    QuantityToReturn = request.QuantityToReturn,
                 };
                 if (request.Quantity <= 0)
                 {
