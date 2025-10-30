@@ -311,10 +311,14 @@ public class IncidentsController : ControllerBase
             // Validate Duration against actual time if both start and end times are provided
             if (request.Duration.HasValue && request.EndTime.HasValue && request.StartTime.HasValue)
             {
-                var actualDuration = (request.EndTime.Value - request.StartTime.Value).TotalMinutes;
-                if (request.Duration.Value > (decimal)actualDuration)
+                var actualDuration = (decimal)(request.EndTime.Value - request.StartTime.Value).TotalMinutes;
+                // Allow a small tolerance (0.01 minutes = 0.6 seconds) to account for rounding differences
+                var tolerance = 0.01m;
+                var maxAllowedDuration = actualDuration + tolerance;
+
+                if (request.Duration.Value > maxAllowedDuration)
                 {
-                    return BadRequest(new { success = false, message = $"Thời lượng ({request.Duration.Value} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
+                    return BadRequest(new { success = false, message = $"Thời lượng ({request.Duration.Value:F2} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
                 }
             }
 
@@ -393,10 +397,14 @@ public class IncidentsController : ControllerBase
                 // Validate Duration against actual time if both start and end times are provided
                 if (incident.Duration.HasValue && incident.EndTime.HasValue && incident.StartTime.HasValue)
                 {
-                    var actualDuration = (incident.EndTime.Value - incident.StartTime.Value).TotalMinutes;
-                    if (incident.Duration.Value > (decimal)actualDuration)
+                    var actualDuration = (decimal)(incident.EndTime.Value - incident.StartTime.Value).TotalMinutes;
+                    // Allow a small tolerance (0.01 minutes = 0.6 seconds) to account for rounding differences
+                    var tolerance = 0.01m;
+                    var maxAllowedDuration = actualDuration + tolerance;
+
+                    if (incident.Duration.Value > maxAllowedDuration)
                     {
-                        return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Thời lượng ({incident.Duration.Value} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
+                        return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Thời lượng ({incident.Duration.Value:F2} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
                     }
                 }
             }
@@ -515,10 +523,14 @@ public class IncidentsController : ControllerBase
             // Validate Duration against actual time if both start and end times are provided
             if (request.Duration.HasValue && request.EndTime.HasValue)
             {
-                var actualDuration = (request.EndTime.Value - request.StartTime).TotalMinutes;
-                if (request.Duration.Value > (decimal)actualDuration)
+                var actualDuration = (decimal)(request.EndTime.Value - request.StartTime).TotalMinutes;
+                // Allow a small tolerance (0.01 minutes = 0.6 seconds) to account for rounding differences
+                var tolerance = 0.01m;
+                var maxAllowedDuration = actualDuration + tolerance;
+
+                if (request.Duration.Value > maxAllowedDuration)
                 {
-                    return BadRequest(new { success = false, message = $"Thời lượng ({request.Duration.Value} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
+                    return BadRequest(new { success = false, message = $"Thời lượng ({request.Duration.Value:F2} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
                 }
             }
 

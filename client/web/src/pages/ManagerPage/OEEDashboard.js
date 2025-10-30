@@ -23,35 +23,35 @@ const OEEDashboard = () => {
   const fetchData = async (date) => {
     setIsLoading(true)
     try {
-      console.log('Fetching data for date:', date);
+      console.log('Lỗi lấy dữ liệu theo ngày:', date);
       
       // Fetch OEE data for all lines
       const oeeResponse = await dashboardService.getOEEStatsByDate(date)
-      console.log('OEE Response:', oeeResponse);
+      console.log('OEE phản hồi:', oeeResponse);
       if (oeeResponse?.success && oeeResponse?.data) {
         setOeeData(oeeResponse.data)
       }
 
       // Fetch pending tech support incidents
       // Format date for incident API (yyyy-MM-dd)
-      console.log('Calling incident API with date:', date);
+      console.log('Đang gọi api sự cố theo ngày :', date);
       try {
         const incidentResponse = await incidentService.getTechSupportPendingIncidents(date)
-        console.log('Incident API call completed');
-        console.log('Incident Response:', incidentResponse);
+        console.log('Gọi api sự cố hoàn thành');
+        console.log('Sự cố phản hồi:', incidentResponse);
         if (incidentResponse?.success && incidentResponse?.data) {
-          console.log('Setting incident data:', incidentResponse.data);
+          console.log('Đang thiết lập dữ liệu sự cố:', incidentResponse.data);
           setIncidentData(incidentResponse.data)
         } else {
-          console.log('No incident data or invalid response');
+          console.log('Không có dữ liệu sự cố hoặc phản hồi không hợp lệ');
           setIncidentData([]);
         }
       } catch (incidentError) {
-        console.error('Error fetching incident data:', incidentError);
+        console.error('Lỗi khi lấy dữ liệu sự cố:', incidentError);
         setIncidentData([]);
       }
     } catch (error) {
-      console.error('Error fetching OEE dashboard data:', error)
+      console.error('Lỗi khi lấy dữ liệu bảng điều khiển OEE:', error)
       setIncidentData([]);
     } finally {
       setIsLoading(false)
@@ -71,7 +71,7 @@ const OEEDashboard = () => {
 
   // Debug: log incident data changes
   useEffect(() => {
-    console.log('Incident data state changed:', incidentData);
+    console.log('Dữ liệu sự cố đã thay đổi:', incidentData);
   }, [incidentData]);
 
   const handleDateChange = (date) => {

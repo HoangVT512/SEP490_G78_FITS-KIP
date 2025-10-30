@@ -1,10 +1,12 @@
 package com.example.fitsforkip.data.local;
 
 import androidx.room.Entity;
+import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 import androidx.room.TypeConverters;
 
 import java.util.Date;
+import java.util.List;
 
 @Entity(tableName = "incident_history")
 @TypeConverters(DateConverter.class)
@@ -26,11 +28,14 @@ public class IncidentHistoryEntity {
     public String assignedTo;
     public boolean isTechSupport;
     public boolean synced = false;
-
+    public List<String> imagePaths; // Local paths to images
+    private List<String> imageUrls; // List of uploaded image URLs
+    public Integer lineId;
     // Constructors, getters, setters
     public IncidentHistoryEntity() {}
 
-    public IncidentHistoryEntity(Integer equipmentId, Date startTime, Date endTime, Double duration, Integer typeId, String reason, String solution, String issue, String status, Date createdDate, String reportedByUserId, String assignedTo, boolean isTechSupport, boolean synced) {
+    @Ignore
+    public IncidentHistoryEntity(Integer equipmentId, Date startTime, Date endTime, Double duration, Integer typeId, String reason, String solution, String issue, String status, Date createdDate, String reportedByUserId, String assignedTo, boolean isTechSupport, boolean synced, List<String> imagePaths, List<String> imageUrls, Integer lineId) {
         this.equipmentId = equipmentId;
         this.startTime = startTime;
         this.endTime = endTime;
@@ -45,9 +50,10 @@ public class IncidentHistoryEntity {
         this.assignedTo = assignedTo;
         this.isTechSupport = isTechSupport;
         this.synced = synced;
+        this.imagePaths = imagePaths;
+        this.imageUrls = imageUrls;
+        this.lineId = lineId;
     }
-
-    // Getters and setters
     public int getIncidentId() { return incidentId; }
     public void setIncidentId(int incidentId) { this.incidentId = incidentId; }
 
@@ -92,4 +98,13 @@ public class IncidentHistoryEntity {
 
     public boolean isSynced() { return synced; }
     public void setSynced(boolean synced) { this.synced = synced; }
+
+    public List<String> getImagePaths() { return imagePaths; }
+    public void setImagePaths(List<String> imagePaths) { this.imagePaths = imagePaths; }
+
+    public List<String> getImageUrls() { return imageUrls; }
+    public void setImageUrls(List<String> imageUrls) { this.imageUrls = imageUrls; }
+
+    public Integer getLineId() { return lineId; }
+    public void setLineId(Integer lineId) { this.lineId = lineId; }
 }

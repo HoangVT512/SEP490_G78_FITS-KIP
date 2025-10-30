@@ -12,7 +12,7 @@ export function Factory({ title, type, oeeData, incidentData, onBoxHover, onBoxL
   const layoutData = type === 'mechanical' ? mechanicalData : type === 'assembly' ? assemblyData : wireData
 
   // Debug: log incident data
-  console.log(`[${type}] Incident Data:`, incidentData);
+  console.log(`[${type}] Sự cố dữ liệu:`, incidentData);
 
   // Helper function to calculate incident hours
   const calculateIncidentHours = (lineIncident) => {

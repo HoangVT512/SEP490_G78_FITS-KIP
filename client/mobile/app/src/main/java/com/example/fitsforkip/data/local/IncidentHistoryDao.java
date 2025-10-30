@@ -50,4 +50,10 @@ public interface IncidentHistoryDao {
 
     @Query("DELETE FROM incident_history WHERE synced = 0 AND equipmentId IN (:equipmentIds)")
     void deleteAllUnsyncedByEquipmentIds(List<Integer> equipmentIds);
+
+    @Query("SELECT * FROM incident_history WHERE lineId = :lineId ORDER BY createdDate DESC")
+    List<IncidentHistoryEntity> getIncidentsByLineId(int lineId);
+
+    @Query("SELECT COUNT(*) FROM incident_history WHERE synced = 0 AND lineId = :lineId")
+    int getUnsyncedCountByLineId(int lineId);
 }

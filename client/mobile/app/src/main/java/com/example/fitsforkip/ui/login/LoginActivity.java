@@ -205,6 +205,7 @@ public class LoginActivity extends AppCompatActivity {
                             SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
                             SharedPreferences.Editor editor = prefs.edit();
                             editor.putString("token", loginResponse.getToken());
+                            editor.putString("user_id", loginResponse.getUser().getId());
                             editor.putString("employee_id", loginResponse.getUser().getEmployeeCode());
                             editor.putString("production_line", loginResponse.getLine().getLineName());
                             editor.putInt("line_id", loginResponse.getLine().getLineId());

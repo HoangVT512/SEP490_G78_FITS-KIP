@@ -10,6 +10,7 @@ public class AppDatabaseSingleton {
         if (instance == null) {
             instance = Room.databaseBuilder(context.getApplicationContext(),
                     AppDatabase.class, "fitsforkip.db")
+                    .fallbackToDestructiveMigration()
                     .build();
         }
         return instance;
