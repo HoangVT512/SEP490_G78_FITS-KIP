@@ -1509,9 +1509,21 @@ const IncidentManagement = () => {
       title: "#",
       dataIndex: "rowIndex",
       key: "rowIndex",
-      width: 100,
+      width: 50,
       fixed: "left",
       render: (text) => <span style={{ fontWeight: 500 }}>{text}</span>,
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 120,
+      fixed: "left",
+      render: (status) => (
+        <Tag icon={getStatusIcon(status)} color={getStatusColor(status)}>
+          {status}
+        </Tag>
+      ),
     },
     {
       title: "Thiết bị",
@@ -1738,17 +1750,6 @@ const IncidentManagement = () => {
     //     </Tooltip>
     //   ),
     // },
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
-      width: 130,
-      render: (status) => (
-        <Tag icon={getStatusIcon(status)} color={getStatusColor(status)}>
-          {status}
-        </Tag>
-      ),
-    },
     {
       title: "Thao tác",
       key: "action",
