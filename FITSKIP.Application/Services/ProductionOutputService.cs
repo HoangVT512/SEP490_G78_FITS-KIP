@@ -11,17 +11,20 @@ public class ProductionOutputService : IProductionOutputService
     private readonly ILineRepository _lineRepository;
     private readonly IShiftRepository _shiftRepository;
     private readonly IIncidentRepository _incidentRepository;
+    private readonly INotificationService _notificationService;
 
     public ProductionOutputService(
         IProductionOutputRepository productionOutputRepository,
         ILineRepository lineRepository,
         IShiftRepository shiftRepository,
-        IIncidentRepository incidentRepository)
+        IIncidentRepository incidentRepository,
+        INotificationService notificationService)
     {
         _productionOutputRepository = productionOutputRepository;
         _lineRepository = lineRepository;
         _shiftRepository = shiftRepository;
         _incidentRepository = incidentRepository;
+        _notificationService = notificationService;
     }
 
     public async Task<IReadOnlyList<ProductionOutputDTO>> GetProductionOutputsAsync(CancellationToken cancellationToken = default)
@@ -97,6 +100,24 @@ public class ProductionOutputService : IProductionOutputService
         };
 
         var createdOutput = await _productionOutputRepository.CreateAsync(productionOutput, cancellationToken);
+
+        // Broadcast to Managers group for OEE Dashboard realtime updates
+        try
+        {
+            Console.WriteLine($"📡 Broadcasting production output creation to Managers group for OEE Dashboard");
+            await _notificationService.SendNotificationToGroupAsync(
+                "Managers",
+                "Thêm sản lượng mới",
+                $"Sản lượng mới được thêm cho chuyền {line.LineName} - Ca {shift.ShiftName}",
+                "production"
+            );
+            Console.WriteLine($"✅ Broadcast to Managers group completed for production output creation");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error broadcasting production output creation: {ex.Message}");
+        }
+
         return ProductionOutputDTO.FromEntity(createdOutput);
     }
 
@@ -181,13 +202,65 @@ public class ProductionOutputService : IProductionOutputService
 
         output.UpdatedAt = DateTime.UtcNow;
         var updatedOutput = await _productionOutputRepository.UpdateAsync(output, cancellationToken);
+
+        // Broadcast to Managers group for OEE Dashboard realtime updates
+        if (updatedOutput != null)
+        {
+            try
+            {
+                var line = await _lineRepository.GetByIdAsync(output.LineId, cancellationToken);
+                var shift = await _shiftRepository.GetByIdAsync(output.ShiftId, cancellationToken);
+
+                Console.WriteLine($"📡 Broadcasting production output update to Managers group for OEE Dashboard");
+                await _notificationService.SendNotificationToGroupAsync(
+                    "Managers",
+                    "Cập nhật sản lượng",
+                    $"Sản lượng được cập nhật cho chuyền {line?.LineName} - Ca {shift?.ShiftName}",
+                    "production"
+                );
+                Console.WriteLine($"✅ Broadcast to Managers group completed for production output update");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error broadcasting production output update: {ex.Message}");
+            }
+        }
+
         return updatedOutput != null ? ProductionOutputDTO.FromEntity(updatedOutput) : null;
     }
 
 
     public async Task<bool> DeleteProductionOutputAsync(int id, CancellationToken cancellationToken = default)
     {
-        return await _productionOutputRepository.DeleteAsync(id, cancellationToken);
+        // Get production output info before deleting for notification
+        var output = await _productionOutputRepository.GetByIdAsync(id, cancellationToken);
+
+        var result = await _productionOutputRepository.DeleteAsync(id, cancellationToken);
+
+        // Broadcast to Managers group for OEE Dashboard realtime updates
+        if (result && output != null)
+        {
+            try
+            {
+                var line = await _lineRepository.GetByIdAsync(output.LineId, cancellationToken);
+                var shift = await _shiftRepository.GetByIdAsync(output.ShiftId, cancellationToken);
+
+                Console.WriteLine($"📡 Broadcasting production output deletion to Managers group for OEE Dashboard");
+                await _notificationService.SendNotificationToGroupAsync(
+                    "Managers",
+                    "Xóa sản lượng",
+                    $"Sản lượng đã được xóa cho chuyền {line?.LineName} - Ca {shift?.ShiftName}",
+                    "production"
+                );
+                Console.WriteLine($"✅ Broadcast to Managers group completed for production output deletion");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error broadcasting production output deletion: {ex.Message}");
+            }
+        }
+
+        return result;
     }
 
     public async Task<IReadOnlyList<ProductionOutputDTO>> GetProductionOutputsByLineAsync(int lineId, CancellationToken cancellationToken = default)

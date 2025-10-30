@@ -513,12 +513,63 @@ public class IncidentService : IIncidentService
             Console.WriteLine($"⏭️ Skipping notification on update - Status: {updatedIncident?.Status}, IsTechSupport: {updatedIncident?.IsTechSupport}, Changed: {wasNotTechSupport || wasNotPending}");
         }
 
+        // Always broadcast to Managers group for OEE Dashboard realtime updates (for any update)
+        if (updatedIncident != null)
+        {
+            try
+            {
+                var updatedEquipment = updatedIncident.EquipmentId.HasValue ? await _equipmentRepository.GetByIdAsync(updatedIncident.EquipmentId.Value, cancellationToken) : null;
+                var updatedLine = updatedIncident.LineId.HasValue ? await _lineRepository.GetByIdAsync(updatedIncident.LineId.Value, cancellationToken) : null;
+
+                Console.WriteLine($"📡 Broadcasting incident update to Managers group for OEE Dashboard - Incident ID: {updatedIncident.IncidentId}");
+                await _notificationService.SendNotificationToGroupAsync(
+                    "Managers",
+                    "Cập nhật sự cố",
+                    $"Sự cố {updatedIncident.IncidentId} đã được cập nhật tại {(updatedEquipment != null ? $"thiết bị {updatedEquipment.EquipmentName}" : $"dây chuyền {updatedLine?.LineName ?? "Chưa xác định"}")}",
+                    "incident"
+                );
+                Console.WriteLine($"✅ Broadcast to Managers group completed for incident update");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error broadcasting incident update: {ex.Message}");
+            }
+        }
+
         return updatedIncident;
     }
 
-    public Task<bool> DeleteIncidentAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteIncidentAsync(int id, CancellationToken cancellationToken = default)
     {
-        return _incidentRepository.DeleteAsync(id, cancellationToken);
+        // Get incident info before deleting for notification
+        var incident = await _incidentRepository.GetByIdAsync(id, cancellationToken);
+
+        var result = await _incidentRepository.DeleteAsync(id, cancellationToken);
+
+        // Broadcast to Managers group for OEE Dashboard realtime updates
+        if (result && incident != null)
+        {
+            try
+            {
+                var equipment = incident.EquipmentId.HasValue ? await _equipmentRepository.GetByIdAsync(incident.EquipmentId.Value, cancellationToken) : null;
+                var line = incident.LineId.HasValue ? await _lineRepository.GetByIdAsync(incident.LineId.Value, cancellationToken) : null;
+
+                Console.WriteLine($"📡 Broadcasting incident deletion to Managers group for OEE Dashboard - Incident ID: {id}");
+                await _notificationService.SendNotificationToGroupAsync(
+                    "Managers",
+                    "Xóa sự cố",
+                    $"Sự cố {id} đã được xóa tại {(equipment != null ? $"thiết bị {equipment.EquipmentName}" : $"dây chuyền {line?.LineName ?? "Chưa xác định"}")}",
+                    "incident"
+                );
+                Console.WriteLine($"✅ Broadcast to Managers group completed for incident deletion");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error broadcasting incident deletion: {ex.Message}");
+            }
+        }
+
+        return result;
     }
 
     public async Task<DowntimeStatsDTO> GetDowntimeStatsAsync(string period, DateTime? startDate = null, DateTime? endDate = null, int? lineId = null, CancellationToken cancellationToken = default)
@@ -882,6 +933,16 @@ public class IncidentService : IIncidentService
                 }
             }
             Console.WriteLine($"   ✅ Notifications sent successfully to {technicalManagers.Count} managers");
+
+            // Also broadcast to all Managers group for OEE Dashboard realtime updates
+            Console.WriteLine($"   📡 Broadcasting incident update to Managers group for OEE Dashboard");
+            await _notificationService.SendNotificationToGroupAsync(
+                "Managers",
+                "Cập nhật sự cố",
+                $"Có sự cố mới tại {(equipment != null ? $"thiết bị {equipment.EquipmentName}" : $"dây chuyền {line?.LineName ?? "Chưa xác định"}")} - Mã sự cố: {incident.IncidentId}",
+                "incident"
+            );
+            Console.WriteLine($"   ✅ Broadcast to Managers group completed");
         }
         catch (Exception ex)
         {
