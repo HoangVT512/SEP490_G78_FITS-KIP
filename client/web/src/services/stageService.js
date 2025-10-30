@@ -1,5 +1,16 @@
 import apiRequest from "./api";
 
+// Export function getAllStages for consistency
+export const getAllStages = async () => {
+  try {
+    const response = await apiRequest("/Stages");
+    return response;
+  } catch (error) {
+    console.error("Get all stages error:", error);
+    throw error;
+  }
+};
+
 export const stageService = {
   async getStages() {
     try {
@@ -86,4 +97,14 @@ export const stageService = {
       throw error;
     }
   },
+
+  async getAllStages() {
+    try {
+      const response = await apiRequest("/Stages");
+      return response;
+    } catch (error) {
+      console.error("Get all stages error:", error);
+      throw error;
+    }
+  }
 };

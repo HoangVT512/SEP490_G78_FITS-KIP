@@ -830,4 +830,27 @@ public class UserRepository : IUserRepository
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }
+
+    public async Task<IReadOnlyList<User>> GetUsersByRoleIdAsync(string roleId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            Console.WriteLine($"GetUsersByRoleIdAsync được gọi với roleId: {roleId}");
+
+            var users = await db.Users
+                .Include(u => u.Role)
+                .Where(u => u.RoleId == roleId && !string.IsNullOrEmpty(u.EmployeeCode))
+                .ToListAsync(cancellationToken);
+
+            Console.WriteLine($"Đã tìm thấy {users.Count} users với roleId {roleId}");
+
+            return users;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Lỗi trong GetUsersByRoleIdAsync: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            return new List<User>();
+        }
+    }
 }

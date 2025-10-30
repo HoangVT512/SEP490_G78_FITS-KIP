@@ -4,6 +4,7 @@ using FITSKIP.Infrastructure.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    partial class FitskipDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251029122303_SeedMaintenanceTemplates")]
+    partial class SeedMaintenanceTemplates
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -353,15 +356,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<DateTime>("NextDueDate")
                         .HasColumnType("datetime");
 
-                    b.Property<DateTime?>("PostponedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("PostponedDueDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("PostponedReason")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime");
 
@@ -390,55 +384,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.HasIndex("TemplateId");
 
                     b.ToTable("MaintenancePlans");
-                });
-
-            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenancePlanAssignment", b =>
-                {
-                    b.Property<int>("AssignmentId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasColumnName("AssignmentID");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AssignmentId"));
-
-                    b.Property<string>("AssignedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<DateTime>("AssignedDate")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("datetime")
-                        .HasDefaultValueSql("GETDATE()");
-
-                    b.Property<bool>("IsActive")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bit")
-                        .HasDefaultValue(true);
-
-                    b.Property<int>("PlanId")
-                        .HasColumnType("int")
-                        .HasColumnName("PlanID");
-
-                    b.Property<string>("TechnicianId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<string>("TechnicianType")
-                        .IsRequired()
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
-
-                    b.HasKey("AssignmentId")
-                        .HasName("PK__MaintenancePlanAssignment__AssignmentID");
-
-                    b.HasIndex("AssignedBy");
-
-                    b.HasIndex("PlanId");
-
-                    b.HasIndex("TechnicianId");
-
-                    b.ToTable("MaintenancePlanAssignments");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceTemplate", b =>
@@ -1318,35 +1263,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("Template");
                 });
 
-            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenancePlanAssignment", b =>
-                {
-                    b.HasOne("FITSKIP.Domain.Entities.User", "AssignedByUser")
-                        .WithMany()
-                        .HasForeignKey("AssignedBy")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .HasConstraintName("FK_MaintenancePlanAssignments_AssignedBy");
-
-                    b.HasOne("FITSKIP.Domain.Entities.MaintenancePlan", "Plan")
-                        .WithMany("Assignments")
-                        .HasForeignKey("PlanId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("FK_MaintenancePlanAssignments_Plans");
-
-                    b.HasOne("FITSKIP.Domain.Entities.User", "Technician")
-                        .WithMany("MaintenanceAssignments")
-                        .HasForeignKey("TechnicianId")
-                        .OnDelete(DeleteBehavior.NoAction)
-                        .IsRequired()
-                        .HasConstraintName("FK_MaintenancePlanAssignments_Technician");
-
-                    b.Navigation("AssignedByUser");
-
-                    b.Navigation("Plan");
-
-                    b.Navigation("Technician");
-                });
-
             modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceTemplate", b =>
                 {
                     b.HasOne("FITSKIP.Domain.Entities.User", "CreatedByUser")
@@ -1609,8 +1525,6 @@ namespace FITSKIP.Infrastructure.Migrations
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenancePlan", b =>
                 {
-                    b.Navigation("Assignments");
-
                     b.Navigation("WorkOrders");
                 });
 
@@ -1645,8 +1559,6 @@ namespace FITSKIP.Infrastructure.Migrations
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.User", b =>
                 {
-                    b.Navigation("MaintenanceAssignments");
-
                     b.Navigation("PurchaseRequestApprovedByNavigations");
 
                     b.Navigation("PurchaseRequestRejectedByNavigations");

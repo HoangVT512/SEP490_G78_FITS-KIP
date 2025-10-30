@@ -348,6 +348,43 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MaintenanceTemplates",
+                columns: table => new
+                {
+                    TemplateID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    StageID = table.Column<int>(type: "int", nullable: false),
+                    TemplateName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
+                    Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    InspectionCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    CreatedDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
+                    CreatedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    UpdatedDate = table.Column<DateTime>(type: "datetime", nullable: true),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Maintenance__TemplateID", x => x.TemplateID);
+                    table.ForeignKey(
+                        name: "FK_MaintenanceTemplates_CreatedBy",
+                        column: x => x.CreatedBy,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_MaintenanceTemplates_Stages",
+                        column: x => x.StageID,
+                        principalTable: "Stages",
+                        principalColumn: "StageID",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MaintenanceTemplates_UpdatedBy",
+                        column: x => x.UpdatedBy,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "IncidentHistory",
                 columns: table => new
                 {
@@ -388,35 +425,6 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "MaintenancePlans",
-                columns: table => new
-                {
-                    PlanID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    EquipmentID = table.Column<int>(type: "int", nullable: true),
-                    IntervalType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    IntervalValue = table.Column<int>(type: "int", nullable: false),
-                    StartDate = table.Column<DateOnly>(type: "date", nullable: false),
-                    NextDueDate = table.Column<DateOnly>(type: "date", nullable: false),
-                    AssignedTo = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
-                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK__Maintena__755C22D75A5E8C31", x => x.PlanID);
-                    table.ForeignKey(
-                        name: "FK__MaintenanPlan__Equip__1234567",
-                        column: x => x.EquipmentID,
-                        principalTable: "Equipment",
-                        principalColumn: "EquipmentID");
-                    table.ForeignKey(
-                        name: "FK__MaintenanPlan__User__2345678",
-                        column: x => x.AssignedTo,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "ReplacementHistories",
                 columns: table => new
                 {
@@ -451,6 +459,84 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MaintenancePlans",
+                columns: table => new
+                {
+                    PlanID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    EquipmentID = table.Column<int>(type: "int", nullable: true),
+                    TemplateID = table.Column<int>(type: "int", nullable: true),
+                    IntervalType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    IntervalValue = table.Column<int>(type: "int", nullable: false),
+                    StartDate = table.Column<DateTime>(type: "datetime", nullable: false),
+                    NextDueDate = table.Column<DateTime>(type: "datetime", nullable: false),
+                    AssignedToElectrical = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    AssignedToMechanical = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    CreatedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    CreatedDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false, defaultValue: "Pending"),
+                    AssignedTo = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Maintena__755C22D75A5E8C31", x => x.PlanID);
+                    table.ForeignKey(
+                        name: "FK_MaintenancePlans_CreatedBy",
+                        column: x => x.CreatedBy,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_MaintenancePlans_ElectricalTech",
+                        column: x => x.AssignedToElectrical,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_MaintenancePlans_Equipment",
+                        column: x => x.EquipmentID,
+                        principalTable: "Equipment",
+                        principalColumn: "EquipmentID",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_MaintenancePlans_MechanicalTech",
+                        column: x => x.AssignedToMechanical,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_MaintenancePlans_Templates",
+                        column: x => x.TemplateID,
+                        principalTable: "MaintenanceTemplates",
+                        principalColumn: "TemplateID",
+                        onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MaintenanceTemplateItems",
+                columns: table => new
+                {
+                    ItemID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TemplateID = table.Column<int>(type: "int", nullable: false),
+                    Category = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    OrderIndex = table.Column<int>(type: "int", nullable: false),
+                    StepName = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    StepDescription = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    IsRequired = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
+                    RequiredRole = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__MaintenanceTemplateItem__ItemID", x => x.ItemID);
+                    table.ForeignKey(
+                        name: "FK_MaintenanceTemplateItems_Templates",
+                        column: x => x.TemplateID,
+                        principalTable: "MaintenanceTemplates",
+                        principalColumn: "TemplateID",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "IncidentShifts",
                 columns: table => new
                 {
@@ -478,25 +564,100 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MaintenanceWorkOrders",
+                columns: table => new
+                {
+                    WorkOrderID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    WorkOrderCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    PlanID = table.Column<int>(type: "int", nullable: false),
+                    EquipmentID = table.Column<int>(type: "int", nullable: false),
+                    AssignedDate = table.Column<DateTime>(type: "datetime", nullable: false),
+                    DueDate = table.Column<DateTime>(type: "datetime", nullable: false),
+                    AssignedToElectrical = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    AssignedToMechanical = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false, defaultValue: "Pending"),
+                    UsageUnit = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    InspectionCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    RepairTime = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    StartedDate = table.Column<DateTime>(type: "datetime", nullable: true),
+                    CompletedDate = table.Column<DateTime>(type: "datetime", nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    CreatedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    CreatedDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
+                    UpdatedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    UpdatedDate = table.Column<DateTime>(type: "datetime", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__MaintenanceWorkOrder__WorkOrderID", x => x.WorkOrderID);
+                    table.ForeignKey(
+                        name: "FK_MaintenanceWorkOrders_CreatedBy",
+                        column: x => x.CreatedBy,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_MaintenanceWorkOrders_ElectricalTech",
+                        column: x => x.AssignedToElectrical,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_MaintenanceWorkOrders_Equipment",
+                        column: x => x.EquipmentID,
+                        principalTable: "Equipment",
+                        principalColumn: "EquipmentID",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MaintenanceWorkOrders_MechanicalTech",
+                        column: x => x.AssignedToMechanical,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_MaintenanceWorkOrders_Plans",
+                        column: x => x.PlanID,
+                        principalTable: "MaintenancePlans",
+                        principalColumn: "PlanID",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_MaintenanceWorkOrders_UpdatedBy",
+                        column: x => x.UpdatedBy,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "MaintenanceChecklistItems",
                 columns: table => new
                 {
                     ChecklistID = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
-                    PlanID = table.Column<int>(type: "int", nullable: false),
-                    StepName = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    IsChecked = table.Column<bool>(type: "bit", nullable: true),
+                    WorkOrderID = table.Column<int>(type: "int", nullable: false),
+                    Category = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    OrderIndex = table.Column<int>(type: "int", nullable: false),
+                    StepName = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    StepDescription = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    RequiredRole = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    IsChecked = table.Column<bool>(type: "bit", nullable: false, defaultValue: false),
+                    CompletedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
                     CompletedDate = table.Column<DateTime>(type: "datetime", nullable: true),
-                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true)
+                    Notes = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    PlanID = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK__Maintena__26C4E2F5A1234567", x => x.ChecklistID);
                     table.ForeignKey(
-                        name: "FK__Maintena__PlanID__3456789",
-                        column: x => x.PlanID,
-                        principalTable: "MaintenancePlans",
-                        principalColumn: "PlanID");
+                        name: "FK_MaintenanceChecklistItems_CompletedBy",
+                        column: x => x.CompletedBy,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_MaintenanceChecklistItems_WorkOrders",
+                        column: x => x.WorkOrderID,
+                        principalTable: "MaintenanceWorkOrders",
+                        principalColumn: "WorkOrderID",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -574,19 +735,89 @@ namespace FITSKIP.Infrastructure.Migrations
                 column: "DepartmentID");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MaintenanceChecklistItems_PlanID",
+                name: "IX_MaintenanceChecklistItems_CompletedBy",
                 table: "MaintenanceChecklistItems",
-                column: "PlanID");
+                column: "CompletedBy");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MaintenancePlans_AssignedTo",
+                name: "IX_MaintenanceChecklistItems_WorkOrderID",
+                table: "MaintenanceChecklistItems",
+                column: "WorkOrderID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenancePlans_AssignedToElectrical",
                 table: "MaintenancePlans",
-                column: "AssignedTo");
+                column: "AssignedToElectrical");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenancePlans_AssignedToMechanical",
+                table: "MaintenancePlans",
+                column: "AssignedToMechanical");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenancePlans_CreatedBy",
+                table: "MaintenancePlans",
+                column: "CreatedBy");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MaintenancePlans_EquipmentID",
                 table: "MaintenancePlans",
                 column: "EquipmentID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenancePlans_TemplateID",
+                table: "MaintenancePlans",
+                column: "TemplateID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenanceTemplateItems_TemplateID",
+                table: "MaintenanceTemplateItems",
+                column: "TemplateID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenanceTemplates_CreatedBy",
+                table: "MaintenanceTemplates",
+                column: "CreatedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenanceTemplates_StageID",
+                table: "MaintenanceTemplates",
+                column: "StageID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenanceTemplates_UpdatedBy",
+                table: "MaintenanceTemplates",
+                column: "UpdatedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenanceWorkOrders_AssignedToElectrical",
+                table: "MaintenanceWorkOrders",
+                column: "AssignedToElectrical");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenanceWorkOrders_AssignedToMechanical",
+                table: "MaintenanceWorkOrders",
+                column: "AssignedToMechanical");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenanceWorkOrders_CreatedBy",
+                table: "MaintenanceWorkOrders",
+                column: "CreatedBy");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenanceWorkOrders_EquipmentID",
+                table: "MaintenanceWorkOrders",
+                column: "EquipmentID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenanceWorkOrders_PlanID",
+                table: "MaintenanceWorkOrders",
+                column: "PlanID");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaintenanceWorkOrders_UpdatedBy",
+                table: "MaintenanceWorkOrders",
+                column: "UpdatedBy");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Notifications_UserId",
@@ -683,6 +914,9 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "MaintenanceChecklistItems");
 
             migrationBuilder.DropTable(
+                name: "MaintenanceTemplateItems");
+
+            migrationBuilder.DropTable(
                 name: "Notifications");
 
             migrationBuilder.DropTable(
@@ -701,7 +935,7 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "IncidentHistory");
 
             migrationBuilder.DropTable(
-                name: "MaintenancePlans");
+                name: "MaintenanceWorkOrders");
 
             migrationBuilder.DropTable(
                 name: "Shifts");
@@ -713,7 +947,13 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "StopType");
 
             migrationBuilder.DropTable(
+                name: "MaintenancePlans");
+
+            migrationBuilder.DropTable(
                 name: "Equipment");
+
+            migrationBuilder.DropTable(
+                name: "MaintenanceTemplates");
 
             migrationBuilder.DropTable(
                 name: "Stages");

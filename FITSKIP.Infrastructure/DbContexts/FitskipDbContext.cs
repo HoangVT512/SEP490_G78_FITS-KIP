@@ -33,6 +33,14 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
     public virtual DbSet<MaintenanceChecklistItem> MaintenanceChecklistItems { get; set; }
 
+    public virtual DbSet<MaintenanceTemplate> MaintenanceTemplates { get; set; }
+
+    public virtual DbSet<MaintenanceTemplateItem> MaintenanceTemplateItems { get; set; }
+
+    public virtual DbSet<MaintenanceWorkOrder> MaintenanceWorkOrders { get; set; }
+
+    public virtual DbSet<MaintenancePlanAssignment> MaintenancePlanAssignments { get; set; }
+
     public virtual DbSet<ProductionOutput> ProductionOutputs { get; set; }
 
     public virtual DbSet<PurchaseRequest> PurchaseRequests { get; set; }
@@ -184,19 +192,166 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
             entity.Property(e => e.PlanId).HasColumnName("PlanID");
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
+            entity.Property(e => e.TemplateId).HasColumnName("TemplateID");
             entity.Property(e => e.IntervalType).HasMaxLength(20);
-            entity.Property(e => e.AssignedTo).HasMaxLength(450);
+            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Pending");
+            entity.Property(e => e.AssignedToElectrical).HasMaxLength(450);
+            entity.Property(e => e.AssignedToMechanical).HasMaxLength(450);
+            entity.Property(e => e.CreatedBy).HasMaxLength(450);
+            entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.StartDate).HasColumnType("datetime");
+            entity.Property(e => e.NextDueDate).HasColumnType("datetime");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
-            // Equipment relationship - no reverse collection
+            // Equipment relationship
             entity.HasOne(d => d.Equipment).WithMany()
                 .HasForeignKey(d => d.EquipmentId)
-                .HasConstraintName("FK__MaintenanPlan__Equip__1234567");
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_MaintenancePlans_Equipment");
 
-            // AssignedTo relationship - no reverse collection
-            entity.HasOne(d => d.AssignedToUser).WithMany()
-                .HasForeignKey(d => d.AssignedTo)
-                .HasConstraintName("FK__MaintenanPlan__User__2345678");
+            // Template relationship
+            entity.HasOne(d => d.Template).WithMany(p => p.MaintenancePlans)
+                .HasForeignKey(d => d.TemplateId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_MaintenancePlans_Templates");
+
+            // Electrical Technician relationship - NO ACTION để tránh multiple cascade paths
+            entity.HasOne(d => d.ElectricalTechnician).WithMany()
+                .HasForeignKey(d => d.AssignedToElectrical)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenancePlans_ElectricalTech");
+
+            // Mechanical Technician relationship - NO ACTION để tránh multiple cascade paths
+            entity.HasOne(d => d.MechanicalTechnician).WithMany()
+                .HasForeignKey(d => d.AssignedToMechanical)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenancePlans_MechanicalTech");
+
+            // CreatedBy relationship - NO ACTION để tránh multiple cascade paths
+            entity.HasOne(d => d.CreatedByUser).WithMany()
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenancePlans_CreatedBy");
+
+            // Backward compatibility - deprecated fields
+            entity.Property(e => e.AssignedTo).HasMaxLength(450);
+            entity.Ignore(e => e.AssignedToUser);
+            entity.Ignore(e => e.ChecklistItems);
+        });
+
+        modelBuilder.Entity<MaintenanceTemplate>(entity =>
+        {
+            entity.HasKey(e => e.TemplateId).HasName("PK__Maintenance__TemplateID");
+
+            entity.Property(e => e.TemplateId).HasColumnName("TemplateID");
+            entity.Property(e => e.StageId).HasColumnName("StageID");
+            entity.Property(e => e.TemplateName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.InspectionCode).HasMaxLength(50);
+            entity.Property(e => e.CreatedBy).HasMaxLength(450);
+            entity.Property(e => e.UpdatedBy).HasMaxLength(450);
+            entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedDate).HasColumnType("datetime");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            // Stage relationship
+            entity.HasOne(d => d.Stage).WithMany()
+                .HasForeignKey(d => d.StageId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MaintenanceTemplates_Stages");
+
+            // CreatedBy relationship - NO ACTION để tránh multiple cascade paths
+            entity.HasOne(d => d.CreatedByUser).WithMany()
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenanceTemplates_CreatedBy");
+
+            // UpdatedBy relationship - NO ACTION để tránh multiple cascade paths
+            entity.HasOne(d => d.UpdatedByUser).WithMany()
+                .HasForeignKey(d => d.UpdatedBy)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenanceTemplates_UpdatedBy");
+        });
+
+        modelBuilder.Entity<MaintenanceTemplateItem>(entity =>
+        {
+            entity.HasKey(e => e.ItemId).HasName("PK__MaintenanceTemplateItem__ItemID");
+
+            entity.Property(e => e.ItemId).HasColumnName("ItemID");
+            entity.Property(e => e.TemplateId).HasColumnName("TemplateID");
+            entity.Property(e => e.Category).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.StepName).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.StepDescription).HasMaxLength(1000);
+            entity.Property(e => e.RequiredRole).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.IsRequired).HasDefaultValue(true);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            // Template relationship
+            entity.HasOne(d => d.Template).WithMany(p => p.TemplateItems)
+                .HasForeignKey(d => d.TemplateId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MaintenanceTemplateItems_Templates");
+        });
+
+        modelBuilder.Entity<MaintenanceWorkOrder>(entity =>
+        {
+            entity.HasKey(e => e.WorkOrderId).HasName("PK__MaintenanceWorkOrder__WorkOrderID");
+
+            entity.Property(e => e.WorkOrderId).HasColumnName("WorkOrderID");
+            entity.Property(e => e.WorkOrderCode).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.PlanId).HasColumnName("PlanID");
+            entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
+            entity.Property(e => e.AssignedDate).HasColumnType("datetime");
+            entity.Property(e => e.DueDate).HasColumnType("datetime");
+            entity.Property(e => e.AssignedToElectrical).HasMaxLength(450);
+            entity.Property(e => e.AssignedToMechanical).HasMaxLength(450);
+            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Pending");
+            entity.Property(e => e.UsageUnit).HasMaxLength(100);
+            entity.Property(e => e.InspectionCode).HasMaxLength(50);
+            entity.Property(e => e.RepairTime).HasMaxLength(50);
+            entity.Property(e => e.StartedDate).HasColumnType("datetime");
+            entity.Property(e => e.CompletedDate).HasColumnType("datetime");
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.Property(e => e.CreatedBy).HasMaxLength(450);
+            entity.Property(e => e.UpdatedBy).HasMaxLength(450);
+            entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedDate).HasColumnType("datetime");
+
+            // Plan relationship
+            entity.HasOne(d => d.Plan).WithMany(p => p.WorkOrders)
+                .HasForeignKey(d => d.PlanId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MaintenanceWorkOrders_Plans");
+
+            // Equipment relationship
+            entity.HasOne(d => d.Equipment).WithMany()
+                .HasForeignKey(d => d.EquipmentId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MaintenanceWorkOrders_Equipment");
+
+            // Electrical Technician relationship - NO ACTION để tránh multiple cascade paths
+            entity.HasOne(d => d.ElectricalTechnician).WithMany()
+                .HasForeignKey(d => d.AssignedToElectrical)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenanceWorkOrders_ElectricalTech");
+
+            // Mechanical Technician relationship - NO ACTION để tránh multiple cascade paths
+            entity.HasOne(d => d.MechanicalTechnician).WithMany()
+                .HasForeignKey(d => d.AssignedToMechanical)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenanceWorkOrders_MechanicalTech");
+
+            // CreatedBy relationship - NO ACTION để tránh multiple cascade paths
+            entity.HasOne(d => d.CreatedByUser).WithMany()
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenanceWorkOrders_CreatedBy");
+
+            // UpdatedBy relationship - NO ACTION để tránh multiple cascade paths
+            entity.HasOne(d => d.UpdatedByUser).WithMany()
+                .HasForeignKey(d => d.UpdatedBy)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenanceWorkOrders_UpdatedBy");
         });
 
         modelBuilder.Entity<MaintenanceChecklistItem>(entity =>
@@ -204,15 +359,62 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.HasKey(e => e.ChecklistId).HasName("PK__Maintena__26C4E2F5A1234567");
 
             entity.Property(e => e.ChecklistId).HasColumnName("ChecklistID");
-            entity.Property(e => e.PlanId).HasColumnName("PlanID");
-            entity.Property(e => e.StepName).HasMaxLength(200);
+            entity.Property(e => e.WorkOrderId).HasColumnName("WorkOrderID");
+            entity.Property(e => e.Category).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.StepName).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.StepDescription).HasMaxLength(1000);
+            entity.Property(e => e.RequiredRole).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.IsChecked).HasDefaultValue(false);
+            entity.Property(e => e.CompletedBy).HasMaxLength(450);
             entity.Property(e => e.CompletedDate).HasColumnType("datetime");
-            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
 
-            entity.HasOne(d => d.Plan).WithMany(p => p.ChecklistItems)
+            // WorkOrder relationship
+            entity.HasOne(d => d.WorkOrder).WithMany(p => p.ChecklistItems)
+                .HasForeignKey(d => d.WorkOrderId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MaintenanceChecklistItems_WorkOrders");
+
+            // CompletedBy relationship
+            entity.HasOne(d => d.CompletedByUser).WithMany()
+                .HasForeignKey(d => d.CompletedBy)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_MaintenanceChecklistItems_CompletedBy");
+
+            // Backward compatibility - deprecated
+            entity.Property(e => e.PlanId).HasColumnName("PlanID");
+            entity.Ignore(e => e.Plan);
+        });
+
+        modelBuilder.Entity<MaintenancePlanAssignment>(entity =>
+        {
+            entity.HasKey(e => e.AssignmentId).HasName("PK__MaintenancePlanAssignment__AssignmentID");
+
+            entity.Property(e => e.AssignmentId).HasColumnName("AssignmentID");
+            entity.Property(e => e.PlanId).HasColumnName("PlanID");
+            entity.Property(e => e.TechnicianId).HasMaxLength(450).IsRequired();
+            entity.Property(e => e.TechnicianType).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.AssignedBy).HasMaxLength(450);
+            entity.Property(e => e.AssignedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            // Plan relationship
+            entity.HasOne(d => d.Plan).WithMany(p => p.Assignments)
                 .HasForeignKey(d => d.PlanId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Maintena__PlanID__3456789");
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MaintenancePlanAssignments_Plans");
+
+            // Technician relationship - NO ACTION để tránh multiple cascade paths
+            entity.HasOne(d => d.Technician).WithMany(p => p.MaintenanceAssignments)
+                .HasForeignKey(d => d.TechnicianId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenancePlanAssignments_Technician");
+
+            // AssignedBy relationship - NO ACTION để tránh multiple cascade paths
+            entity.HasOne(d => d.AssignedByUser).WithMany()
+                .HasForeignKey(d => d.AssignedBy)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenancePlanAssignments_AssignedBy");
         });
 
         modelBuilder.Entity<ProductionOutput>(entity =>

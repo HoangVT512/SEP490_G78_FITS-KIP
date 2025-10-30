@@ -4,6 +4,7 @@ using FITSKIP.Infrastructure.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    partial class FitskipDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251030064152_AddPostponeFieldsToMaintenancePlan")]
+    partial class AddPostponeFieldsToMaintenancePlan
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -354,9 +357,6 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("datetime");
 
                     b.Property<DateTime?>("PostponedDate")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("PostponedDueDate")
                         .HasColumnType("datetime2");
 
                     b.Property<string>("PostponedReason")

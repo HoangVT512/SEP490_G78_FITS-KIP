@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251026112236_InitialCreate")]
+    [Migration("20251029111040_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -250,29 +250,58 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ChecklistId"));
 
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("CompletedBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<DateTime?>("CompletedDate")
                         .HasColumnType("datetime");
 
-                    b.Property<bool?>("IsChecked")
-                        .HasColumnType("bit");
+                    b.Property<bool>("IsChecked")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(false);
 
                     b.Property<string>("Notes")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("int");
 
                     b.Property<int>("PlanId")
                         .HasColumnType("int")
                         .HasColumnName("PlanID");
 
+                    b.Property<string>("RequiredRole")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("StepDescription")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
                     b.Property<string>("StepName")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("WorkOrderId")
+                        .HasColumnType("int")
+                        .HasColumnName("WorkOrderID");
 
                     b.HasKey("ChecklistId")
                         .HasName("PK__Maintena__26C4E2F5A1234567");
 
-                    b.HasIndex("PlanId");
+                    b.HasIndex("CompletedBy");
+
+                    b.HasIndex("WorkOrderId");
 
                     b.ToTable("MaintenanceChecklistItems");
                 });
@@ -289,6 +318,23 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<string>("AssignedTo")
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AssignedToElectrical")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AssignedToMechanical")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("GETDATE()");
 
                     b.Property<int?>("EquipmentId")
                         .HasColumnType("int")
@@ -307,20 +353,248 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("bit")
                         .HasDefaultValue(true);
 
-                    b.Property<DateOnly>("NextDueDate")
-                        .HasColumnType("date");
+                    b.Property<DateTime>("NextDueDate")
+                        .HasColumnType("datetime");
 
-                    b.Property<DateOnly>("StartDate")
-                        .HasColumnType("date");
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<int?>("TemplateId")
+                        .HasColumnType("int")
+                        .HasColumnName("TemplateID");
 
                     b.HasKey("PlanId")
                         .HasName("PK__Maintena__755C22D75A5E8C31");
 
-                    b.HasIndex("AssignedTo");
+                    b.HasIndex("AssignedToElectrical");
+
+                    b.HasIndex("AssignedToMechanical");
+
+                    b.HasIndex("CreatedBy");
 
                     b.HasIndex("EquipmentId");
 
+                    b.HasIndex("TemplateId");
+
                     b.ToTable("MaintenancePlans");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceTemplate", b =>
+                {
+                    b.Property<int>("TemplateId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("TemplateID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TemplateId"));
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("InspectionCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("StageId")
+                        .HasColumnType("int")
+                        .HasColumnName("StageID");
+
+                    b.Property<string>("TemplateName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime");
+
+                    b.HasKey("TemplateId")
+                        .HasName("PK__Maintenance__TemplateID");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("StageId");
+
+                    b.HasIndex("UpdatedBy");
+
+                    b.ToTable("MaintenanceTemplates");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceTemplateItem", b =>
+                {
+                    b.Property<int>("ItemId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("ItemID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ItemId"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<bool>("IsRequired")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bit")
+                        .HasDefaultValue(true);
+
+                    b.Property<int>("OrderIndex")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RequiredRole")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("StepDescription")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("StepName")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("TemplateId")
+                        .HasColumnType("int")
+                        .HasColumnName("TemplateID");
+
+                    b.HasKey("ItemId")
+                        .HasName("PK__MaintenanceTemplateItem__ItemID");
+
+                    b.HasIndex("TemplateId");
+
+                    b.ToTable("MaintenanceTemplateItems");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceWorkOrder", b =>
+                {
+                    b.Property<int>("WorkOrderId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("WorkOrderID");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("WorkOrderId"));
+
+                    b.Property<DateTime>("AssignedDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("AssignedToElectrical")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AssignedToMechanical")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("CompletedDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("CreatedBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime>("CreatedDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime")
+                        .HasDefaultValueSql("GETDATE()");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<int>("EquipmentId")
+                        .HasColumnType("int")
+                        .HasColumnName("EquipmentID");
+
+                    b.Property<string>("InspectionCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("PlanId")
+                        .HasColumnType("int")
+                        .HasColumnName("PlanID");
+
+                    b.Property<string>("RepairTime")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("StartedDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)")
+                        .HasDefaultValue("Pending");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<DateTime?>("UpdatedDate")
+                        .HasColumnType("datetime");
+
+                    b.Property<string>("UsageUnit")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("WorkOrderCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("WorkOrderId")
+                        .HasName("PK__MaintenanceWorkOrder__WorkOrderID");
+
+                    b.HasIndex("AssignedToElectrical");
+
+                    b.HasIndex("AssignedToMechanical");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("EquipmentId");
+
+                    b.HasIndex("PlanId");
+
+                    b.HasIndex("UpdatedBy");
+
+                    b.ToTable("MaintenanceWorkOrders");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Notification", b =>
@@ -928,30 +1202,158 @@ namespace FITSKIP.Infrastructure.Migrations
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceChecklistItem", b =>
                 {
-                    b.HasOne("FITSKIP.Domain.Entities.MaintenancePlan", "Plan")
-                        .WithMany("ChecklistItems")
-                        .HasForeignKey("PlanId")
-                        .IsRequired()
-                        .HasConstraintName("FK__Maintena__PlanID__3456789");
+                    b.HasOne("FITSKIP.Domain.Entities.User", "CompletedByUser")
+                        .WithMany()
+                        .HasForeignKey("CompletedBy")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_MaintenanceChecklistItems_CompletedBy");
 
-                    b.Navigation("Plan");
+                    b.HasOne("FITSKIP.Domain.Entities.MaintenanceWorkOrder", "WorkOrder")
+                        .WithMany("ChecklistItems")
+                        .HasForeignKey("WorkOrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_MaintenanceChecklistItems_WorkOrders");
+
+                    b.Navigation("CompletedByUser");
+
+                    b.Navigation("WorkOrder");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenancePlan", b =>
                 {
-                    b.HasOne("FITSKIP.Domain.Entities.User", "AssignedToUser")
+                    b.HasOne("FITSKIP.Domain.Entities.User", "ElectricalTechnician")
                         .WithMany()
-                        .HasForeignKey("AssignedTo")
-                        .HasConstraintName("FK__MaintenanPlan__User__2345678");
+                        .HasForeignKey("AssignedToElectrical")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_MaintenancePlans_ElectricalTech");
+
+                    b.HasOne("FITSKIP.Domain.Entities.User", "MechanicalTechnician")
+                        .WithMany()
+                        .HasForeignKey("AssignedToMechanical")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_MaintenancePlans_MechanicalTech");
+
+                    b.HasOne("FITSKIP.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_MaintenancePlans_CreatedBy");
 
                     b.HasOne("FITSKIP.Domain.Entities.Equipment", "Equipment")
                         .WithMany()
                         .HasForeignKey("EquipmentId")
-                        .HasConstraintName("FK__MaintenanPlan__Equip__1234567");
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_MaintenancePlans_Equipment");
 
-                    b.Navigation("AssignedToUser");
+                    b.HasOne("FITSKIP.Domain.Entities.MaintenanceTemplate", "Template")
+                        .WithMany("MaintenancePlans")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("FK_MaintenancePlans_Templates");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("ElectricalTechnician");
 
                     b.Navigation("Equipment");
+
+                    b.Navigation("MechanicalTechnician");
+
+                    b.Navigation("Template");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceTemplate", b =>
+                {
+                    b.HasOne("FITSKIP.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_MaintenanceTemplates_CreatedBy");
+
+                    b.HasOne("FITSKIP.Domain.Entities.Stage", "Stage")
+                        .WithMany()
+                        .HasForeignKey("StageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_MaintenanceTemplates_Stages");
+
+                    b.HasOne("FITSKIP.Domain.Entities.User", "UpdatedByUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedBy")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_MaintenanceTemplates_UpdatedBy");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("Stage");
+
+                    b.Navigation("UpdatedByUser");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceTemplateItem", b =>
+                {
+                    b.HasOne("FITSKIP.Domain.Entities.MaintenanceTemplate", "Template")
+                        .WithMany("TemplateItems")
+                        .HasForeignKey("TemplateId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_MaintenanceTemplateItems_Templates");
+
+                    b.Navigation("Template");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceWorkOrder", b =>
+                {
+                    b.HasOne("FITSKIP.Domain.Entities.User", "ElectricalTechnician")
+                        .WithMany()
+                        .HasForeignKey("AssignedToElectrical")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_MaintenanceWorkOrders_ElectricalTech");
+
+                    b.HasOne("FITSKIP.Domain.Entities.User", "MechanicalTechnician")
+                        .WithMany()
+                        .HasForeignKey("AssignedToMechanical")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_MaintenanceWorkOrders_MechanicalTech");
+
+                    b.HasOne("FITSKIP.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_MaintenanceWorkOrders_CreatedBy");
+
+                    b.HasOne("FITSKIP.Domain.Entities.Equipment", "Equipment")
+                        .WithMany()
+                        .HasForeignKey("EquipmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_MaintenanceWorkOrders_Equipment");
+
+                    b.HasOne("FITSKIP.Domain.Entities.MaintenancePlan", "Plan")
+                        .WithMany("WorkOrders")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_MaintenanceWorkOrders_Plans");
+
+                    b.HasOne("FITSKIP.Domain.Entities.User", "UpdatedByUser")
+                        .WithMany()
+                        .HasForeignKey("UpdatedBy")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_MaintenanceWorkOrders_UpdatedBy");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("ElectricalTechnician");
+
+                    b.Navigation("Equipment");
+
+                    b.Navigation("MechanicalTechnician");
+
+                    b.Navigation("Plan");
+
+                    b.Navigation("UpdatedByUser");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Notification", b =>
@@ -1122,6 +1524,18 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenancePlan", b =>
+                {
+                    b.Navigation("WorkOrders");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceTemplate", b =>
+                {
+                    b.Navigation("MaintenancePlans");
+
+                    b.Navigation("TemplateItems");
+                });
+
+            modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceWorkOrder", b =>
                 {
                     b.Navigation("ChecklistItems");
                 });
