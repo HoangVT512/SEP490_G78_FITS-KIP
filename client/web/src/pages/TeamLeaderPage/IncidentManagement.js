@@ -2801,8 +2801,15 @@ const IncidentManagement = () => {
                                   [`stageId_${incidentForm.id}`]:
                                     equipment.stageId,
                                 });
+                                // Trigger form change to re-render disable state
+                                setFormChangeCounter((prev) => prev + 1);
                               } else {
                                 setSelectedEquipment(null);
+                                form.setFieldsValue({
+                                  [`lineId_${incidentForm.id}`]: undefined,
+                                  [`stageId_${incidentForm.id}`]: undefined,
+                                });
+                                setFormChangeCounter((prev) => prev + 1);
                               }
                             }}
                           >
@@ -2829,24 +2836,7 @@ const IncidentManagement = () => {
                             showSearch
                             allowClear
                             optionFilterProp="children"
-                            onChange={(value) => {
-                              const equipment = equipments.find(
-                                (e) => e.equipmentId === value
-                              );
-                              if (equipment) {
-                                setSelectedEquipment(equipment);
-                                form.setFieldsValue({
-                                  [`equipmentCode_${incidentForm.id}`]:
-                                    equipment.equipmentCode,
-                                  [`lineId_${incidentForm.id}`]:
-                                    equipment.lineId,
-                                  [`stageId_${incidentForm.id}`]:
-                                    equipment.stageId,
-                                });
-                              } else {
-                                setSelectedEquipment(null);
-                              }
-                            }}
+                            disabled
                           >
                             {equipments.map((equipment) => (
                               <Option
@@ -2871,6 +2861,7 @@ const IncidentManagement = () => {
                             showSearch
                             allowClear
                             optionFilterProp="children"
+                            disabled
                           >
                             {stages.map((stage) => (
                               <Option key={stage.stageId} value={stage.stageId}>
@@ -2894,6 +2885,11 @@ const IncidentManagement = () => {
                             showSearch
                             allowClear
                             optionFilterProp="children"
+                            disabled={
+                              !!form.getFieldValue(
+                                `equipmentCode_${incidentForm.id}`
+                              )
+                            }
                           >
                             {lines.map((line) => (
                               <Option key={line.lineId} value={line.lineId}>
@@ -3196,9 +3192,16 @@ const IncidentManagement = () => {
                             lineId: equipment.lineId,
                             stageId: equipment.stageId,
                           });
+                          // Trigger re-render to update disable state
+                          setFormChangeCounter((prev) => prev + 1);
                         } else {
                           setSelectedEquipment(null);
-                          form.setFieldsValue({ equipmentId: null });
+                          form.setFieldsValue({
+                            equipmentId: null,
+                            lineId: undefined,
+                            stageId: undefined,
+                          });
+                          setFormChangeCounter((prev) => prev + 1);
                         }
                       }}
                     >
@@ -3220,22 +3223,7 @@ const IncidentManagement = () => {
                       showSearch
                       allowClear
                       optionFilterProp="children"
-                      onChange={(value) => {
-                        const equipment = equipments.find(
-                          (e) => e.equipmentId === value
-                        );
-                        if (equipment) {
-                          setSelectedEquipment(equipment);
-                          form.setFieldsValue({
-                            equipmentCode: equipment.equipmentCode,
-                            lineId: equipment.lineId,
-                            stageId: equipment.stageId,
-                          });
-                        } else {
-                          setSelectedEquipment(null);
-                          form.setFieldsValue({ equipmentId: null });
-                        }
-                      }}
+                      disabled
                     >
                       {equipments.map((equipment) => (
                         <Option
@@ -3256,6 +3244,7 @@ const IncidentManagement = () => {
                       showSearch
                       allowClear
                       optionFilterProp="children"
+                      disabled
                     >
                       {stages.map((stage) => (
                         <Option key={stage.stageId} value={stage.stageId}>
@@ -3279,6 +3268,7 @@ const IncidentManagement = () => {
                       showSearch
                       allowClear
                       optionFilterProp="children"
+                      disabled={!!form.getFieldValue("equipmentCode")}
                     >
                       {lines.map((line) => (
                         <Option key={line.lineId} value={line.lineId}>
