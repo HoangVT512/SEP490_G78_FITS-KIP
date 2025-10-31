@@ -206,6 +206,8 @@ namespace FITSKIP.API.Controllers
 
         /// <summary>
         /// Ghi nhận số lượng thực tế sử dụng và cập nhật trạng thái
+        /// Nếu actualQuantityUsed == Quantity (dùng đủ): tự động chuyển "Hoàn thành" và trừ kho luôn
+        /// Nếu actualQuantityUsed < Quantity (dư): chuyển "Chờ trả lại", chờ QLKT xác nhận
         /// </summary>
         [HttpPut("{id:int}/record-usage")]
         public async Task<ActionResult<ReplacementHistoryDTO>> RecordActualUsage(
@@ -237,6 +239,26 @@ namespace FITSKIP.API.Controllers
                     existing.Remarks = request.Remarks;
 
                 var result = await _service.UpdateAsync(id, existing, cancellationToken);
+
+                // Nếu status = "Hoàn thành" (dùng đủ), tự động trừ kho luôn
+                if (result.Status == "Hoàn thành" && result.PartId > 0 && result.ActualQuantityUsed.HasValue && result.ActualQuantityUsed.Value > 0)
+                {
+                    var sparePart = await _context.SpareParts.FindAsync(new object[] { result.PartId }, cancellationToken: cancellationToken);
+                    if (sparePart != null)
+                    {
+                        // Trừ số lượng = ActualQuantityUsed
+                        sparePart.Quantity -= result.ActualQuantityUsed.Value;
+
+                        // Đảm bảo quantity không âm
+                        if (sparePart.Quantity < 0)
+                            sparePart.Quantity = 0;
+
+                        _context.SpareParts.Update(sparePart);
+                        await _context.SaveChangesAsync(cancellationToken);
+
+                        Console.WriteLine($"✓ Auto-reduced SparePart {result.PartId}: Quantity -= {result.ActualQuantityUsed.Value}, New Quantity = {sparePart.Quantity}");
+                    }
+                }
 
                 var response = new ReplacementHistoryDTO
                 {

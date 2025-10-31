@@ -314,8 +314,12 @@ const ReplacementCreate = ({
         payload
       );
 
-      // Nếu có thừa, show modal thông báo
+      // Nếu actualQty > requestedQty: show modal thông báo có dư
+      // Nếu actualQty === requestedQty: tự động hoàn thành & trừ kho (backend xử lý)
+      // Nếu actualQty < requestedQty: chuyển "Chờ trả lại" (backend xử lý)
+
       if (actualQty > requestedQty) {
+        // Trường hợp vượt quá (không nên xảy ra nhưng xử lý để an toàn)
         const toReturn = actualQty - requestedQty;
         setQuantityToReturn(toReturn);
         setReturnModalVisible(true);
@@ -323,6 +327,7 @@ const ReplacementCreate = ({
         return; // Không close form, đợi user confirm modal
       }
 
+      // Trường hợp dùng đủ hoặc dùng ít hơn → hoàn thành ngay
       message.success("Đã ghi nhận số lượng sử dụng thành công.");
 
       if (typeof onSuccess === "function") {
