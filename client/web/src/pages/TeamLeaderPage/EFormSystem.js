@@ -359,15 +359,21 @@ const calculateAndUpdateOEE = async (record, shift) => {
   // Calculate cycle times based on production data
   const calculateCycleTimes = (shift1Data, shift2Data) => {
     let totalLoadingTime = 0;
+    let totalTargetAmount = 0;
     let totalDowntime = 0;
     let totalResultAmount = 0;
 
     // Calculate for shift 1
     shift1Data.forEach(slot => {
-      if (slot.resultAmount && parseInt(slot.resultAmount) > 0) {
+      // Only count slots that have target or result data
+      const hasData = (slot.targetAmount && parseInt(slot.targetAmount) > 0) || 
+                      (slot.resultAmount && parseInt(slot.resultAmount) > 0);
+      
+      if (hasData) {
         const loadingTime = parseInt(slot.loadingTime) || 0;
         totalLoadingTime += loadingTime;
-        totalResultAmount += parseInt(slot.resultAmount);
+        totalTargetAmount += parseInt(slot.targetAmount) || 0;
+        totalResultAmount += parseInt(slot.resultAmount) || 0;
 
         // Calculate actual downtime from downDetails (FIXED: Use exact downtime per slot)
         if (Array.isArray(slot.downDetails) && slot.downDetails.length > 0) {
@@ -381,10 +387,15 @@ const calculateAndUpdateOEE = async (record, shift) => {
 
     // Calculate for shift 2
     shift2Data.forEach(slot => {
-      if (slot.resultAmount && parseInt(slot.resultAmount) > 0) {
+      // Only count slots that have target or result data
+      const hasData = (slot.targetAmount && parseInt(slot.targetAmount) > 0) || 
+                      (slot.resultAmount && parseInt(slot.resultAmount) > 0);
+      
+      if (hasData) {
         const loadingTime = parseInt(slot.loadingTime) || 0;
         totalLoadingTime += loadingTime;
-        totalResultAmount += parseInt(slot.resultAmount);
+        totalTargetAmount += parseInt(slot.targetAmount) || 0;
+        totalResultAmount += parseInt(slot.resultAmount) || 0;
 
         // Calculate actual downtime from downDetails (FIXED: Use exact downtime per slot)
         if (Array.isArray(slot.downDetails) && slot.downDetails.length > 0) {
@@ -396,10 +407,15 @@ const calculateAndUpdateOEE = async (record, shift) => {
       }
     });
 
-    if (totalResultAmount > 0) {
+    // Calculate cycle times
+    if (totalResultAmount > 0 && totalTargetAmount > 0) {
       const operatingTime = totalLoadingTime - totalDowntime;
+      
+      // Actual Cycle Time = Operating Time / Result Amount (thời gian thực tế cho 1 sản phẩm)
       const actualCycleTime = (operatingTime * 60) / totalResultAmount;
-      const idealCycleTime = (totalLoadingTime * 60) / totalResultAmount;
+      
+      // Ideal Cycle Time = Loading Time / Target Amount (thời gian lý tưởng cho 1 sản phẩm)
+      const idealCycleTime = (totalLoadingTime * 60) / totalTargetAmount;
 
       return {
         actual: actualCycleTime.toFixed(2),
@@ -658,6 +674,15 @@ const calculateAndUpdateOEE = async (record, shift) => {
         }
       };
 
+      // ✅ Update currentFormData with calculated cycle times
+      setCurrentFormData({
+        line: selectedLine,
+        process: 'Lắp Sleeve S/A',
+        date: dayjs(selectedDate).format('DD/MM/YYYY'),
+        actualCycleTime: cycleTimes.actual,
+        idealCycleTime: cycleTimes.ideal
+      });
+
       if (existingForm) {
         setSavedForms(prev => prev.map(form =>
           form.id === existingForm.id ? formData : form
@@ -668,6 +693,9 @@ const calculateAndUpdateOEE = async (record, shift) => {
     } else {
       // No data from API - create draft form
       console.log('Không có dữ liệu từ API, tạo mẫu nháp...');
+
+      // Calculate cycle times even for draft (will be 0 if no data)
+      const cycleTimes = calculateCycleTimes(shift1DataForForm, shift2DataForForm);
 
       if (!existingForm) {
         const newForm = {
@@ -681,7 +709,8 @@ const calculateAndUpdateOEE = async (record, shift) => {
             line: selectedLine,
             process: 'Lắp Sleeve S/A',
             date: dayjs(selectedDate).format('DD/MM/YYYY'),
-            actualTT: '0.0', // Default for draft
+            actualCycleTime: cycleTimes.actual,
+            idealCycleTime: cycleTimes.ideal,
             shifts: {
               1: shift1DataForForm,  // Now includes populated downDetails
               2: shift2DataForForm   // Now includes populated downDetails
@@ -692,12 +721,32 @@ const calculateAndUpdateOEE = async (record, shift) => {
         setSavedForms(prev => [...prev, newForm]);
       }
 
+      // ✅ Update currentFormData for draft
+      setCurrentFormData({
+        line: selectedLine,
+        process: 'Lắp Sleeve S/A',
+        date: dayjs(selectedDate).format('DD/MM/YYYY'),
+        actualCycleTime: cycleTimes.actual,
+        idealCycleTime: cycleTimes.ideal
+      });
+
       // Reset to default data (but now with downDetails populated)
       setShift1Data(shift1DataForForm);  // Includes populated downDetails
       setShift2Data(shift2DataForForm);  // Includes populated downDetails
     }
   }, [selectedLine, selectedFormType, selectedDate, productionOutputs, slotTimeMappings, currentLoadedDate, incidents]);  // ✅ 'incidents' is already in dependencies
 
+  // ✅ Auto-update cycle times when shift data changes (for real-time calculation when user edits)
+  useEffect(() => {
+    if (currentEditingFormId && (shift1Data.length > 0 || shift2Data.length > 0)) {
+      const cycleTimes = calculateCycleTimes(shift1Data, shift2Data);
+      setCurrentFormData(prev => ({
+        ...prev,
+        actualCycleTime: cycleTimes.actual,
+        idealCycleTime: cycleTimes.ideal
+      }));
+    }
+  }, [shift1Data, shift2Data, currentEditingFormId]);
 
   const getCurrentShiftData = () => {
     switch (activeShift) {
@@ -2320,20 +2369,54 @@ const calculateAndUpdateOEE = async (record, shift) => {
           setEditValue('');
         }}
         okText={editingCell?.dataIndex === 'downDetails' ? "Đóng" : "Lưu"}
+        footer={editingCell?.dataIndex === 'downDetails' ? [
+          <Button
+            key="close"
+            type="primary"
+            size="large"
+            onClick={() => {
+              setEditModalVisible(false);
+              setEditingCell(null);
+              setEditValue('');
+            }}
+            style={{
+              background: 'linear-gradient(135deg, #283652 0%, #334766 100%)',
+              border: 'none',
+              borderRadius: '6px',
+              fontWeight: 500
+            }}
+          >
+            Đóng
+          </Button>
+        ] : [
+          <Button
+            key="cancel"
+            size="large"
+            onClick={() => {
+              setEditModalVisible(false);
+              setEditingCell(null);
+              setEditValue('');
+            }}
+            style={{ borderRadius: '6px' }}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="ok"
+            type="primary"
+            size="large"
+            onClick={handleModalOk}
+            style={{
+              background: 'linear-gradient(135deg, #283652 0%, #334766 100%)',
+              border: 'none',
+              borderRadius: '6px',
+              fontWeight: 500
+            }}
+          >
+            Lưu
+          </Button>
+        ]}
         width={500}
-        okButtonProps={{
-          size: 'large',
-          style: {
-            background: 'linear-gradient(135deg, #283652 0%, #334766 100%)',
-            border: 'none',
-            borderRadius: '6px',
-            fontWeight: 500
-          }
-        }}
-        cancelButtonProps={{
-          size: 'large',
-          style: { borderRadius: '6px' }
-        }}
       >
         <Form layout="vertical" style={{ marginTop: '16px' }}>
           <Form.Item

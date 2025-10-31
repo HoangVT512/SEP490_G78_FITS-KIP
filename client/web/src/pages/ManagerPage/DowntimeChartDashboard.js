@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Row, Col, Select, DatePicker, Tabs, Statistic, Progress, Space, Tag, Alert  } from 'antd';
+import { Card, Row, Col, Select, DatePicker, Tabs, Statistic, Progress, Space, Tag, Alert } from 'antd';
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Line, ComposedChart, Area, AreaChart, Scatter, ScatterChart } from 'recharts';
 import { ArrowUpOutlined, ArrowDownOutlined, ThunderboltOutlined, ClockCircleOutlined, DashboardOutlined, LoadingOutlined, SettingOutlined, UserOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { name } from 'dayjs/locale/vi';
 import { authService } from '../../services/authService';
 import { lineService } from '../../services/lineService';
+import { departmentService } from '../../services/departmentService';
 import { userService } from '../../services/userService';
 import { dashboardService } from '../../services/dashboardService';
 
 const { Option } = Select;
 const { TabPane } = Tabs;
+
 
 const DowntimeChartDashboard = () => {
     const currentYear = dayjs().year();
@@ -41,6 +43,9 @@ const DowntimeChartDashboard = () => {
     // State cho thông báo khi không có quyền truy cập
     const [notificationMessage, setNotificationMessage] = useState(null);
 
+    // State cho loading khi thay đổi tháng
+    const [monthLoading, setMonthLoading] = useState(false);
+
     // Fetch user và lines data khi component mount
     useEffect(() => {
         const fetchUserAndLines = async () => {
@@ -59,14 +64,14 @@ const DowntimeChartDashboard = () => {
                 // Nếu user không có departmentId, thử lấy từ API
                 if (!user.departmentId && user.id) {
                     try {
-                        console.log('User missing departmentId, fetching current user info...');
+                        console.log('Người dùng thiếu mã phòng ban, đang lấy thông tin người dùng hiện tại...');
                         const currentUserInfo = await authService.getCurrentUser();
                         if (currentUserInfo && currentUserInfo.departmentId) {
                             user.departmentId = currentUserInfo.departmentId;
-                            console.log('Got departmentId from current user API:', user.departmentId);
+                            console.log('Đã lấy mã phòng ban từ API người dùng hiện tại:', user.departmentId);
                         }
                     } catch (deptError) {
-                        console.error('Error fetching current user info:', deptError);
+                        console.error('Lỗi lấy thông tin người dùng hiện tại:', deptError);
                     }
                 }
 
@@ -76,53 +81,86 @@ const DowntimeChartDashboard = () => {
                 let allowedLines = [];
 
                 // Debug: log thông tin user
-                console.log('Current user:', user);
-                console.log('User roles:', user.roles);
-                console.log('User departmentId:', user.departmentId);
+                console.log('Người dùng hiện tại:', user);
+                console.log('ID người dùng:', user.id);
+                console.log('Vai trò người dùng:', user.roles);
+                console.log('Mã phòng ban người dùng:', user.departmentId);
 
                 // Kiểm tra vai trò của user
-                console.log('Checking user roles for manager...');
+                console.log('Đang kiểm tra vai trò của user cho quản lý...');
                 console.log('user.roles:', user.roles);
-                console.log('user.roles type:', typeof user.roles);
-                console.log('user.roles is array:', Array.isArray(user.roles));
+                console.log('user.roles loại:', typeof user.roles);
+                console.log('user.roles là mảng:', Array.isArray(user.roles));
 
-                const isManager = user.roles && Array.isArray(user.roles) && user.roles.some(role => 
+                const isManager = user.roles && Array.isArray(user.roles) && user.roles.some(role =>
                     role && typeof role === 'string' && role.includes('Quản lý')
                 );
 
-                console.log('Is manager:', isManager);
+                console.log('Là quản lý:', isManager);
 
+                // Luôn lấy lines mà user được assign trước
+                let userAssignedLines = [];
+                try {
+                    console.log('Đang lấy dây chuyền được phân công cho người dùng...');
+                    const userLinesResponse = await lineService.getLinesByUser(user.id);
+                    // Handle both wrapped and direct responses
+                    userAssignedLines = userLinesResponse.success ? userLinesResponse.data : (Array.isArray(userLinesResponse) ? userLinesResponse : []);
+                    console.log('Dây chuyền được phân công cho người dùng:', userAssignedLines);
+                } catch (lineError) {
+                    console.error('Lỗi lấy danh sách dây chuyền của người dùng:', lineError);
+                    userAssignedLines = [];
+                }
+
+                // Nếu là quản lý, lấy thêm tất cả lines trong phòng ban của họ
+                let departmentLines = [];
                 if (isManager) {
-                    // Nếu là quản lý và có departmentId, lấy tất cả lines trong phòng ban của họ
-                    if (user.departmentId) {
-                        try {
-                            console.log('Đang lấy danh sách dây chuyền theo phòng ban...');
-                            // Sử dụng API endpoint để lấy lines theo department
-                            const departmentLines = await lineService.getLinesByDepartment(user.departmentId);
-                            console.log('Department lines for manager:', departmentLines);
-                            allowedLines = departmentLines;
-                        } catch (lineError) {
-                            console.error('Lỗi lấy dánh sách dây chuyền theo phòng ban:', lineError);
-                            // Không lấy gì cả nếu lỗi
-                            allowedLines = [];
-                        }
-                    } else {
-                        console.log('Quản lý không được phân công vào phòng ban nào, nên không lấy được dây chuyền.');
-                        // Nếu là quản lý nhưng chưa có departmentId, không hiển thị dây chuyền nào
-                        allowedLines = [];
-                    }
-                } else {
-                    // Nếu không phải quản lý, chỉ lấy lines mà user được phân công
                     try {
-                        console.log('Đang lấy dây chuyền theo người dùng...');
-                        const userLines = await lineService.getLinesByUser(user.id);
-                        allowedLines = userLines || [];
-                        console.log('Dây chuyền của người dùng:', allowedLines);
+                        console.log('Đang kiểm tra quyền quản lý phòng ban...');
+                        // Lấy danh sách tất cả departments để kiểm tra managerId
+                        const departments = await departmentService.getActiveDepartments();
+                        console.log('Phòng ban:', departments);
+
+                        // Tìm department mà user là manager
+                        const managedDepartment = departments.find(dept => dept.managerId === user.id);
+                        console.log('Phòng ban quản lý:', managedDepartment);
+
+                        if (managedDepartment) {
+                            console.log('Đang lấy danh sách dây chuyền theo phòng ban quản lý...');
+                            // Sử dụng API endpoint để lấy lines theo department
+                            const departmentLinesResponse = await lineService.getLinesByDepartment(managedDepartment.departmentId);
+                            console.log('Dây chuyền theo phòng ban quản lý:', departmentLinesResponse);
+                            // Handle both wrapped and direct responses
+                            departmentLines = departmentLinesResponse.success ? departmentLinesResponse.data : (Array.isArray(departmentLinesResponse) ? departmentLinesResponse : []);
+                        } else {
+                            console.log('Quản lý không được phân công quản lý phòng ban nào.');
+                        }
                     } catch (lineError) {
-                        console.error('Lỗi lấy danh sách người dùng với dây chuyền:', lineError);
-                        allowedLines = [];
+                        console.error('Lỗi lấy danh sách dây chuyền theo phòng ban:', lineError);
+                        departmentLines = [];
                     }
                 }
+
+                // Merge user assigned lines và department lines, loại bỏ duplicate
+                const allLineIds = new Set();
+                const mergedLines = [];
+
+                // Thêm user assigned lines trước
+                userAssignedLines.forEach(line => {
+                    if (!allLineIds.has(line.lineId)) {
+                        allLineIds.add(line.lineId);
+                        mergedLines.push(line);
+                    }
+                });
+
+                // Thêm department lines
+                departmentLines.forEach(line => {
+                    if (!allLineIds.has(line.lineId)) {
+                        allLineIds.add(line.lineId);
+                        mergedLines.push(line);
+                    }
+                });
+
+                allowedLines = mergedLines;
 
                 // Transform data để phù hợp với format hiện tại
                 const transformedLines = allowedLines.map(line => ({
@@ -142,19 +180,26 @@ const DowntimeChartDashboard = () => {
 
                 // Set thông báo dựa trên quyền truy cập
                 if (transformedLines.length === 0) {
-                    if (isManager && !user.departmentId) {
-                        setNotificationMessage({
-                            type: 'manager-no-department',
-                            title: 'Chưa được phân công phòng ban',
-                            message: 'Bạn có vai trò quản lý nhưng chưa được phân công quản lý phòng ban nào. Vui lòng liên hệ quản trị viên hệ thống để được phân công phòng ban.',
-                            icon: 'UserOutlined'
-                        });
-                    } else if (!isManager) {
+                    if (userAssignedLines.length === 0) {
                         setNotificationMessage({
                             type: 'user-no-lines',
                             title: 'Chưa được phân công dây chuyền',
                             message: 'Bạn chưa được phân công giám sát dây chuyền sản xuất nào. Vui lòng liên hệ quản lý phòng ban để được phân công.',
                             icon: 'SettingOutlined'
+                        });
+                    } else if (isManager && departmentLines.length === 0) {
+                        setNotificationMessage({
+                            type: 'manager-no-department',
+                            title: 'Chưa được phân công quản lý phòng ban',
+                            message: 'Bạn có vai trò quản lý nhưng chưa được phân công quản lý phòng ban nào. Vui lòng liên hệ quản trị viên hệ thống để được phân công phòng ban.',
+                            icon: 'UserOutlined'
+                        });
+                    } else {
+                        setNotificationMessage({
+                            type: 'no-lines',
+                            title: 'Không có dây chuyền nào',
+                            message: 'Không tìm thấy dây chuyền nào để hiển thị.',
+                            icon: 'ExclamationCircleOutlined'
                         });
                     }
                 } else {
@@ -203,6 +248,13 @@ const DowntimeChartDashboard = () => {
         fetchUserAndLines();
     }, []);
 
+    // Set loading khi thay đổi tháng
+    useEffect(() => {
+        if (dataLoaded) {
+            setMonthLoading(true);
+        }
+    }, [selectedMonth]);
+
     // Fetch downtime data khi selectedMonth hoặc selectedLines thay đổi
     useEffect(() => {
         const fetchDowntimeData = async () => {
@@ -238,7 +290,9 @@ const DowntimeChartDashboard = () => {
 
                 setDowntimeData(newDowntimeData);
             } catch (error) {
-                console.error('Error fetching downtime data:', error);
+                console.error('Lỗi lấy dữ liệu dừng máy:', error);
+            } finally {
+                setMonthLoading(false);
             }
         };
 
@@ -263,6 +317,8 @@ const DowntimeChartDashboard = () => {
             } catch (error) {
                 console.error('Lỗi lấy dữ liệu dừng máy hàng ngày:', error);
                 setDailyDowntimeData([]);
+            } finally {
+                setMonthLoading(false);
             }
         };
 
@@ -326,8 +382,8 @@ const DowntimeChartDashboard = () => {
                                     onClick={() => toggleLegendItem(item.key, lineId)}
                                 >
                                     <div style={{
-                                        width: item.key === 'tyLeMat' ? '10px' : '40px',  
-                                        height: item.key === 'mucTieu' ? '3px' : (item.key === 'tyLeMat' ? '10px' : '14px'),  
+                                        width: item.key === 'tyLeMat' ? '10px' : '40px',
+                                        height: item.key === 'mucTieu' ? '3px' : (item.key === 'tyLeMat' ? '10px' : '14px'),
                                         backgroundColor: item.color,
                                         borderRadius: item.key === 'tyLeMat' ? '50%' : (item.key === 'mucTieu' ? '0' : '2px'),
                                         border: item.border || 'none',
@@ -1212,6 +1268,79 @@ const DowntimeChartDashboard = () => {
                 </div>
             )}
 
+            {monthLoading && !loading && (
+                <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '80px 20px',
+                    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+                    borderRadius: '16px',
+                    marginBottom: '24px',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                    minHeight: '400px'
+                }}>
+                    <div style={{
+                        position: 'relative',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: '24px'
+                    }}>
+                        {/* Bánh răng lớn */}
+                        <SettingOutlined
+                            style={{
+                                fontSize: '80px',
+                                color: '#1890ff',
+                                animation: 'spin-clockwise 2s linear infinite'
+                            }}
+                        />
+                        {/* Bánh răng nhỏ */}
+                        <SettingOutlined
+                            style={{
+                                fontSize: '40px',
+                                color: '#52c41a',
+                                position: 'absolute',
+                                top: '20px',
+                                right: '20px',
+                                animation: 'spin-counterclockwise 1.5s linear infinite'
+                            }}
+                        />
+                        {/* Icon loading ở giữa */}
+                        <LoadingOutlined
+                            style={{
+                                fontSize: '24px',
+                                color: '#fff',
+                                position: 'absolute',
+                                animation: 'pulse 1s ease-in-out infinite'
+                            }}
+                        />
+                    </div>
+
+                    <div style={{
+                        textAlign: 'center',
+                        color: '#334766',
+                        fontSize: '18px',
+                        fontWeight: '600',
+                        marginBottom: '12px'
+                    }}>
+                        📊 Đang tải dữ liệu tháng {selectedMonth}...
+                    </div>
+
+                    <div style={{
+                        textAlign: 'center',
+                        color: '#666',
+                        fontSize: '14px',
+                        lineHeight: '1.5',
+                        maxWidth: '400px'
+                    }}>
+                        Hệ thống đang tải dữ liệu hiệu suất sản xuất cho tháng đã chọn.
+                        Vui lòng đợi trong giây lát...
+                    </div>
+                </div>
+            )}
+
             {error && (
                 <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>
                     <div>{error}</div>
@@ -1219,7 +1348,7 @@ const DowntimeChartDashboard = () => {
             )}
 
             {/* Thông báo khi không có quyền truy cập */}
-            {!loading && !error && notificationMessage && (
+            {!loading && !monthLoading && !error && notificationMessage && (
                 <div style={{ marginBottom: '24px' }}>
                     <Alert
                         message={notificationMessage.title}
@@ -1234,7 +1363,7 @@ const DowntimeChartDashboard = () => {
                 </div>
             )}
 
-            {!loading && !error && productionLines
+            {!loading && !monthLoading && !error && productionLines
                 .filter(line => selectedLines.includes(line.id))
                 .map(line => renderLineCard(line))}
 

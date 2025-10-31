@@ -99,7 +99,7 @@ public class DashboardService : IDashboardService
         };
     }
 
-    // Cập nhật method mới
+    // Cập nhật method mới với logic OEE giống GetDetailedOEEDailyStatsAsync
     public async Task<object> GetDailyDowntimeStatsAsync(int month, int year, int? lineId = null, string? date = null)
     {
         _logger.LogInformation($"Đang lấy thống kê thời gian ngừng hoạt động hàng ngày cho tháng={month}, năm={year}, lineId={lineId}, date={date}");
@@ -124,85 +124,35 @@ public class DashboardService : IDashboardService
         // Query all unique date-line combinations from ProductionOutput
         var productionDays = await _repository.ProductionOutputs
             .Where(po => po.Date >= startDate && po.Date < endDate && (lineId == null || po.LineId == lineId))
-            .Select(po => new { Date = po.Date.Date, LineId = (int)po.LineId })  // Cast to int
+            .Select(po => new { Date = po.Date.Date, LineId = (int)po.LineId })
             .Distinct()
             .ToListAsync();
 
         // Query all unique date-line combinations from IncidentHistory
-        var incidentDays = await (from ih in _repository.IncidentHistories
-                                  join ish in _repository.IncidentShifts on ih.IncidentId equals ish.IncidentId
-                                  where ish.StartTime >= startDate && ish.StartTime < endDate
-                                  && (lineId == null || ih.LineId == lineId)
-                                  select new { Date = ish.StartTime.Date, LineId = (int)ih.LineId! })  // Cast to int
+        var incidentDays = await _repository.IncidentHistories
+            .Where(ih => ih.StartTime >= startDate && ih.StartTime < endDate
+                        && ih.LineId.HasValue && (lineId == null || ih.LineId == lineId))
+            .Select(ih => new { Date = ih.StartTime!.Value.Date, LineId = (int)ih.LineId!.Value })
             .Distinct()
             .ToListAsync();
 
         // Concat and distinct all unique date-line combinations
         var allDays = productionDays.Concat(incidentDays).Distinct().ToList();
 
-        // Query total operating minutes per day from ProductionOutput
-        var dailyOperatingMinutes = await _repository.ProductionOutputs
-            .Where(po => po.Date >= startDate && po.Date < endDate && (lineId == null || po.LineId == lineId))
-            .GroupBy(po => new { po.Date.Date, po.LineId })
-            .Select(g => new
-            {
-                Date = g.Key.Date,
-                LineId = (int)g.Key.LineId,  // Cast to int
-                TotalOperatingMinutes = (double)g.Sum(po => po.LoadingTime ?? 0)
-            })
-            .ToListAsync();
-
-        // Query OEE per day per line from ProductionOutput
-        var dailyOee = await _repository.ProductionOutputs
-            .Where(po => po.Date >= startDate && po.Date < endDate && (lineId == null || po.LineId == lineId))
-            .GroupBy(po => new { po.Date.Date, po.LineId })
-            .Select(g => new
-            {
-                Date = g.Key.Date,
-                LineId = (int)g.Key.LineId,  // Cast to int
-                AvgOee = g.Average(po => po.OEE ?? 0)
-            })
-            .ToListAsync();
-
-        // Query downtime per day per type from IncidentHistory and IncidentShifts
-        var dailyDowntime = await (from ih in _repository.IncidentHistories
-                                   join ish in _repository.IncidentShifts on ih.IncidentId equals ish.IncidentId
-                                   where ish.StartTime >= startDate && ish.StartTime < endDate
-                                   && (lineId == null || ih.LineId == lineId)
-                                   && ih.TypeId.HasValue
-                                   select new
-                                   {
-                                       Date = ish.StartTime.Date,
-                                       LineId = (int)ih.LineId!,  // Cast to int
-                                       TypeId = (int)ih.TypeId!,
-                                       Duration = ih.Duration ?? 0
-                                   })
-            .GroupBy(x => new { x.Date, x.LineId, x.TypeId })
-            .Select(g => new
-            {
-                Date = g.Key.Date,
-                LineId = g.Key.LineId,
-                TypeId = g.Key.TypeId,
-                TotalDuration = g.Sum(x => (double)x.Duration),
-                Occurrences = g.Count()
-            })
-            .ToListAsync();
-
         // Query line names from database
         var lineNames = await _repository.ProductionOutputs
             .Where(po => po.Date >= startDate && po.Date < endDate && (lineId == null || po.LineId == lineId))
-            .Select(po => new { LineId = (int)po.LineId, LineName = po.Line.LineName })  // Cast LineId to int
+            .Select(po => new { LineId = (int)po.LineId, LineName = po.Line.LineName })
             .Distinct()
             .ToDictionaryAsync(x => x.LineId, x => x.LineName);
 
         // Also include line names from incidents if not in production
         var incidentLineNames = await (from ih in _repository.IncidentHistories.Include(ih => ih.Line)
-                                       join ish in _repository.IncidentShifts on ih.IncidentId equals ish.IncidentId
-                                       where ish.StartTime >= startDate && ish.StartTime < endDate
+                                       where ih.StartTime >= startDate && ih.StartTime < endDate
                                        && (lineId == null || ih.LineId == lineId)
                                        && ih.LineId.HasValue
                                        && ih.Line != null
-                                       select new { LineId = (int)ih.LineId!, LineName = ih.Line != null ? ih.Line.LineName : "Unknown" })
+                                       select new { LineId = (int)ih.LineId!.Value, LineName = ih.Line != null ? ih.Line.LineName : "Unknown" })
             .Distinct()
             .ToDictionaryAsync(x => x.LineId, x => x.LineName);
 
@@ -214,98 +164,119 @@ public class DashboardService : IDashboardService
             }
         }
 
-        // Thêm query Target và Result per day per line
-        var dailyProduction = await _repository.ProductionOutputs
-            .Where(po => po.Date >= startDate && po.Date < endDate && (lineId == null || po.LineId == lineId))
-            .GroupBy(po => new { po.Date.Date, po.LineId })
-            .Select(g => new
+        // Build result using same OEE logic as GetDetailedOEEDailyStatsAsync
+        var result = new List<object>();
+
+        foreach (var lineGroup in allDays.GroupBy(d => d.LineId))
+        {
+            var dailyStats = new List<object>();
+
+            foreach (var day in lineGroup)
             {
-                Date = g.Key.Date,
-                LineId = (int)g.Key.LineId,
-                AvgTargetAmount = g.Average(po => (double)(po.TargetAmount ?? 0)),
-                AvgResultAmount = g.Average(po => (double)(po.ResultAmount ?? 0))
-            })
-            .ToListAsync();
+                int currentLineId = day.LineId;
+                DateTime currentDate = day.Date;
+                DateTime dayStart = currentDate.Date;
+                DateTime dayEnd = dayStart.AddDays(1);
 
+                // Query ProductionOutput data for this day
+                var productionDataList = await _repository.ProductionOutputs
+                    .Where(po => po.Date == dayStart && po.LineId == currentLineId)
+                    .ToListAsync();
 
-        // Trong phần build result, cập nhật lossPercentage
-        var result = allDays
-            .GroupBy(d => d.LineId)
-            .Select(lineGroup => new
+                // Calculate totals for the day (same logic as GetDetailedOEEDailyStatsAsync)
+                double totalPlannedProductionTime = productionDataList.Sum(po => (double)(po.LoadingTime ?? 0));
+                double totalTargetAmount = productionDataList.Sum(po => (double)(po.TargetAmount ?? 0));
+                double totalResultAmount = productionDataList.Sum(po => (double)(po.ResultAmount ?? 0));
+
+                // Calculate defective count for the day
+                int totalDefectiveCount = await CalculateDefectiveCountForPeriodAsync(currentLineId, dayStart, dayEnd);
+
+                // Calculate downtime by type for the day (excluding Phe Pham for A-Loss)
+                var downtimeByType = await CalculateDowntimeForPeriodAsync(currentLineId, dayStart, dayEnd);
+                
+                // Calculate A-Loss (all downtime except Phe Pham - Type 3)
+                double totalALossDowntime = downtimeByType
+                    .Where(kvp => kvp.Key != 3)
+                    .Sum(kvp => kvp.Value.Duration);
+
+                // OEE Calculations (same as GetDetailedOEEDailyStatsAsync)
+                double totalActualRunTime = totalPlannedProductionTime - totalALossDowntime;
+                double idealCycleTime = totalTargetAmount > 0 ? totalPlannedProductionTime / totalTargetAmount : 0;
+                double qLossTime = totalDefectiveCount * idealCycleTime;
+
+                double availability = totalPlannedProductionTime > 0 ? totalActualRunTime / totalPlannedProductionTime : 0;
+                double performance = totalActualRunTime > 0 && idealCycleTime > 0 ? (totalResultAmount * idealCycleTime) / totalActualRunTime : 0;
+                double quality = totalResultAmount > 0 ? (totalResultAmount - totalDefectiveCount) / totalResultAmount : 0;
+
+                double oee = availability * performance * quality;
+
+                // Loss calculations using standard OEE formulas
+                double aLoss = (1 - availability) * 100;
+                double pLoss = availability * (1 - performance) * 100;
+                double qLoss = availability * performance * (1 - quality) * 100;
+                double totalLoss = (1 - oee) * 100;
+                double totalDetailedLoss = aLoss + pLoss + qLoss;
+
+                // Build detailed downtime by type
+                var downDetails = new
+                {
+                    dungNgan = GetTypeDetailsFromDict(downtimeByType, 1, totalPlannedProductionTime),
+                    dungDai = GetTypeDetailsFromDict(downtimeByType, 2, totalPlannedProductionTime),
+                    phePham = new
+                    {
+                        percentage = Math.Round(qLoss, 2),
+                        duration = Math.Round(qLossTime, 2),
+                        totalDuration = Math.Round(downtimeByType.ContainsKey(3) ? downtimeByType[3].Duration : 0, 2),
+                        occurrences = totalDefectiveCount
+                    },
+                    veSinhDauCuoiCa = GetTypeDetailsFromDict(downtimeByType, 4, totalPlannedProductionTime),
+                    doiMa = GetTypeDetailsFromDict(downtimeByType, 5, totalPlannedProductionTime)
+                };
+
+                dailyStats.Add(new
+                {
+                    date = currentDate.ToString("yyyy-MM-dd"),
+                    oee = Math.Round(oee * 100, 2),
+                    aLoss = Math.Round(aLoss, 2),
+                    pLoss = Math.Round(pLoss, 2),
+                    qLoss = Math.Round(qLoss, 2),
+                    totalLoss = Math.Round(totalLoss, 2),
+                    totalDetailedLoss = Math.Round(totalDetailedLoss, 2),
+                    downDetails = downDetails
+                });
+            }
+
+            result.Add(new
             {
                 lineId = lineGroup.Key,
                 lineName = lineNames.ContainsKey(lineGroup.Key) ? lineNames[lineGroup.Key] : "Unknown Line",
-                dailyStats = lineGroup.Select(d =>
-                {
-                    var prodData = dailyProduction.FirstOrDefault(p => p.Date == d.Date && p.LineId == d.LineId);
-                    var operatingMinutes = dailyOperatingMinutes.FirstOrDefault(dom => dom.Date == d.Date && dom.LineId == d.LineId)?.TotalOperatingMinutes ?? 0;
-                    var totalTargetAmount = prodData?.AvgTargetAmount * 3 ?? 0; // Assuming 3 slots per day, adjust if needed
-                    var totalResultAmount = prodData?.AvgResultAmount * 3 ?? 0;
-                    var aLossMinutes = dailyDowntime.Where(dd => dd.Date == d.Date && dd.LineId == d.LineId && new[] { 1, 2, 4, 5 }.Contains(dd.TypeId)).Sum(dd => dd.TotalDuration);
-                    var defectiveCount = dailyDowntime.FirstOrDefault(dd => dd.Date == d.Date && dd.LineId == d.LineId && dd.TypeId == 3)?.Occurrences ?? 0;
-                    var phePhamTotalDuration = dailyDowntime.FirstOrDefault(dd => dd.Date == d.Date && dd.LineId == d.LineId && dd.TypeId == 3)?.TotalDuration ?? 0;
-                    var idealCycleTime = totalTargetAmount > 0 ? operatingMinutes / totalTargetAmount : 0;
-                    var actualRunTime = operatingMinutes - aLossMinutes;
-                    var availability = operatingMinutes > 0 ? actualRunTime / operatingMinutes : 0;
-                    var performance = actualRunTime > 0 && idealCycleTime > 0 ? (totalResultAmount * idealCycleTime) / actualRunTime : 0;
-                    var quality = totalResultAmount > 0 ? (totalResultAmount - defectiveCount) / totalResultAmount : 0;
-                    var oee = availability * performance * quality;
-                    var aLoss = (1 - availability) * 100;
-                    var pLoss = availability * (1 - performance) * 100;
-                    var qLoss = availability * performance * (1 - quality) * 100;
-                    var totalDetailedLoss = aLoss + pLoss + qLoss;
-                    var totalLoss = (1 - oee) * 100;
-                    var qLossMinutes = defectiveCount * idealCycleTime;
-                    return new
-                    {
-                        date = d.Date.ToString("yyyy-MM-dd"),
-                        oee = Math.Round(oee * 100, 2),
-                        aLoss = Math.Round(aLoss, 2),
-                        pLoss = Math.Round(pLoss, 2),
-                        qLoss = Math.Round(qLoss, 2),
-                        totalLoss = Math.Round(totalLoss, 2),
-                        totalDetailedLoss = Math.Round(totalDetailedLoss, 2),
-                        downDetails = new
-                        {
-                            dungNgan = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 1, operatingMinutes),
-                            dungDai = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 2, operatingMinutes),
-                            phePham = new
-                            {
-                                percentage = Math.Round(qLoss, 2),
-                                duration = Math.Round(qLossMinutes, 2),
-                                totalDuration = Math.Round(phePhamTotalDuration, 2),
-                                occurrences = defectiveCount
-                            },
-                            veSinhDauCuoiCa = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 4, operatingMinutes),
-                            doiMa = GetTypeDetails(dailyDowntime, d.Date, d.LineId, 5, operatingMinutes)
-                        }
-                    };
-                }).ToList()
-            })
-            .ToList();
+                dailyStats = dailyStats
+            });
+        }
 
         return result;
     }
 
-    private object GetTypeDetails(IEnumerable<dynamic> dailyDowntime, DateTime date, int lineId, int typeId, double totalOperatingMinutes)
+    private object GetTypeDetailsFromDict(Dictionary<int, (double Duration, int Count)> downtimeDict, int typeId, double totalOperatingMinutes)
     {
-        var typeData = dailyDowntime.FirstOrDefault(dd => dd.Date == date && dd.LineId == lineId && dd.TypeId == typeId);
-        if (typeData == null)
+        if (!downtimeDict.ContainsKey(typeId))
         {
             return new { percentage = 0.00, duration = 0.00, occurrences = 0 };
         }
+        
+        var typeData = downtimeDict[typeId];
         return new
         {
-            percentage = Math.Round(totalOperatingMinutes > 0 ? (typeData.TotalDuration / totalOperatingMinutes) * 100 : 0.0, 2),
-            duration = Math.Round(typeData.TotalDuration, 2),
-            occurrences = typeData.Occurrences
+            percentage = Math.Round(totalOperatingMinutes > 0 ? (typeData.Duration / totalOperatingMinutes) * 100 : 0.0, 2),
+            duration = Math.Round(typeData.Duration, 2),
+            occurrences = typeData.Count
         };
     }
 
     // New method for detailed OEE calculation per day per line
     public async Task<object> GetDetailedOEEDailyStatsAsync(int lineId, DateTime date)
     {
-        _logger.LogInformation($"Calculating detailed OEE stats for lineId={lineId}, date={date.ToString("yyyy-MM-dd")}");
+        _logger.LogInformation($"Đang tính chi tiết OEE cho dây chuyền={lineId}, date={date.ToString("yyyy-MM-dd")}");
 
         // Define date range for the specific day
         var startOfDay = date.Date;
@@ -321,7 +292,7 @@ public class DashboardService : IDashboardService
             return new
             {
                 success = false,
-                message = "No production data found for the specified date and line.",
+                message = "Không tìm thấy dữ liệu sản xuất cho ngày và dây chuyền đã chỉ định.",
                 data = (object?)null
             };
         }
@@ -345,7 +316,8 @@ public class DashboardService : IDashboardService
             {
                 var slotStart = date.Date.Add(startTimeSpan);
                 var slotEnd = date.Date.Add(endTimeSpan);
-                totalDowntime += await CalculateDowntimeForPeriodAsync(lineId, slotStart, slotEnd, 3);
+                var downtimeDict = await CalculateDowntimeForPeriodAsync(lineId, slotStart, slotEnd, 3);
+                totalDowntime += downtimeDict.Values.Sum(d => d.Duration);
             }
         }
 
@@ -397,7 +369,7 @@ public class DashboardService : IDashboardService
     // New method for detailed OEE calculation per slot per line
     public async Task<object> GetDetailedOEESlotStatsAsync(int lineId, DateTime date, int shiftId, string slotTime)
     {
-        _logger.LogInformation($"Calculating detailed OEE stats for lineId={lineId}, date={date.ToString("yyyy-MM-dd")}, shiftId={shiftId}, slotTime={slotTime}");
+        _logger.LogInformation($"Đang tính chi tiết OEE cho dây chuyền={lineId}, date={date.ToString("yyyy-MM-dd")}, shiftId={shiftId}, slotTime={slotTime}");
 
         // Parse slot time to get start and end time
         var slotParts = slotTime.Split('-');
@@ -408,7 +380,7 @@ public class DashboardService : IDashboardService
             return new
             {
                 success = false,
-                message = "Invalid slot time format. Use HH:mm-HH:mm."
+                message = "Định dạng khung thời gian không hợp lệ. Sử dụng HH:mm-HH:mm."
             };
         }
 
@@ -425,7 +397,7 @@ public class DashboardService : IDashboardService
             return new
             {
                 success = false,
-                message = "No production data found for the specified slot."
+                message = "Không tìm thấy dữ liệu sản xuất cho slot đã chỉ định."
             };
         }
 
@@ -437,7 +409,8 @@ public class DashboardService : IDashboardService
         int defectiveCount = await CalculateDefectiveCountForPeriodAsync(lineId, slotStart, slotEnd);
 
         // Query total downtime (excluding Phe Pham) within the slot, accounting for crossover
-        double totalDowntime = await CalculateDowntimeForPeriodAsync(lineId, slotStart, slotEnd, 3);
+        var downtimeDict = await CalculateDowntimeForPeriodAsync(lineId, slotStart, slotEnd, 3);
+        double totalDowntime = downtimeDict.Values.Sum(d => d.Duration);
 
         // Calculations
         double actualRunTime = plannedProductionTime - totalDowntime;
@@ -485,18 +458,25 @@ public class DashboardService : IDashboardService
         };
     }
 
-    // Helper method to calculate total downtime for a specific period, accounting for crossover incidents
-    private async Task<double> CalculateDowntimeForPeriodAsync(int lineId, DateTime start, DateTime end, int? excludeTypeId = null)
+    // Helper method to calculate total downtime for a specific period, accounting for crossover incidents and real-time calculation
+    private async Task<Dictionary<int, (double Duration, int Count)>> CalculateDowntimeForPeriodAsync(int lineId, DateTime start, DateTime end, int? excludeTypeId = null)
     {
         var incidents = await _repository.IncidentHistories
-            .Where(ih => ih.LineId == lineId && ih.TypeId.HasValue && ih.TypeId != excludeTypeId && ih.StartTime.HasValue)
+            .Where(ih => ih.LineId == lineId && ih.TypeId.HasValue && ih.StartTime.HasValue)
+            .Select(ih => new { ih.StartTime, ih.EndTime, ih.TypeId })
             .ToListAsync();
 
-        double totalDowntime = 0;
+        var downtimeByType = new Dictionary<int, (double, int)>();
+        DateTime currentTime = DateTime.Now;
+
         foreach (var incident in incidents)
         {
+            if (incident.TypeId == excludeTypeId) continue;
+
             var incidentStart = incident.StartTime!.Value;
-            var incidentEnd = incidentStart.AddMinutes((double)(incident.Duration ?? 0));
+            DateTime incidentEnd = incident.EndTime ?? currentTime;
+            // Clamp to current time if ongoing
+            if (incidentEnd > currentTime) incidentEnd = currentTime;
 
             // Calculate overlap with the period
             var overlapStart = incidentStart > start ? incidentStart : start;
@@ -505,11 +485,14 @@ public class DashboardService : IDashboardService
             if (overlapStart < overlapEnd)
             {
                 var overlapMinutes = (overlapEnd - overlapStart).TotalMinutes;
-                totalDowntime += overlapMinutes;
+                var typeId = (int)incident.TypeId!;
+                if (!downtimeByType.ContainsKey(typeId))
+                    downtimeByType[typeId] = (0, 0);
+                downtimeByType[typeId] = (downtimeByType[typeId].Item1 + overlapMinutes, downtimeByType[typeId].Item2 + 1);
             }
         }
 
-        return totalDowntime;
+        return downtimeByType;
     }
 
     // Helper method to calculate defective count for a specific period

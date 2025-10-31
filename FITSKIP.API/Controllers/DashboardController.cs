@@ -25,10 +25,10 @@ public class DashboardController : ControllerBase
     {
         if (month < 1 || month > 12 || year < 1900 || year > DateTime.Now.Year + 10)
         {
-            return BadRequest(new { success = false, message = "Invalid month or year." });
+            return BadRequest(new { success = false, message = "Tháng hoặc năm không hợp lệ." });
         }
 
-        _logger.LogInformation($"API call: GetDowntimeStats for month={month}, year={year}, lineId={lineId}");
+        _logger.LogInformation($"Gọi API: GetDowntimeStats cho tháng={month}, năm={year}, lineId={lineId}");
 
         try
         {
@@ -37,8 +37,8 @@ public class DashboardController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in GetDowntimeStats");
-            return StatusCode(500, new { success = false, message = "Internal server error", error = ex.Message });
+            _logger.LogError(ex, "Lỗi trong GetDowntimeStats");
+            return StatusCode(500, new { success = false, message = "Lỗi máy chủ nội bộ", error = ex.Message });
         }
     }
 
@@ -48,15 +48,15 @@ public class DashboardController : ControllerBase
     {
         if (month < 1 || month > 12 || year < 1900 || year > DateTime.Now.Year + 10)
         {
-            return BadRequest(new { success = false, message = "Invalid month or year." });
+            return BadRequest(new { success = false, message = "Tháng hoặc năm không hợp lệ." });
         }
 
         if (!string.IsNullOrEmpty(date) && !DateTime.TryParseExact(date, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out _))
         {
-            return BadRequest(new { success = false, message = "Invalid date format. Use dd/MM/yyyy." });
+            return BadRequest(new { success = false, message = "Định dạng ngày không hợp lệ. Sử dụng dd/MM/yyyy." });
         }
 
-        _logger.LogInformation($"API call: GetDailyDowntimeStats for month={month}, year={year}, lineId={lineId}, date={date}");
+        _logger.LogInformation($"Gọi API: GetDailyDowntimeStats cho tháng={month}, năm={year}, lineId={lineId}, ngày={date}");
 
         try
         {
@@ -65,8 +65,8 @@ public class DashboardController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in GetDailyDowntimeStats");
-            return StatusCode(500, new { success = false, message = "Internal server error", error = ex.Message });
+            _logger.LogError(ex, "Lỗi trong GetDailyDowntimeStats");
+            return StatusCode(500, new { success = false, message = "Lỗi máy chủ nội bộ", error = ex.Message });
         }
     }
 
@@ -76,15 +76,15 @@ public class DashboardController : ControllerBase
     {
         if (lineId <= 0)
         {
-            return BadRequest(new { success = false, message = "Invalid lineId." });
+            return BadRequest(new { success = false, message = "LineId không hợp lệ." });
         }
 
         if (!DateTime.TryParseExact(date, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
         {
-            return BadRequest(new { success = false, message = "Invalid date format. Use yyyy-MM-dd." });
+            return BadRequest(new { success = false, message = "Định dạng ngày không hợp lệ. Sử dụng yyyy-MM-dd." });
         }
 
-        _logger.LogInformation($"API call: GetDetailedOEEDailyStats for lineId={lineId}, date={date}");
+        _logger.LogInformation($"Gọi API: GetDetailedOEEDailyStats cho lineId={lineId}, ngày={date}");
 
         try
         {
@@ -93,8 +93,8 @@ public class DashboardController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in GetDetailedOEEDailyStats");
-            return StatusCode(500, new { success = false, message = "Internal server error", error = ex.Message });
+            _logger.LogError(ex, "Lỗi trong GetDetailedOEEDailyStats");
+            return StatusCode(500, new { success = false, message = "Lỗi máy chủ nội bộ", error = ex.Message });
         }
     }
 
@@ -104,25 +104,25 @@ public class DashboardController : ControllerBase
     {
         if (lineId <= 0)
         {
-            return BadRequest(new { success = false, message = "Invalid lineId." });
+            return BadRequest(new { success = false, message = "LineId không hợp lệ." });
         }
 
         if (!DateTime.TryParseExact(date, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
         {
-            return BadRequest(new { success = false, message = "Invalid date format. Use yyyy-MM-dd." });
+            return BadRequest(new { success = false, message = "Định dạng ngày không hợp lệ. Sử dụng yyyy-MM-dd." });
         }
 
         if (shiftId <= 0)
         {
-            return BadRequest(new { success = false, message = "Invalid shiftId." });
+            return BadRequest(new { success = false, message = "ShiftId không hợp lệ." });
         }
 
         if (string.IsNullOrEmpty(slotTime))
         {
-            return BadRequest(new { success = false, message = "Invalid slotTime." });
+            return BadRequest(new { success = false, message = "SlotTime không hợp lệ." });
         }
 
-        _logger.LogInformation($"API call: GetDetailedOEESlotStats for lineId={lineId}, date={date}, shiftId={shiftId}, slotTime={slotTime}");
+        _logger.LogInformation($"Gọi API: GetDetailedOEESlotStats cho lineId={lineId}, ngày={date}, shiftId={shiftId}, slotTime={slotTime}");
 
         try
         {
@@ -131,8 +131,8 @@ public class DashboardController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error in GetDetailedOEESlotStats");
-            return StatusCode(500, new { success = false, message = "Internal server error", error = ex.Message });
+            _logger.LogError(ex, "Lỗi trong GetDetailedOEESlotStats");
+            return StatusCode(500, new { success = false, message = "Lỗi máy chủ nội bộ", error = ex.Message });
         }
     }
 }
