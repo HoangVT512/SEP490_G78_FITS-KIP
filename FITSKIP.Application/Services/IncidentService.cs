@@ -982,25 +982,70 @@ public class IncidentService : IIncidentService
     }
 
     /// <summary>
-    /// Kiểm tra xem thiết bị có yêu cầu linh kiện không (dựa trên bảng ReplacementHistories)
+    /// Kiểm tra trạng thái yêu cầu linh kiện của sự cố
     /// </summary>
-    public async Task<bool> HasSparePartsRequiredAsync(int equipmentId, CancellationToken cancellationToken = default)
+    public async Task<SparePartsStatus> GetSparePartsStatusAsync(int incidentId, CancellationToken cancellationToken = default)
     {
-        if (equipmentId <= 0)
-            return false;
+        if (incidentId <= 0)
+            return new SparePartsStatus { HasPendingRequests = false, HasReturnRequests = false };
 
         try
         {
-            // Get all replacement histories for this equipment
-            var replacements = await _replacementHistoryRepository.GetByEquipmentIdAsync(equipmentId, cancellationToken);
+            // First, get the incident to know its equipment
+            var incident = await _incidentRepository.GetByIdAsync(incidentId, cancellationToken);
+            if (incident == null || !incident.EquipmentId.HasValue)
+                return new SparePartsStatus { HasPendingRequests = false, HasReturnRequests = false };
 
-            // If there are any replacement histories for this equipment, it means it has required spare parts
-            return replacements?.Any() ?? false;
+            // Get all replacement histories for this incident (new records with IncidentId)
+            var replacementsByIncident = await _replacementHistoryRepository.GetByIncidentIdAsync(incidentId, cancellationToken);
+
+            // For backward compatibility: Check replacement records by equipment (old records without IncidentId)
+            var replacementsByEquipment = await _replacementHistoryRepository.GetByEquipmentIdAsync(incident.EquipmentId.Value, cancellationToken);
+
+            // Filter to only include records that don't have IncidentId set (legacy records)
+            // or records that have IncidentId matching this incident
+            var relevantReplacements = replacementsByEquipment?.Where(r =>
+                !r.IncidentId.HasValue || r.IncidentId.Value == incidentId
+            ) ?? Enumerable.Empty<ReplacementHistory>();
+
+            // Combine all relevant replacements
+            var allReplacements = (replacementsByIncident ?? Enumerable.Empty<ReplacementHistory>())
+                .Concat(relevantReplacements)
+                .DistinctBy(r => r.ReplacementId)
+                .ToList();
+
+            // Check for pending requests (not approved yet)
+            var hasPendingRequests = allReplacements.Any(r =>
+                string.IsNullOrEmpty(r.Status) ||
+                r.Status == "Chờ duyệt cấp phát" ||
+                r.Status == "Pending"
+            );
+
+            // Check for return requests (waiting to be returned)
+            var hasReturnRequests = allReplacements.Any(r =>
+                r.Status == "Chờ trả lại" ||
+                r.Status == "Đã giao kho"
+            );
+
+            return new SparePartsStatus
+            {
+                HasPendingRequests = hasPendingRequests,
+                HasReturnRequests = hasReturnRequests
+            };
         }
         catch
         {
-            // If there's an error, return false
-            return false;
+            // If there's an error, return no requests
+            return new SparePartsStatus { HasPendingRequests = false, HasReturnRequests = false };
         }
+    }
+
+    /// <summary>
+    /// Kiểm tra xem sự cố có yêu cầu linh kiện không (dựa trên bảng ReplacementHistories)
+    /// </summary>
+    public async Task<bool> HasSparePartsRequiredAsync(int incidentId, CancellationToken cancellationToken = default)
+    {
+        var status = await GetSparePartsStatusAsync(incidentId, cancellationToken);
+        return status.HasPendingRequests || status.HasReturnRequests;
     }
 }

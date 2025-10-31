@@ -37,6 +37,7 @@ namespace FITSKIP.API.Controllers
                 var responses = result.Select(s => new ReplacementHistoryDTO
                 {
                     EquipmentID = s.EquipmentId,
+                    IncidentId = s.IncidentId,
                     PartID = s.PartId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
@@ -70,6 +71,7 @@ namespace FITSKIP.API.Controllers
                 var response = new ReplacementHistoryDTO
                 {
                     EquipmentID = result.EquipmentId,
+                    IncidentId = result.IncidentId,
                     PartID = result.PartId,
                     PartName = result.Part != null ? result.Part.PartName : null,
                     PartNumber = result.Part != null ? result.Part.PartNumber : null,
@@ -109,6 +111,7 @@ namespace FITSKIP.API.Controllers
                 {
                     PartId = request.PartId,
                     EquipmentId = request.EquipmentId,
+                    IncidentId = request.IncidentId, // Add IncidentId mapping
                     Quantity = request.Quantity,
                     ReplacedDate = request.ReplacedDate,
                     ReplacedBy = request.ReplacedBy,
@@ -127,6 +130,7 @@ namespace FITSKIP.API.Controllers
                 var response = new ReplacementHistoryDTO
                 {
                     EquipmentID = created.EquipmentId,
+                    IncidentId = created.IncidentId, // Add IncidentId mapping
                     PartID = created.PartId,
                     PartName = created.Part != null ? created.Part.PartName : null,
                     PartNumber = created.Part != null ? created.Part.PartNumber : null,
@@ -172,6 +176,7 @@ namespace FITSKIP.API.Controllers
                 {
                     PartId = request.PartId,
                     EquipmentId = request.EquipmentId,
+                    IncidentId = request.IncidentId, // Add IncidentId mapping
                     Quantity = request.Quantity,
                     ReplacedDate = request.ReplacedDate,
                     ReplacedBy = request.ReplacedBy,
@@ -263,6 +268,7 @@ namespace FITSKIP.API.Controllers
                 var response = new ReplacementHistoryDTO
                 {
                     EquipmentID = result.EquipmentId,
+                    IncidentId = result.IncidentId,
                     PartID = result.PartId,
                     PartName = result.Part != null ? result.Part.PartName : null,
                     PartNumber = result.Part != null ? result.Part.PartNumber : null,
@@ -304,6 +310,7 @@ namespace FITSKIP.API.Controllers
                 var responses = result.Select(s => new ReplacementHistoryDTO
                 {
                     EquipmentID = s.EquipmentId,
+                    IncidentId = s.IncidentId,
                     PartID = s.PartId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
@@ -314,7 +321,47 @@ namespace FITSKIP.API.Controllers
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     ReplacementID = s.ReplacementId,
                     Quantity = s.Quantity,
+                    ActualQuantityUsed = s.ActualQuantityUsed,
+                    QuantityToReturn = s.QuantityToReturn,
                     ReplacedDate = s.ReplacedDate,
+                    ReturnedDate = s.ReturnedDate,
+                    ReturnRemarks = s.ReturnRemarks,
+                    Status = s.Status,
+                    Remarks = s.Remarks
+                });
+                return Ok(responses);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpGet("incident/{incidentId:int}")]
+        public async Task<ActionResult<IEnumerable<ReplacementHistoryDTO>>> GetByIncidentId(int incidentId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var result = await _service.GetByIncidentIdAsync(incidentId, cancellationToken);
+                var responses = result.Select(s => new ReplacementHistoryDTO
+                {
+                    EquipmentID = s.EquipmentId,
+                    IncidentId = s.IncidentId,
+                    PartID = s.PartId,
+                    PartName = s.Part != null ? s.Part.PartName : null,
+                    PartNumber = s.Part != null ? s.Part.PartNumber : null,
+                    EquipmentName = s.Equipment != null ? s.Equipment.EquipmentName : null,
+                    EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
+                    ReplacedBy = s.ReplacedBy,
+                    ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
+                    ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
+                    ReplacementID = s.ReplacementId,
+                    Quantity = s.Quantity,
+                    ActualQuantityUsed = s.ActualQuantityUsed,
+                    QuantityToReturn = s.QuantityToReturn,
+                    ReplacedDate = s.ReplacedDate,
+                    ReturnedDate = s.ReturnedDate,
+                    ReturnRemarks = s.ReturnRemarks,
                     Status = s.Status,
                     Remarks = s.Remarks
                 });
@@ -335,6 +382,7 @@ namespace FITSKIP.API.Controllers
                 var responses = result.Select(s => new ReplacementHistoryDTO
                 {
                     EquipmentID = s.EquipmentId,
+                    IncidentId = s.IncidentId,
                     PartID = s.PartId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
@@ -427,6 +475,7 @@ namespace FITSKIP.API.Controllers
                 var responses = result.Select(s => new ReplacementHistoryDTO
                 {
                     EquipmentID = s.EquipmentId,
+                    IncidentId = s.IncidentId,
                     PartID = s.PartId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
@@ -490,6 +539,7 @@ namespace FITSKIP.API.Controllers
 
                 var response = new ReplacementHistoryDTO
                 {
+                    IncidentId = result.IncidentId,
                     PartName = result.Part != null ? result.Part.PartName : null,
                     PartNumber = result.Part != null ? result.Part.PartNumber : null,
                     EquipmentName = result.Equipment != null ? result.Equipment.EquipmentName : null,
@@ -526,6 +576,7 @@ namespace FITSKIP.API.Controllers
                 var result = await _service.GetPendingReturnAsync(cancellationToken);
                 var responses = result.Select(s => new ReplacementHistoryDTO
                 {
+                    IncidentId = s.IncidentId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
                     EquipmentName = s.Equipment != null ? s.Equipment.EquipmentName : null,

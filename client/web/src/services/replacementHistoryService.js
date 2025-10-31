@@ -29,6 +29,14 @@ export const replacementHistoryService = {
     );
     return res?.data || res;
   },
+
+  async getByIncidentId(incidentId) {
+    const res = await apiRequest(
+      `/ReplacementHistories/incident/${encodeURIComponent(incidentId)}`,
+      { method: "GET" }
+    );
+    return res?.data || res;
+  },
   async getByStatus(status) {
     const res = await apiRequest(
       `/ReplacementHistories/status/${encodeURIComponent(status)}`,

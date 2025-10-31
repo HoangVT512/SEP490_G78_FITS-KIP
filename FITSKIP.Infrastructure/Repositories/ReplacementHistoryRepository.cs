@@ -284,6 +284,23 @@ namespace FITSKIP.Infrastructure.Repositories
             }
         }
 
+        public async Task<IEnumerable<ReplacementHistory>> GetByIncidentIdAsync(int incidentId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                return await _context.ReplacementHistories
+                    .Include(r => r.Equipment)
+                    .Include(r => r.Part)
+                    .Include(r => r.ReplacedByNavigation)
+                    .Where(r => r.IncidentId == incidentId)
+                    .ToListAsync(cancellationToken);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Đã xảy ra lỗi khi truy xuất lịch sử thay thế với ID sự cố {incidentId}.", ex);
+            }
+        }
+
         public async Task<IEnumerable<ReplacementHistory>> GetByPartIdAsync(int partId, CancellationToken cancellationToken = default)
         {
             try

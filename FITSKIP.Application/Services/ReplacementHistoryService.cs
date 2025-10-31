@@ -27,6 +27,8 @@ namespace FITSKIP.Application.Services
 
         public Task<IEnumerable<ReplacementHistory>> GetByEquipmentIdAsync(int equipmentId, CancellationToken cancellationToken = default) => _repository.GetByEquipmentIdAsync(equipmentId, cancellationToken);
 
+        public Task<IEnumerable<ReplacementHistory>> GetByIncidentIdAsync(int incidentId, CancellationToken cancellationToken = default) => _repository.GetByIncidentIdAsync(incidentId, cancellationToken);
+
         public Task<ReplacementHistory> GetByIdAsync(int id, CancellationToken cancellationToken = default) => _repository.GetByIdAsync(id, cancellationToken);
 
         public Task<IEnumerable<ReplacementHistory>> GetByPartIdAsync(int partId, CancellationToken cancellationToken = default) => _repository.GetByPartIdAsync(partId, cancellationToken);

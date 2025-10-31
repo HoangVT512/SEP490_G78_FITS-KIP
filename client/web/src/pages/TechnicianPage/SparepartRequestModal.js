@@ -117,6 +117,7 @@ const SparepartRequestModal = ({ incident, open, onClose, onSuccess }) => {
       // Create replacement history records for each part
       const requests = selectedParts.map((part) => ({
         equipmentId: incident?.equipmentId,
+        incidentId: incident?.incidentId, // Add incidentId to link replacement to specific incident
         partId: part.partId,
         quantity: part.quantity,
         replacedDate: dayjs().toISOString(),

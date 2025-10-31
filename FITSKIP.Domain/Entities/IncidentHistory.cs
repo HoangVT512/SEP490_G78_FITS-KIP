@@ -46,4 +46,6 @@ public partial class IncidentHistory
     public virtual ICollection<IncidentShift> IncidentShifts { get; set; } = new List<IncidentShift>();
 
     public virtual ICollection<IncidentImage> IncidentImages { get; set; } = new List<IncidentImage>();
+
+    public virtual ICollection<ReplacementHistory> ReplacementHistories { get; set; } = new List<ReplacementHistory>();
 }

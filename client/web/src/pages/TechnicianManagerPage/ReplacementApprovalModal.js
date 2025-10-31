@@ -29,6 +29,7 @@ const { Title, Text } = Typography;
 
 const ReplacementApprovalModal = ({
   equipmentId,
+  incidentId,
   equipmentInfo, // { name: string, code: string }
   open,
   onClose,
@@ -48,48 +49,98 @@ const ReplacementApprovalModal = ({
     if (!open) return;
     load();
     fetchUsers();
-  }, [open, equipmentId]);
+  }, [open, incidentId]);
 
   const load = async () => {
-    if (!equipmentId) {
-      setPendingItems([]);
-      setApprovedItems([]);
-      setPendingReturnItems([]);
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await replacementHistoryService.getByEquipmentId(equipmentId);
-      const data = Array.isArray(res) ? res : res?.data || [];
+    if (viewMode) {
+      // Khi viewMode=true (xem lịch sử)
+      // Ưu tiên load theo incidentId, nếu không có thì load theo equipmentId
+      const loadId = incidentId || equipmentId;
+      const isLoadingByIncident = !!incidentId;
 
-      // Filter pending requests
-      const pending = data.filter(
-        (r) =>
-          !r.status ||
-          r.status === "Chờ duyệt cấp phát" ||
-          r.status === "Pending"
-      );
-      setPendingItems(pending);
+      if (!loadId) {
+        setPendingItems([]);
+        setApprovedItems([]);
+        setPendingReturnItems([]);
+        return;
+      }
+      setLoading(true);
+      try {
+        let res;
+        let data = [];
 
-      // Filter approved requests
-      const approved = data.filter(
-        (r) => r.status === "Đã duyệt cấp phát" || r.status === "Completed"
-      );
-      setApprovedItems(approved);
+        if (isLoadingByIncident) {
+          // Load theo incident cụ thể
+          res = await replacementHistoryService.getByIncidentId(incidentId);
+          data = Array.isArray(res) ? res : res?.data || [];
+        } else {
+          // Fallback: load theo equipment và filter theo incident
+          res = await replacementHistoryService.getByEquipmentId(equipmentId);
+          data = Array.isArray(res) ? res : res?.data || [];
+          // Filter chỉ những record có IncidentId
+          data = data.filter(item => item.incidentId != null);
+        }
 
-      // Filter items waiting for return (KTV has recorded actual usage)
-      const pendingReturn = data.filter(
-        (r) => r.status === "Chờ trả lại" || r.status === "Đã giao kho"
-      );
-      setPendingReturnItems(pendingReturn);
+        // Filter chỉ những record đã hoàn thành (lịch sử)
+        const approved = data.filter(
+          (r) => r.status === "Hoàn thành" || r.status === "Completed"
+        );
+        setApprovedItems(approved);
 
-      // Fetch stock info for all spare parts
-      await fetchSparePartsStock([...pending, ...approved, ...pendingReturn]);
-    } catch (err) {
-      console.error("Failed to load replacement requests", err);
-      message.error("Không thể tải yêu cầu thay thế: " + (err?.message || err));
-    } finally {
-      setLoading(false);
+        // Các tab khác để trống khi viewMode
+        setPendingItems([]);
+        setPendingReturnItems([]);
+
+        // Fetch stock info for all spare parts
+        await fetchSparePartsStock(approved);
+      } catch (err) {
+        console.error("Failed to load replacement history", err);
+        message.error("Không thể tải lịch sử thay thế: " + (err?.message || err));
+      } finally {
+        setLoading(false);
+      }
+    } else {
+      // Logic cũ cho chế độ duyệt yêu cầu
+      if (!incidentId) {
+        setPendingItems([]);
+        setApprovedItems([]);
+        setPendingReturnItems([]);
+        return;
+      }
+      setLoading(true);
+      try {
+        const res = await replacementHistoryService.getByIncidentId(incidentId);
+        const data = Array.isArray(res) ? res : res?.data || [];
+
+        // Filter pending requests
+        const pending = data.filter(
+          (r) =>
+            !r.status ||
+            r.status === "Chờ duyệt cấp phát" ||
+            r.status === "Pending"
+        );
+        setPendingItems(pending);
+
+        // Filter approved requests
+        const approved = data.filter(
+          (r) => r.status === "Đã duyệt cấp phát" || r.status === "Completed"
+        );
+        setApprovedItems(approved);
+
+        // Filter items waiting for return (KTV has recorded actual usage)
+        const pendingReturn = data.filter(
+          (r) => r.status === "Chờ trả lại" || r.status === "Đã giao kho"
+        );
+        setPendingReturnItems(pendingReturn);
+
+        // Fetch stock info for all spare parts
+        await fetchSparePartsStock([...pending, ...approved, ...pendingReturn]);
+      } catch (err) {
+        console.error("Failed to load replacement requests", err);
+        message.error("Không thể tải yêu cầu thay thế: " + (err?.message || err));
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -231,25 +282,25 @@ const ReplacementApprovalModal = ({
 
           // Nếu đủ hàng, hiển thị thông báo xác nhận
           console.log(`✅ Stock is sufficient. Available: ${availableQuantity}, Requested: ${requestedQuantity}`);
-          message.info({
-            content: (
-              <div style={{ alignItems: 'flex-start', textAlign: 'left', lineHeight: '1.4' }}>
-                <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
-                  Tồn kho đủ để cấp phát
-                </div>
-                <div style={{ marginBottom: '4px' }}>
-                  Tồn kho hiện tại: <strong>{availableQuantity}</strong>
-                </div>
-                <div style={{ marginBottom: '4px' }}>
-                  Yêu cầu: <strong>{requestedQuantity}</strong>
-                </div>
-                {/* <div style={{ color: '#52c41a' }}>
-                  ➡️ Còn lại sau khi cấp: <strong>{availableQuantity - requestedQuantity}</strong>
-                </div> */}
-              </div>
-            ),
-            duration: 5,
-          });
+          // message.info({
+          //   content: (
+          //     <div style={{ alignItems: 'flex-start', textAlign: 'left', lineHeight: '1.4' }}>
+          //       <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+          //         Tồn kho đủ để cấp phát
+          //       </div>
+          //       <div style={{ marginBottom: '4px' }}>
+          //         Tồn kho hiện tại: <strong>{availableQuantity}</strong>
+          //       </div>
+          //       <div style={{ marginBottom: '4px' }}>
+          //         Yêu cầu: <strong>{requestedQuantity}</strong>
+          //       </div>
+          //       {/* <div style={{ color: '#52c41a' }}>
+          //         ➡️ Còn lại sau khi cấp: <strong>{availableQuantity - requestedQuantity}</strong>
+          //       </div> */}
+          //     </div>
+          //   ),
+          //   duration: 5,
+          // });
         } catch (checkError) {
           console.error("Error checking inventory:", checkError);
           message.error("❌ Lỗi khi kiểm tra tồn kho: " + (checkError?.message || checkError));
@@ -364,76 +415,46 @@ const ReplacementApprovalModal = ({
         </Tag>
       ),
     },
-    {
-      title: <Text strong style={{ fontSize: '13px' }}>Tồn kho</Text>,
-      key: "stockQuantity",
-      width: 110,
-      align: "center",
-      render: (_, record) => {
-        const stock = sparePartsStock[record.sparePartId];
-        if (!stock) {
-          return <Text type="secondary" style={{ fontSize: '13px' }}>...</Text>;
-        }
+    // {
+    //   title: <Text strong style={{ fontSize: '13px' }}>Tồn kho</Text>,
+    //   key: "stockQuantity",
+    //   width: 110,
+    //   align: "center",
+    //   render: (_, record) => {
+    //     const stock = sparePartsStock[record.sparePartId];
+    //     if (!stock) {
+    //       return <Text type="secondary" style={{ fontSize: '13px' }}>...</Text>;
+    //     }
 
-        const available = stock.quantity || 0;
-        const requested = record.quantity || 0;
-        const isOutOfStock = available === 0;
-        const isInsufficient = available < requested;
+    //     const available = stock.quantity || 0;
+    //     const requested = record.quantity || 0;
+    //     const isOutOfStock = available === 0;
+    //     const isInsufficient = available < requested;
 
-        let color = "green";
-        let icon = "✓";
+    //     let color = "green";
+    //     let icon = "✓";
 
-        if (isOutOfStock) {
-          color = "red";
-          icon = "✕";
-        } else if (isInsufficient) {
-          color = "orange";
-          icon = "⚠";
-        }
+    //     if (isOutOfStock) {
+    //       color = "red";
+    //       icon = "✕";
+    //     } else if (isInsufficient) {
+    //       color = "orange";
+    //       icon = "⚠";
+    //     }
 
-        return (
-          <Tooltip title={
-            isOutOfStock ? "Hết hàng" :
-              isInsufficient ? `Thiếu ${requested - available} sản phẩm` :
-                `Đủ hàng (còn ${available - requested} sau cấp phát)`
-          }>
-            <Tag color={color} style={{ fontSize: '13px', fontWeight: 500 }}>
-              {icon} {available}
-            </Tag>
-          </Tooltip>
-        );
-      },
-    },
-    {
-      title: <Text strong style={{ fontSize: '13px' }}>SL sử dụng</Text>,
-      dataIndex: "actualQuantityUsed",
-      key: "actualQuantityUsed",
-      width: 110,
-      align: "center",
-      render: (qty) =>
-        qty ? (
-          <Tag color="green" style={{ fontSize: '13px', fontWeight: 500 }}>
-            {qty}
-          </Tag>
-        ) : (
-          <Text type="secondary" style={{ fontSize: '13px' }}>-</Text>
-        ),
-    },
-    {
-      title: <Text strong style={{ fontSize: '13px' }}>SL thừa</Text>,
-      dataIndex: "quantityToReturn",
-      key: "quantityToReturn",
-      width: 90,
-      align: "center",
-      render: (qty) =>
-        qty > 0 ? (
-          <Tag color="orange" style={{ fontSize: '13px', fontWeight: 500 }}>
-            {qty}
-          </Tag>
-        ) : (
-          <Text type="secondary" style={{ fontSize: '13px' }}>-</Text>
-        ),
-    },
+    //     return (
+    //       <Tooltip title={
+    //         isOutOfStock ? "Hết hàng" :
+    //           isInsufficient ? `Thiếu ${requested - available} sản phẩm` :
+    //             `Đủ hàng (còn ${available - requested} sau cấp phát)`
+    //       }>
+    //         <Tag color={color} style={{ fontSize: '13px', fontWeight: 500 }}>
+    //           {icon} {available}
+    //         </Tag>
+    //       </Tooltip>
+    //     );
+    //   },
+    // },
     {
       title: <Text strong style={{ fontSize: '13px' }}>Ngày yêu cầu</Text>,
       dataIndex: "replacedDate",
@@ -540,8 +561,8 @@ const ReplacementApprovalModal = ({
     },
   ];
 
-  // Columns for history tab (without action button)
-  const columnsHistory = [
+  // Columns for approved tab (without SL đã dùng and SL thừa columns)
+  const columnsApproved = [
     {
       title: <Text strong style={{ fontSize: '13px' }}>ID</Text>,
       dataIndex: "replacementID",
@@ -583,46 +604,202 @@ const ReplacementApprovalModal = ({
         </Tag>
       ),
     },
+    // {
+    //   title: <Text strong style={{ fontSize: '13px' }}>Tồn kho</Text>,
+    //   key: "stockQuantity",
+    //   width: 110,
+    //   align: "center",
+    //   render: (_, record) => {
+    //     const stock = sparePartsStock[record.sparePartId];
+    //     if (!stock) {
+    //       return <Text type="secondary" style={{ fontSize: '13px' }}>...</Text>;
+    //     }
+
+    //     const available = stock.quantity || 0;
+    //     const requested = record.quantity || 0;
+    //     const isOutOfStock = available === 0;
+    //     const isInsufficient = available < requested;
+
+    //     let color = "green";
+    //     let icon = "✓";
+
+    //     if (isOutOfStock) {
+    //       color = "red";
+    //       icon = "✕";
+    //     } else if (isInsufficient) {
+    //       color = "orange";
+    //       icon = "⚠";
+    //     }
+
+    //     return (
+    //       <Tooltip title={
+    //         isOutOfStock ? "Hết hàng" :
+    //           isInsufficient ? `Thiếu ${requested - available} sản phẩm` :
+    //             `Đủ hàng (còn ${available - requested} sau cấp phát)`
+    //       }>
+    //         <Tag color={color} style={{ fontSize: '13px', fontWeight: 500 }}>
+    //           {icon} {available}
+    //         </Tag>
+    //       </Tooltip>
+    //     );
+    //   },
+    // },
     {
-      title: <Text strong style={{ fontSize: '13px' }}>Tồn kho</Text>,
-      key: "stockQuantity",
-      width: 110,
+      title: <Text strong style={{ fontSize: '13px' }}>Ngày yêu cầu</Text>,
+      dataIndex: "replacedDate",
+      key: "replacedDate",
+      width: 140,
+      render: (d) => (
+        <Text style={{ fontSize: '13px' }}>
+          {d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"}
+        </Text>
+      ),
+    },
+    {
+      title: <Text strong style={{ fontSize: '13px' }}>Người yêu cầu</Text>,
+      dataIndex: "replacedBy",
+      key: "replacedBy",
+      width: 160,
+      render: (replacedBy) => (
+        <Text style={{ fontSize: '13px' }}>{getUserName(replacedBy)}</Text>
+      ),
+    },
+    {
+      title: <Text strong style={{ fontSize: '13px' }}>Trạng thái</Text>,
+      dataIndex: "status",
+      key: "status",
+      width: 140,
       align: "center",
-      render: (_, record) => {
-        const stock = sparePartsStock[record.sparePartId];
-        if (!stock) {
-          return <Text type="secondary" style={{ fontSize: '13px' }}>...</Text>;
-        }
-
-        const available = stock.quantity || 0;
-        const requested = record.quantity || 0;
-        const isOutOfStock = available === 0;
-        const isInsufficient = available < requested;
-
-        let color = "green";
-        let icon = "✓";
-
-        if (isOutOfStock) {
-          color = "red";
-          icon = "✕";
-        } else if (isInsufficient) {
-          color = "orange";
-          icon = "⚠";
-        }
-
+      render: (s) => {
+        let text = s || "Đã duyệt cấp phát";
         return (
-          <Tooltip title={
-            isOutOfStock ? "Hết hàng" :
-              isInsufficient ? `Thiếu ${requested - available} sản phẩm` :
-                `Đủ hàng (còn ${available - requested} sau cấp phát)`
-          }>
-            <Tag color={color} style={{ fontSize: '13px', fontWeight: 500 }}>
-              {icon} {available}
-            </Tag>
-          </Tooltip>
+          <Tag
+            icon={<CheckCircleOutlined />}
+            color="green"
+            style={{
+              fontSize: '13px',
+              fontWeight: 500,
+              padding: '4px 12px',
+            }}
+          >
+            {text}
+          </Tag>
         );
       },
     },
+    {
+      title: <Text strong style={{ fontSize: '13px' }}>Ghi chú</Text>,
+      dataIndex: "remarks",
+      key: "remarks",
+      width: 180,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (r) => (
+        <Tooltip title={r}>
+          <Text type="secondary" style={{ fontSize: '13px' }}>
+            {r || "-"}
+          </Text>
+        </Tooltip>
+      ),
+    },
+  ];
+
+  // Columns for history tab (without action button)
+  const columnsHistory = [
+    {
+      title: <Text strong style={{ fontSize: '13px' }}>ID</Text>,
+      dataIndex: "replacementID",
+      key: "replacementID",
+      width: 70,
+      align: "center",
+      render: (id) => <Text strong style={{ color: "#52c41a" }}>#{id}</Text>,
+    },
+    {
+      title: <Text strong style={{ fontSize: '13px' }}>Sự cố</Text>,
+      dataIndex: "incidentId",
+      key: "incidentId",
+      width: 80,
+      align: "center",
+      render: (incidentId) => incidentId ? (
+        <Text strong style={{ color: "#1890ff" }}>#{incidentId}</Text>
+      ) : (
+        <Text type="secondary">-</Text>
+      ),
+    },
+    {
+      title: <Text strong style={{ fontSize: '13px' }}>Mã phụ tùng</Text>,
+      dataIndex: "partNumber",
+      key: "partNumber",
+      width: 130,
+      render: (text) => <Text code style={{ fontSize: '13px' }}>{text}</Text>,
+    },
+    {
+      title: <Text strong style={{ fontSize: '13px' }}>Tên phụ tùng</Text>,
+      dataIndex: "partName",
+      key: "partName",
+      width: 200,
+      ellipsis: {
+        showTitle: false,
+      },
+      render: (text) => (
+        <Tooltip title={text}>
+          <Text style={{ fontSize: '13px' }}>{text}</Text>
+        </Tooltip>
+      ),
+    },
+    {
+      title: <Text strong style={{ fontSize: '13px' }}>SL yêu cầu</Text>,
+      dataIndex: "quantity",
+      key: "quantity",
+      width: 100,
+      align: "center",
+      render: (qty) => (
+        <Tag color="blue" style={{ fontSize: '13px', fontWeight: 500 }}>
+          {qty}
+        </Tag>
+      ),
+    },
+    // {
+    //   title: <Text strong style={{ fontSize: '13px' }}>Tồn kho</Text>,
+    //   key: "stockQuantity",
+    //   width: 110,
+    //   align: "center",
+    //   render: (_, record) => {
+    //     const stock = sparePartsStock[record.sparePartId];
+    //     if (!stock) {
+    //       return <Text type="secondary" style={{ fontSize: '13px' }}>...</Text>;
+    //     }
+
+    //     const available = stock.quantity || 0;
+    //     const requested = record.quantity || 0;
+    //     const isOutOfStock = available === 0;
+    //     const isInsufficient = available < requested;
+
+    //     let color = "green";
+    //     let icon = "✓";
+
+    //     if (isOutOfStock) {
+    //       color = "red";
+    //       icon = "✕";
+    //     } else if (isInsufficient) {
+    //       color = "orange";
+    //       icon = "⚠";
+    //     }
+
+    //     return (
+    //       <Tooltip title={
+    //         isOutOfStock ? "Hết hàng" :
+    //           isInsufficient ? `Thiếu ${requested - available} sản phẩm` :
+    //             `Đủ hàng (còn ${available - requested} sau cấp phát)`
+    //       }>
+    //         <Tag color={color} style={{ fontSize: '13px', fontWeight: 500 }}>
+    //           {icon} {available}
+    //         </Tag>
+    //       </Tooltip>
+    //     );
+    //   },
+    // },
     {
       title: <Text strong style={{ fontSize: '13px' }}>SL sử dụng</Text>,
       dataIndex: "actualQuantityUsed",
@@ -657,6 +834,17 @@ const ReplacementApprovalModal = ({
       title: <Text strong style={{ fontSize: '13px' }}>Ngày yêu cầu</Text>,
       dataIndex: "replacedDate",
       key: "replacedDate",
+      width: 140,
+      render: (d) => (
+        <Text style={{ fontSize: '13px' }}>
+          {d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"}
+        </Text>
+      ),
+    },
+    {
+      title: <Text strong style={{ fontSize: '13px' }}>Ngày trả linh kiện</Text>,
+      dataIndex: "returnedDate",
+      key: "returnedDate",
       width: 140,
       render: (d) => (
         <Text style={{ fontSize: '13px' }}>
@@ -757,46 +945,46 @@ const ReplacementApprovalModal = ({
         </Tag>
       ),
     },
-    {
-      title: <Text strong style={{ fontSize: '13px' }}>Tồn kho</Text>,
-      key: "stockQuantity",
-      width: 110,
-      align: "center",
-      render: (_, record) => {
-        const stock = sparePartsStock[record.sparePartId];
-        if (!stock) {
-          return <Text type="secondary" style={{ fontSize: '13px' }}>...</Text>;
-        }
+    // {
+    //   title: <Text strong style={{ fontSize: '13px' }}>Tồn kho</Text>,
+    //   key: "stockQuantity",
+    //   width: 110,
+    //   align: "center",
+    //   render: (_, record) => {
+    //     const stock = sparePartsStock[record.sparePartId];
+    //     if (!stock) {
+    //       return <Text type="secondary" style={{ fontSize: '13px' }}>...</Text>;
+    //     }
 
-        const available = stock.quantity || 0;
-        const requested = record.quantity || 0;
-        const isOutOfStock = available === 0;
-        const isInsufficient = available < requested;
+    //     const available = stock.quantity || 0;
+    //     const requested = record.quantity || 0;
+    //     const isOutOfStock = available === 0;
+    //     const isInsufficient = available < requested;
 
-        let color = "green";
-        let icon = "✓";
+    //     let color = "green";
+    //     let icon = "✓";
 
-        if (isOutOfStock) {
-          color = "red";
-          icon = "✕";
-        } else if (isInsufficient) {
-          color = "orange";
-          icon = "⚠";
-        }
+    //     if (isOutOfStock) {
+    //       color = "red";
+    //       icon = "✕";
+    //     } else if (isInsufficient) {
+    //       color = "orange";
+    //       icon = "⚠";
+    //     }
 
-        return (
-          <Tooltip title={
-            isOutOfStock ? "Hết hàng" :
-              isInsufficient ? `Thiếu ${requested - available} sản phẩm` :
-                `Đủ hàng (còn ${available - requested} sau cấp phát)`
-          }>
-            <Tag color={color} style={{ fontSize: '13px', fontWeight: 500 }}>
-              {icon} {available}
-            </Tag>
-          </Tooltip>
-        );
-      },
-    },
+    //     return (
+    //       <Tooltip title={
+    //         isOutOfStock ? "Hết hàng" :
+    //           isInsufficient ? `Thiếu ${requested - available} sản phẩm` :
+    //             `Đủ hàng (còn ${available - requested} sau cấp phát)`
+    //       }>
+    //         <Tag color={color} style={{ fontSize: '13px', fontWeight: 500 }}>
+    //           {icon} {available}
+    //         </Tag>
+    //       </Tooltip>
+    //     );
+    //   },
+    // },
     {
       title: <Text strong style={{ fontSize: '13px' }}>SL sử dụng</Text>,
       dataIndex: "actualQuantityUsed",
@@ -877,6 +1065,7 @@ const ReplacementApprovalModal = ({
       key: "action",
       width: 170,
       align: "center",
+      fixed: "right",
       render: (_, record) => {
         const status = record.status || "Chờ trả lại";
 
@@ -1015,12 +1204,12 @@ const ReplacementApprovalModal = ({
             label: (
               <span style={{ fontSize: '14px', fontWeight: 500 }}>
                 <CheckCircleOutlined style={{ marginRight: 6 }} />
-                Đã duyệt ({approvedItems.length})
+                {viewMode ? `Lịch sử thay thế (${approvedItems.length})` : `Đã duyệt (${approvedItems.length})`}
               </span>
             ),
             children: (
               <Table
-                columns={columnsHistory}
+                columns={viewMode ? columnsHistory : columnsApproved}
                 dataSource={approvedItems}
                 rowKey={(r) => r.replacementID || r.replacementId}
                 loading={loading}
@@ -1028,7 +1217,7 @@ const ReplacementApprovalModal = ({
                   pageSize: 8,
                   showTotal: (total) => (
                     <Text style={{ fontSize: '13px' }}>
-                      Tổng số: <Text strong>{total}</Text> yêu cầu
+                      Tổng số: <Text strong>{total}</Text> {viewMode ? 'lịch sử thay thế' : 'yêu cầu'}
                     </Text>
                   ),
                 }}
@@ -1036,32 +1225,36 @@ const ReplacementApprovalModal = ({
               />
             ),
           },
-          {
-            key: "pendingReturn",
-            label: (
-              <span style={{ fontSize: '14px', fontWeight: 500 }}>
-                <HistoryOutlined style={{ marginRight: 6 }} />
-                Chờ trả lại ({pendingReturnItems.length})
-              </span>
-            ),
-            children: (
-              <Table
-                columns={columnsReturnConfirm}
-                dataSource={pendingReturnItems}
-                rowKey={(r) => r.replacementID || r.replacementId}
-                loading={loading}
-                pagination={{
-                  pageSize: 8,
-                  showTotal: (total) => (
-                    <Text style={{ fontSize: '13px' }}>
-                      Tổng số: <Text strong>{total}</Text> yêu cầu
-                    </Text>
-                  ),
-                }}
-                scroll={{ x: 1350, y: 450 }}
-              />
-            ),
-          },
+          ...(viewMode
+            ? []
+            : [
+              {
+                key: "pendingReturn",
+                label: (
+                  <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                    <HistoryOutlined style={{ marginRight: 6 }} />
+                    Chờ trả lại ({pendingReturnItems.length})
+                  </span>
+                ),
+                children: (
+                  <Table
+                    columns={columnsReturnConfirm}
+                    dataSource={pendingReturnItems}
+                    rowKey={(r) => r.replacementID || r.replacementId}
+                    loading={loading}
+                    pagination={{
+                      pageSize: 8,
+                      showTotal: (total) => (
+                        <Text style={{ fontSize: '13px' }}>
+                          Tổng số: <Text strong>{total}</Text> yêu cầu
+                        </Text>
+                      ),
+                    }}
+                    scroll={{ x: 1350, y: 450 }}
+                  />
+                ),
+              },
+            ]),
         ]}
       />
     </Modal>

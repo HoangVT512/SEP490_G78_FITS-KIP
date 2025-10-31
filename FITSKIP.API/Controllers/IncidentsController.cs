@@ -806,6 +806,39 @@ public class IncidentsController : ControllerBase
     }
 
     /// <summary>
+    /// Kiểm tra trạng thái yêu cầu linh kiện của sự cố
+    /// </summary>
+    [HttpGet("{incidentId}/spare-parts-status")]
+    public async Task<IActionResult> GetIncidentSparePartsStatus(int incidentId)
+    {
+        try
+        {
+            var incident = await _incidentService.GetIncidentByIdAsync(incidentId);
+            if (incident == null)
+            {
+                return NotFound(new { success = false, message = "Không tìm thấy sự cố" });
+            }
+
+            var sparePartsStatus = await _incidentService.GetSparePartsStatusAsync(incidentId);
+
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    hasPendingRequests = sparePartsStatus.HasPendingRequests,
+                    hasReturnRequests = sparePartsStatus.HasReturnRequests,
+                    incidentId = incidentId
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi kiểm tra trạng thái linh kiện", details = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Kiểm tra xem sự cố có yêu cầu linh kiện không
     /// </summary>
     [HttpGet("{incidentId}/has-spare-parts")]
@@ -819,23 +852,8 @@ public class IncidentsController : ControllerBase
                 return NotFound(new { success = false, message = "Không tìm thấy sự cố" });
             }
 
-            // Get equipment ID from incident
-            var equipmentId = incident.EquipmentId;
-            if (!equipmentId.HasValue || equipmentId <= 0)
-            {
-                return Ok(new
-                {
-                    success = true,
-                    data = new
-                    {
-                        hasSpareParts = false,
-                        message = "Sự cố không liên kết với thiết bị"
-                    }
-                });
-            }
-
-            // Call the service method - this will check ReplacementHistories table
-            var hasSpareParts = await _incidentService.HasSparePartsRequiredAsync(equipmentId.Value);
+            // Call the service method directly with incidentId - this will check ReplacementHistories table for this specific incident
+            var hasSpareParts = await _incidentService.HasSparePartsRequiredAsync(incidentId);
 
             return Ok(new
             {
@@ -843,8 +861,7 @@ public class IncidentsController : ControllerBase
                 data = new
                 {
                     hasSpareParts = hasSpareParts,
-                    incidentId = incidentId,
-                    equipmentId = equipmentId.Value
+                    incidentId = incidentId
                 }
             });
         }

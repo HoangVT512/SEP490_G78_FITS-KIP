@@ -134,11 +134,11 @@ export const incidentService = {
 
   async checkHasSpareParts(incidentId) {
     const res = await apiRequest(
-      `/Incidents/${encodeURIComponent(incidentId)}/has-spare-parts`,
+      `/Incidents/${encodeURIComponent(incidentId)}/spare-parts-status`,
       {
         method: "GET",
       }
     );
-    return res?.data?.hasSpareParts || false;
+    return res?.data || { hasPendingRequests: false, hasReturnRequests: false };
   },
 };

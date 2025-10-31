@@ -34,6 +34,7 @@ import {
   RightOutlined,
   PictureOutlined,
   PushpinOutlined,
+  UndoOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { incidentService } from "../../services/incidentService";
@@ -54,6 +55,7 @@ const IncidentList = () => {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [approvalModalVisible, setApprovalModalVisible] = useState(false);
   const [approvalEquipmentId, setApprovalEquipmentId] = useState(null);
+  const [approvalIncidentId, setApprovalIncidentId] = useState(null);
   const [approvalEquipmentInfo, setApprovalEquipmentInfo] = useState(null); // Equipment name and code
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
@@ -61,9 +63,10 @@ const IncidentList = () => {
   const [technicians, setTechnicians] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [selectedTechnicianId, setSelectedTechnicianId] = useState(null);
-  const [sparePartsRequiredMap, setSparePartsRequiredMap] = useState({}); // Track which incidents have spare parts
+  const [sparePartsStatusMap, setSparePartsStatusMap] = useState({}); // Track spare parts status for each incident
   const [historyModalVisible, setHistoryModalVisible] = useState(false); // Xem lịch sử thay thế
   const [selectedEquipmentId, setSelectedEquipmentId] = useState(null); // Equipment ID để xem lịch sử
+  const [selectedIncidentId, setSelectedIncidentId] = useState(null); // Incident ID để xem lịch sử
   const [selectedEquipmentInfo, setSelectedEquipmentInfo] = useState(null); // Equipment info for history modal
   const [imagePreviewVisible, setImagePreviewVisible] = useState(false); // Modal xem hình ảnh
   const [currentImageIndex, setCurrentImageIndex] = useState(0); // Index hình ảnh hiện tại
@@ -300,23 +303,23 @@ const IncidentList = () => {
       setIncidents(displayIncidents);
       setFilteredIncidents(displayIncidents);
 
-      // Check which incidents have spare parts required
+      // Check spare parts status for each incident
       const sparePartsMap = {};
       for (const incident of mapped) {
         try {
-          const hasSpareParts = await incidentService.checkHasSpareParts(
+          const sparePartsStatus = await incidentService.checkHasSpareParts(
             incident.id
           );
-          sparePartsMap[incident.id] = hasSpareParts;
+          sparePartsMap[incident.id] = sparePartsStatus;
         } catch (err) {
           console.error(
             `Error checking spare parts for incident ${incident.id}:`,
             err
           );
-          sparePartsMap[incident.id] = false;
+          sparePartsMap[incident.id] = { hasPendingRequests: false, hasReturnRequests: false };
         }
       }
-      setSparePartsRequiredMap(sparePartsMap);
+      setSparePartsStatusMap(sparePartsMap);
     } catch (err) {
       console.error("Lỗi khi tải danh sách sự cố:", err);
       message.error(err?.message || "Không thể tải danh sách sự cố");
@@ -523,8 +526,8 @@ const IncidentList = () => {
       render: (text, record) => (
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <span style={{ fontWeight: 500 }}>{text}</span>
-          {sparePartsRequiredMap[record.id] && (
-            <Tooltip title="Có yêu cầu linh kiện thay thế">
+          {sparePartsStatusMap[record.id]?.hasPendingRequests && (
+            <Tooltip title="Có yêu cầu linh kiện thay thế đang chờ duyệt">
               <div style={{
                 backgroundColor: "#ff4d4f",
                 borderRadius: "50%",
@@ -538,6 +541,30 @@ const IncidentList = () => {
                 border: "2px solid white"
               }}>
                 <PushpinOutlined
+                  style={{
+                    color: "white",
+                    fontSize: "14px",
+                    fontWeight: "bold"
+                  }}
+                />
+              </div>
+            </Tooltip>
+          )}
+          {sparePartsStatusMap[record.id]?.hasReturnRequests && (
+            <Tooltip title="Có linh kiện cần trả lại">
+              <div style={{
+                backgroundColor: "#faad14",
+                borderRadius: "50%",
+                width: "24px",
+                height: "24px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                animation: "pulse 2s infinite",
+                boxShadow: "0 0 8px rgba(250, 173, 20, 0.5)",
+                border: "2px solid white"
+              }}>
+                <UndoOutlined
                   style={{
                     color: "white",
                     fontSize: "14px",
@@ -737,6 +764,7 @@ const IncidentList = () => {
             onClick: () => {
               setSelectedIncident(record);
               setApprovalEquipmentId(record.equipmentId || record.equipmentId);
+              setApprovalIncidentId(record.id);
               setApprovalEquipmentInfo({
                 name: record.equipmentName,
                 code: record.equipmentCode,
@@ -749,6 +777,7 @@ const IncidentList = () => {
             label: "Xem lịch sử thay thế",
             icon: <EyeOutlined />,
             onClick: () => {
+              setSelectedIncidentId(record.id); // Use record.id instead of record.incidentId
               setSelectedEquipmentId(record.equipmentId);
               setSelectedEquipmentInfo({
                 name: record.equipmentName,
@@ -1059,11 +1088,13 @@ const IncidentList = () => {
       {/* Replacement approvals modal */}
       <ReplacementApprovalModal
         equipmentId={approvalEquipmentId}
+        incidentId={approvalIncidentId}
         equipmentInfo={approvalEquipmentInfo}
         open={approvalModalVisible}
         onClose={() => {
           setApprovalModalVisible(false);
           setApprovalEquipmentId(null);
+          setApprovalIncidentId(null);
           setApprovalEquipmentInfo(null);
         }}
         onUpdated={() => fetchIncidents()}
@@ -1072,11 +1103,13 @@ const IncidentList = () => {
       {/* Replacement History Modal */}
       <ReplacementApprovalModal
         equipmentId={selectedEquipmentId}
+        incidentId={selectedIncidentId}
         equipmentInfo={selectedEquipmentInfo}
         open={historyModalVisible}
         onClose={() => {
           setHistoryModalVisible(false);
           setSelectedEquipmentId(null);
+          setSelectedIncidentId(null);
           setSelectedEquipmentInfo(null);
         }}
         onUpdated={fetchIncidents}

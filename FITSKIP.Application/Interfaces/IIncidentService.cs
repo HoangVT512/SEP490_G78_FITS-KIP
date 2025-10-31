@@ -21,8 +21,13 @@ namespace FITSKIP.Application.Interfaces
         Task<string> UploadIncidentImageAsync(IFormFile imageFile, CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Kiểm tra xem thiết bị có yêu cầu linh kiện không (dựa trên bảng ReplacementHistories)
+        /// Kiểm tra trạng thái yêu cầu linh kiện của sự cố
         /// </summary>
-        Task<bool> HasSparePartsRequiredAsync(int equipmentId, CancellationToken cancellationToken = default);
+        Task<SparePartsStatus> GetSparePartsStatusAsync(int incidentId, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Kiểm tra xem sự cố có yêu cầu linh kiện không (dựa trên bảng ReplacementHistories)
+        /// </summary>
+        Task<bool> HasSparePartsRequiredAsync(int incidentId, CancellationToken cancellationToken = default);
     }
 }

@@ -11,6 +11,8 @@ namespace FITSKIP.Domain.DTO
     {
         public int? EquipmentId { get; set; }
 
+        public int? IncidentId { get; set; } // Add IncidentId field
+
         public int PartId { get; set; }
 
         public int Quantity { get; set; }
