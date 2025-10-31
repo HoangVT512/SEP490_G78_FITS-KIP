@@ -107,34 +107,7 @@ const ManagerLayout = () => {
           // Tăng số lượng notification badge
           setNotificationCount((prev) => prev + 1);
 
-          // Hiển thị message toast (LUÔN LUÔN hiển thị)
-          antdMessage.success({
-            content: `🔔 ${
-              notificationData.title ||
-              notificationData.message ||
-              "Bạn có thông báo mới"
-            }`,
-            duration: 5,
-          });
-
-          // Hiển thị notification popup
-          antdNotification.info({
-            message: notificationData.title || "Thông báo mới",
-            description: notificationData.message,
-            placement: "topRight",
-            duration: 5,
-          });
-
-          // Play notification sound
-          try {
-            const audio = new Audio(
-              "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBBQp4OPztmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+Dyvmwh"
-            );
-            audio.volume = 0.5;
-            audio.play().catch((e) => console.log("Cannot play sound:", e));
-          } catch (e) {
-            console.log("Sound error:", e);
-          }
+          // Chỉ cập nhật badge, không hiển thị toast hay notification popup
         });
 
         // Lắng nghe broadcast (thông báo cho tất cả)
@@ -144,34 +117,7 @@ const ManagerLayout = () => {
           // Tăng số lượng notification badge
           setNotificationCount((prev) => prev + 1);
 
-          // Hiển thị message toast
-          antdMessage.info({
-            content: `📢 ${
-              broadcastData.title ||
-              broadcastData.message ||
-              "Thông báo hệ thống mới"
-            }`,
-            duration: 5,
-          });
-
-          // Hiển thị notification popup
-          antdNotification.warning({
-            message: broadcastData.title || "Thông báo hệ thống",
-            description: broadcastData.message,
-            placement: "topRight",
-            duration: 5,
-          });
-
-          // Play notification sound
-          try {
-            const audio = new Audio(
-              "data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBBQp4OPztmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+Dyvmwh"
-            );
-            audio.volume = 0.5;
-            audio.play().catch((e) => console.log("Cannot play sound:", e));
-          } catch (e) {
-            console.log("Sound error:", e);
-          }
+          // Chỉ cập nhật badge, không hiển thị toast hay notification popup
         });
 
         console.log("✅ SignalR initialized successfully!");
