@@ -79,7 +79,7 @@ public class IncidentsController : ControllerBase
         try
         {
             var allIncidents = await _incidentService.GetIncidentsAsync();
-            
+
             // Filter: IsTechSupport = true AND Status != "Hoàn thành"
             var pendingIncidents = allIncidents.Where(i =>
                 i.IsTechSupport &&
@@ -122,7 +122,7 @@ public class IncidentsController : ControllerBase
                         duration = i.Duration,
                         status = i.Status,
                         issue = i.Issue,
-                        assignedTo = !string.IsNullOrEmpty(i.AssignedTo) 
+                        assignedTo = !string.IsNullOrEmpty(i.AssignedTo)
                             ? userLookup.GetValueOrDefault(i.AssignedTo, "Unknown User")
                             : null
                     }).ToList()
@@ -311,12 +311,10 @@ public class IncidentsController : ControllerBase
             // Validate Duration against actual time if both start and end times are provided
             if (request.Duration.HasValue && request.EndTime.HasValue && request.StartTime.HasValue)
             {
-                var actualDuration = (decimal)(request.EndTime.Value - request.StartTime.Value).TotalMinutes;
-                // Allow a small tolerance (0.01 minutes = 0.6 seconds) to account for rounding differences
-                var tolerance = 0.01m;
-                var maxAllowedDuration = actualDuration + tolerance;
+                var rawActualDuration = CalculateAdjustedDuration(request.StartTime.Value, request.EndTime.Value);
+                var actualDuration = Math.Round(rawActualDuration, 2);
 
-                if (request.Duration.Value > maxAllowedDuration)
+                if (request.Duration.Value > actualDuration)
                 {
                     return BadRequest(new { success = false, message = $"Thời lượng ({request.Duration.Value:F2} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
                 }
@@ -397,12 +395,10 @@ public class IncidentsController : ControllerBase
                 // Validate Duration against actual time if both start and end times are provided
                 if (incident.Duration.HasValue && incident.EndTime.HasValue && incident.StartTime.HasValue)
                 {
-                    var actualDuration = (decimal)(incident.EndTime.Value - incident.StartTime.Value).TotalMinutes;
-                    // Allow a small tolerance (0.01 minutes = 0.6 seconds) to account for rounding differences
-                    var tolerance = 0.01m;
-                    var maxAllowedDuration = actualDuration + tolerance;
+                    var rawActualDuration = CalculateAdjustedDuration(incident.StartTime.Value, incident.EndTime.Value);
+                    var actualDuration = Math.Round(rawActualDuration, 2);
 
-                    if (incident.Duration.Value > maxAllowedDuration)
+                    if (incident.Duration.Value > actualDuration)
                     {
                         return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Thời lượng ({incident.Duration.Value:F2} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
                     }
@@ -523,12 +519,10 @@ public class IncidentsController : ControllerBase
             // Validate Duration against actual time if both start and end times are provided
             if (request.Duration.HasValue && request.EndTime.HasValue)
             {
-                var actualDuration = (decimal)(request.EndTime.Value - request.StartTime).TotalMinutes;
-                // Allow a small tolerance (0.01 minutes = 0.6 seconds) to account for rounding differences
-                var tolerance = 0.01m;
-                var maxAllowedDuration = actualDuration + tolerance;
+                var rawActualDuration = CalculateAdjustedDuration(request.StartTime, request.EndTime.Value);
+                var actualDuration = Math.Round(rawActualDuration, 2);
 
-                if (request.Duration.Value > maxAllowedDuration)
+                if (request.Duration.Value > actualDuration)
                 {
                     return BadRequest(new { success = false, message = $"Thời lượng ({request.Duration.Value:F2} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
                 }
@@ -809,5 +803,87 @@ public class IncidentsController : ControllerBase
         {
             return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi upload ảnh", details = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Kiểm tra xem sự cố có yêu cầu linh kiện không
+    /// </summary>
+    [HttpGet("{incidentId}/has-spare-parts")]
+    public async Task<IActionResult> CheckIncidentHasSpareParts(int incidentId)
+    {
+        try
+        {
+            var incident = await _incidentService.GetIncidentByIdAsync(incidentId);
+            if (incident == null)
+            {
+                return NotFound(new { success = false, message = "Không tìm thấy sự cố" });
+            }
+
+            // Get equipment ID from incident
+            var equipmentId = incident.EquipmentId;
+            if (!equipmentId.HasValue || equipmentId <= 0)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        hasSpareParts = false,
+                        message = "Sự cố không liên kết với thiết bị"
+                    }
+                });
+            }
+
+            // Call the service method - this will check ReplacementHistories table
+            var hasSpareParts = await _incidentService.HasSparePartsRequiredAsync(equipmentId.Value);
+
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    hasSpareParts = hasSpareParts,
+                    incidentId = incidentId,
+                    equipmentId = equipmentId.Value
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi kiểm tra linh kiện", details = ex.Message });
+        }
+    }
+
+    private decimal CalculateAdjustedDuration(DateTime startTime, DateTime endTime)
+    {
+        var rawDuration = (decimal)(endTime - startTime).TotalMinutes;
+        var adjustedDuration = rawDuration;
+
+        // Break times: 11:00-11:30 and 18:00-18:30
+        var break1Start = startTime.Date.AddHours(11);
+        var break1End = startTime.Date.AddHours(11).AddMinutes(30);
+        var break2Start = startTime.Date.AddHours(18);
+        var break2End = startTime.Date.AddHours(18).AddMinutes(30);
+
+        // Calculate overlap with break 1 (11:00-11:30)
+        var break1OverlapStart = startTime > break1Start ? startTime : break1Start;
+        var break1OverlapEnd = endTime < break1End ? endTime : break1End;
+        if (break1OverlapStart < break1OverlapEnd)
+        {
+            var break1Overlap = (decimal)(break1OverlapEnd - break1OverlapStart).TotalMinutes;
+            adjustedDuration -= break1Overlap;
+        }
+
+        // Calculate overlap with break 2 (18:00-18:30)
+        var break2OverlapStart = startTime > break2Start ? startTime : break2Start;
+        var break2OverlapEnd = endTime < break2End ? endTime : break2End;
+        if (break2OverlapStart < break2OverlapEnd)
+        {
+            var break2Overlap = (decimal)(break2OverlapEnd - break2OverlapStart).TotalMinutes;
+            adjustedDuration -= break2Overlap;
+        }
+
+        // Ensure duration is not negative
+        return Math.Max(0, adjustedDuration);
     }
 }

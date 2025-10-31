@@ -332,16 +332,22 @@ public class DashboardService : IDashboardService
         double totalResultAmount = productionDataList.Sum(po => (double)(po.ResultAmount ?? 0));
 
         // Query defective count (Phe Pham incidents) for the day
-        int totalDefectiveCount = await _repository.IncidentHistories
-            .Where(ih => ih.StartTime >= startOfDay && ih.StartTime < endOfDay
-                        && ih.LineId == lineId && ih.TypeId == 3)
-            .CountAsync();
+        int totalDefectiveCount = await CalculateDefectiveCountForPeriodAsync(lineId, startOfDay, endOfDay);
 
-        // Query total downtime (excluding Phe Pham) for the day
-        double totalDowntime = await _repository.IncidentHistories
-            .Where(ih => ih.StartTime >= startOfDay && ih.StartTime < endOfDay
-                        && ih.LineId == lineId && ih.TypeId.HasValue && ih.TypeId != 3)
-            .SumAsync(ih => (double)(ih.Duration ?? 0));
+        // Query total downtime (excluding Phe Pham) for the day, accounting for crossover across slots
+        double totalDowntime = 0;
+        foreach (var po in productionDataList)
+        {
+            var slotParts = po.SlotTime.Split('-');
+            if (slotParts.Length == 2 &&
+                TimeSpan.TryParse(slotParts[0], out var startTimeSpan) &&
+                TimeSpan.TryParse(slotParts[1], out var endTimeSpan))
+            {
+                var slotStart = date.Date.Add(startTimeSpan);
+                var slotEnd = date.Date.Add(endTimeSpan);
+                totalDowntime += await CalculateDowntimeForPeriodAsync(lineId, slotStart, slotEnd, 3);
+            }
+        }
 
         // Calculations
         double totalActualRunTime = totalPlannedProductionTime - totalDowntime;
@@ -423,21 +429,15 @@ public class DashboardService : IDashboardService
             };
         }
 
-        double plannedProductionTime = productionData.LoadingTime ?? 0;
-        double targetAmount = productionData.TargetAmount ?? 0;
-        double resultAmount = productionData.ResultAmount ?? 0;
+        double plannedProductionTime = (double)(productionData.LoadingTime ?? 0);
+        double targetAmount = (double)(productionData.TargetAmount ?? 0);
+        double resultAmount = (double)(productionData.ResultAmount ?? 0);
 
         // Query defective count (Phe Pham incidents) within the slot
-        int defectiveCount = await _repository.IncidentHistories
-            .Where(ih => ih.StartTime >= slotStart && ih.StartTime < slotEnd
-                        && ih.LineId == lineId && ih.TypeId == 3)
-            .CountAsync();
+        int defectiveCount = await CalculateDefectiveCountForPeriodAsync(lineId, slotStart, slotEnd);
 
-        // Query total downtime (excluding Phe Pham) within the slot
-        double totalDowntime = await _repository.IncidentHistories
-            .Where(ih => ih.StartTime >= slotStart && ih.StartTime < slotEnd
-                        && ih.LineId == lineId && ih.TypeId.HasValue && ih.TypeId != 3)
-            .SumAsync(ih => (double)(ih.Duration ?? 0));
+        // Query total downtime (excluding Phe Pham) within the slot, accounting for crossover
+        double totalDowntime = await CalculateDowntimeForPeriodAsync(lineId, slotStart, slotEnd, 3);
 
         // Calculations
         double actualRunTime = plannedProductionTime - totalDowntime;
@@ -483,5 +483,41 @@ public class DashboardService : IDashboardService
                 totalDetailedLoss = Math.Round(totalDetailedLoss, 2) // A + P + Q Loss
             }
         };
+    }
+
+    // Helper method to calculate total downtime for a specific period, accounting for crossover incidents
+    private async Task<double> CalculateDowntimeForPeriodAsync(int lineId, DateTime start, DateTime end, int? excludeTypeId = null)
+    {
+        var incidents = await _repository.IncidentHistories
+            .Where(ih => ih.LineId == lineId && ih.TypeId.HasValue && ih.TypeId != excludeTypeId && ih.StartTime.HasValue)
+            .ToListAsync();
+
+        double totalDowntime = 0;
+        foreach (var incident in incidents)
+        {
+            var incidentStart = incident.StartTime!.Value;
+            var incidentEnd = incidentStart.AddMinutes((double)(incident.Duration ?? 0));
+
+            // Calculate overlap with the period
+            var overlapStart = incidentStart > start ? incidentStart : start;
+            var overlapEnd = incidentEnd < end ? incidentEnd : end;
+
+            if (overlapStart < overlapEnd)
+            {
+                var overlapMinutes = (overlapEnd - overlapStart).TotalMinutes;
+                totalDowntime += overlapMinutes;
+            }
+        }
+
+        return totalDowntime;
+    }
+
+    // Helper method to calculate defective count for a specific period
+    private async Task<int> CalculateDefectiveCountForPeriodAsync(int lineId, DateTime start, DateTime end)
+    {
+        return await _repository.IncidentHistories
+            .Where(ih => ih.StartTime >= start && ih.StartTime < end
+                        && ih.LineId == lineId && ih.TypeId == 3)
+            .CountAsync();
     }
 }

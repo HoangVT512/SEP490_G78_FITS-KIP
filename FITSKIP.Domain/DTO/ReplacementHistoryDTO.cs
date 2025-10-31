@@ -17,7 +17,31 @@ namespace FITSKIP.Domain.DTO
         public string Status { get; set; }
         public string Remarks { get; set; }
 
-        
+        /// <summary>
+        /// Số lượng thực tế sử dụng
+        /// </summary>
+        public int? ActualQuantityUsed { get; set; }
+
+        /// <summary>
+        /// Số lượng thừa cần trả lại
+        /// </summary>
+        public int? QuantityToReturn { get; set; }
+
+        /// <summary>
+        /// Ngày trả lại
+        /// </summary>
+        public DateTime? ReturnedDate { get; set; }
+
+        /// <summary>
+        /// Người xác nhận trả lại (nhân viên kho)
+        /// </summary>
+        public string? ReturnConfirmedBy { get; set; }
+
+        /// <summary>
+        /// Ghi chú về trả lại
+        /// </summary>
+        public string? ReturnRemarks { get; set; }
+
         public string EquipmentName { get; set; }
         public string EquipmentCode { get; set; }
         public string PartName { get; set; }

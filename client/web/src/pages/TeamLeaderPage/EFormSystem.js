@@ -369,6 +369,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
         totalLoadingTime += loadingTime;
         totalResultAmount += parseInt(slot.resultAmount);
 
+        // Calculate actual downtime from downDetails (FIXED: Use exact downtime per slot)
         if (Array.isArray(slot.downDetails) && slot.downDetails.length > 0) {
           const slotDowntime = slot.downDetails.reduce((sum, detail) =>
             sum + (parseFloat(detail.minutes) || 0), 0
@@ -385,6 +386,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
         totalLoadingTime += loadingTime;
         totalResultAmount += parseInt(slot.resultAmount);
 
+        // Calculate actual downtime from downDetails (FIXED: Use exact downtime per slot)
         if (Array.isArray(slot.downDetails) && slot.downDetails.length > 0) {
           const slotDowntime = slot.downDetails.reduce((sum, detail) =>
             sum + (parseFloat(detail.minutes) || 0), 0
@@ -416,6 +418,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
         date: dayjs(currentFormData.date, 'DD/MM/YYYY').format('YYYY-MM-DD'),
         shiftId: shift,
         slotTime: record.time,
+        loadingTime: parseInt(record.loadingTime) || 60, // Thêm loadingTime
         targetAmount: parseInt(record.targetAmount),
         resultAmount: parseInt(record.resultAmount)
       };
@@ -465,48 +468,83 @@ const calculateAndUpdateOEE = async (record, shift) => {
     let shift1DataForForm = [...defaultShift1Data];
     let shift2DataForForm = [...defaultShift2Data];
 
-    // Function to check if incident overlaps with slot (FIXED: Use lowercase startTime/endTime)
+    // Function to check if incident overlaps with slot and calculate exact downtime (FIXED VERSION)
     const doesIncidentOverlapSlot = (incident, slotTime, date) => {
       const [slotStartStr, slotEndStr] = slotTime.split(' - ');
       const slotStart = dayjs(`${date} ${slotStartStr}`, 'DD/MM/YYYY HH:mm');
       const slotEnd = dayjs(`${date} ${slotEndStr}`, 'DD/MM/YYYY HH:mm');
-      const incidentStart = dayjs(incident.startTime);  // ✅ FIXED: lowercase
-      const incidentEnd = dayjs(incident.endTime);      // ✅ FIXED: lowercase
-      return incidentStart.isBefore(slotEnd) && incidentEnd.isAfter(slotStart);
+      const incidentStart = dayjs(incident.startTime);
+      const incidentEnd = dayjs(incident.endTime);
+
+      // Check if incident overlaps with slot
+      const overlaps = incidentStart.isBefore(slotEnd) && incidentEnd.isAfter(slotStart);
+
+      if (!overlaps) {
+        return { overlaps: false, downtime: 0 };
+      }
+
+      // Calculate exact downtime within this slot
+      const effectiveStart = incidentStart.isAfter(slotStart) ? incidentStart : slotStart;
+      const effectiveEnd = incidentEnd.isBefore(slotEnd) ? incidentEnd : slotEnd;
+
+      const downtimeMinutes = effectiveEnd.diff(effectiveStart, 'minute', true);
+
+      return {
+        overlaps: true,
+        downtime: Math.max(0, downtimeMinutes) // Ensure non-negative
+      };
     };
 
-    // Populate downDetails for each slot in shift1 (ALWAYS RUN THIS, REGARDLESS OF PRODUCTION OUTPUTS)
+    // Populate downDetails for each slot in shift1 (FIXED: Calculate exact downtime per slot)
     if (incidents.length > 0) {
       console.log('Populating downDetails for shift1 with', incidents.length, 'incidents');
       shift1DataForForm.forEach(slot => {
-        const overlappingIncidents = incidents.filter(incident =>
-          doesIncidentOverlapSlot(incident, slot.time, dayjs(selectedDate).format('DD/MM/YYYY'))
-        );
+        const overlappingIncidents = incidents.filter(incident => {
+          const overlapResult = doesIncidentOverlapSlot(incident, slot.time, dayjs(selectedDate).format('DD/MM/YYYY'));
+          return overlapResult.overlaps;
+        });
+
         console.log('Slot:', slot.time, 'Overlapping incidents:', overlappingIncidents);
-        slot.downDetails = overlappingIncidents.map(incident => ({
-          type: incident.type?.typeName || 'Unknown',
-          minutes: incident.duration || 0,
-          issue: incident.issue || '',  // ✅ THÊM: Thêm issue từ incident
-          count: null // Set to null or calculate if scrap count is available
-        }));
+
+        // Calculate exact downtime for each incident in this slot
+        const downDetails = overlappingIncidents.map(incident => {
+          const overlapResult = doesIncidentOverlapSlot(incident, slot.time, dayjs(selectedDate).format('DD/MM/YYYY'));
+          return {
+            type: incident.type?.typeName || 'Unknown',
+            minutes: Math.round(overlapResult.downtime * 100) / 100, // Round to 2 decimal places
+            issue: incident.issue || '',
+            count: null // Set to null or calculate if scrap count is available
+          };
+        }).filter(detail => detail.minutes > 0); // Only include incidents with actual downtime in this slot
+
+        slot.downDetails = downDetails;
         console.log('Set downDetails for slot:', slot.time, 'to:', slot.downDetails);
       });
     }
 
-    // Populate downDetails for each slot in shift2 (ALWAYS RUN THIS, REGARDLESS OF PRODUCTION OUTPUTS)
+    // Populate downDetails for each slot in shift2 (FIXED: Calculate exact downtime per slot)
     if (incidents.length > 0) {
       console.log('Populating downDetails for shift2 with', incidents.length, 'incidents');
       shift2DataForForm.forEach(slot => {
-        const overlappingIncidents = incidents.filter(incident =>
-          doesIncidentOverlapSlot(incident, slot.time, dayjs(selectedDate).format('DD/MM/YYYY'))
-        );
+        const overlappingIncidents = incidents.filter(incident => {
+          const overlapResult = doesIncidentOverlapSlot(incident, slot.time, dayjs(selectedDate).format('DD/MM/YYYY'));
+          return overlapResult.overlaps;
+        });
+
         console.log('Overlapping incidents for slot', slot.time, ':', overlappingIncidents);
-        slot.downDetails = overlappingIncidents.map(incident => ({
-          type: incident.type?.typeName || 'Unknown',
-          minutes: incident.duration || 0,
-          issue: incident.issue || '',  // ✅ THÊM: Thêm issue từ incident
-          count: null // Set to null or calculate if scrap count is available
-        }));
+
+        // Calculate exact downtime for each incident in this slot
+        const downDetails = overlappingIncidents.map(incident => {
+          const overlapResult = doesIncidentOverlapSlot(incident, slot.time, dayjs(selectedDate).format('DD/MM/YYYY'));
+          return {
+            type: incident.type?.typeName || 'Unknown',
+            minutes: Math.round(overlapResult.downtime * 100) / 100, // Round to 2 decimal places
+            issue: incident.issue || '',
+            count: null // Set to null or calculate if scrap count is available
+          };
+        }).filter(detail => detail.minutes > 0); // Only include incidents with actual downtime in this slot
+
+        slot.downDetails = downDetails;
       });
     }
 
@@ -902,9 +940,9 @@ const calculateAndUpdateOEE = async (record, shift) => {
           errors.push(`Slot ${slot.time} (Ca 1): Thời gian tải không được vượt quá ${maxLoadingTime} phút.`);
         }
         // ✅ VALIDATION: Kiểm tra loadingTime không giống resultAmount khi target > 0
-        if (slot.loadingTime && slot.resultAmount && slot.targetAmount && parseInt(slot.loadingTime) === parseInt(slot.resultAmount) && parseInt(slot.targetAmount) > 0) {
-          errors.push(`Slot ${slot.time} (Ca 1): Thời gian tải (${slot.loadingTime} phút) giống với số lượng sản xuất thực tế (${slot.resultAmount}). Vui lòng kiểm tra lại.`);
-        }
+        // if (slot.loadingTime && slot.resultAmount && slot.targetAmount && parseInt(slot.loadingTime) === parseInt(slot.resultAmount) && parseInt(slot.targetAmount) > 0) {
+        //   errors.push(`Slot ${slot.time} (Ca 1): Thời gian tải (${slot.loadingTime} phút) giống với số lượng sản xuất thực tế (${slot.resultAmount}). Vui lòng kiểm tra lại.`);
+        // }
         // Nếu có lỗi, bỏ qua slot này
         if (errors.length > 0) return;
 
@@ -964,9 +1002,9 @@ const calculateAndUpdateOEE = async (record, shift) => {
           errors.push(`Slot ${slot.time} (Ca 2): Thời gian tải không được vượt quá ${maxLoadingTime} phút.`);
         }
         // ✅ VALIDATION: Kiểm tra loadingTime không giống resultAmount khi target > 0
-        if (slot.loadingTime && slot.resultAmount && slot.targetAmount && parseInt(slot.loadingTime) === parseInt(slot.resultAmount) && parseInt(slot.targetAmount) > 0) {
-          errors.push(`Slot ${slot.time} (Ca 2): Thời gian tải (${slot.loadingTime} phút) giống với số lượng sản xuất thực tế (${slot.resultAmount}). Vui lòng kiểm tra lại.`);
-        }
+        // if (slot.loadingTime && slot.resultAmount && slot.targetAmount && parseInt(slot.loadingTime) === parseInt(slot.resultAmount) && parseInt(slot.targetAmount) > 0) {
+        //   errors.push(`Slot ${slot.time} (Ca 2): Thời gian tải (${slot.loadingTime} phút) giống với số lượng sản xuất thực tế (${slot.resultAmount}). Vui lòng kiểm tra lại.`);
+        // }
         if (errors.length > 0) return;
 
         const existingRecord = freshProductionOutputs.find(po =>
@@ -1225,8 +1263,8 @@ const calculateAndUpdateOEE = async (record, shift) => {
   const getFieldLabel = (dataIndex) => {
     const labels = {
       loadingTime: 'Thời Gian Nạp',
-      targetAmount: 'Số Lượng Sản Xuất Mục Tiêu',
-      resultAmount: 'Số Lượng Sản Xuất Kết Quả',
+      targetAmount: 'Sản Lượng Mục Tiêu',
+      resultAmount: 'Sản Lượng Thực Tế',
       oee: 'OEE',
       downDetails: 'Chi Tiết Thời Gian Dừng Máy'
     };
@@ -1313,7 +1351,50 @@ const calculateAndUpdateOEE = async (record, shift) => {
       ),
     },
     {
-      title: 'Số Lượng Sản Xuất Mục Tiêu',
+      title: 'Running Time (phút)',
+      dataIndex: 'runningTime',
+      key: 'runningTime',
+      width: 180,
+      align: 'center',
+      render: (text, record) => {
+        // Tính running time = loadingTime - tổng downtime từ downDetails
+        const loadingTime = parseFloat(record.loadingTime) || 0;
+        const totalDowntime = Array.isArray(record.downDetails)
+          ? record.downDetails.reduce((sum, detail) => sum + (parseFloat(detail.minutes) || 0), 0)
+          : 0;
+        const runningTime = Math.max(0, loadingTime - totalDowntime);
+
+        return (
+          <div
+            style={{
+              padding: '12px 8px',
+              minHeight: '101px',
+              height: '101px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.3s',
+              fontWeight: 600,
+              color: runningTime < loadingTime ? '#ff4d4f' : '#000000',
+              backgroundColor: runningTime < loadingTime ? '#fff2f0' : 'transparent',
+              borderRadius: '4px'
+            }}
+          >
+            <div style={{ fontSize: '16px', marginBottom: '4px' }}>
+              {runningTime.toFixed(2)}
+            </div>
+            {/* {runningTime < loadingTime && (
+              <div style={{ fontSize: '12px', color: '#ff4d4f', fontWeight: 500 }}>
+                -{totalDowntime.toFixed(1)} downtime
+              </div>
+            )} */}
+          </div>
+        );
+      },
+    },
+    {
+      title: 'Sản Lượng Mục Tiêu',
       dataIndex: 'targetAmount',
       key: 'targetAmount',
       width: 180,
@@ -1341,7 +1422,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
       ),
     },
     {
-      title: 'Số Lượng Sản Xuất Thực Tế',
+      title: 'Sản Lượng Thực Tế',
       dataIndex: 'resultAmount',
       key: 'resultAmount',
       width: 180,
@@ -1782,7 +1863,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
                 <Form.Item
                   label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px', textAlign: 'left', display: 'block' }}>Tiêu Đề Biểu Mẫu</span>}
                   colon={false}
-                  labelCol={{ span: 2 }}
+                  labelCol={{ span: 2}}
                   wrapperCol={{ span: 22 }}
                 >
                   <Input
@@ -1998,7 +2079,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
               pagination={false}
               bordered
               size="middle"
-              scroll={{ x: 1200 }}
+              scroll={{ x: 1400 }}
               style={{
                 marginTop: '16px',
                 borderRadius: '8px',
@@ -2303,7 +2384,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
                             color: '#6b7280',
                             flexDirection: 'column'  // ✅ THAY ĐỔI: Dùng column để dễ thêm issue
                           }}>
-                            <span>Thời gian: {detail.minutes} phút</span>
+                            <span>Thời gian: {detail.minutes.toFixed(2)} phút</span>
                             {detail.issue && (  // ✅ THÊM: Chỉ hiển thị nếu có issue
                               <span>Vấn đề: {detail.issue}</span>
                             )}
@@ -2313,6 +2394,18 @@ const calculateAndUpdateOEE = async (record, shift) => {
                           </div>
                         </div>
                       ))}
+                    </div>
+                    <div style={{
+                      marginTop: '16px',
+                      padding: '12px',
+                      backgroundColor: '#e0f2fe',
+                      border: '1px solid #bae6fd',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      color: '#0369a1',
+                      fontStyle: 'italic'
+                    }}>
+                      <strong>Lưu ý:</strong> Hệ thống tự động phân chia thời gian dừng máy cho các slot bị ảnh hưởng bởi sự cố lan ra nhiều slot. Thời gian hiển thị ở đây là phần thời gian dừng thực tế trong slot này.
                     </div>
                   </div>
                 ) : (

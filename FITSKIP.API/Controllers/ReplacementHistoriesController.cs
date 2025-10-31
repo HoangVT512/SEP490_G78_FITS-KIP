@@ -76,7 +76,11 @@ namespace FITSKIP.API.Controllers
                     ReplacedByEmail = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.Email : null,
                     ReplacementID = result.ReplacementId,
                     Quantity = result.Quantity,
+                    ActualQuantityUsed = result.ActualQuantityUsed,
+                    QuantityToReturn = result.QuantityToReturn,
                     ReplacedDate = result.ReplacedDate,
+                    ReturnedDate = result.ReturnedDate,
+                    ReturnRemarks = result.ReturnRemarks,
                     Status = result.Status,
                     Remarks = result.Remarks
                 };
@@ -169,6 +173,8 @@ namespace FITSKIP.API.Controllers
                     ReplacedBy = request.ReplacedBy,
                     Status = request.Status,
                     Remarks = request.Remarks,
+                    ActualQuantityUsed = request.ActualQuantityUsed,
+                    QuantityToReturn = request.QuantityToReturn,
                 };
                 if (request.Quantity <= 0)
                 {
@@ -334,6 +340,84 @@ namespace FITSKIP.API.Controllers
                     ReplacementID = s.ReplacementId,
                     Quantity = s.Quantity,
                     ReplacedDate = s.ReplacedDate,
+                    Status = s.Status,
+                    Remarks = s.Remarks
+                });
+                return Ok(responses);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// Cập nhật thông tin trả lại linh kiện thừa vào kho
+        /// </summary>
+        [HttpPut("{id}/confirm-return")]
+        public async Task<ActionResult<ReplacementHistoryDTO>> ConfirmReturn(
+            int id,
+            [FromBody] ReturnConfirmationDto confirmationDto,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var result = await _service.ConfirmReturnAsync(id, confirmationDto, cancellationToken);
+                if (result == null)
+                    return NotFound("Replacement history not found");
+
+                var response = new ReplacementHistoryDTO
+                {
+                    PartName = result.Part != null ? result.Part.PartName : null,
+                    PartNumber = result.Part != null ? result.Part.PartNumber : null,
+                    EquipmentName = result.Equipment != null ? result.Equipment.EquipmentName : null,
+                    EquipmentCode = result.Equipment != null ? result.Equipment.EquipmentCode : null,
+                    ReplacedByUserName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.UserName : null,
+                    ReplacedByEmail = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.Email : null,
+                    ReplacementID = result.ReplacementId,
+                    Quantity = result.Quantity,
+                    ActualQuantityUsed = result.ActualQuantityUsed,
+                    QuantityToReturn = result.QuantityToReturn,
+                    ReplacedDate = result.ReplacedDate,
+                    ReturnedDate = result.ReturnedDate,
+                    ReturnConfirmedBy = result.ReturnConfirmedBy,
+                    ReturnRemarks = result.ReturnRemarks,
+                    Status = result.Status,
+                    Remarks = result.Remarks
+                };
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, "Internal server error: " + ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// Lấy danh sách lịch sử thay thế cần trả lại linh kiện
+        /// </summary>
+        [HttpGet("pending-return")]
+        public async Task<ActionResult<IEnumerable<ReplacementHistoryDTO>>> GetPendingReturn(CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var result = await _service.GetPendingReturnAsync(cancellationToken);
+                var responses = result.Select(s => new ReplacementHistoryDTO
+                {
+                    PartName = s.Part != null ? s.Part.PartName : null,
+                    PartNumber = s.Part != null ? s.Part.PartNumber : null,
+                    EquipmentName = s.Equipment != null ? s.Equipment.EquipmentName : null,
+                    EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
+                    ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
+                    ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
+                    ReplacementID = s.ReplacementId,
+                    Quantity = s.Quantity,
+                    ActualQuantityUsed = s.ActualQuantityUsed,
+                    QuantityToReturn = s.QuantityToReturn,
+                    ReplacedDate = s.ReplacedDate,
+                    ReturnedDate = s.ReturnedDate,
+                    ReturnConfirmedBy = s.ReturnConfirmedBy,
+                    ReturnRemarks = s.ReturnRemarks,
                     Status = s.Status,
                     Remarks = s.Remarks
                 });

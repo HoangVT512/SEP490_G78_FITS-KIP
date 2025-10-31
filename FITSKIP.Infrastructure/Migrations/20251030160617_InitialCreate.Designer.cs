@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251029041002_InitialCreate")]
+    [Migration("20251030160617_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -543,6 +543,9 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ReplacementId"));
 
+                    b.Property<int?>("ActualQuantityUsed")
+                        .HasColumnType("int");
+
                     b.Property<int?>("EquipmentId")
                         .HasColumnType("int")
                         .HasColumnName("EquipmentID");
@@ -552,6 +555,9 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnName("PartID");
 
                     b.Property<int>("Quantity")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("QuantityToReturn")
                         .HasColumnType("int");
 
                     b.Property<string>("Remarks")
@@ -565,6 +571,15 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     b.Property<DateTime>("ReplacedDate")
                         .HasColumnType("datetime");
+
+                    b.Property<string>("ReturnConfirmedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ReturnRemarks")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("ReturnedDate")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("Status")
                         .IsRequired()

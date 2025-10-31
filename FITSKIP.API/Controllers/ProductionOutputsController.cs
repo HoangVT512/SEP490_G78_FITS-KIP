@@ -273,8 +273,12 @@ public class ProductionOutputsController : ControllerBase
             if (!ModelState.IsValid)
                 return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = ModelState });
 
+            // Tính runTime = loadingTime - downtime trước
+            var runTime = await _productionOutputService.CalculateLoadingTimeAsync(
+                request.LineId, request.Date, request.ShiftId, request.SlotTime, request.LoadingTime, cancellationToken);
+
             var oee = await _productionOutputService.CalculateOEEAsync(
-                request.LineId, request.Date, request.ShiftId, request.SlotTime, request.TargetAmount, request.ResultAmount, request.LoadingTime, cancellationToken);
+                request.LineId, request.Date, request.ShiftId, request.SlotTime, request.TargetAmount, request.ResultAmount, runTime, cancellationToken);
 
             // Convert OEE to percentage for display
             var oeePercentage = Math.Round(oee * 100, 2);

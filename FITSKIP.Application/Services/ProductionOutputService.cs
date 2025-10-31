@@ -11,17 +11,20 @@ public class ProductionOutputService : IProductionOutputService
     private readonly ILineRepository _lineRepository;
     private readonly IShiftRepository _shiftRepository;
     private readonly IIncidentRepository _incidentRepository;
+    private readonly INotificationService _notificationService;
 
     public ProductionOutputService(
         IProductionOutputRepository productionOutputRepository,
         ILineRepository lineRepository,
         IShiftRepository shiftRepository,
-        IIncidentRepository incidentRepository)
+        IIncidentRepository incidentRepository,
+        INotificationService notificationService)
     {
         _productionOutputRepository = productionOutputRepository;
         _lineRepository = lineRepository;
         _shiftRepository = shiftRepository;
         _incidentRepository = incidentRepository;
+        _notificationService = notificationService;
     }
 
     public async Task<IReadOnlyList<ProductionOutputDTO>> GetProductionOutputsAsync(CancellationToken cancellationToken = default)
@@ -97,6 +100,24 @@ public class ProductionOutputService : IProductionOutputService
         };
 
         var createdOutput = await _productionOutputRepository.CreateAsync(productionOutput, cancellationToken);
+
+        // Broadcast to Managers group for OEE Dashboard realtime updates
+        try
+        {
+            Console.WriteLine($"📡 Broadcasting production output creation to Managers group for OEE Dashboard");
+            await _notificationService.SendNotificationToGroupAsync(
+                "Managers",
+                "Thêm sản lượng mới",
+                $"Sản lượng mới được thêm cho chuyền {line.LineName} - Ca {shift.ShiftName}",
+                "production"
+            );
+            Console.WriteLine($"✅ Broadcast to Managers group completed for production output creation");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error broadcasting production output creation: {ex.Message}");
+        }
+
         return ProductionOutputDTO.FromEntity(createdOutput);
     }
 
@@ -181,13 +202,65 @@ public class ProductionOutputService : IProductionOutputService
 
         output.UpdatedAt = DateTime.UtcNow;
         var updatedOutput = await _productionOutputRepository.UpdateAsync(output, cancellationToken);
+
+        // Broadcast to Managers group for OEE Dashboard realtime updates
+        if (updatedOutput != null)
+        {
+            try
+            {
+                var line = await _lineRepository.GetByIdAsync(output.LineId, cancellationToken);
+                var shift = await _shiftRepository.GetByIdAsync(output.ShiftId, cancellationToken);
+
+                Console.WriteLine($"📡 Broadcasting production output update to Managers group for OEE Dashboard");
+                await _notificationService.SendNotificationToGroupAsync(
+                    "Managers",
+                    "Cập nhật sản lượng",
+                    $"Sản lượng được cập nhật cho chuyền {line?.LineName} - Ca {shift?.ShiftName}",
+                    "production"
+                );
+                Console.WriteLine($"✅ Broadcast to Managers group completed for production output update");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error broadcasting production output update: {ex.Message}");
+            }
+        }
+
         return updatedOutput != null ? ProductionOutputDTO.FromEntity(updatedOutput) : null;
     }
 
 
     public async Task<bool> DeleteProductionOutputAsync(int id, CancellationToken cancellationToken = default)
     {
-        return await _productionOutputRepository.DeleteAsync(id, cancellationToken);
+        // Get production output info before deleting for notification
+        var output = await _productionOutputRepository.GetByIdAsync(id, cancellationToken);
+
+        var result = await _productionOutputRepository.DeleteAsync(id, cancellationToken);
+
+        // Broadcast to Managers group for OEE Dashboard realtime updates
+        if (result && output != null)
+        {
+            try
+            {
+                var line = await _lineRepository.GetByIdAsync(output.LineId, cancellationToken);
+                var shift = await _shiftRepository.GetByIdAsync(output.ShiftId, cancellationToken);
+
+                Console.WriteLine($"📡 Broadcasting production output deletion to Managers group for OEE Dashboard");
+                await _notificationService.SendNotificationToGroupAsync(
+                    "Managers",
+                    "Xóa sản lượng",
+                    $"Sản lượng đã được xóa cho chuyền {line?.LineName} - Ca {shift?.ShiftName}",
+                    "production"
+                );
+                Console.WriteLine($"✅ Broadcast to Managers group completed for production output deletion");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error broadcasting production output deletion: {ex.Message}");
+            }
+        }
+
+        return result;
     }
 
     public async Task<IReadOnlyList<ProductionOutputDTO>> GetProductionOutputsByLineAsync(int lineId, CancellationToken cancellationToken = default)
@@ -253,18 +326,12 @@ public class ProductionOutputService : IProductionOutputService
         var slotStart = date.Date.AddHours(startHour);
         var slotEnd = date.Date.AddHours(endHour);
 
-        // Tính downtime từ incidents
-        var incidents = await _incidentRepository.GetIncidentsByLineDateShiftSlotAsync(lineId, date, shiftId, slotStart, slotEnd, cancellationToken);
-        // var totalIncidentDuration = incidents
-        //     .Where(i => i.StartTime.HasValue && i.EndTime.HasValue && i.Duration.HasValue)
-        //     .Sum(i => (int)i.Duration!.Value);
-        var totalIncidentDuration = incidents
-        .Where(i => i.StartTime.HasValue && i.EndTime.HasValue && i.Duration.HasValue && i.TypeId != 3)  // Loại trừ defects (TypeId=3)
-        .Sum(i => (int)i.Duration!.Value);
+        // Tính downtime từ incidents, accounting for crossover
+        var totalIncidentDuration = await CalculateDowntimeForSlotAsync(lineId, slotStart, slotEnd, cancellationToken);
 
         // Run Time = Loading Time nhập - downtime (nếu không nhập, dùng 60 - downtime)
         var baseLoadingTime = providedLoadingTime ?? 60;
-        var runTime = baseLoadingTime - totalIncidentDuration;
+        var runTime = (int)(baseLoadingTime - totalIncidentDuration);
         return Math.Max(0, runTime); // Đảm bảo không âm
     }
 
@@ -409,10 +476,11 @@ public class ProductionOutputService : IProductionOutputService
             slotEnd = date.Date.AddHours(endHour);
         }
 
-        var incidents = await _incidentRepository.GetIncidentsByLineDateShiftSlotAsync(lineId, date, shiftId, slotStart, slotEnd, cancellationToken);
+        // A Loss: Downtime from TypeId 1,2,4,5, accounting for crossover
+        var aLossMinutes = (decimal)await CalculateDowntimeForSlotAsync(lineId, slotStart, slotEnd, cancellationToken);
 
-        // A Loss: Downtime from TypeId 1,2,4,5
-        var aLossMinutes = incidents.Where(i => new[] { 1, 2, 4, 5 }.Contains(i.TypeId ?? 0)).Sum(i => (decimal)(i.Duration ?? 0));
+        // Get incidents for defective count
+        var incidents = await _incidentRepository.GetIncidentsByLineDateShiftSlotAsync(lineId, date, shiftId, slotStart, slotEnd, cancellationToken);
         var aLossPercentage = (aLossMinutes / PlannedProductionTime) * 100;
 
         // Q Loss: Defective time (TypeId=3 × Ideal Cycle Time)
@@ -464,5 +532,30 @@ public class ProductionOutputService : IProductionOutputService
         }
         // Max loading time = (endHour - startHour) * 60
         return (endHour - startHour) * 60;
+    }
+
+    // Helper method to calculate total downtime for a specific slot, accounting for crossover incidents
+    private async Task<double> CalculateDowntimeForSlotAsync(int lineId, DateTime slotStart, DateTime slotEnd, CancellationToken cancellationToken = default)
+    {
+        var incidents = await _incidentRepository.GetByLineIdAsync(lineId, slotStart.Date, slotStart.Date.AddDays(1), cancellationToken);
+        double totalDowntime = 0;
+        foreach (var incident in incidents)
+        {
+            if (!incident.StartTime.HasValue || !incident.Duration.HasValue || incident.TypeId == 3) continue; // Exclude defects
+
+            var incidentStart = incident.StartTime.Value;
+            var incidentEnd = incidentStart.AddMinutes((double)incident.Duration.Value);
+
+            // Calculate overlap with the slot
+            var overlapStart = incidentStart > slotStart ? incidentStart : slotStart;
+            var overlapEnd = incidentEnd < slotEnd ? incidentEnd : slotEnd;
+
+            if (overlapStart < overlapEnd)
+            {
+                var overlapMinutes = (overlapEnd - overlapStart).TotalMinutes;
+                totalDowntime += overlapMinutes;
+            }
+        }
+        return totalDowntime;
     }
 }

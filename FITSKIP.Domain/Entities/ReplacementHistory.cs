@@ -17,9 +17,34 @@ public partial class ReplacementHistory
 
     public string ReplacedBy { get; set; } = null!;
 
-    public string Status { get; set; } = "Pending";
+    public string Status { get; set; } = "Chờ duyệt cấp phát"; // Trạng thái mặc định (tiếng Việt)
 
     public string? Remarks { get; set; }
+
+    /// <summary>
+    /// Số lượng thực tế sử dụng (có thể khác với Quantity nếu có thừa/thiếu)
+    /// </summary>
+    public int? ActualQuantityUsed { get; set; }
+
+    /// <summary>
+    /// Số lượng thừa cần trả lại kho (nếu ActualQuantityUsed < Quantity)
+    /// </summary>
+    public int? QuantityToReturn { get; set; }
+
+    /// <summary>
+    /// Ngày trả lại linh kiện thừa vào kho
+    /// </summary>
+    public DateTime? ReturnedDate { get; set; }
+
+    /// <summary>
+    /// Người xác nhận việc trả lại (thường là nhân viên kho)
+    /// </summary>
+    public string? ReturnConfirmedBy { get; set; }
+
+    /// <summary>
+    /// Ghi chú về việc trả lại
+    /// </summary>
+    public string? ReturnRemarks { get; set; }
 
     public virtual Equipment? Equipment { get; set; }
 

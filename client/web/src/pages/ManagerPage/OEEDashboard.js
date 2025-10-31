@@ -1,27 +1,33 @@
-import React, { useEffect, useState } from 'react'
-import { LoadingOverlay } from '../../components/OEE/LoadingOverlay'
-import { Header } from '../../components/OEE/Header'
-import { Legend } from '../../components/OEE/Legend'
-import { Factory } from '../../components/OEE/Factory'
-import { IncidentModal } from '../../components/OEE/IncidentModal'
-import { Tooltip } from '../../components/OEE/Tooltip'
-import { Footer } from '../../components/OEE/Footer'
-import { dashboardService } from '../../services/dashboardService'
-import { incidentService } from '../../services/incidentService'
-import '../../styles/pages/OEE.css'
+import React, { useEffect, useState } from "react";
+import { LoadingOverlay } from "../../components/OEE/LoadingOverlay";
+import { Header } from "../../components/OEE/Header";
+import { Legend } from "../../components/OEE/Legend";
+import { Factory } from "../../components/OEE/Factory";
+import { IncidentModal } from "../../components/OEE/IncidentModal";
+import { Tooltip } from "../../components/OEE/Tooltip";
+import { Footer } from "../../components/OEE/Footer";
+import { dashboardService } from "../../services/dashboardService";
+import { incidentService } from "../../services/incidentService";
+import signalRService from "../../services/signalRService";
+import { authService } from "../../services/authService";
+import "../../styles/pages/OEE.css";
 
 const OEEDashboard = () => {
-  const [isLoading, setIsLoading] = useState(true)
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
-  const [tooltipData, setTooltipData] = useState(null)
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
-  const [modalData, setModalData] = useState(null)
-  const [oeeData, setOeeData] = useState([])
-  const [incidentData, setIncidentData] = useState([])
+  const [isLoading, setIsLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState(
+    new Date().toISOString().split("T")[0]
+  );
+  const [tooltipData, setTooltipData] = useState(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [modalData, setModalData] = useState(null);
+  const [oeeData, setOeeData] = useState([]);
+  const [incidentData, setIncidentData] = useState([]);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [isRealtime, setIsRealtime] = useState(false);
 
   // Fetch OEE and incident data
   const fetchData = async (date) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       console.log('Lỗi lấy dữ liệu theo ngày:', date);
       
@@ -29,7 +35,7 @@ const OEEDashboard = () => {
       const oeeResponse = await dashboardService.getOEEStatsByDate(date)
       console.log('OEE phản hồi:', oeeResponse);
       if (oeeResponse?.success && oeeResponse?.data) {
-        setOeeData(oeeResponse.data)
+        setOeeData(oeeResponse.data);
       }
 
       // Fetch pending tech support incidents
@@ -50,24 +56,114 @@ const OEEDashboard = () => {
         console.error('Lỗi khi lấy dữ liệu sự cố:', incidentError);
         setIncidentData([]);
       }
+
+      // Update last refresh time
+      setLastUpdate(new Date());
+      console.log(
+        "✨ Data refresh completed at:",
+        new Date().toLocaleTimeString("vi-VN")
+      );
     } catch (error) {
       console.error('Lỗi khi lấy dữ liệu bảng điều khiển OEE:', error)
       setIncidentData([]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+
+  // Initialize SignalR connection for realtime updates
+  useEffect(() => {
+    const initializeSignalR = async () => {
+      try {
+        const token = authService.getToken();
+        if (token && !signalRService.isConnected) {
+          await signalRService.startConnection(token);
+          setIsRealtime(true);
+
+          // Listen for incident updates
+          signalRService.onReceiveNotification((notification) => {
+            console.log("📢 Received notification:", notification);
+            // Refresh data when incident created/updated
+            if (
+              notification?.type === "incident" ||
+              notification?.message?.includes("sự cố")
+            ) {
+              console.log("🔄 Refreshing data due to incident notification");
+              fetchData(selectedDate);
+            }
+          });
+
+          // Listen for general data updates
+          signalRService.onDataUpdated((data) => {
+            console.log("📊 Data updated:", data);
+            if (
+              data?.type === "incident" ||
+              data?.action === "created" ||
+              data?.action === "updated" ||
+              data?.action === "deleted"
+            ) {
+              console.log("🚨 Incident data changed, refreshing...");
+              fetchData(selectedDate);
+            }
+          });
+
+          // Listen for broadcasts
+          signalRService.onReceiveBroadcast((message) => {
+            console.log("📡 Received broadcast:", message);
+            fetchData(selectedDate);
+          });
+
+          // Listen for specific incident notifications
+          if (signalRService.connection) {
+            signalRService.connection.on("IncidentNotification", (data) => {
+              console.log("🚨 Incident notification received:", data);
+              fetchData(selectedDate);
+            });
+
+            signalRService.connection.on("RefreshIncidents", (data) => {
+              console.log("🔄 Refresh incidents signal received:", data);
+              fetchData(selectedDate);
+            });
+
+            signalRService.connection.on("DataUpdated", (data) => {
+              console.log("📊 DataUpdated event received:", data);
+              if (data?.type === "incident") {
+                console.log("🚨 Incident data updated, refreshing...");
+                fetchData(selectedDate);
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error("❌ SignalR connection failed:", error);
+        setIsRealtime(false);
+      }
+    };
+
+    initializeSignalR();
+
+    return () => {
+      // Cleanup SignalR listeners
+      if (signalRService.isConnected) {
+        signalRService.offReceiveNotification();
+        signalRService.offDataUpdated();
+        signalRService.offReceiveBroadcast();
+
+        // Remove custom listeners
+        if (signalRService.connection) {
+          signalRService.connection.off("IncidentNotification");
+          signalRService.connection.off("RefreshIncidents");
+          signalRService.connection.off("DataUpdated");
+        }
+      }
+    };
+  }, [selectedDate]);
 
   useEffect(() => {
-    fetchData(selectedDate)
-    
-    // Set up polling for real-time updates every 60 seconds (1 minute)
-    const interval = setInterval(() => {
-      fetchData(selectedDate)
-    }, 60000)
+    fetchData(selectedDate);
 
-    return () => clearInterval(interval)
-  }, [selectedDate])
+    // Removed polling - now relying on SignalR realtime updates only
+  }, [selectedDate]);
 
   // Debug: log incident data changes
   useEffect(() => {
@@ -75,38 +171,38 @@ const OEEDashboard = () => {
   }, [incidentData]);
 
   const handleDateChange = (date) => {
-    setSelectedDate(date)
-  }
+    setSelectedDate(date);
+  };
 
   const handleBoxHover = (data, event) => {
-    const rect = event.target.getBoundingClientRect()
-    setTooltipData(data)
-    setTooltipPosition({ x: rect.right + 10, y: rect.top })
-  }
+    const rect = event.target.getBoundingClientRect();
+    setTooltipData(data);
+    setTooltipPosition({ x: rect.right + 10, y: rect.top });
+  };
 
   const handleBoxLeave = () => {
-    setTooltipData(null)
-  }
+    setTooltipData(null);
+  };
 
   const handleIncidentClick = (data) => {
     // Format modal data from incident
     const formattedData = {
-      equipmentCode: data.incident?.incidents[0]?.equipmentCode || '-',
-      equipmentName: data.incident?.incidents[0]?.equipmentName || '-',
-      stage: data.incident?.incidents[0]?.stage || '-',
-      line: data.incident?.incidents[0]?.line || data.name || '-',
-      startTime: data.incident?.incidents[0]?.startTime 
-        ? new Date(data.incident.incidents[0].startTime).toLocaleString('vi-VN')
-        : '-',
-      hours: data.incident?.hours || '-',
-      assignee: data.incident?.incidents[0]?.assignedTo || '-',
-      oee: data.oee || '-',
-      issue: data.incident?.incidents[0]?.issue || '-', // Add issue field
+      equipmentCode: data.incident?.incidents[0]?.equipmentCode || "-",
+      equipmentName: data.incident?.incidents[0]?.equipmentName || "-",
+      stage: data.incident?.incidents[0]?.stage || "-",
+      line: data.incident?.incidents[0]?.line || data.name || "-",
+      startTime: data.incident?.incidents[0]?.startTime
+        ? new Date(data.incident.incidents[0].startTime).toLocaleString("vi-VN")
+        : "-",
+      hours: data.incident?.hours || "-",
+      assignee: data.incident?.incidents[0]?.assignedTo || "-",
+      oee: data.oee || "-",
+      issue: data.incident?.incidents[0]?.issue || "-", // Add issue field
       incidentCount: data.incident?.count || 0,
-      allIncidents: data.incident?.incidents || []
-    }
-    setModalData(formattedData)
-  }
+      allIncidents: data.incident?.incidents || [],
+    };
+    setModalData(formattedData);
+  };
 
   return (
     <div className="oee-reset">
@@ -148,7 +244,7 @@ const OEEDashboard = () => {
         <Footer />
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default OEEDashboard
+export default OEEDashboard;

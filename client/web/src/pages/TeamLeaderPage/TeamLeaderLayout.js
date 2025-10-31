@@ -32,7 +32,7 @@ import styles from "../../styles/components/TeamLeaderLayout.module.css";
 // Import team leader pages
 import TeamLeaderDashboard from "./TeamLeaderDashboard";
 import TeamLeaderEquipment from "./TeamLeaderEquipment";
-import ProductionManagement from "./ProductionManagement";
+// import ProductionManagement from "./ProductionManagement";
 import ReplacementComponents from "./ReplacementComponents";
 import IncidentManagement from "./IncidentManagement";
 import EFormSystem from "./EFormSystem";
@@ -64,8 +64,8 @@ const TeamLeaderLayout = () => {
       setSelectedKey("equipment");
     } else if (path.includes("/EFormProductionInput")) {
       setSelectedKey("EFormProductionInput");
-    } else if (path.includes("/production")) {
-      setSelectedKey("production");
+      // } else if (path.includes("/production")) {
+      //   setSelectedKey("production");
     } else if (path.includes("/replacement")) {
       setSelectedKey("replacement");
     } else if (path.includes("/incidents")) {
@@ -101,8 +101,8 @@ const TeamLeaderLayout = () => {
 
     if (path.includes("/equipment")) {
       return <TeamLeaderEquipment />;
-    } else if (path.includes("/production")) {
-      return <ProductionManagement />;
+      // } else if (path.includes("/production")) {
+      //   return <ProductionManagement />;
     } else if (path.includes("/EFormProductionInput")) {
       return <EFormSystem />;
     } else if (path.includes("/replacement")) {
@@ -135,11 +135,11 @@ const TeamLeaderLayout = () => {
       icon: <EditOutlined />,
       label: "E-Form Nhập liệu sản lượng",
     },
-    {
-      key: "production",
-      icon: <BarChartOutlined />,
-      label: "Quản lý sản xuất",
-    },
+    // {
+    //   key: "production",
+    //   icon: <BarChartOutlined />,
+    //   label: "Quản lý sản xuất",
+    // },
     {
       key: "equipment",
       icon: <ToolOutlined />,
@@ -174,9 +174,9 @@ const TeamLeaderLayout = () => {
       case "EFormProductionInput":
         navigate("/team-leader/EFormProductionInput");
         break;
-      case "production":
-        navigate("/team-leader/production");
-        break;
+      // case "production":
+      //   navigate("/team-leader/production");
+      //   break;
       case "equipment":
         navigate("/team-leader/equipment");
         break;

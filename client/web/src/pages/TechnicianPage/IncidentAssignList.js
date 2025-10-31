@@ -32,7 +32,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { incidentService } from "../../services/incidentService";
-import SparePartRequest from "./SparePartRequest";
+import SparepartRequestModal from "./SparepartRequestModal";
 import ReplacementCreate from "./ReplacementCreate";
 import ReplacementHistoryList from "./ReplacementHistoryList";
 import styles from "../../styles/pages/IncidentAssignList.module.css";
@@ -264,7 +264,7 @@ const IncidentAssignList = () => {
           {
             key: "spare",
             icon: <ToolOutlined />,
-            label: "Phụ tùng",
+            label: "Yêu cầu phụ tùng",
             onClick: () => {
               setSpareForIncident(record);
               setSpareModalVisible(true);
@@ -425,20 +425,18 @@ const IncidentAssignList = () => {
         />
       </Card>
 
-      {/* Spare parts modal (embed SparePartRequest) */}
-      <Modal
-        title={<span>Yêu cầu phụ tùng (liên quan sự cố)</span>}
+      {/* Spare parts modal (request spare parts) */}
+      <SparepartRequestModal
+        incident={spareForIncident}
         open={spareModalVisible}
-        onCancel={() => {
+        onClose={() => {
           setSpareModalVisible(false);
           setSpareForIncident(null);
         }}
-        footer={null}
-        width={900}
-        destroyOnClose
-      >
-        <SparePartRequest incident={spareForIncident} />
-      </Modal>
+        onSuccess={() => {
+          fetchIncidents(); // Refresh incidents list
+        }}
+      />
 
       {/* Replacement create modal (embedded form) */}
       <Modal

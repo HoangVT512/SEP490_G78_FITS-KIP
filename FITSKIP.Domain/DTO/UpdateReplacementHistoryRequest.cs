@@ -22,5 +22,15 @@ namespace FITSKIP.Domain.DTO
         public string Status { get; set; } = null!;
 
         public string? Remarks { get; set; }
+
+        /// <summary>
+        /// Số lượng thực tế đã sử dụng
+        /// </summary>
+        public int? ActualQuantityUsed { get; set; }
+
+        /// <summary>
+        /// Số lượng thừa cần trả lại kho
+        /// </summary>
+        public int? QuantityToReturn { get; set; }
     }
 }

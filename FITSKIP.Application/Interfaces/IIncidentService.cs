@@ -19,5 +19,10 @@ namespace FITSKIP.Application.Interfaces
         Task<IReadOnlyList<IncidentHistory>> GetIncidentsByUserLinesAsync(string userId, CancellationToken cancellationToken = default);
         Task<IReadOnlyList<IncidentHistory>> GetIncidentsAssignedToTechnicianAsync(string technicianId, CancellationToken cancellationToken = default);
         Task<string> UploadIncidentImageAsync(IFormFile imageFile, CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Kiểm tra xem thiết bị có yêu cầu linh kiện không (dựa trên bảng ReplacementHistories)
+        /// </summary>
+        Task<bool> HasSparePartsRequiredAsync(int equipmentId, CancellationToken cancellationToken = default);
     }
 }

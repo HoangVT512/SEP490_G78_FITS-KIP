@@ -51,6 +51,9 @@ const IncidentList = () => {
   const [technicians, setTechnicians] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [selectedTechnicianId, setSelectedTechnicianId] = useState(null);
+  const [sparePartsRequiredMap, setSparePartsRequiredMap] = useState({}); // Track which incidents have spare parts
+  const [historyModalVisible, setHistoryModalVisible] = useState(false); // Xem lịch sử thay thế
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState(null); // Equipment ID để xem lịch sử
 
   // Get current user from auth context to filter by department
   const { user: currentUser } = useAuth();
@@ -287,6 +290,24 @@ const IncidentList = () => {
       });
       setIncidents(mapped);
       setFilteredIncidents(mapped);
+
+      // Check which incidents have spare parts required
+      const sparePartsMap = {};
+      for (const incident of mapped) {
+        try {
+          const hasSpareParts = await incidentService.checkHasSpareParts(
+            incident.id
+          );
+          sparePartsMap[incident.id] = hasSpareParts;
+        } catch (err) {
+          console.error(
+            `Error checking spare parts for incident ${incident.id}:`,
+            err
+          );
+          sparePartsMap[incident.id] = false;
+        }
+      }
+      setSparePartsRequiredMap(sparePartsMap);
     } catch (err) {
       console.error("Lỗi khi tải danh sách sự cố:", err);
       message.error(err?.message || "Không thể tải danh sách sự cố");
@@ -521,6 +542,26 @@ const IncidentList = () => {
       ),
     },
     {
+      title: "Yêu cầu linh kiện",
+      dataIndex: "id",
+      key: "hasSpareParts",
+      width: 120,
+      align: "center",
+      render: (incidentId) => {
+        const hasSpareParts = sparePartsRequiredMap[incidentId];
+        if (hasSpareParts === undefined) {
+          return <span style={{ color: "#999" }}>Kiểm tra...</span>;
+        }
+        return hasSpareParts ? (
+          <Tag color="red" icon={<ExclamationCircleOutlined />}>
+            Có yêu cầu
+          </Tag>
+        ) : (
+          <Tag color="default">Không</Tag>
+        );
+      },
+    },
+    {
       title: "Ngày báo cáo",
       dataIndex: "reportDate",
       key: "reportDate",
@@ -598,6 +639,15 @@ const IncidentList = () => {
               setSelectedIncident(record);
               setApprovalEquipmentId(record.equipmentId || record.equipmentId);
               setApprovalModalVisible(true);
+            },
+          },
+          {
+            key: "replacementHistory",
+            label: "Xem lịch sử thay thế",
+            icon: <EyeOutlined />,
+            onClick: () => {
+              setSelectedEquipmentId(record.equipmentId);
+              setHistoryModalVisible(true);
             },
           },
         ];
@@ -897,6 +947,18 @@ const IncidentList = () => {
           setApprovalEquipmentId(null);
         }}
         onUpdated={() => fetchIncidents()}
+      />
+
+      {/* Replacement History Modal */}
+      <ReplacementApprovalModal
+        equipmentId={selectedEquipmentId}
+        open={historyModalVisible}
+        onClose={() => {
+          setHistoryModalVisible(false);
+          setSelectedEquipmentId(null);
+        }}
+        onUpdated={fetchIncidents}
+        viewMode={true}
       />
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>

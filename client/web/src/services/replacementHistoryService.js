@@ -13,6 +13,15 @@ export const replacementHistoryService = {
     const res = await apiRequest(`/ReplacementHistories`, { method: "GET" });
     return res?.data || res;
   },
+
+  async getById(id) {
+    const res = await apiRequest(
+      `/ReplacementHistories/${encodeURIComponent(id)}`,
+      { method: "GET" }
+    );
+    return res?.data || res;
+  },
+
   async getByEquipmentId(equipmentId) {
     const res = await apiRequest(
       `/ReplacementHistories/equipment/${encodeURIComponent(equipmentId)}`,
