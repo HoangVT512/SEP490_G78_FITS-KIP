@@ -130,7 +130,10 @@ namespace FITSKIP.API
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IReplacementHistoryService, FITSKIP.Application.Services.ReplacementHistoryService>();
 
             // Maintenance services
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IMaintenanceTemplateRepository, FITSKIP.Infrastructure.Repositories.MaintenanceTemplateRepository>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IMaintenanceTemplateItemRepository, FITSKIP.Infrastructure.Repositories.MaintenanceTemplateItemRepository>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IMaintenancePlanRepository, FITSKIP.Infrastructure.Repositories.MaintenancePlanRepository>();
+            builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IMaintenanceWorkOrderRepository, FITSKIP.Infrastructure.Repositories.MaintenanceWorkOrderRepository>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IMaintenanceChecklistItemRepository, FITSKIP.Infrastructure.Repositories.MaintenanceChecklistItemRepository>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IMaintenanceService, FITSKIP.Application.Services.MaintenanceService>();
 

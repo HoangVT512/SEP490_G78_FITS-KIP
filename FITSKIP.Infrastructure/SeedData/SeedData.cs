@@ -1808,7 +1808,276 @@ namespace FITSKIP.Infrastructure.SeedData
                 };
 
                 await context.ProductionOutputs.AddRangeAsync(productionOutputs);
+            }
+        }
+        public static async Task SeedMaintenanceTemplates(FitskipDbContext context)
+        {
+            if (!await context.MaintenanceTemplates.AnyAsync())
+            {
+                var stages = await context.Stages.ToListAsync();
+
+                var templates = new List<MaintenanceTemplate>();
+
+                foreach (var stage in stages)
+                {
+                    var stageTemplates = new List<MaintenanceTemplate>();
+
+                    switch (stage.StageName)
+                    {
+                        case "Chuẩn bị nguyên liệu":
+                            stageTemplates.Add(new MaintenanceTemplate
+                            {
+                                StageId = stage.StageId,
+                                TemplateName = "Bảo trì máy cắt nguyên liệu",
+                                Description = "Template bảo trì định kỳ cho máy cắt nguyên liệu",
+                                InspectionCode = "MT-CB-001",
+                                IsActive = true,
+                                CreatedDate = DateTime.Now.AddMonths(-3),
+                                UpdatedDate = DateTime.Now.AddMonths(-3)
+                            });
+                            break;
+
+                        case "Gia công":
+                            stageTemplates.AddRange(new List<MaintenanceTemplate>
+                            {
+                                new MaintenanceTemplate
+                                {
+                                    StageId = stage.StageId,
+                                    TemplateName = "Bảo trì máy phay CNC",
+                                    Description = "Bảo trì định kỳ máy phay CNC - kiểm tra hệ thống cơ khí và điện",
+                                    InspectionCode = "MT-GC-001",
+                                    IsActive = true,
+                                    CreatedDate = DateTime.Now.AddMonths(-4),
+                                    UpdatedDate = DateTime.Now.AddMonths(-4)
+                                },
+                                new MaintenanceTemplate
+                                {
+                                    StageId = stage.StageId,
+                                    TemplateName = "Bảo trì máy tiện",
+                                    Description = "Template bảo trì cho máy tiện - kiểm tra trục chính và hệ thống dao",
+                                    InspectionCode = "MT-GC-002",
+                                    IsActive = true,
+                                    CreatedDate = DateTime.Now.AddMonths(-2),
+                                    UpdatedDate = DateTime.Now.AddMonths(-2)
+                                }
+                            });
+                            break;
+
+                        case "Lắp ráp":
+                            stageTemplates.Add(new MaintenanceTemplate
+                            {
+                                StageId = stage.StageId,
+                                TemplateName = "Bảo trì máy lắp ráp tự động",
+                                Description = "Kiểm tra và bảo trì hệ thống lắp ráp tự động",
+                                InspectionCode = "MT-LR-001",
+                                IsActive = true,
+                                CreatedDate = DateTime.Now.AddMonths(-2),
+                                UpdatedDate = DateTime.Now.AddMonths(-2)
+                            });
+                            break;
+
+                        case "Kiểm tra":
+                        case "Kiểm tra sản phẩm":
+                            stageTemplates.Add(new MaintenanceTemplate
+                            {
+                                StageId = stage.StageId,
+                                TemplateName = "Bảo trì thiết bị kiểm tra chất lượng",
+                                Description = "Template bảo trì và hiệu chuẩn thiết bị kiểm tra chất lượng",
+                                InspectionCode = "MT-KT-001",
+                                IsActive = true,
+                                CreatedDate = DateTime.Now.AddMonths(-1),
+                                UpdatedDate = DateTime.Now.AddMonths(-1)
+                            });
+                            break;
+
+                        case "Đóng gói":
+                            stageTemplates.Add(new MaintenanceTemplate
+                            {
+                                StageId = stage.StageId,
+                                TemplateName = "Bảo trì máy đóng gói tự động",
+                                Description = "Bảo trì định kỳ hệ thống đóng gói tự động",
+                                InspectionCode = "MT-DG-001",
+                                IsActive = true,
+                                CreatedDate = DateTime.Now.AddMonths(-1),
+                                UpdatedDate = DateTime.Now.AddMonths(-1)
+                            });
+                            break;
+
+                        case "Dán nhãn":
+                            stageTemplates.Add(new MaintenanceTemplate
+                            {
+                                StageId = stage.StageId,
+                                TemplateName = "Bảo trì máy dán nhãn",
+                                Description = "Template bảo trì cho máy dán nhãn tự động",
+                                InspectionCode = "MT-DN-001",
+                                IsActive = true,
+                                CreatedDate = DateTime.Now.AddMonths(-1),
+                                UpdatedDate = DateTime.Now.AddMonths(-1)
+                            });
+                            break;
+                    }
+
+                    templates.AddRange(stageTemplates);
+                }
+
+                await context.MaintenanceTemplates.AddRangeAsync(templates);
                 await context.SaveChangesAsync();
+            }
+        }
+
+        public static async Task SeedMaintenanceTemplateItems(FitskipDbContext context)
+        {
+            if (!await context.MaintenanceTemplateItems.AnyAsync())
+            {
+                var templates = await context.MaintenanceTemplates
+                    .Include(t => t.Stage)
+                    .ToListAsync();
+
+                var templateItems = new List<MaintenanceTemplateItem>();
+
+                foreach (var template in templates)
+                {
+                    var items = new List<MaintenanceTemplateItem>();
+
+                    // Items chung cho tất cả máy móc
+                    var commonItems = new List<(string StepName, string Category, string RequiredRole)>
+                    {
+                        ("Kiểm tra vệ sinh tổng thể máy móc", "General", "Both"),
+                        ("Kiểm tra các biển báo an toàn", "General", "Both"),
+                        ("Ghi chép vào sổ bảo trì", "General", "Both")
+                    };
+
+                    if (template.TemplateName.Contains("máy cắt nguyên liệu"))
+                    {
+                        items.AddRange(new List<MaintenanceTemplateItem>
+                        {
+                            new MaintenanceTemplateItem { OrderIndex = 1, StepName = "Kiểm tra lưỡi cắt", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 2, StepName = "Bôi trơn hệ thống truyền động", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 3, StepName = "Kiểm tra hệ thống điện động cơ", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 4, StepName = "Kiểm tra cảm biến an toàn", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 5, StepName = "Kiểm tra độ chính xác cắt", Category = "General", RequiredRole = "Both" }
+                        });
+                    }
+                    else if (template.TemplateName.Contains("máy phay CNC"))
+                    {
+                        items.AddRange(new List<MaintenanceTemplateItem>
+                        {
+                            new MaintenanceTemplateItem { OrderIndex = 1, StepName = "Kiểm tra hệ thống trục chính", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 2, StepName = "Bôi trơn ray trượt", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 3, StepName = "Kiểm tra độ căng dây đai", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 4, StepName = "Kiểm tra hệ thống servo motor", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 5, StepName = "Kiểm tra bộ điều khiển CNC", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 6, StepName = "Kiểm tra hệ thống làm mát", Category = "General", RequiredRole = "Both" },
+                            new MaintenanceTemplateItem { OrderIndex = 7, StepName = "Hiệu chuẩn độ chính xác máy", Category = "General", RequiredRole = "Both" }
+                        });
+                    }
+                    else if (template.TemplateName.Contains("máy tiện"))
+                    {
+                        items.AddRange(new List<MaintenanceTemplateItem>
+                        {
+                            new MaintenanceTemplateItem { OrderIndex = 1, StepName = "Kiểm tra trục chính", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 2, StepName = "Kiểm tra hệ thống dao", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 3, StepName = "Bôi trơn ổ trục", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 4, StepName = "Kiểm tra động cơ chính", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 5, StepName = "Kiểm tra hệ thống điều khiển", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 6, StepName = "Kiểm tra độ đồng tâm", Category = "General", RequiredRole = "Both" }
+                        });
+                    }
+                    else if (template.TemplateName.Contains("lắp ráp tự động"))
+                    {
+                        items.AddRange(new List<MaintenanceTemplateItem>
+                        {
+                            new MaintenanceTemplateItem { OrderIndex = 1, StepName = "Kiểm tra hệ thống khí nén", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 2, StepName = "Kiểm tra các xy lanh pneumatic", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 3, StepName = "Kiểm tra bộ cấp linh kiện", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 4, StepName = "Kiểm tra PLC và hệ thống điều khiển", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 5, StepName = "Kiểm tra các cảm biến định vị", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 6, StepName = "Kiểm tra băng tải", Category = "General", RequiredRole = "Both" },
+                            new MaintenanceTemplateItem { OrderIndex = 7, StepName = "Test độ chính xác lắp ráp", Category = "General", RequiredRole = "Both" }
+                        });
+                    }
+                    else if (template.TemplateName.Contains("kiểm tra chất lượng"))
+                    {
+                        items.AddRange(new List<MaintenanceTemplateItem>
+                        {
+                            new MaintenanceTemplateItem { OrderIndex = 1, StepName = "Hiệu chuẩn thiết bị đo", Category = "General", RequiredRole = "Both" },
+                            new MaintenanceTemplateItem { OrderIndex = 2, StepName = "Kiểm tra hệ thống camera", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 3, StepName = "Kiểm tra phần mềm xử lý ảnh", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 4, StepName = "Kiểm tra hệ thống chiếu sáng", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 5, StepName = "Vệ sinh ống kính và cảm biến", Category = "General", RequiredRole = "Both" }
+                        });
+                    }
+                    else if (template.TemplateName.Contains("đóng gói tự động"))
+                    {
+                        items.AddRange(new List<MaintenanceTemplateItem>
+                        {
+                            new MaintenanceTemplateItem { OrderIndex = 1, StepName = "Kiểm tra hệ thống gấp carton", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 2, StepName = "Kiểm tra hệ thống dán băng keo", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 3, StepName = "Bôi trơn các khớp nối", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 4, StepName = "Kiểm tra động cơ băng tải", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 5, StepName = "Kiểm tra cảm biến đếm sản phẩm", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 6, StepName = "Test tốc độ đóng gói", Category = "General", RequiredRole = "Both" }
+                        });
+                    }
+                    else if (template.TemplateName.Contains("dán nhãn"))
+                    {
+                        items.AddRange(new List<MaintenanceTemplateItem>
+                        {
+                            new MaintenanceTemplateItem { OrderIndex = 1, StepName = "Kiểm tra hệ thống cấp nhãn", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 2, StepName = "Kiểm tra con lăn dán", Category = "Mechanical", RequiredRole = "Mechanical" },
+                            new MaintenanceTemplateItem { OrderIndex = 3, StepName = "Kiểm tra cảm biến vị trí nhãn", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 4, StepName = "Kiểm tra bộ điều khiển", Category = "Electrical", RequiredRole = "Electrical" },
+                            new MaintenanceTemplateItem { OrderIndex = 5, StepName = "Kiểm tra độ chính xác dán nhãn", Category = "General", RequiredRole = "Both" }
+                        });
+                    }
+
+                    // Thêm items chung
+                    int currentIndex = items.Count + 1;
+                    foreach (var commonItem in commonItems)
+                    {
+                        items.Add(new MaintenanceTemplateItem
+                        {
+                            OrderIndex = currentIndex++,
+                            StepName = commonItem.StepName,
+                            Category = commonItem.Category,
+                            RequiredRole = commonItem.RequiredRole
+                        });
+                    }
+
+                    // Gán TemplateId cho từng item
+                    foreach (var item in items)
+                    {
+                        item.TemplateId = template.TemplateId;
+                    }
+
+                    templateItems.AddRange(items);
+                }
+
+                await context.MaintenanceTemplateItems.AddRangeAsync(templateItems);
+                await context.SaveChangesAsync();
+            }
+        }
+
+        public static async Task UpdateUserRole(FitskipDbContext context, string userId, string roleName)
+        {
+            var user = await context.Users.FindAsync(userId);
+            if (user != null)
+            {
+                var role = await context.Roles.FirstOrDefaultAsync(r => r.NormalizedName == roleName.ToUpperInvariant());
+                if (role != null)
+                {
+                    user.RoleId = role.Id;
+                    await context.SaveChangesAsync();
+                    Console.WriteLine($"✅ Đã cập nhật quyền '{roleName}' cho user {user.UserName} (ID: {userId})");
+                }
+                else
+                {
+                    Console.WriteLine($"❌ Không tìm thấy role '{roleName}'");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"❌ Không tìm thấy user với ID: {userId}");
             }
         }
 
@@ -1818,6 +2087,10 @@ namespace FITSKIP.Infrastructure.SeedData
             await SeedDepartments(context);
             await SeedUsers(context);
             await SeedUserRoles(context);
+            
+            // Cập nhật quyền cho user cụ thể nếu cần
+            await UpdateUserRole(context, "83820559-72da-4a1f-80bd-66867dc3d33c", "Quản lý kỹ thuật");
+            
             await SeedStopTypes(context);
             await SeedLines(context);
             await SeedStages(context);
@@ -1826,6 +2099,8 @@ namespace FITSKIP.Infrastructure.SeedData
             // await SeedSpareParts(context); // Removed: User will add spare parts via web interface
             await SeedIncidentHistories(context);
             await SeedProductionOutputs(context);
+            await SeedMaintenanceTemplates(context);
+            await SeedMaintenanceTemplateItems(context);
         }
     }
 }

@@ -23,6 +23,7 @@ public class User : IdentityUser
     public virtual ICollection<UserLine> UserLines { get; set; } = new List<UserLine>();
     public virtual ICollection<MaintenancePlan> MaintenancePlans { get; set; } = new List<MaintenancePlan>();
     public virtual ICollection<ReplacementHistory> ReplacementHistories { get; set; } = new List<ReplacementHistory>();
+    public virtual ICollection<MaintenancePlanAssignment> MaintenanceAssignments { get; set; } = new List<MaintenancePlanAssignment>();
 }
 
 
