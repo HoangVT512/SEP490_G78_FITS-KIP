@@ -1,1 +1,0 @@
-﻿UPDATE AspNetUsers SET RoleId = (SELECT Id FROM AspNetRoles WHERE NormalizedName = 'QUẢN LÝ KỸ THUẬT') WHERE Id = '83820559-72da-4a1f-80bd-66867dc3d33c'; SELECT Id, UserName, Email, FullName, EmployeeCode, RoleId FROM AspNetUsers WHERE Id = '83820559-72da-4a1f-80bd-66867dc3d33c';

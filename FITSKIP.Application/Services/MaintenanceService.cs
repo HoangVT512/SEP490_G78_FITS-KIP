@@ -1068,7 +1068,7 @@ namespace FITSKIP.Application.Services
         public async Task<IEnumerable<TechnicianDTO>> GetAllTechniciansAsync()
         {
             // Lấy TẤT CẢ users có RoleId = bc5072df-86be-4b90-b259-32dce53aba81 (Kỹ thuật viên)
-            const string TECHNICIAN_ROLE_ID = "bc5072df-86be-4b90-b259-32dce53aba81";
+            const string TECHNICIAN_ROLE_ID = "9c724ef4-e855-4063-9e2c-628dcb08c2d6";
             var users = await _userRepository.GetUsersByRoleIdAsync(TECHNICIAN_ROLE_ID);
             return users.Select(MapUserToTechnicianDTO);
         }
