@@ -16,6 +16,7 @@ import { sparePartService } from "../../services/sparePartService";
 import { incidentService } from "../../services/incidentService";
 import { replacementHistoryService } from "../../services/replacementHistoryService";
 import { useAuth } from "../../contexts/AuthContext";
+import ReturnExcessModal from "./ReturnExcessModal";
 
 const { TextArea } = Input;
 const ReplacementCreate = ({
@@ -41,6 +42,7 @@ const ReplacementCreate = ({
   const [replacementData, setReplacementData] = useState(null); // Dữ liệu replacement đã tồn tại
   const [equipmentName, setEquipmentName] = useState(""); // Tên thiết bị
   const [partName, setPartName] = useState(""); // Tên phụ tùng
+  const [returnModalVisible, setReturnModalVisible] = useState(false); // Modal thông báo trả lại
 
   useEffect(() => {
     const init = async () => {
@@ -270,35 +272,58 @@ const ReplacementCreate = ({
         replacementData.quantity ||
         replacementData.Quantity ||
         0;
-      const actualQty = values.ActualQuantityUsed;
+      const actualQty =
+        parseInt(values.actualQuantityUsed) || values.ActualQuantityUsed || 0;
 
-      if (actualQty === undefined || actualQty === null) {
+      if (actualQty === undefined || actualQty === null || actualQty === 0) {
         message.error("Vui lòng nhập số lượng thực tế đã sử dụng");
         setLoading(false);
         return;
       }
 
-      const toReturn = actualQty < requestedQty ? requestedQty - actualQty : 0;
+      if (actualQty < 0) {
+        message.error("Số lượng sử dụng không được âm");
+        return;
+      }
+
+      // Xác định trạng thái dựa trên so sánh số lượng thực tế vs yêu cầu (Quantity = số lượng lấy từ kho)
+      let status = "Hoàn thành"; // Default
+
+      if (actualQty < requestedQty) {
+        // Còn thừa: dùng ít hơn số lượng lấy → cần trả lại kho
+        status = "Chờ trả lại";
+      } else if (actualQty === requestedQty) {
+        // Dùng đủ: dùng đúng số lượng lấy
+        status = "Hoàn thành";
+      } else {
+        // Vượt quá: dùng nhiều hơn số lượng lấy (không nên xảy ra)
+        status = "Chờ trả lại"; // Cũng là thừa
+      }
 
       const payload = {
-        ReplacementID:
-          replacementData.replacementID || replacementData.ReplacementID,
-        ActualQuantityUsed: actualQty, // Số lượng thực tế sử dụng
-        QuantityToReturn: toReturn, // Số lượng thừa (nếu có)
+        ActualQuantityUsed: actualQty,
+        Status: status,
         Remarks:
           values.Remarks || replacementData.remarks || replacementData.Remarks,
       };
 
-      console.log("Updating replacement with payload:", payload);
+      console.log("Recording actual usage with payload:", payload);
 
-      await replacementHistoryService.update(payload.ReplacementID, payload);
+      await replacementHistoryService.recordActualUsage(
+        replacementData.replacementID || replacementData.ReplacementID,
+        payload
+      );
 
-      const message_text =
-        toReturn > 0
-          ? `Đã ghi nhận số lượng sử dụng. Có ${toReturn} linh kiện cần trả lại kho.`
-          : "Đã ghi nhận số lượng sử dụng thành công.";
+      // Nếu có thừa, show modal thông báo
+      if (actualQty > requestedQty) {
+        const toReturn = actualQty - requestedQty;
+        setQuantityToReturn(toReturn);
+        setReturnModalVisible(true);
+        setLoading(false);
+        return; // Không close form, đợi user confirm modal
+      }
 
-      message.success(message_text);
+      message.success("Đã ghi nhận số lượng sử dụng thành công.");
 
       if (typeof onSuccess === "function") {
         onSuccess();
@@ -310,6 +335,20 @@ const ReplacementCreate = ({
       message.error(err?.message || "Không thể cập nhật ghi nhận thay thế.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // NEW: Handler khi user xác nhận trả hàng trong modal
+  const handleReturnConfirm = () => {
+    setReturnModalVisible(false);
+    message.success(
+      `Bạn có ${quantityToReturn} linh kiện thừa. Vui lòng trực tiếp đến kho để trả hàng. QLKT sẽ xác nhận sau khi bạn trả.`
+    );
+
+    if (typeof onSuccess === "function") {
+      onSuccess();
+    } else {
+      navigate("/technician/incident-list");
     }
   };
 
@@ -411,8 +450,8 @@ const ReplacementCreate = ({
               ⚠️ Số lượng thừa cần trả lại kho: {quantityToReturn}
             </strong>
             <p style={{ marginTop: "8px", marginBottom: 0 }}>
-              Sau khi QLKT duyệt, vui lòng đến kho để trả {quantityToReturn}{" "}
-              linh kiện.
+              Vui lòng trực tiếp đến kho để trả {quantityToReturn} linh kiện.
+              QLKT sẽ xác nhận và hoàn thành quy trình.
             </p>
           </div>
         )}
@@ -476,6 +515,16 @@ const ReplacementCreate = ({
           </div>
         )}
       </Form>
+
+      {/* NEW: Modal thông báo cần trả lại linh kiện thừa */}
+      <ReturnExcessModal
+        visible={returnModalVisible}
+        excessQuantity={quantityToReturn}
+        partName={partName}
+        onConfirm={handleReturnConfirm}
+        onCancel={() => setReturnModalVisible(false)}
+        loading={loading}
+      />
     </Card>
   );
 };

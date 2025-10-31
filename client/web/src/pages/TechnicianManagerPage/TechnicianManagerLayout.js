@@ -24,6 +24,7 @@ import {
   BellOutlined,
   SafetyOutlined,
   EditOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -38,6 +39,8 @@ import InventoryManagement from "./InventoryManagement";
 import PurchaseRequestManagement from "./PurchaseRequestManagement";
 import MaintenancePlanManagement from "./MaintenanceManagement";
 import NotificationsList from "../ManagerPage/NotificationsList";
+import ReplacementReturnPage from "./ReplacementReturnPage";
+import KtvReturnConfirmPage from "../TechnicianPage/KtvReturnConfirmPage";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -150,6 +153,18 @@ const TechnicianManagerLayout = () => {
       label: "Kế hoạch bảo trì",
       onClick: () => navigate("/technician-manager/maintenance-plans"),
     },
+    {
+      key: "returns",
+      icon: <EditOutlined />,
+      label: "Xác nhận trả lại",
+      onClick: () => navigate("/technician-manager/replacement-returns"),
+    },
+    {
+      key: "ktv-confirm-return",
+      icon: <CheckCircleOutlined />,
+      label: "Xác nhận đã giao kho",
+      onClick: () => navigate("/technician-manager/ktv-confirm-return"),
+    },
   ];
 
   // Handle menu click
@@ -181,6 +196,10 @@ const TechnicianManagerLayout = () => {
       return <PurchaseRequestManagement />;
     } else if (path.includes("maintenance-plans")) {
       return <MaintenancePlanManagement />;
+    } else if (path.includes("replacement-returns")) {
+      return <ReplacementReturnPage />;
+    } else if (path.includes("ktv-confirm-return")) {
+      return <KtvReturnConfirmPage />;
     } else if (path.includes("notifications")) {
       return <NotificationsList />;
     }

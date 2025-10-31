@@ -1,6 +1,7 @@
 ﻿using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using FITSKIP.Infrastructure.DbContexts;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -17,11 +18,14 @@ namespace FITSKIP.API.Controllers
     public class ReplacementHistoriesController : ControllerBase
     {
         private readonly IReplacementHistoryService _service;
+        private readonly FitskipDbContext _context;
 
         public ReplacementHistoriesController(
-            IReplacementHistoryService service)
+            IReplacementHistoryService service,
+            FitskipDbContext context)
         {
             _service = service;
+            _context = context;
         }
 
         [HttpGet]
@@ -200,6 +204,75 @@ namespace FITSKIP.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Ghi nhận số lượng thực tế sử dụng và cập nhật trạng thái
+        /// </summary>
+        [HttpPut("{id:int}/record-usage")]
+        public async Task<ActionResult<ReplacementHistoryDTO>> RecordActualUsage(
+            int id,
+            [FromBody] RecordUsageRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                if (request.ActualQuantityUsed < 0)
+                    return BadRequest(new { message = "Số lượng sử dụng không được âm" });
+
+                // Get existing replacement
+                var existing = await _service.GetByIdAsync(id, cancellationToken);
+                if (existing == null)
+                    return NotFound(new { message = $"Replacement history với ID {id} không tồn tại" });
+
+                // Update only ActualQuantityUsed, QuantityToReturn, and Status
+                existing.ActualQuantityUsed = request.ActualQuantityUsed;
+
+                var toReturn = existing.Quantity - request.ActualQuantityUsed;
+                existing.QuantityToReturn = toReturn > 0 ? toReturn : 0;
+                existing.Status = request.Status; // "Chờ trả lại" or "Hoàn thành"
+
+                if (!string.IsNullOrEmpty(request.Remarks))
+                    existing.Remarks = request.Remarks;
+
+                var result = await _service.UpdateAsync(id, existing, cancellationToken);
+
+                var response = new ReplacementHistoryDTO
+                {
+                    EquipmentID = result.EquipmentId,
+                    PartID = result.PartId,
+                    PartName = result.Part != null ? result.Part.PartName : null,
+                    PartNumber = result.Part != null ? result.Part.PartNumber : null,
+                    EquipmentName = result.Equipment != null ? result.Equipment.EquipmentName : null,
+                    EquipmentCode = result.Equipment != null ? result.Equipment.EquipmentCode : null,
+                    ReplacedBy = result.ReplacedBy,
+                    ReplacedByUserName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.UserName : null,
+                    ReplacedByEmail = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.Email : null,
+                    ReplacementID = result.ReplacementId,
+                    Quantity = result.Quantity,
+                    ActualQuantityUsed = result.ActualQuantityUsed,
+                    QuantityToReturn = result.QuantityToReturn,
+                    ReplacedDate = result.ReplacedDate,
+                    Status = result.Status,
+                    Remarks = result.Remarks
+                };
+                return Ok(response);
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Internal server error", error = ex.Message });
+            }
+        }
+
         [HttpGet("equipment/{equipmentId:int}")]
         public async Task<ActionResult<IEnumerable<ReplacementHistoryDTO>>> GetByEquipmentId(int equipmentId, CancellationToken cancellationToken = default)
         {
@@ -331,15 +404,22 @@ namespace FITSKIP.API.Controllers
                 var result = await _service.GetByStatusAsync(status, cancellationToken);
                 var responses = result.Select(s => new ReplacementHistoryDTO
                 {
+                    EquipmentID = s.EquipmentId,
+                    PartID = s.PartId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
                     EquipmentName = s.Equipment != null ? s.Equipment.EquipmentName : null,
                     EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
+                    ReplacedBy = s.ReplacedBy,
                     ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     ReplacementID = s.ReplacementId,
                     Quantity = s.Quantity,
+                    ActualQuantityUsed = s.ActualQuantityUsed,
+                    QuantityToReturn = s.QuantityToReturn,
                     ReplacedDate = s.ReplacedDate,
+                    ReturnedDate = s.ReturnedDate,
+                    ReturnRemarks = s.ReturnRemarks,
                     Status = s.Status,
                     Remarks = s.Remarks
                 });
@@ -352,7 +432,7 @@ namespace FITSKIP.API.Controllers
         }
 
         /// <summary>
-        /// Cập nhật thông tin trả lại linh kiện thừa vào kho
+        /// Cập nhật thông tin trả lại linh kiện thừa vào kho và trừ số lượng trong SpareParts
         /// </summary>
         [HttpPut("{id}/confirm-return")]
         public async Task<ActionResult<ReplacementHistoryDTO>> ConfirmReturn(
@@ -365,6 +445,26 @@ namespace FITSKIP.API.Controllers
                 var result = await _service.ConfirmReturnAsync(id, confirmationDto, cancellationToken);
                 if (result == null)
                     return NotFound("Replacement history not found");
+
+                // NEW: Trừ số lượng trong bảng SpareParts theo ActualQuantityUsed
+                if (result.PartId > 0 && result.ActualQuantityUsed.HasValue && result.ActualQuantityUsed.Value > 0)
+                {
+                    var sparePart = await _context.SpareParts.FindAsync(new object[] { result.PartId }, cancellationToken: cancellationToken);
+                    if (sparePart != null)
+                    {
+                        // Trừ số lượng = ActualQuantityUsed
+                        sparePart.Quantity -= result.ActualQuantityUsed.Value;
+
+                        // Đảm bảo quantity không âm
+                        if (sparePart.Quantity < 0)
+                            sparePart.Quantity = 0;
+
+                        _context.SpareParts.Update(sparePart);
+                        await _context.SaveChangesAsync(cancellationToken);
+
+                        Console.WriteLine($"✓ Updated SparePart {result.PartId}: Quantity -= {result.ActualQuantityUsed.Value}, New Quantity = {sparePart.Quantity}");
+                    }
+                }
 
                 var response = new ReplacementHistoryDTO
                 {
