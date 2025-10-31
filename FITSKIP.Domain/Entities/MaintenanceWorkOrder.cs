@@ -27,12 +27,6 @@ public partial class MaintenanceWorkOrder
 
     public string Status { get; set; } = "Pending";
 
-    public string? UsageUnit { get; set; }
-
-    public string? InspectionCode { get; set; }
-
-    public string? RepairTime { get; set; }
-
     public DateTime? StartedDate { get; set; }
 
     public DateTime? CompletedDate { get; set; }

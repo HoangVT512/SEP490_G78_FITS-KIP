@@ -242,9 +242,6 @@ namespace FITSKIP.Domain.DTO
         
         // Details
         public string Status { get; set; } = string.Empty; // 'Pending', 'InProgress', 'Completed', 'Cancelled'
-        public string? UsageUnit { get; set; }
-        public string? InspectionCode { get; set; }
-        public string? RepairTime { get; set; }
         public string? Notes { get; set; }
         
         // Checklist
@@ -271,15 +268,6 @@ namespace FITSKIP.Domain.DTO
         public string? AssignedToElectrical { get; set; }
         public string? AssignedToMechanical { get; set; }
 
-        [MaxLength(100)]
-        public string? UsageUnit { get; set; }
-
-        [MaxLength(50)]
-        public string? InspectionCode { get; set; }
-
-        [MaxLength(50)]
-        public string? RepairTime { get; set; }
-
         [MaxLength(1000)]
         public string? Notes { get; set; }
 
@@ -295,15 +283,6 @@ namespace FITSKIP.Domain.DTO
         public string? AssignedToElectrical { get; set; }
         public string? AssignedToMechanical { get; set; }
         public string? Status { get; set; }
-
-        [MaxLength(100)]
-        public string? UsageUnit { get; set; }
-
-        [MaxLength(50)]
-        public string? InspectionCode { get; set; }
-
-        [MaxLength(50)]
-        public string? RepairTime { get; set; }
 
         [MaxLength(1000)]
         public string? Notes { get; set; }

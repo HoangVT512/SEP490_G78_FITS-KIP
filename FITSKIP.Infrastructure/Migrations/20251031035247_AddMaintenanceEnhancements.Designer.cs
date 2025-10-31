@@ -4,6 +4,7 @@ using FITSKIP.Infrastructure.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    partial class FitskipDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251031035247_AddMaintenanceEnhancements")]
+    partial class AddMaintenanceEnhancements
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -585,12 +588,31 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("datetime")
                         .HasDefaultValueSql("GETDATE()");
 
+                    b.Property<decimal?>("DowntimeCost")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("DowntimeHours")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<DateTime>("DueDate")
                         .HasColumnType("datetime");
 
                     b.Property<int>("EquipmentId")
                         .HasColumnType("int")
                         .HasColumnName("EquipmentID");
+
+                    b.Property<string>("InspectionCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<bool>("IsSLAViolated")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("IsUrgent")
+                        .HasColumnType("bit");
+
+                    b.Property<decimal?>("LaborCost")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
@@ -599,6 +621,23 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<int>("PlanId")
                         .HasColumnType("int")
                         .HasColumnName("PlanID");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("RepairTime")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<DateTime?>("SLADueDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("SLAHoursRemaining")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("SparePartsCost")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<DateTime?>("StartedDate")
                         .HasColumnType("datetime");
@@ -610,12 +649,19 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("nvarchar(50)")
                         .HasDefaultValue("Pending");
 
+                    b.Property<decimal?>("TotalCost")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("UpdatedBy")
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime");
+
+                    b.Property<string>("UsageUnit")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("WorkOrderCode")
                         .IsRequired()

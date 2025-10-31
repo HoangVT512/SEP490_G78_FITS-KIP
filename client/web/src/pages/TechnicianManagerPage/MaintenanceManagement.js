@@ -601,9 +601,7 @@ const MaintenanceManagement = () => {
       dueDate: dayjs(record.dueDate),
       assignedToElectrical: record.assignedToElectrical,
       assignedToMechanical: record.assignedToMechanical,
-      usageUnit: record.usageUnit,
-      inspectionCode: record.inspectionCode,
-      repairTime: record.repairTime,
+      // ❌ REMOVED: usageUnit, inspectionCode, repairTime - không sử dụng
       notes: record.notes,
     });
     setIsWorkOrderModalVisible(true);
@@ -617,9 +615,7 @@ const MaintenanceManagement = () => {
           dueDate: values.dueDate?.toISOString(),
           assignedToElectrical: values.assignedToElectrical,
           assignedToMechanical: values.assignedToMechanical,
-          usageUnit: values.usageUnit,
-          inspectionCode: values.inspectionCode,
-          repairTime: values.repairTime,
+          // ❌ REMOVED: usageUnit, inspectionCode, repairTime - không sử dụng
           notes: values.notes,
         });
         message.success("Cập nhật phiếu bảo trì thành công!");
@@ -629,9 +625,7 @@ const MaintenanceManagement = () => {
           dueDate: values.dueDate.toISOString(),
           assignedToElectrical: values.assignedToElectrical,
           assignedToMechanical: values.assignedToMechanical,
-          usageUnit: values.usageUnit,
-          inspectionCode: values.inspectionCode,
-          repairTime: values.repairTime,
+          // ❌ REMOVED: usageUnit, inspectionCode, repairTime - không sử dụng
           notes: values.notes,
         });
         message.success("Tạo phiếu bảo trì thành công!");
@@ -1616,16 +1610,38 @@ const MaintenanceManagement = () => {
     const unsubscribeChecklist = subscribe("ChecklistItemUpdated", (data) => {
       console.log("📢 TechManager received: Checklist updated", data);
       
+      // ✅ Reload toàn bộ WorkOrder để đảm bảo có data mới nhất
+      if (data.workOrderId) {
+        loadWorkOrders();
+      }
+      
       // Nếu đang mở modal chi tiết, cập nhật real-time
       if (selectedRecord && selectedRecord.workOrderId === data.workOrderId) {
-        setSelectedRecord((prev) => ({
-          ...prev,
-          checklistItems: prev.checklistItems?.map((item) =>
-            item.checklistItemId === data.checklistItemId
-              ? { ...item, ...data }
-              : item
-          ),
-        }));
+        console.log("🔄 Updating selectedRecord checklist in real-time");
+        
+        setSelectedRecord((prev) => {
+          if (!prev || !prev.checklistItems) return prev;
+          
+          return {
+            ...prev,
+            checklistItems: prev.checklistItems.map((item) => {
+              if (item.checklistId === data.checklistItemId || item.checklistId === data.checklistId) {
+                console.log(`✅ Found matching item: ${item.checklistId} - Updating to isChecked=${data.isChecked}`);
+                return {
+                  ...item,
+                  isChecked: data.isChecked,
+                  notes: data.notes || item.notes,
+                  completedBy: data.completedBy,
+                  completedDate: data.completedDate,
+                  completedByName: data.completedByName,
+                };
+              }
+              return item;
+            }),
+          };
+        });
+        
+        // ✅ KHÔNG hiển thị popup notification nữa - chỉ update modal
       }
     });
 
@@ -2439,33 +2455,6 @@ const MaintenanceManagement = () => {
               </Row>
 
               <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                    name="usageUnit"
-                    label="Đơn vị sử dụng"
-                  >
-                    <Input placeholder="Nhập đơn vị sử dụng (tùy chọn)" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="inspectionCode"
-                    label="Mã kiểm tra"
-                  >
-                    <Input placeholder="Nhập mã kiểm tra (tùy chọn)" />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={16}>
-                <Col span={12}>
-                  <Form.Item
-                    name="repairTime"
-                    label="Thời gian sửa chữa (giờ)"
-                  >
-                    <InputNumber min={0} style={{ width: "100%" }} placeholder="Nhập thời gian sửa chữa (tùy chọn)" />
-                  </Form.Item>
-                </Col>
                 <Col span={12}>
                   <Form.Item
                     name="notes"

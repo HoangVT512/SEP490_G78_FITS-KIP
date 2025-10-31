@@ -511,9 +511,7 @@ namespace FITSKIP.Application.Services
                 AssignedToElectrical = request.AssignedToElectrical,
                 AssignedToMechanical = request.AssignedToMechanical,
                 Status = "Pending",
-                UsageUnit = request.UsageUnit,
-                InspectionCode = request.InspectionCode,
-                RepairTime = request.RepairTime,
+                // ❌ REMOVED: UsageUnit, InspectionCode, RepairTime - không sử dụng
                 Notes = request.Notes,
                 CreatedBy = userId,
                 CreatedDate = DateTime.Now
@@ -605,9 +603,7 @@ namespace FITSKIP.Application.Services
             if (!string.IsNullOrEmpty(request.Status))
                 workOrder.Status = request.Status;
 
-            workOrder.UsageUnit = request.UsageUnit;
-            workOrder.InspectionCode = request.InspectionCode;
-            workOrder.RepairTime = request.RepairTime;
+            // ❌ REMOVED: UsageUnit, InspectionCode, RepairTime - không sử dụng
             workOrder.Notes = request.Notes;
             workOrder.UpdatedBy = userId;
             workOrder.UpdatedDate = DateTime.Now;
@@ -1304,9 +1300,6 @@ namespace FITSKIP.Application.Services
                 MechanicalTechnicianName = workOrder.MechanicalTechnician?.FullName,
                 MechanicalEmployeeCode = workOrder.MechanicalTechnician?.EmployeeCode,
                 Status = workOrder.Status,
-                UsageUnit = workOrder.UsageUnit,
-                InspectionCode = workOrder.InspectionCode,
-                RepairTime = workOrder.RepairTime,
                 Notes = workOrder.Notes,
                 ChecklistItems = checklistItems.Select(MapChecklistItemToDTO).OrderBy(ci => ci.OrderIndex).ToList(),
                 TotalChecklistItems = totalItems,

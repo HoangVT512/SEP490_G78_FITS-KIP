@@ -4,6 +4,7 @@ using FITSKIP.Infrastructure.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    partial class FitskipDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251031040332_RemoveMaintenanceEnhancements")]
+    partial class RemoveMaintenanceEnhancements
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -592,6 +595,10 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("EquipmentID");
 
+                    b.Property<string>("InspectionCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -599,6 +606,10 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<int>("PlanId")
                         .HasColumnType("int")
                         .HasColumnName("PlanID");
+
+                    b.Property<string>("RepairTime")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<DateTime?>("StartedDate")
                         .HasColumnType("datetime");
@@ -616,6 +627,10 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     b.Property<DateTime?>("UpdatedDate")
                         .HasColumnType("datetime");
+
+                    b.Property<string>("UsageUnit")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("WorkOrderCode")
                         .IsRequired()
