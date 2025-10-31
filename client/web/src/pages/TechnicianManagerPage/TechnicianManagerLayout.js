@@ -51,6 +51,8 @@ const TechnicianManagerLayout = () => {
   const [selectedKey, setSelectedKey] = useState("dashboard");
   const [notificationCount, setNotificationCount] = useState(0);
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -77,8 +79,23 @@ const TechnicianManagerLayout = () => {
     fetchUnreadCount();
   }, []);
 
+  // Fetch notifications list
+  const fetchNotifications = async () => {
+    setNotificationsLoading(true);
+    try {
+      const data = await notificationService.getNotifications(false); // Get all notifications
+      setNotifications(data);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    } finally {
+      setNotificationsLoading(false);
+    }
+  };
+
   // Initialize SignalR connection
   useEffect(() => {
+    let notificationHandler = null;
+
     const initializeSignalR = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -88,17 +105,31 @@ const TechnicianManagerLayout = () => {
           return;
         }
 
-        // Start SignalR connection
-        await signalRService.startConnection(token);
+        // Check if already connected to avoid duplicate connections
+        if (signalRService.isConnected) {
+          console.log("SignalR already connected, setting up listener only");
+        } else {
+          // Start SignalR connection
+          await signalRService.startConnection(token);
+        }
 
-        // Lắng nghe thông báo cá nhân
-        signalRService.onReceiveNotification((notificationData) => {
-          console.log("📩 Received notification:", notificationData);
+        // Define notification handler
+        notificationHandler = (notificationData) => {
+          console.log("📩 [TechnicianManagerLayout] Received notification:", notificationData);
 
-          // Tăng số lượng notification badge
-          setNotificationCount((prev) => prev + 1);
+          // Tăng số lượng notification badge NGAY LẬP TỨC
+          setNotificationCount((prev) => {
+            const newCount = prev + 1;
+            console.log(`📊 Badge count updated: ${prev} -> ${newCount}`);
+            return newCount;
+          });
 
-          // Hiển thị message toast (LUÔN LUÔN hiển thị)
+          // Tự động refresh danh sách nếu drawer đang mở
+          if (notificationDrawerOpen) {
+            fetchNotifications();
+          }
+
+          // Hiển thị message toast CHỈ MỘT LẦN
           antdMessage.success({
             content: `🔔 ${
               notificationData.title ||
@@ -106,8 +137,12 @@ const TechnicianManagerLayout = () => {
               "Bạn có thông báo mới"
             }`,
             duration: 5,
+            key: `notification-${Date.now()}`, // Unique key để tránh duplicate
           });
-        });
+        };
+
+        // Lắng nghe thông báo cá nhân (listener được track trong service để tránh duplicate)
+        signalRService.onReceiveNotification(notificationHandler);
       } catch (error) {
         console.error("❌ Error initializing SignalR:", error);
       }
@@ -115,9 +150,12 @@ const TechnicianManagerLayout = () => {
 
     initializeSignalR();
 
-    // Cleanup function
+    // Cleanup function - pass the specific handler to remove
     return () => {
-      signalRService.offReceiveNotification();
+      console.log("🧹 Cleaning up SignalR listeners in TechnicianManagerLayout");
+      if (notificationHandler) {
+        signalRService.offReceiveNotification(notificationHandler);
+      }
     };
   }, []); // Empty dependency array - only run once on mount
 
@@ -354,6 +392,8 @@ const TechnicianManagerLayout = () => {
               count={notificationCount}
               onClick={() => {
                 setNotificationDrawerOpen(true);
+                // Tự động load danh sách thông báo khi mở drawer
+                fetchNotifications();
                 // Refresh unread count from server
                 notificationService.getUnreadCount().then((count) => {
                   setNotificationCount(count);
@@ -409,6 +449,9 @@ const TechnicianManagerLayout = () => {
           onNotificationCountChange={(newCount) =>
             setNotificationCount(newCount)
           }
+          initialNotifications={notifications}
+          initialLoading={notificationsLoading}
+          onRefresh={fetchNotifications}
         />
       </Drawer>
     </AntLayout>

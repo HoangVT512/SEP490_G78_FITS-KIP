@@ -18,6 +18,7 @@ import {
 import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
 import { sparePartService } from "../../services/sparePartService";
 import { replacementHistoryService } from "../../services/replacementHistoryService";
+import notificationService from "../../services/notificationService";
 import { useAuth } from "../../contexts/AuthContext";
 import dayjs from "dayjs";
 
@@ -127,6 +128,36 @@ const SparepartRequestModal = ({ incident, open, onClose, onSuccess }) => {
       // Send all requests
       for (const request of requests) {
         await replacementHistoryService.create(request);
+      }
+
+      // Send real-time notification to Technical Managers
+      try {
+        const notificationMessage = `Kỹ thuật viên ${currentUser?.fullName || currentUser?.username} đã gửi yêu cầu thay thế phụ tùng cho sự cố #${incident?.incidentId || 'N/A'} - Thiết bị: ${incident?.equipmentName || 'N/A'} (${incident?.equipmentCode || ''}). Tổng số: ${selectedParts.length} loại phụ tùng.`;
+
+        await notificationService.sendToTechnicalManagers({
+          message: notificationMessage,
+          type: "sparePartRequest",
+          data: {
+            incidentId: incident?.incidentId,
+            equipmentId: incident?.equipmentId,
+            equipmentName: incident?.equipmentName,
+            equipmentCode: incident?.equipmentCode,
+            technicianId: userId,
+            technicianName: currentUser?.fullName || currentUser?.username,
+            requestedParts: selectedParts.map(part => ({
+              partId: part.partId,
+              partNumber: part.partNumber,
+              partName: part.partName,
+              quantity: part.quantity,
+              availableQuantity: part.availableQuantity,
+            })),
+            totalItems: selectedParts.length,
+            requestDate: dayjs().toISOString(),
+          },
+        });
+      } catch (notificationError) {
+        console.error("Failed to send notification:", notificationError);
+        // Don't fail the whole operation if notification fails
       }
 
       message.success(

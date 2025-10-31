@@ -28,9 +28,9 @@ dayjs.locale("vi");
 
 const { Title, Text, Paragraph } = Typography;
 
-const NotificationsList = ({ onClose, onNotificationCountChange }) => {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(false);
+const NotificationsList = ({ onClose, onNotificationCountChange, initialNotifications = [], initialLoading = false, onRefresh }) => {
+  const [notifications, setNotifications] = useState(initialNotifications);
+  const [loading, setLoading] = useState(initialLoading);
   const [unreadOnly, setUnreadOnly] = useState(false);
 
   // Fetch notifications from API
@@ -109,6 +109,14 @@ const NotificationsList = ({ onClose, onNotificationCountChange }) => {
     fetchNotifications();
   }, [unreadOnly]);
 
+  // Update notifications when initialNotifications changes
+  useEffect(() => {
+    if (initialNotifications.length > 0) {
+      setNotifications(initialNotifications);
+      setLoading(initialLoading);
+    }
+  }, [initialNotifications, initialLoading]);
+
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
@@ -128,7 +136,7 @@ const NotificationsList = ({ onClose, onNotificationCountChange }) => {
           <Button
             type="text"
             icon={<ReloadOutlined />}
-            onClick={fetchNotifications}
+            onClick={onRefresh || fetchNotifications}
           >
             Làm mới
           </Button>

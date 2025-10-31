@@ -151,6 +151,9 @@ namespace FITSKIP.API
             // Azure Storage Service
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IAzureStorageService, FITSKIP.Application.Services.AzureStorageService>();
 
+            // Add Background Services
+            builder.Services.AddHostedService<FITSKIP.Application.Services.NotificationCleanupService>();
+
             builder.Services.AddLogging();
 
             // JWT Authentication configuration

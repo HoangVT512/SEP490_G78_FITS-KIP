@@ -568,25 +568,48 @@ const DowntimeChartDashboard = () => {
                 dailyStat = lineDailyData.dailyStats.find(stat => stat.date === formattedDate);
             }
 
+            // Tính tổng % của các stop types (theo đúng thứ tự legend)
+            const stopTypes = ['dungNgan', 'dungDai', 'phaPham', 'dauCuoiCa', 'doiMa'];
+            let totalStopPercentage = 0;
+            if (dailyStat) {
+                const detailKeyMap = {
+                    'dungNgan': 'dungNgan',
+                    'dungDai': 'dungDai',
+                    'phaPham': 'phePham',
+                    'dauCuoiCa': 'veSinhDauCuoiCa',
+                    'doiMa': 'doiMa'
+                };
+                stopTypes.forEach(key => {
+                    const detailKey = detailKeyMap[key];
+                    if (dailyStat.downDetails[detailKey]) {
+                        totalStopPercentage += dailyStat.downDetails[detailKey].percentage || 0;
+                    }
+                });
+            }
+
             return (
                 <div style={{
-                    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                    backgroundColor: 'rgba(15, 23, 42, 0.97)',
                     color: 'white',
-                    padding: '16px',
-                    borderRadius: '8px',
+                    padding: '20px',
+                    borderRadius: '12px',
                     fontSize: '12px',
-                    minWidth: '280px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                    minWidth: '320px',
+                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    backdropFilter: 'blur(10px)'
                 }}>
                     {/* Tiêu đề ngày */}
                     <div style={{
-                        marginBottom: '12px',
+                        marginBottom: '16px',
                         fontWeight: 'bold',
-                        fontSize: '13px',
-                        borderBottom: '1px solid rgba(255,255,255,0.2)',
-                        paddingBottom: '8px'
+                        fontSize: '15px',
+                        borderBottom: '2px solid rgba(59, 130, 246, 0.5)',
+                        paddingBottom: '10px',
+                        color: '#60a5fa',
+                        letterSpacing: '0.5px'
                     }}>
-                        {currentDate}
+                        📅 {currentDate}
                     </div>
 
                     {payload
@@ -595,8 +618,8 @@ const DowntimeChartDashboard = () => {
                             const order = [
                                 'dungNgan',
                                 'dungDai',
-                                'phePham',
-                                'veSinhDauCuoiCa',
+                                'phaPham',
+                                'dauCuoiCa',
                                 'doiMa',
                                 'oee',
                                 'mucTieu',
@@ -614,7 +637,7 @@ const DowntimeChartDashboard = () => {
                                     'dungNgan': 'dungNgan',
                                     'dungDai': 'dungDai',
                                     'phaPham': 'phePham',
-                                    'veSinhDauCuoiCa': 'veSinhDauCuoiCa',
+                                    'dauCuoiCa': 'veSinhDauCuoiCa',
                                     'doiMa': 'doiMa'
                                 };
                                 const detailKey = detailKeyMap[item.dataKey];
@@ -624,7 +647,7 @@ const DowntimeChartDashboard = () => {
                             }
 
                             return (
-                                <div key={index} style={{ marginBottom: '8px' }}>
+                                <div key={index} style={{ marginBottom: '10px' }}>
                                     <div
                                         style={{
                                             display: 'flex',
@@ -635,29 +658,32 @@ const DowntimeChartDashboard = () => {
                                         <div style={{ display: 'flex', alignItems: 'center' }}>
                                             <div
                                                 style={{
-                                                    width: '14px',
-                                                    height: '14px',
+                                                    width: '16px',
+                                                    height: '16px',
                                                     backgroundColor: item.color,
-                                                    marginRight: '10px',
-                                                    borderRadius: '2px',
+                                                    marginRight: '12px',
+                                                    borderRadius: item.dataKey === 'tyLeMat' ? '50%' : '3px',
                                                     border:
                                                         item.dataKey === 'oee'
                                                             ? '2px solid white'
                                                             : item.dataKey === 'mucTieu'
                                                                 ? '2px dashed #aaa'
                                                                 : 'none',
+                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                                                 }}
                                             ></div>
-                                            <span style={{ fontWeight: 'bold' }}>{item.name}</span>
+                                            <span style={{ fontWeight: '600', fontSize: '13px' }}>{item.name}</span>
                                         </div>
 
                                         {isMainMetric && (
                                             <span
                                                 style={{
                                                     fontWeight: 'bold',
-                                                    marginLeft: '8px',
-                                                    minWidth: '60px',
+                                                    marginLeft: '12px',
+                                                    minWidth: '70px',
                                                     textAlign: 'right',
+                                                    fontSize: '13px',
+                                                    color: item.dataKey === 'oee' ? '#4ade80' : (item.dataKey === 'tyLeMat' ? '#f87171' : '#fbbf24')
                                                 }}
                                             >
                                                 {isNaN(item.value)
@@ -671,15 +697,19 @@ const DowntimeChartDashboard = () => {
                                     {details && !isMainMetric && (
                                         <div
                                             style={{
-                                                marginLeft: '24px',
+                                                marginLeft: '28px',
                                                 fontSize: '11px',
-                                                lineHeight: '1.4',
-                                                marginTop: '4px',
+                                                lineHeight: '1.5',
+                                                marginTop: '6px',
+                                                padding: '6px 10px',
+                                                backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                                borderRadius: '6px',
+                                                borderLeft: '3px solid ' + item.color
                                             }}
                                         >
                                             {details.percentage > 0
-                                                ? `${details.percentage.toFixed(2)}% | Thời lượng: ${details.totalDuration || details.duration} phút | Số lần: ${details.occurrences}`
-                                                : '0% | Thời lượng: 0 phút | Số lần: 0'}
+                                                ? ` ${details.percentage.toFixed(2)}% | ${(details.totalDuration || details.duration).toFixed(2)} phút |  ${details.occurrences} lần`
+                                                : ' 0% | 0 phút |  0 lần'}
                                         </div>
                                     )}
 
@@ -687,10 +717,11 @@ const DowntimeChartDashboard = () => {
                                     {!details && !isMainMetric && (
                                         <div
                                             style={{
-                                                marginLeft: '24px',
+                                                marginLeft: '28px',
                                                 fontSize: '11px',
                                                 lineHeight: '1.4',
                                                 marginTop: '4px',
+                                                color: 'rgba(255, 255, 255, 0.7)'
                                             }}
                                         >
                                             {isNaN(item.value)
@@ -701,6 +732,53 @@ const DowntimeChartDashboard = () => {
                                 </div>
                             );
                         })}
+
+                    {/* Dòng tổng stop types */}
+                    {dailyStat && (
+                        <div style={{
+                            marginTop: '16px',
+                            paddingTop: '12px',
+                            borderTop: '2px solid rgba(255, 255, 255, 0.2)',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            padding: '10px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid rgba(239, 68, 68, 0.3)'
+                        }}>
+                            <span style={{
+                                fontWeight: 'bold',
+                                fontSize: '13px',
+                                color: '#fca5a5'
+                            }}>
+                                Tổng tỷ lệ dừng
+                            </span>
+                            <span style={{
+                                fontWeight: 'bold',
+                                fontSize: '14px',
+                                color: '#f87171'
+                            }}>
+                                {totalStopPercentage.toFixed(2)}%
+                            </span>
+                        </div>
+                    )}
+
+                    {/* So sánh với tỷ lệ mất mát */}
+                    {dailyStat && dailyStat.totalLoss > 0 && (
+                        <div style={{
+                            marginTop: '8px',
+                            fontSize: '11px',
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            fontStyle: 'italic',
+                            textAlign: 'center'
+                        }}>
+                            {Math.abs(totalStopPercentage - dailyStat.totalLoss) < 0.01
+                                ? '✓ Tổng dừng khớp với tỷ lệ mất mát'
+                                : `Chênh lệch: ${Math.abs(totalStopPercentage - dailyStat.totalLoss).toFixed(2)}%`
+                            }
+                        </div>
+                    )}
                 </div>
             );
         }
@@ -809,71 +887,168 @@ const DowntimeChartDashboard = () => {
 
         return (
             <div key={line.id} style={{ marginBottom: '32px' }}>
-                {/* Header Cards cho từng dây chuyền */}
-                <Row gutter={[16, 16]} style={{ marginBottom: '16px' }}>
-                    {/* Card OEE */}
+                {/* Header Cards cho từng dây chuyền - Enhanced Industrial Design */}
+                <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+                    {/* Card OEE - Premium Design */}
                     <Col xs={24} sm={8} md={8}>
                         <Card
                             style={{
                                 border: '1px solid #d9d9d9',
                                 borderRadius: '12px',
                                 boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                                height: '140px'
+                                height: '160px',
+                                position: 'relative',
+                                overflow: 'hidden'
                             }}
-                            bodyStyle={{ padding: '20px 24px', textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
+                            bodyStyle={{
+                                padding: '24px',
+                                textAlign: 'center',
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                position: 'relative',
+                                zIndex: 1
+                            }}
                         >
-                            <div style={{ color: '#000' }}>
-                                <div style={{ fontSize: '16px', marginBottom: '8px', opacity: 0.7 }}>
-                                    {/* <DashboardOutlined style={{ marginRight: '8px' }} /> */}
-                                    {line.name}
+                            {/* Background decoration */}
+                            <div style={{
+                                position: 'absolute',
+                                top: '-20px',
+                                right: '-20px',
+                                width: '100px',
+                                height: '100px',
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                borderRadius: '50%'
+                            }}></div>
+                            <div style={{ color: '#000000ff' }}>
+                                <div style={{
+                                    fontSize: '14px',
+                                    marginBottom: '8px',
+                                    opacity: 0.9,
+                                    fontWeight: '500',
+                                    letterSpacing: '0.5px'
+                                }}>
+                                    OEE
                                 </div>
-                                <div style={{ fontSize: '32px', fontWeight: 'bold' }}>
+                                <div style={{
+                                    fontSize: '42px',
+                                    fontWeight: '800',
+                                    textShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                    marginBottom: '4px'
+                                }}>
                                     {avgOEE}%
-                                    <span style={{ fontSize: '14px', marginLeft: '8px', opacity: 0.8 }}>OEE</span>
                                 </div>
                             </div>
                         </Card>
                     </Col>
 
-                    {/* Card Thời gian hoạt động */}
+                    {/* Card Thời gian hoạt động - Green Theme */}
                     <Col xs={24} sm={8} md={8}>
                         <Card
                             style={{
                                 border: '1px solid #d9d9d9',
                                 borderRadius: '12px',
                                 boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                                height: '140px'
+                                height: '160px',
+                                position: 'relative',
+                                overflow: 'hidden'
                             }}
-                            bodyStyle={{ padding: '20px 24px', textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
+                            bodyStyle={{
+                                padding: '24px',
+                                textAlign: 'center',
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                position: 'relative',
+                                zIndex: 1
+                            }}
                         >
-                            <Statistic
-                                title={<span style={{ color: '#000', opacity: 0.7, fontSize: '16px' }}>Thời gian hoạt động</span>}
-                                value={productivity}
-                                suffix="%"
-                                valueStyle={{ color: '#000', fontSize: '24px', fontWeight: 'bold' }}
-                            //prefix={<ThunderboltOutlined style={{ color: '#1890ff' }} />}
-                            />
+                            {/* Background decoration */}
+                            <div style={{
+                                position: 'absolute',
+                                bottom: '-20px',
+                                left: '-20px',
+                                width: '100px',
+                                height: '100px',
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                borderRadius: '50%'
+                            }}></div>
+                            <div style={{ color: '#000000ff' }}>
+                                <div style={{
+                                    fontSize: '14px',
+                                    marginBottom: '8px',
+                                    opacity: 0.9,
+                                    fontWeight: '500',
+                                    letterSpacing: '0.5px'
+                                }}>
+                                    Hiệu suất hoạt động
+                                </div>
+                                <div style={{
+                                    fontSize: '42px',
+                                    fontWeight: '800',
+                                    textShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                    marginBottom: '4px'
+                                }}>
+                                    {productivity}%
+                                </div>
+                            </div>
                         </Card>
                     </Col>
 
-                    {/* Card Tỷ lệ mất mát */}
+                    {/* Card Tỷ lệ mất mát - Red Theme */}
                     <Col xs={24} sm={8} md={8}>
                         <Card
                             style={{
                                 border: '1px solid #d9d9d9',
                                 borderRadius: '12px',
                                 boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                                height: '140px'
+                                height: '160px',
+                                position: 'relative',
+                                overflow: 'hidden'
                             }}
-                            bodyStyle={{ padding: '20px 24px', textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}
+                            bodyStyle={{
+                                padding: '24px',
+                                textAlign: 'center',
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                position: 'relative',
+                                zIndex: 1
+                            }}
                         >
-                            <Statistic
-                                title={<span style={{ color: '#000', opacity: 0.7, fontSize: '16px' }}>Tỷ lệ mất mát TB</span>}
-                                value={avgLoss}
-                                suffix="%"
-                                valueStyle={{ color: '#000', fontSize: '24px', fontWeight: 'bold' }}
-                            //prefix={avgLoss < 10 ? <ArrowDownOutlined style={{ color: '#52c41a' }} /> : <ArrowUpOutlined style={{ color: '#ff4d4f' }} />}
-                            />
+                            {/* Background decoration */}
+                            <div style={{
+                                position: 'absolute',
+                                top: '50%',
+                                right: '-30px',
+                                width: '120px',
+                                height: '120px',
+                                background: 'rgba(255, 255, 255, 0.1)',
+                                borderRadius: '50%',
+                                transform: 'translateY(-50%)'
+                            }}></div>
+                            <div style={{ color: '#000000ff' }}>
+                                <div style={{
+                                    fontSize: '14px',
+                                    marginBottom: '8px',
+                                    opacity: 0.9,
+                                    fontWeight: '500',
+                                    letterSpacing: '0.5px'
+                                }}>
+                                    Tỷ lệ mất mát
+                                </div>
+                                <div style={{
+                                    fontSize: '42px',
+                                    fontWeight: '800',
+                                    textShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                    marginBottom: '4px'
+                                }}>
+                                    {avgLoss}%
+                                </div>
+                            </div>
                         </Card>
                     </Col>
                 </Row>
@@ -1084,84 +1259,170 @@ const DowntimeChartDashboard = () => {
     return (
         <div style={{
             padding: '24px',
-            background: 'linear-gradient(180deg, #f0f2f5 0%, #ffffff 100%)',
-            minHeight: '100vh'
+            background: 'linear-gradient(135deg, #e3f2fd 0%, #f5f5f5 50%, #fff3e0 100%)',
+            minHeight: '100vh',
+            position: 'relative'
         }}>
-            {/* Header Dashboard */}
+            {/* Background pattern for factory theme */}
             <div style={{
-                background: 'linear-gradient(135deg, #334766 0%, #0861c1ff 100%)',
-                padding: '32px',
-                borderRadius: '16px',
-                marginBottom: '24px',
-                boxShadow: '0 8px 24px rgba(24, 144, 255, 0.25)',
-                color: 'white'
-            }}>
-                <Row gutter={[24, 24]} align="middle">
-                    <Col xs={24} lg={12}>
-                        <div>
-                            <h1 style={{
-                                fontSize: '32px',
-                                fontWeight: '700',
-                                margin: 0,
-                                color: 'white',
-                                textShadow: '2px 2px 4px rgba(0,0,0,0.2)'
-                            }}>
-                                Biểu đồ biểu thị thời gian dừng máy
-                            </h1>
-                            <p style={{
-                                fontSize: '16px',
-                                margin: '8px 0 0 0',
-                                opacity: 0.95,
-                                fontWeight: '400'
-                            }}>
-                                Theo dõi hiệu suất và phân tích chi tiết các dây chuyền sản xuất
-                            </p>
-                        </div>
-                    </Col>
-                    <Col xs={24} lg={12}>
-                        <Row gutter={16} justify="end">
-                            <Col xs={24} sm={12} md={10}>
-                                <div style={{ marginBottom: '8px', fontSize: '13px', opacity: 0.9 }}>
-                                    🗓️ Chọn tháng
-                                </div>
-                                <Select
-                                    value={selectedMonth}
-                                    onChange={setSelectedMonth}
-                                    style={{ width: '100%' }}
-                                    size="large"
-                                >
-                                    {months.map(month => (
-                                        <Option key={month} value={month}>{month}</Option>
-                                    ))}
-                                </Select>
-                            </Col>
-                            <Col xs={24} sm={12} md={10}>
-                                <div style={{ marginBottom: '8px', fontSize: '13px', opacity: 0.9 }}>
-                                    🏭 Chọn dây chuyền
-                                </div>
-                                <Select
-                                    mode="multiple"
-                                    value={selectedLines}
-                                    onChange={setSelectedLines}
-                                    style={{ width: '100%' }}
-                                    size="large"
-                                    placeholder="Chọn dây chuyền"
-                                    maxTagCount={2}
-                                >
-                                    {productionLines.map(line => (
-                                        <Option key={line.id} value={line.id}>
-                                            {line.name}
-                                        </Option>
-                                    ))}
-                                </Select>
-                            </Col>
-                        </Row>
-                    </Col>
-                </Row>
-            </div>
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                opacity: 0.03,
+                backgroundImage: 'repeating-linear-gradient(45deg, transparent, transparent 35px, #000 35px, #000 36px)',
+                pointerEvents: 'none',
+                zIndex: 0
+            }}></div>
 
-            {/* Tổng quan nhanh */}
-            {/* <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
+            <div style={{ position: 'relative', zIndex: 1 }}>
+                {/* Header Dashboard - Enhanced Industrial Design */}
+                <div style={{
+                    background: 'linear-gradient(135deg, #1e3a5f 0%, #2c5282 50%, #1a365d 100%)',
+                    padding: '40px 32px',
+                    borderRadius: '20px',
+                    marginBottom: '32px',
+                    boxShadow: '0 12px 40px rgba(30, 58, 95, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)',
+                    color: 'white',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    border: '1px solid rgba(255,255,255,0.1)'
+                }}>
+                    {/* Decorative elements */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '-50px',
+                        right: '-50px',
+                        width: '200px',
+                        height: '200px',
+                        background: 'radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%)',
+                        borderRadius: '50%'
+                    }}></div>
+                    <div style={{
+                        position: 'absolute',
+                        bottom: '-30px',
+                        left: '-30px',
+                        width: '150px',
+                        height: '150px',
+                        background: 'radial-gradient(circle, rgba(255,255,255,0.05) 0%, transparent 70%)',
+                        borderRadius: '50%'
+                    }}></div>
+
+                    <Row gutter={[24, 24]} align="middle">
+                        <Col xs={24} lg={12}>
+                            <div>
+                                <div style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                    padding: '6px 16px',
+                                    borderRadius: '20px',
+                                    marginBottom: '16px',
+                                    backdropFilter: 'blur(10px)',
+                                    border: '1px solid rgba(255,255,255,0.2)'
+                                }}>
+                                    <SettingOutlined style={{ fontSize: '16px', marginRight: '8px' }} />
+                                    <span style={{ fontSize: '13px', fontWeight: '500' }}>Hệ thống giám sát sản xuất</span>
+                                </div>
+                                <h1 style={{
+                                    fontSize: '36px',
+                                    fontWeight: '800',
+                                    margin: '0 0 12px 0',
+                                    color: 'white',
+                                    textShadow: '2px 2px 8px rgba(0,0,0,0.3)',
+                                    letterSpacing: '-0.5px'
+                                }}>
+                                    Biểu Đồ Thời Gian Dừng Máy
+                                </h1>
+                                <p style={{
+                                    fontSize: '16px',
+                                    margin: '0',
+                                    opacity: 0.95,
+                                    fontWeight: '400',
+                                    lineHeight: '1.5'
+                                }}>
+                                    Theo dõi hiệu suất và phân tích chi tiết các dây chuyền sản xuất<br />
+                                    <span style={{ fontSize: '14px', opacity: 0.8 }}>
+                                        Cập nhật theo thời gian thực • Dữ liệu chính xác • Phân tích toàn diện
+                                    </span>
+                                </p>
+                            </div>
+                        </Col>
+                        <Col xs={24} lg={12}>
+                            <Row gutter={16} justify="end">
+                                <Col xs={24} sm={12} md={11}>
+                                    <div style={{
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        padding: '16px',
+                                        borderRadius: '12px',
+                                        backdropFilter: 'blur(10px)',
+                                        border: '1px solid rgba(255,255,255,0.15)'
+                                    }}>
+                                        <div style={{
+                                            marginBottom: '10px',
+                                            fontSize: '13px',
+                                            opacity: 0.9,
+                                            fontWeight: '500',
+                                            display: 'flex',
+                                            alignItems: 'center'
+                                        }}>
+                                            � Chọn tháng
+                                        </div>
+                                        <Select
+                                            value={selectedMonth}
+                                            onChange={setSelectedMonth}
+                                            style={{ width: '100%' }}
+                                            size="large"
+                                        >
+                                            {months.map(month => (
+                                                <Option key={month} value={month}>{month}</Option>
+                                            ))}
+                                        </Select>
+                                    </div>
+                                </Col>
+                                <Col xs={24} sm={12} md={11}>
+                                    <div style={{
+                                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                        padding: '16px',
+                                        borderRadius: '12px',
+                                        backdropFilter: 'blur(10px)',
+                                        border: '1px solid rgba(255,255,255,0.15)'
+                                    }}>
+                                        <div style={{
+                                            marginBottom: '10px',
+                                            fontSize: '13px',
+                                            opacity: 0.9,
+                                            fontWeight: '500',
+                                            display: 'flex',
+                                            alignItems: 'center'
+                                        }}>
+                                            Chọn dây chuyền
+                                        </div>
+                                        <Select
+                                            mode="multiple"
+                                            value={selectedLines}
+                                            onChange={setSelectedLines}
+                                            style={{ width: '100%' }}
+                                            size="large"
+                                            placeholder="Chọn dây chuyền"
+                                            maxTagCount={2}
+                                        >
+                                            {productionLines.map(line => (
+                                                <Option key={line.id} value={line.id}>
+                                                    {line.name}
+                                                </Option>
+                                            ))}
+                                        </Select>
+                                    </div>
+                                </Col>
+                            </Row>
+                        </Col>
+                    </Row>
+                </div>
+
+                {/* Tổng quan nhanh */}
+                {/* <Row gutter={[16, 16]} style={{ marginBottom: '24px' }}>
         {productionLines
           .filter(line => selectedLines.includes(line.id))
           .map(line => (
@@ -1194,182 +1455,182 @@ const DowntimeChartDashboard = () => {
           ))}
       </Row> */}
 
-            {/* Render các dây chuyền được chọn */}
-            {loading && (
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '80px 20px',
-                    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-                    borderRadius: '16px',
-                    marginBottom: '24px',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                    minHeight: '400px'
-                }}>
+                {/* Render các dây chuyền được chọn */}
+                {loading && (
                     <div style={{
-                        position: 'relative',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        marginBottom: '24px'
+                        padding: '80px 20px',
+                        background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+                        borderRadius: '16px',
+                        marginBottom: '24px',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                        minHeight: '400px'
                     }}>
-                        {/* Bánh răng lớn */}
-                        <SettingOutlined
-                            style={{
-                                fontSize: '80px',
-                                color: '#1890ff',
-                                animation: 'spin-clockwise 2s linear infinite'
-                            }}
-                        />
-                        {/* Bánh răng nhỏ */}
-                        <SettingOutlined
-                            style={{
-                                fontSize: '40px',
-                                color: '#52c41a',
-                                position: 'absolute',
-                                top: '20px',
-                                right: '20px',
-                                animation: 'spin-counterclockwise 1.5s linear infinite'
-                            }}
-                        />
-                        {/* Icon loading ở giữa */}
-                        <LoadingOutlined
-                            style={{
-                                fontSize: '24px',
-                                color: '#fff',
-                                position: 'absolute',
-                                animation: 'pulse 1s ease-in-out infinite'
-                            }}
-                        />
-                    </div>
+                        <div style={{
+                            position: 'relative',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginBottom: '24px'
+                        }}>
+                            {/* Bánh răng lớn */}
+                            <SettingOutlined
+                                style={{
+                                    fontSize: '80px',
+                                    color: '#1890ff',
+                                    animation: 'spin-clockwise 2s linear infinite'
+                                }}
+                            />
+                            {/* Bánh răng nhỏ */}
+                            <SettingOutlined
+                                style={{
+                                    fontSize: '40px',
+                                    color: '#52c41a',
+                                    position: 'absolute',
+                                    top: '20px',
+                                    right: '20px',
+                                    animation: 'spin-counterclockwise 1.5s linear infinite'
+                                }}
+                            />
+                            {/* Icon loading ở giữa */}
+                            <LoadingOutlined
+                                style={{
+                                    fontSize: '24px',
+                                    color: '#fff',
+                                    position: 'absolute',
+                                    animation: 'pulse 1s ease-in-out infinite'
+                                }}
+                            />
+                        </div>
 
-                    <div style={{
-                        textAlign: 'center',
-                        color: '#334766',
-                        fontSize: '18px',
-                        fontWeight: '600',
-                        marginBottom: '12px'
-                    }}>
-                        🏭 Đang tải dữ liệu sản xuất...
-                    </div>
+                        <div style={{
+                            textAlign: 'center',
+                            color: '#334766',
+                            fontSize: '18px',
+                            fontWeight: '600',
+                            marginBottom: '12px'
+                        }}>
+                            🏭 Đang tải dữ liệu sản xuất...
+                        </div>
 
-                    <div style={{
-                        textAlign: 'center',
-                        color: '#666',
-                        fontSize: '14px',
-                        lineHeight: '1.5',
-                        maxWidth: '400px'
-                    }}>
-                        Hệ thống đang thu thập và phân tích dữ liệu hiệu suất từ các dây chuyền sản xuất.
-                        Vui lòng đợi trong giây lát...
+                        <div style={{
+                            textAlign: 'center',
+                            color: '#666',
+                            fontSize: '14px',
+                            lineHeight: '1.5',
+                            maxWidth: '400px'
+                        }}>
+                            Hệ thống đang thu thập và phân tích dữ liệu hiệu suất từ các dây chuyền sản xuất.
+                            Vui lòng đợi trong giây lát...
+                        </div>
                     </div>
-                </div>
-            )}
+                )}
 
-            {monthLoading && !loading && (
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '80px 20px',
-                    background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-                    borderRadius: '16px',
-                    marginBottom: '24px',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
-                    minHeight: '400px'
-                }}>
+                {monthLoading && !loading && (
                     <div style={{
-                        position: 'relative',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        marginBottom: '24px'
+                        padding: '80px 20px',
+                        background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+                        borderRadius: '16px',
+                        marginBottom: '24px',
+                        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+                        minHeight: '400px'
                     }}>
-                        {/* Bánh răng lớn */}
-                        <SettingOutlined
+                        <div style={{
+                            position: 'relative',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            marginBottom: '24px'
+                        }}>
+                            {/* Bánh răng lớn */}
+                            <SettingOutlined
+                                style={{
+                                    fontSize: '80px',
+                                    color: '#1890ff',
+                                    animation: 'spin-clockwise 2s linear infinite'
+                                }}
+                            />
+                            {/* Bánh răng nhỏ */}
+                            <SettingOutlined
+                                style={{
+                                    fontSize: '40px',
+                                    color: '#52c41a',
+                                    position: 'absolute',
+                                    top: '20px',
+                                    right: '20px',
+                                    animation: 'spin-counterclockwise 1.5s linear infinite'
+                                }}
+                            />
+                            {/* Icon loading ở giữa */}
+                            <LoadingOutlined
+                                style={{
+                                    fontSize: '24px',
+                                    color: '#fff',
+                                    position: 'absolute',
+                                    animation: 'pulse 1s ease-in-out infinite'
+                                }}
+                            />
+                        </div>
+
+                        <div style={{
+                            textAlign: 'center',
+                            color: '#334766',
+                            fontSize: '18px',
+                            fontWeight: '600',
+                            marginBottom: '12px'
+                        }}>
+                            📊 Đang tải dữ liệu tháng {selectedMonth}...
+                        </div>
+
+                        <div style={{
+                            textAlign: 'center',
+                            color: '#666',
+                            fontSize: '14px',
+                            lineHeight: '1.5',
+                            maxWidth: '400px'
+                        }}>
+                            Hệ thống đang tải dữ liệu hiệu suất sản xuất cho tháng đã chọn.
+                            Vui lòng đợi trong giây lát...
+                        </div>
+                    </div>
+                )}
+
+                {error && (
+                    <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>
+                        <div>{error}</div>
+                    </div>
+                )}
+
+                {/* Thông báo khi không có quyền truy cập */}
+                {!loading && !monthLoading && !error && notificationMessage && (
+                    <div style={{ marginBottom: '24px' }}>
+                        <Alert
+                            message={notificationMessage.title}
+                            description={notificationMessage.message}
+                            type={notificationMessage.type === 'manager-no-department' ? 'warning' : 'info'}
+                            showIcon
                             style={{
-                                fontSize: '80px',
-                                color: '#1890ff',
-                                animation: 'spin-clockwise 2s linear infinite'
-                            }}
-                        />
-                        {/* Bánh răng nhỏ */}
-                        <SettingOutlined
-                            style={{
-                                fontSize: '40px',
-                                color: '#52c41a',
-                                position: 'absolute',
-                                top: '20px',
-                                right: '20px',
-                                animation: 'spin-counterclockwise 1.5s linear infinite'
-                            }}
-                        />
-                        {/* Icon loading ở giữa */}
-                        <LoadingOutlined
-                            style={{
-                                fontSize: '24px',
-                                color: '#fff',
-                                position: 'absolute',
-                                animation: 'pulse 1s ease-in-out infinite'
+                                borderRadius: '12px',
+                                fontSize: '14px'
                             }}
                         />
                     </div>
+                )}
 
-                    <div style={{
-                        textAlign: 'center',
-                        color: '#334766',
-                        fontSize: '18px',
-                        fontWeight: '600',
-                        marginBottom: '12px'
-                    }}>
-                        📊 Đang tải dữ liệu tháng {selectedMonth}...
-                    </div>
+                {!loading && !monthLoading && !error && productionLines
+                    .filter(line => selectedLines.includes(line.id))
+                    .map(line => renderLineCard(line))}
 
-                    <div style={{
-                        textAlign: 'center',
-                        color: '#666',
-                        fontSize: '14px',
-                        lineHeight: '1.5',
-                        maxWidth: '400px'
-                    }}>
-                        Hệ thống đang tải dữ liệu hiệu suất sản xuất cho tháng đã chọn.
-                        Vui lòng đợi trong giây lát...
-                    </div>
-                </div>
-            )}
-
-            {error && (
-                <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>
-                    <div>{error}</div>
-                </div>
-            )}
-
-            {/* Thông báo khi không có quyền truy cập */}
-            {!loading && !monthLoading && !error && notificationMessage && (
-                <div style={{ marginBottom: '24px' }}>
-                    <Alert
-                        message={notificationMessage.title}
-                        description={notificationMessage.message}
-                        type={notificationMessage.type === 'manager-no-department' ? 'warning' : 'info'}
-                        showIcon
-                        style={{
-                            borderRadius: '12px',
-                            fontSize: '14px'
-                        }}
-                    />
-                </div>
-            )}
-
-            {!loading && !monthLoading && !error && productionLines
-                .filter(line => selectedLines.includes(line.id))
-                .map(line => renderLineCard(line))}
-
-            {/* Global CSS for animations */}
-            <style dangerouslySetInnerHTML={{
-                __html: `
+                {/* Global CSS for animations */}
+                <style dangerouslySetInnerHTML={{
+                    __html: `
                     @keyframes spin-clockwise {
                         from { transform: rotate(0deg); }
                         to { transform: rotate(360deg); }
@@ -1383,7 +1644,8 @@ const DowntimeChartDashboard = () => {
                         50% { opacity: 0.7; transform: scale(1.1); }
                     }
                 `
-            }} />
+                }} />
+            </div>
         </div>
     );
 };
