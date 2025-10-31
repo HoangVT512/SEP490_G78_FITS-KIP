@@ -73,7 +73,7 @@ namespace FITSKIP.Application.Services
                 {
                     existing.ActualQuantityUsed = confirmationDto.ActualQuantityUsed.Value;
                     existing.QuantityToReturn = null;
-                    existing.Status = "Completed"; // Đã hoàn thành, không có thừa
+                    existing.Status = "Hoàn thành"; // Đã hoàn thành, không có thừa
                 }
             }
 
@@ -82,10 +82,10 @@ namespace FITSKIP.Application.Services
             existing.ReturnConfirmedBy = confirmationDto.ReturnConfirmedBy;
             existing.ReturnRemarks = confirmationDto.ReturnRemarks;
 
-            // Nếu đã xác nhận trả lại, cập nhật status
+            // Nếu đã xác nhận trả lại, cập nhật status thành "Hoàn thành" (tiếng Việt)
             if (!string.IsNullOrEmpty(confirmationDto.ReturnConfirmedBy))
             {
-                existing.Status = "Returned"; // Đã trả lại
+                existing.Status = "Hoàn thành"; // Hoàn thành - status cuối cùng (tiếng Việt)
             }
 
             return await _repository.UpdateAsync(existing, cancellationToken);

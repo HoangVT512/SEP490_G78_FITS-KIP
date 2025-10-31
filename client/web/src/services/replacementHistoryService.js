@@ -47,6 +47,28 @@ export const replacementHistoryService = {
     );
     return res;
   },
+
+  async recordActualUsage(id, payload) {
+    const res = await apiRequest(
+      `/ReplacementHistories/${encodeURIComponent(id)}/record-usage`,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }
+    );
+    return res;
+  },
+
+  async confirmReturn(id, payload) {
+    const res = await apiRequest(
+      `/ReplacementHistories/${encodeURIComponent(id)}/confirm-return`,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }
+    );
+    return res;
+  },
 };
 
 export default replacementHistoryService;

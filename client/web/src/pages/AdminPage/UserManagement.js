@@ -87,8 +87,6 @@ const UserManagement = ({ showHeader = true }) => {
   const [lines, setLines] = useState([]);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
   const [filteredLines, setFilteredLines] = useState([]);
-  const [isManagementRoleSelected, setIsManagementRoleSelected] =
-    useState(false);
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [disableLineSelection, setDisableLineSelection] = useState(false);
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
@@ -363,7 +361,7 @@ const UserManagement = ({ showHeader = true }) => {
         const isAdmin = user.roles && user.roles.includes("Quản trị viên");
         setIsAdminUser(isAdmin);
 
-        // Check if user role is NOT Team Leader - only Team Leader can select lines
+        // Check if user role is Team Leader - only Team Leader can select lines
         const isTeamLeader =
           user.roles &&
           user.roles.some((roleName) => {
@@ -372,14 +370,6 @@ const UserManagement = ({ showHeader = true }) => {
           });
         // Disable line selection if user is NOT Team Leader
         setDisableLineSelection(!isTeamLeader);
-
-        // If Manager, clear lineIds
-        const isManager =
-          user.roles &&
-          user.roles.some((roleName) => {
-            const normalizedRole = (roleName || "").trim().toLowerCase();
-            return ["quản lý", "manager"].includes(normalizedRole);
-          });
 
         form.setFieldsValue({
           ...user,
@@ -396,7 +386,7 @@ const UserManagement = ({ showHeader = true }) => {
               : "",
           roleIds: userRoleIds.length > 0 ? userRoleIds[0] : null,
           departmentId: user.departmentId,
-          lineIds: isManager ? [] : user.lineIds || [],
+          lineIds: isTeamLeader ? user.lineIds || [] : [],
           status: user.status === "active" ? "true" : "false",
         });
 
@@ -915,8 +905,6 @@ const UserManagement = ({ showHeader = true }) => {
       setEditingUser(null);
       setIsAdminUser(false);
       form.resetFields();
-      // Ensure management-role flag is cleared after creating/updating
-      setIsManagementRoleSelected(false);
       // Reload users from API
       const userData = await userService.getUsers();
       // Map department names to users
@@ -947,8 +935,6 @@ const UserManagement = ({ showHeader = true }) => {
     setIsAdminUser(false);
     setDisableLineSelection(false);
     form.resetFields();
-    // Reset management-role flag to avoid stale state when reopening modal
-    setIsManagementRoleSelected(false);
     setSelectedDepartmentId(null);
     setFilteredLines([]);
   };
@@ -1045,8 +1031,6 @@ const UserManagement = ({ showHeader = true }) => {
                 onClick={() => {
                   setEditingUser(null);
                   form.resetFields();
-                  // Reset management-role flag when opening Add User modal
-                  setIsManagementRoleSelected(false);
                   setDisableLineSelection(true); // Default: disable line selection for new users
                   setSelectedDepartmentId(null);
                   setFilteredLines([]);
@@ -1309,18 +1293,12 @@ const UserManagement = ({ showHeader = true }) => {
                 selectedRole &&
                 (selectedRole.name || "").trim().toLowerCase() === "tổ trưởng";
 
-              // Check if it's a management role (Manager)
-              const isManagement =
-                selectedRole &&
-                ((selectedRole.name || "").trim().toLowerCase() === "quản lý" ||
-                  (selectedRole.name || "").trim().toLowerCase() === "manager");
-
-              // Update line selection restrictions: only Team Leader can select lines
+              // Update line selection restrictions: ONLY Team Leader can select lines
+              // For all other roles (QL, QLKT, KTV, QTV), disable line selection
               setDisableLineSelection(!isTeamLeader);
-              setIsManagementRoleSelected(!!isManagement);
 
-              // Only clear line selection when adding new user (not editing)
-              if (!editingUser) {
+              // Clear line selection for non-Team-Leader roles
+              if (!isTeamLeader) {
                 form.setFieldsValue({ lineIds: [] });
               }
             }
@@ -1516,25 +1494,8 @@ const UserManagement = ({ showHeader = true }) => {
                         (line) => line.departmentId === value
                       );
                       setFilteredLines(deptLines);
-
-                      // Check if current role is management
-                      const roleId = form.getFieldValue("roleIds");
-                      const selectedRole = roles.find((r) => r.id === roleId);
-                      const currentIsManagement =
-                        selectedRole &&
-                        ((selectedRole.name || "").trim().toLowerCase() ===
-                          "quản lý" ||
-                          (selectedRole.name || "").trim().toLowerCase() ===
-                            "manager");
-
-                      if (currentIsManagement) {
-                        // Auto-select all lines for management role
-                        const allLineIds = deptLines.map((line) => line.lineId);
-                        form.setFieldsValue({ lineIds: allLineIds });
-                      } else {
-                        // Clear line selection for non-management
-                        form.setFieldsValue({ lineIds: [] });
-                      }
+                      // Clear line selection when department changes
+                      form.setFieldsValue({ lineIds: [] });
                     } else {
                       setFilteredLines([]);
                       form.setFieldsValue({ lineIds: [] });
@@ -1583,7 +1544,7 @@ const UserManagement = ({ showHeader = true }) => {
                   }
                   title={
                     disableLineSelection
-                      ? "Không thể chọn dây chuyền cho vai trò: Quản lý, Quản lý kỹ thuật, Kỹ thuật viên, Quản trị viên"
+                      ? "Chỉ Tổ trưởng mới có thể chọn dây chuyền"
                       : ""
                   }
                   allowClear
@@ -1606,7 +1567,7 @@ const UserManagement = ({ showHeader = true }) => {
                             padding: "8px",
                           }}
                         >
-                          Không thể chọn dây chuyền cho vai trò này
+                          Chỉ Tổ trưởng mới có thể chọn dây chuyền
                         </div>
                       );
                     }
