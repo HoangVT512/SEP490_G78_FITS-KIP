@@ -9,6 +9,8 @@ import {
   Button,
   message,
   Space,
+  Row,
+  Col,
 } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
@@ -21,16 +23,10 @@ import ReturnExcessModal from "./ReturnExcessModal";
 const { TextArea } = Input;
 const ReplacementCreate = ({
   incidentId: propIncidentId = null,
-  replacementId: propReplacementId = null, // NEW: để load replacement có sẵn
+  replacementId: propReplacementId = null,
   onSuccess = null,
   onCancel = null,
 }) => {
-  // ReplacementCreate can be used as a standalone page or embedded in a modal.
-  // Props:
-  // - incidentId (optional) : if provided, prefill EquipmentId from that incident
-  // - replacementId (optional) : if provided, load existing replacement data (view/edit mode)
-  // - onSuccess (optional) : callback when creation succeeds (embedded mode)
-  // - onCancel (optional) : callback to close modal (embedded mode)
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -38,17 +34,16 @@ const ReplacementCreate = ({
 
   const [parts, setParts] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [quantityToReturn, setQuantityToReturn] = useState(0); // Số lượng thừa cần trả
-  const [replacementData, setReplacementData] = useState(null); // Dữ liệu replacement đã tồn tại
-  const [equipmentName, setEquipmentName] = useState(""); // Tên thiết bị
-  const [partName, setPartName] = useState(""); // Tên phụ tùng
-  const [returnModalVisible, setReturnModalVisible] = useState(false); // Modal thông báo trả lại
+  const [quantityToReturn, setQuantityToReturn] = useState(0);
+  const [replacementData, setReplacementData] = useState(null);
+  const [equipmentName, setEquipmentName] = useState("");
+  const [partName, setPartName] = useState("");
+  const [returnModalVisible, setReturnModalVisible] = useState(false);
 
   useEffect(() => {
     const init = async () => {
       setLoading(true);
 
-      // Load spare parts (non-fatal)
       try {
         const res = await sparePartService.getAll();
         setParts(Array.isArray(res) ? res : res?.data || []);
@@ -59,7 +54,6 @@ const ReplacementCreate = ({
         );
       }
 
-      // NEW: Load existing replacement data if replacementId is provided
       try {
         const replacementId =
           propReplacementId || searchParams.get("replacementId");
@@ -77,14 +71,12 @@ const ReplacementCreate = ({
           if (replacement) {
             setReplacementData(replacement);
 
-            // Build display names - handle both PascalCase and camelCase
             const equipName =
               replacement.equipmentName ||
               replacement.EquipmentName ||
               `Thiết bị #${replacement.equipmentId || replacement.EquipmentID}`;
-            const partDisplayName = `${
-              replacement.partNumber || replacement.PartNumber
-            } - ${replacement.partName || replacement.PartName}`;
+            const partDisplayName = `${replacement.partNumber || replacement.PartNumber
+              } - ${replacement.partName || replacement.PartName}`;
 
             console.log("Equipment Name:", equipName);
             console.log("Part Name:", partDisplayName);
@@ -92,10 +84,9 @@ const ReplacementCreate = ({
             setEquipmentName(equipName);
             setPartName(partDisplayName);
 
-            // Fill form with existing data - handle both PascalCase and camelCase
             const formValues = {
-              EquipmentName: equipName, // Display only
-              PartName: partDisplayName, // Display only
+              EquipmentName: equipName,
+              PartName: partDisplayName,
               Quantity: replacement.quantity || replacement.Quantity,
               ActualQuantityUsed:
                 replacement.actualQuantityUsed ||
@@ -110,7 +101,6 @@ const ReplacementCreate = ({
             console.log("Setting form values:", formValues);
             form.setFieldsValue(formValues);
 
-            // Calculate quantity to return
             if (
               replacement.actualQuantityUsed &&
               replacement.actualQuantityUsed < replacement.quantity
@@ -130,7 +120,6 @@ const ReplacementCreate = ({
         );
       }
 
-      // Load incident info and find approved replacement
       try {
         const incidentId = propIncidentId || searchParams.get("incidentId");
         if (incidentId) {
@@ -145,7 +134,6 @@ const ReplacementCreate = ({
               inc.equipment?.equipmentId ||
               inc.equipment?.equipmentID;
 
-            // Try to find approved replacement for this equipment
             console.log(
               "Looking for approved replacement for equipment:",
               equipId
@@ -156,21 +144,19 @@ const ReplacementCreate = ({
                 await replacementHistoryService.getByEquipmentId(equipId);
               console.log("All replacements for equipment:", allReplacements);
 
-              // Find approved replacement (status "Đã duyệt cấp phát")
               const approvedReplacement = Array.isArray(allReplacements)
                 ? allReplacements.find(
-                    (r) =>
-                      (r.status === "Đã duyệt cấp phát" ||
-                        r.Status === "Đã duyệt cấp phát") &&
-                      !r.actualQuantityUsed &&
-                      !r.ActualQuantityUsed // Chưa ghi nhận
-                  )
+                  (r) =>
+                    (r.status === "Đã duyệt cấp phát" ||
+                      r.Status === "Đã duyệt cấp phát") &&
+                    !r.actualQuantityUsed &&
+                    !r.ActualQuantityUsed
+                )
                 : null;
 
               if (approvedReplacement) {
                 console.log("Found approved replacement:", approvedReplacement);
 
-                // Load this replacement as if user passed replacementId
                 setReplacementData(approvedReplacement);
 
                 const equipName =
@@ -178,12 +164,10 @@ const ReplacementCreate = ({
                   approvedReplacement.EquipmentName ||
                   inc.equipment?.equipmentName ||
                   `Thiết bị #${equipId}`;
-                const partDisplayName = `${
-                  approvedReplacement.partNumber ||
+                const partDisplayName = `${approvedReplacement.partNumber ||
                   approvedReplacement.PartNumber
-                } - ${
-                  approvedReplacement.partName || approvedReplacement.PartName
-                }`;
+                  } - ${approvedReplacement.partName || approvedReplacement.PartName
+                  }`;
 
                 setEquipmentName(equipName);
                 setPartName(partDisplayName);
@@ -199,18 +183,18 @@ const ReplacementCreate = ({
                     approvedReplacement.ActualQuantityUsed,
                   ReplacedDate:
                     approvedReplacement.replacedDate ||
-                    approvedReplacement.ReplacedDate
+                      approvedReplacement.ReplacedDate
                       ? dayjs(
-                          approvedReplacement.replacedDate ||
-                            approvedReplacement.ReplacedDate
-                        )
+                        approvedReplacement.replacedDate ||
+                        approvedReplacement.ReplacedDate
+                      )
                       : dayjs(),
                   Remarks:
                     approvedReplacement.remarks || approvedReplacement.Remarks,
                 });
 
                 setLoading(false);
-                return; // Found and loaded, exit
+                return;
               } else {
                 console.warn(
                   "No approved replacement found for equipment:",
@@ -235,7 +219,6 @@ const ReplacementCreate = ({
         );
       }
 
-      // default replaced date to now
       try {
         form.setFieldsValue({ ReplacedDate: dayjs() });
       } catch (err) {
@@ -247,7 +230,6 @@ const ReplacementCreate = ({
     init();
   }, [propIncidentId, propReplacementId, searchParams]);
 
-  // Tính toán số lượng thừa khi ActualQuantityUsed thay đổi
   const handleActualQuantityChange = (value) => {
     const requestedQty = form.getFieldValue("Quantity") || 0;
     if (value && value < requestedQty) {
@@ -286,18 +268,14 @@ const ReplacementCreate = ({
         return;
       }
 
-      // Xác định trạng thái dựa trên so sánh số lượng thực tế vs yêu cầu (Quantity = số lượng lấy từ kho)
-      let status = "Hoàn thành"; // Default
+      let status = "Hoàn thành";
 
       if (actualQty < requestedQty) {
-        // Còn thừa: dùng ít hơn số lượng lấy → cần trả lại kho
         status = "Chờ trả lại";
       } else if (actualQty === requestedQty) {
-        // Dùng đủ: dùng đúng số lượng lấy
         status = "Hoàn thành";
       } else {
-        // Vượt quá: dùng nhiều hơn số lượng lấy (không nên xảy ra)
-        status = "Chờ trả lại"; // Cũng là thừa
+        status = "Chờ trả lại";
       }
 
       const payload = {
@@ -314,20 +292,14 @@ const ReplacementCreate = ({
         payload
       );
 
-      // Nếu actualQty > requestedQty: show modal thông báo có dư
-      // Nếu actualQty === requestedQty: tự động hoàn thành & trừ kho (backend xử lý)
-      // Nếu actualQty < requestedQty: chuyển "Chờ trả lại" (backend xử lý)
-
       if (actualQty > requestedQty) {
-        // Trường hợp vượt quá (không nên xảy ra nhưng xử lý để an toàn)
         const toReturn = actualQty - requestedQty;
         setQuantityToReturn(toReturn);
         setReturnModalVisible(true);
         setLoading(false);
-        return; // Không close form, đợi user confirm modal
+        return;
       }
 
-      // Trường hợp dùng đủ hoặc dùng ít hơn → hoàn thành ngay
       message.success("Đã ghi nhận số lượng sử dụng thành công.");
 
       if (typeof onSuccess === "function") {
@@ -343,7 +315,6 @@ const ReplacementCreate = ({
     }
   };
 
-  // NEW: Handler khi user xác nhận trả hàng trong modal
   const handleReturnConfirm = () => {
     setReturnModalVisible(false);
     message.success(
@@ -370,130 +341,156 @@ const ReplacementCreate = ({
   return (
     <Card title="Ghi nhận số lượng thực tế sử dụng" bordered={false}>
       <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        <Form.Item label="Sự cố (tùy chọn)">
-          {/* Incident is passed via query param or prop; showing readonly when present */}
-        </Form.Item>
+        {/* Row 1: Equipment & Part Info - 2 columns */}
+        <Row gutter={[16, 0]}>
+          <Col xs={24} sm={12}>
+            <Form.Item label="Thiết bị">
+              <Input
+                value={equipmentName}
+                disabled
+                placeholder="Thiết bị từ sự cố"
+                style={{ color: "#000", fontWeight: 500 }}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={12}>
+            <Form.Item label="Phụ tùng">
+              <Input
+                value={partName}
+                disabled
+                placeholder="Phụ tùng đã được duyệt"
+                style={{ color: "#000", fontWeight: 500 }}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
 
-        <Form.Item label="Thiết bị">
-          <Input
-            value={equipmentName}
-            disabled
-            placeholder="Thiết bị từ sự cố"
-            style={{ color: "#000", fontWeight: 500 }}
-          />
-        </Form.Item>
+        {/* Row 2: Quantity Info - 3 columns */}
+        <Row gutter={[16, 0]}>
+          <Col xs={24} sm={8}>
+            <Form.Item label="Số lượng lấy từ kho">
+              <InputNumber
+                value={replacementData?.quantity || replacementData?.Quantity}
+                disabled
+                style={{ width: "100%", color: "#000", fontWeight: 500 }}
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Form.Item
+              label="Số lượng sử dụng"
+              name="ActualQuantityUsed"
+              rules={[
+                {
+                  required: true,
+                  message: "Vui lòng nhập số lượng",
+                },
+                ({ getFieldValue }) => ({
+                  validator(_, value) {
+                    const quantity = getFieldValue("Quantity");
+                    if (!value || value <= quantity) {
+                      return Promise.resolve();
+                    }
+                    return Promise.reject(
+                      new Error(`Không được vượt quá ${quantity}`)
+                    );
+                  },
+                }),
+              ]}
+              tooltip="Số lượng thực tế đã sử dụng"
+            >
+              <InputNumber
+                min={0}
+                style={{ width: "100%" }}
+                onChange={handleActualQuantityChange}
+                placeholder="Nhập số lượng"
+              />
+            </Form.Item>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Form.Item label="Ngày thay thế" name="ReplacedDate">
+              <DatePicker
+                showTime
+                style={{ width: "100%" }}
+                disabled={!!replacementData}
+              />
+            </Form.Item>
+          </Col>
+        </Row>
 
-        <Form.Item label="Phụ tùng">
-          <Input
-            value={partName}
-            disabled
-            placeholder="Phụ tùng đã được duyệt"
-            style={{ color: "#000", fontWeight: 500 }}
-          />
-        </Form.Item>
-
-        <Form.Item label="Số lượng đã lấy từ kho">
-          <InputNumber
-            value={replacementData?.quantity || replacementData?.Quantity}
-            disabled
-            style={{ width: "100%", color: "#000", fontWeight: 500 }}
-          />
-        </Form.Item>
-
-        <Form.Item
-          label="Số lượng thực tế sử dụng"
-          name="ActualQuantityUsed"
-          rules={[
-            {
-              required: true,
-              message: "Vui lòng nhập số lượng thực tế đã sử dụng",
-            },
-            ({ getFieldValue }) => ({
-              validator(_, value) {
-                const quantity = getFieldValue("Quantity");
-                if (!value || value <= quantity) {
-                  return Promise.resolve();
-                }
-                return Promise.reject(
-                  new Error(`Số lượng sử dụng không được vượt quá ${quantity}`)
-                );
-              },
-            }),
-          ]}
-          tooltip="Nhập số lượng linh kiện đã thực sự sử dụng để sửa chữa"
-        >
-          <InputNumber
-            min={0}
-            style={{ width: "100%" }}
-            onChange={handleActualQuantityChange}
-            placeholder="Nhập số lượng thực tế đã sử dụng"
-          />
-        </Form.Item>
-
+        {/* Status Display */}
         {replacementData && (
-          <Form.Item label="Trạng thái">
-            <Input
-              value={replacementData.status || replacementData.Status}
-              disabled
-              style={{ color: "#000", fontWeight: 500 }}
-            />
-          </Form.Item>
+          <Row gutter={[16, 0]}>
+            <Col xs={24} sm={12}>
+              <Form.Item label="Trạng thái">
+                <Input
+                  value={replacementData.status || replacementData.Status}
+                  disabled
+                  style={{ color: "#000", fontWeight: 500 }}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
         )}
 
+        {/* Quantity Return Alert */}
         {quantityToReturn > 0 && (
           <div
             style={{
-              padding: "12px",
+              padding: "12px 16px",
               backgroundColor: "#fff7e6",
               border: "1px solid #ffc069",
               borderRadius: "4px",
               marginBottom: "16px",
               color: "#ad6800",
+              fontSize: "13px",
             }}
           >
-            <strong>
-              ⚠️ Số lượng thừa cần trả lại kho: {quantityToReturn}
-            </strong>
-            <p style={{ marginTop: "8px", marginBottom: 0 }}>
-              Vui lòng trực tiếp đến kho để trả {quantityToReturn} linh kiện.
-              QLKT sẽ xác nhận và hoàn thành quy trình.
+            <strong>⚠️ Số lượng thừa: {quantityToReturn}</strong>
+            <p style={{ marginTop: "6px", marginBottom: 0 }}>
+              Vui lòng trực tiếp đến kho để trả {quantityToReturn} linh kiện. QLKT sẽ xác nhận.
             </p>
           </div>
         )}
 
-        <Form.Item label="Ngày thay thế" name="ReplacedDate">
-          <DatePicker
-            showTime
-            style={{ width: "100%" }}
-            disabled={!!replacementData}
-          />
-        </Form.Item>
-
+        {/* Remarks */}
         <Form.Item label="Ghi chú" name="Remarks">
           <TextArea
-            rows={4}
+            rows={3}
             placeholder="Ghi chú (tùy chọn)"
             disabled={!!replacementData}
+            style={{ fontSize: "13px" }}
           />
         </Form.Item>
 
+        {/* Button Group */}
         {replacementData && (
           <Form.Item>
-            <Space
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                width: "100%",
-              }}
-            >
+            <Space style={{ display: "flex", justifyContent: "flex-end", width: "100%" }}>
               <Button
                 onClick={() =>
                   typeof onCancel === "function" ? onCancel() : navigate(-1)
                 }
+                style={{
+                  height: "40px",
+                  fontSize: "16px",
+                  minWidth: "120px",
+                }}
               >
                 Hủy
               </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                style={{
+                  backgroundColor: "#283652",
+                  height: "40px",
+                  fontSize: "16px",
+                  fontWeight: "500",
+                  minWidth: "120px",
+                }}
+              >
                 Lưu ghi nhận
               </Button>
             </Space>
@@ -508,20 +505,18 @@ const ReplacementCreate = ({
               border: "1px solid #ffc069",
               borderRadius: "4px",
               textAlign: "center",
+              fontSize: "13px",
             }}
           >
             <p style={{ margin: 0, color: "#ad6800" }}>
-              ⚠️ Form này dùng để ghi nhận số lượng thực tế sử dụng sau khi sửa
-              chữa.
+              ⚠️ Form này dùng để ghi nhận số lượng sử dụng sau khi sửa chữa.
               <br />
-              Để yêu cầu cấp phát linh kiện mới, vui lòng sử dụng chức năng "Yêu
-              cầu cấp phát" trong danh sách sự cố.
+              Để yêu cầu cấp phát linh kiện mới, vui lòng sử dụng "Yêu cầu cấp phát" trong danh sách sự cố.
             </p>
           </div>
         )}
       </Form>
 
-      {/* NEW: Modal thông báo cần trả lại linh kiện thừa */}
       <ReturnExcessModal
         visible={returnModalVisible}
         excessQuantity={quantityToReturn}

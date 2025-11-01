@@ -87,7 +87,12 @@ const ReplacementApprovalModal = ({
         // Filter chỉ những record đã hoàn thành (lịch sử)
         const approved = data.filter(
           (r) => r.status === "Hoàn thành" || r.status === "Completed"
-        );
+        ).sort((a, b) => {
+          // Sắp xếp theo ngày yêu cầu, mới nhất trước
+          const dateA = new Date(a.replacedDate || a.ReplacedDate || 0);
+          const dateB = new Date(b.replacedDate || b.ReplacedDate || 0);
+          return dateB - dateA; // Giảm dần (mới nhất trước)
+        });
         setApprovedItems(approved);
 
         // Các tab khác để trống khi viewMode
@@ -750,7 +755,7 @@ const ReplacementApprovalModal = ({
       key: "replacementID",
       width: 70,
       align: "center",
-      render: (id) => <Text strong style={{ color: "#52c41a" }}>#{id}</Text>,
+      render: (id, record, index) => <Text strong style={{ color: "#52c41a" }}>#{index + 1}</Text>,
     },
     {
       title: <Text strong style={{ fontSize: '13px' }}>Sự cố</Text>,
@@ -874,7 +879,7 @@ const ReplacementApprovalModal = ({
       width: 140,
       render: (d) => (
         <Text style={{ fontSize: '13px' }}>
-          {d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"}
+          {d ? dayjs(d).format("DD/MM/YYYY HH:mm:ss") : "-"}
         </Text>
       ),
     },
@@ -885,7 +890,7 @@ const ReplacementApprovalModal = ({
       width: 140,
       render: (d) => (
         <Text style={{ fontSize: '13px' }}>
-          {d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"}
+          {d ? dayjs(d).format("DD/MM/YYYY HH:mm:ss") : "-"}
         </Text>
       ),
     },
@@ -1059,7 +1064,7 @@ const ReplacementApprovalModal = ({
       width: 140,
       render: (d) => (
         <Text style={{ fontSize: '13px' }}>
-          {d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"}
+          {d ? dayjs(d).format("DD/MM/YYYY HH:mm:ss") : "-"}
         </Text>
       ),
     },

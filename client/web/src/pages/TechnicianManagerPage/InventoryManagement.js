@@ -16,6 +16,8 @@ import {
   Statistic,
   Dropdown,
   Alert,
+  Tabs,
+  Descriptions,
 } from "antd";
 import {
   PlusOutlined,
@@ -44,6 +46,13 @@ const InventoryManagement = () => {
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterActive, setFilterActive] = useState("active"); // Filter by IsActive status
+
+  // Replace filterActive with showInactive for tab-based filtering
+  const [showInactive, setShowInactive] = useState(() => {
+    // Load from localStorage or default to false (show active only)
+    const saved = localStorage.getItem('inventoryManagement_showInactive');
+    return saved ? JSON.parse(saved) : false;
+  });
 
   // Spare parts loaded from backend
   const [spareParts, setSpareParts] = useState([]);
@@ -75,25 +84,6 @@ const InventoryManagement = () => {
       width: 200,
     },
     {
-      title: "Loại phụ tùng",
-      dataIndex: "partType",
-      key: "partType",
-      width: 150,
-    },
-    {
-      title: "Nhà cung cấp",
-      dataIndex: "supplier",
-      key: "supplier",
-      width: 150,
-    },
-    {
-      title: "Giá mua",
-      dataIndex: "purchasePrice",
-      key: "purchasePrice",
-      width: 120,
-      render: (price) => (price ? `${price.toLocaleString("vi-VN")} đ` : "N/A"),
-    },
-    {
       title: "Số lượng",
       dataIndex: "quantity",
       key: "quantity",
@@ -101,29 +91,17 @@ const InventoryManagement = () => {
       render: (quantity) => quantity ?? 0,
     },
     {
+      title: "SL tối thiểu",
+      dataIndex: "minQuantity",
+      key: "minQuantity",
+      width: 110,
+      render: (min) => min ?? 0,
+    },
+    {
       title: "Vị trí",
       dataIndex: "location",
       key: "location",
       width: 150,
-    },
-    {
-      title: "Kho",
-      dataIndex: "warehouse",
-      key: "warehouse",
-      width: 120,
-    },
-    {
-      title: "Đơn vị tính",
-      dataIndex: "uom",
-      key: "uom",
-      width: 100,
-    },
-    {
-      title: "Số lượng tối thiểu",
-      dataIndex: "minQuantity",
-      key: "minQuantity",
-      width: 140,
-      render: (min) => min ?? 0,
     },
     {
       title: "Trạng thái",
@@ -174,12 +152,6 @@ const InventoryManagement = () => {
       },
     },
     {
-      title: "Chu kỳ thay thế",
-      dataIndex: "replacementCycle",
-      key: "replacementCycle",
-      width: 140,
-    },
-    {
       title: "Trạng thái hoạt động",
       dataIndex: "isActive",
       key: "isActive",
@@ -211,7 +183,7 @@ const InventoryManagement = () => {
           },
           {
             key: "delete",
-            icon: <DeleteOutlined />,
+            icon: record.isActive ? <DeleteOutlined /> : <CheckCircleOutlined />,
             label: record.isActive ? "Ngưng sử dụng" : "Khôi phục",
             danger: record.isActive,
             onClick: () => handleDelete(record),
@@ -223,8 +195,13 @@ const InventoryManagement = () => {
             menu={{ items: menuItems }}
             trigger={["click"]}
             destroyOnHidden={true}
+            placement="bottomRight"
           >
-            <Button type="link" icon={<DownOutlined />} />
+            <Button
+              type="text"
+              icon={<DownOutlined />}
+              style={{ borderRadius: "6px" }}
+            />
           </Dropdown>
         );
       },
@@ -297,7 +274,7 @@ const InventoryManagement = () => {
         specifications: values.specifications || "",
         supplier: values.supplier || "",
         purchasePrice: values.purchasePrice || null,
-        quantity: values.quantity || 0,
+        quantity: values.quantity || 0,  // ✅ THÊM giá trị mặc định
         minQuantity: values.minQuantity ?? 5,
         location: values.location || "",
         warehouse: values.warehouse || "",
@@ -306,6 +283,8 @@ const InventoryManagement = () => {
         dateAdded: values.dateAdded ? values.dateAdded.toISOString() : null,
         documentUrl: values.documentUrl || "",
       };
+
+      console.log("Sending payload to backend:", payload);
 
       if (editingRecord) {
         await sparePartService.update(editingRecord.partId, payload);
@@ -368,6 +347,11 @@ const InventoryManagement = () => {
     loadParts();
   }, []);
 
+  // Persist inactive view state on change
+  useEffect(() => {
+    localStorage.setItem('inventoryManagement_showInactive', JSON.stringify(showInactive));
+  }, [showInactive]);
+
   // Helper function to get sort order for status
   const getStatusSortOrder = (status) => {
     switch (status) {
@@ -389,10 +373,8 @@ const InventoryManagement = () => {
         part.partName.toLowerCase().includes(searchText.toLowerCase());
       const matchStatus =
         filterStatus === "all" || part.status === filterStatus;
-      const matchActive =
-        filterActive === "all" ||
-        (filterActive === "active" && part.isActive) ||
-        (filterActive === "inactive" && !part.isActive);
+      // Update filtering logic to use showInactive
+      const matchActive = showInactive ? !part.isActive : part.isActive; // Show inactive if showInactive is true, otherwise show active
       return matchSearch && matchStatus && matchActive;
     })
     .sort((a, b) => {
@@ -528,11 +510,11 @@ const InventoryManagement = () => {
       {/* Statistics */}
       <Row gutter={[16, 16]} className={styles.statsRow}>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard}>
+          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #e8e8e8" }}>
             <Statistic
-              title="Tổng phụ tùng"
+              title={<span style={{ color: "#283652", fontWeight: "600" }}>Tổng phụ tùng</span>}
               value={stats.total}
-              prefix={<InboxOutlined />}
+              prefix={<InboxOutlined style={{ color: "#283652" }} />}
               valueStyle={{
                 color: "#283652",
                 fontSize: "28px",
@@ -542,11 +524,11 @@ const InventoryManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard}>
+          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #b7eb8f" }}>
             <Statistic
-              title="Đủ hàng"
+              title={<span style={{ color: "#52c41a", fontWeight: "600" }}>Đủ hàng</span>}
               value={stats.inStock}
-              prefix={<CheckCircleOutlined />}
+              prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
               valueStyle={{
                 color: "#52c41a",
                 fontSize: "28px",
@@ -556,11 +538,11 @@ const InventoryManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard}>
+          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #ffe58f" }}>
             <Statistic
-              title="Sắp hết"
+              title={<span style={{ color: "#faad14", fontWeight: "600" }}>Sắp hết</span>}
               value={stats.lowStock}
-              prefix={<WarningOutlined />}
+              prefix={<WarningOutlined style={{ color: "#faad14" }} />}
               valueStyle={{
                 color: "#faad14",
                 fontSize: "28px",
@@ -570,11 +552,11 @@ const InventoryManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard}>
+          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #ffccc7" }}>
             <Statistic
-              title="Hết hàng"
+              title={<span style={{ color: "#ff4d4f", fontWeight: "600" }}>Hết hàng</span>}
               value={stats.outOfStock}
-              prefix={<WarningOutlined />}
+              prefix={<WarningOutlined style={{ color: "#ff4d4f" }} />}
               valueStyle={{
                 color: "#ff4d4f",
                 fontSize: "28px",
@@ -590,16 +572,17 @@ const InventoryManagement = () => {
         title="Danh sách phụ tùng"
         className={styles.tableCard}
         extra={
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <Space>
             <Button
-              type="primary"
+              type="default"
+              icon={<WarningOutlined />}
               onClick={() => {
                 setMinValue(5);
                 setShowMinModal(true);
               }}
               style={{
-                backgroundColor: "#283652",
-                borderColor: "#283652",
+                borderColor: "#faad14",
+                color: "#faad14",
                 borderRadius: "6px",
                 fontWeight: "500",
               }}
@@ -608,6 +591,7 @@ const InventoryManagement = () => {
             </Button>
             <Button
               type="primary"
+              icon={<PlusOutlined />}
               onClick={handleAdd}
               style={{
                 backgroundColor: "#283652",
@@ -618,74 +602,163 @@ const InventoryManagement = () => {
             >
               Thêm phụ tùng
             </Button>
-          </div>
+          </Space>
         }
       >
-        <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-          <Row gutter={16}>
-            <Col xs={24} sm={12} md={8}>
-              <Search
-                placeholder="Tìm theo mã hoặc tên phụ tùng"
-                onChange={(e) => setSearchText(e.target.value)}
-                allowClear
-                style={{ borderRadius: "6px" }}
-              />
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Select
-                style={{ width: "100%", borderRadius: "6px" }}
-                placeholder="Lọc theo trạng thái"
-                value={filterStatus}
-                onChange={setFilterStatus}
-              >
-                <Option value="all">Tất cả trạng thái</Option>
-                <Option value="Đủ hàng">Đủ hàng</Option>
-                <Option value="Sắp hết">Sắp hết</Option>
-                <Option value="Hết hàng">Hết hàng</Option>
-              </Select>
-            </Col>
-            <Col xs={24} sm={12} md={8}>
-              <Select
-                style={{ width: "100%", borderRadius: "6px" }}
-                placeholder="Lọc theo trạng thái hoạt động"
-                value={filterActive}
-                onChange={setFilterActive}
-              >
-                <Option value="all">Tất cả</Option>
-                <Option value="active">Đang sử dụng</Option>
-                <Option value="inactive">Đã xóa</Option>
-              </Select>
-            </Col>
-          </Row>
+        <Tabs
+          activeKey={showInactive ? 'inactive' : 'active'}
+          onChange={(key) => setShowInactive(key === 'inactive')}
+          items={[
+            {
+              key: 'active',
+              label: (
+                <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                  <CheckCircleOutlined style={{ marginRight: 6 }} />
+                  Đang sử dụng ({spareParts.filter(p => p.isActive).length})
+                </span>
+              ),
+              children: (
+                <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+                  <Row gutter={16}>
+                    <Col xs={24} sm={12} md={8}>
+                      <Search
+                        placeholder="Tìm theo mã hoặc tên phụ tùng"
+                        onChange={(e) => setSearchText(e.target.value)}
+                        allowClear
+                        style={{ borderRadius: "6px" }}
+                      />
+                    </Col>
+                    <Col xs={24} sm={12} md={8}>
+                      <Select
+                        style={{ width: "100%", borderRadius: "6px" }}
+                        placeholder="Lọc theo trạng thái"
+                        value={filterStatus}
+                        onChange={setFilterStatus}
+                      >
+                        <Option value="all">Tất cả trạng thái</Option>
+                        <Option value="Đủ hàng">Đủ hàng</Option>
+                        <Option value="Sắp hết">Sắp hết</Option>
+                        <Option value="Hết hàng">Hết hàng</Option>
+                      </Select>
+                    </Col>
+                  </Row>
 
-          <Table
-            columns={columns}
-            dataSource={filteredData}
-            rowKey="partId"
-            loading={loading}
-            scroll={{ x: 2000 }}
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: true,
-              showTotal: (total) => `Tổng cộng ${total} phụ tùng`,
-              style: { marginTop: "16px" },
-            }}
-            style={{ borderRadius: "6px" }}
-          />
-        </Space>
+                  <Table
+                    columns={columns}
+                    dataSource={filteredData}
+                    rowKey="partId"
+                    loading={loading}
+                    scroll={{ x: 1200 }}
+                    pagination={{
+                      pageSize: 10,
+                      showSizeChanger: true,
+                      showTotal: (total) => `Tổng cộng ${total} phụ tùng`,
+                      style: { marginTop: "16px" },
+                    }}
+                    style={{ borderRadius: "6px" }}
+                  />
+                </Space>
+              ),
+            },
+            {
+              key: 'inactive',
+              label: (
+                <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                  <DeleteOutlined style={{ marginRight: 6 }} />
+                  Ngưng sử dụng ({spareParts.filter(p => !p.isActive).length})
+                </span>
+              ),
+              children: (
+                <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+                  <Row gutter={16}>
+                    <Col xs={24} sm={12} md={8}>
+                      <Search
+                        placeholder="Tìm theo mã hoặc tên phụ tùng"
+                        onChange={(e) => setSearchText(e.target.value)}
+                        allowClear
+                        style={{ borderRadius: "6px" }}
+                      />
+                    </Col>
+                    <Col xs={24} sm={12} md={8}>
+                      <Select
+                        style={{ width: "100%", borderRadius: "6px" }}
+                        placeholder="Lọc theo trạng thái"
+                        value={filterStatus}
+                        onChange={setFilterStatus}
+                      >
+                        <Option value="all">Tất cả trạng thái</Option>
+                        <Option value="Đủ hàng">Đủ hàng</Option>
+                        <Option value="Sắp hết">Sắp hết</Option>
+                        <Option value="Hết hàng">Hết hàng</Option>
+                      </Select>
+                    </Col>
+                  </Row>
+
+                  <Table
+                    columns={columns}
+                    dataSource={filteredData}
+                    rowKey="partId"
+                    loading={loading}
+                    scroll={{ x: 1200 }}
+                    pagination={{
+                      pageSize: 10,
+                      showSizeChanger: true,
+                      showTotal: (total) => `Tổng cộng ${total} phụ tùng`,
+                      style: { marginTop: "16px" },
+                    }}
+                    style={{ borderRadius: "6px" }}
+                  />
+                </Space>
+              ),
+            },
+          ]}
+        />
       </Card>
 
       {/* Add/Edit Modal */}
       <Modal
-        title={editingRecord ? "Cập nhật phụ tùng" : "Thêm phụ tùng mới"}
+        title={
+          <div
+            style={{ fontSize: "20px", fontWeight: "600", color: "#283652" }}
+          >
+            {editingRecord ? "Cập nhật phụ tùng" : "Thêm phụ tùng mới"}
+          </div>
+        }
         open={isModalVisible}
+        onOk={() => form.submit()}  // ✅ ĐÚNG: Gọi form.submit()
         onCancel={() => {
           setIsModalVisible(false);
           form.resetFields();
         }}
-        footer={null}
         width={1400}
-        style={{ top: 20 }}
+        centered
+        okText={editingRecord ? "Cập nhật" : "Thêm mới"}
+        cancelText="Hủy"
+        okButtonProps={{
+          style: {
+            backgroundColor: "#283652",
+            borderColor: "#283652",
+            height: "40px",
+            fontSize: "16px",
+            fontWeight: "500",
+            minWidth: "120px",
+          },
+          icon: editingRecord ? <EditOutlined /> : <PlusOutlined />,
+          loading: loading,
+          htmlType: "submit",  // ✅ Thêm dòng này
+        }}
+        cancelButtonProps={{
+          style: {
+            height: "40px",
+            fontSize: "16px",
+            minWidth: "120px",
+          },
+        }}
+        bodyStyle={{
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          padding: "24px",
+        }}
       >
         <Form
           form={form}
@@ -697,7 +770,11 @@ const InventoryManagement = () => {
             <Col span={12}>
               <Form.Item
                 name="partNumber"
-                label="Mã phụ tùng"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Mã phụ tùng
+                  </span>
+                }
                 rules={[
                   { required: true, message: "Vui lòng nhập mã phụ tùng" },
                   {
@@ -727,13 +804,17 @@ const InventoryManagement = () => {
                   },
                 ]}
               >
-                <Input placeholder="VD: PT001" />
+                <Input placeholder="VD: PT001" size="large" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="partName"
-                label="Tên phụ tùng"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Tên phụ tùng
+                  </span>
+                }
                 rules={[
                   { required: true, message: "Vui lòng nhập tên phụ tùng" },
                   { min: 2, message: "Tên phụ tùng phải có ít nhất 2 ký tự" },
@@ -768,34 +849,59 @@ const InventoryManagement = () => {
                   },
                 ]}
               >
-                <Input placeholder="VD: Motor điện 5HP" />
+                <Input placeholder="VD: Motor điện 5HP" size="large" />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="partType" label="Loại phụ tùng">
-                <Input placeholder="VD: Cơ khí, Điện tử, Điều khiển" />
+              <Form.Item
+                name="partType"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Loại phụ tùng
+                  </span>
+                }
+              >
+                <Input placeholder="VD: Cơ khí, Điện tử, Điều khiển" size="large" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="supplier" label="Nhà cung cấp">
-                <Input placeholder="VD: Công ty XYZ" />
+              <Form.Item
+                name="supplier"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Nhà cung cấp
+                  </span>
+                }
+              >
+                <Input placeholder="VD: Công ty XYZ" size="large" />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="material" label="Vật liệu">
-                <Input placeholder="VD: Thép không gỉ, Nhôm" />
+              <Form.Item
+                name="material"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Vật liệu
+                  </span>
+                }
+              >
+                <Input placeholder="VD: Thép không gỉ, Nhôm" size="large" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="purchasePrice"
-                label="Giá mua (đ)"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Giá mua (đ)
+                  </span>
+                }
                 rules={[
                   { type: "number", min: 0, message: "Giá không được âm" },
                 ]}
@@ -803,6 +909,7 @@ const InventoryManagement = () => {
                 <InputNumber
                   style={{ width: "100%" }}
                   placeholder="VD: 100000"
+                  size="large"
                 />
               </Form.Item>
             </Col>
@@ -810,10 +917,18 @@ const InventoryManagement = () => {
 
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item name="specifications" label="Thông số kỹ thuật">
+              <Form.Item
+                name="specifications"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Thông số kỹ thuật
+                  </span>
+                }
+              >
                 <Input.TextArea
                   placeholder="VD: Chiều dài 1500mm, Đường kính 50mm"
                   rows={2}
+                  size="large"
                 />
               </Form.Item>
             </Col>
@@ -823,23 +938,35 @@ const InventoryManagement = () => {
             <Col span={12}>
               <Form.Item
                 name="quantity"
-                label="Số lượng"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Số lượng
+                  </span>
+                }
                 rules={[
                   { required: true, message: "Vui lòng nhập số lượng" },
-                  { type: "number", min: 0, message: "Số lượng không được âm" },
+                  {
+                    type: "number",
+                    min: editingRecord ? 0 : 1,
+                    message: editingRecord ? "Số lượng không được âm" : "Số lượng phải lớn hơn 0"
+                  },
                 ]}
               >
-                <InputNumber min={0} style={{ width: "100%" }} />
+                <InputNumber min={editingRecord ? 0 : 1} style={{ width: "100%" }} size="large" />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="minQuantity"
-                label="Số lượng tối thiểu"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Số lượng tối thiểu
+                  </span>
+                }
                 rules={[{ type: "number", min: 0, message: "Phải >= 0" }]}
                 initialValue={editingRecord ? undefined : 5}
               >
-                <InputNumber min={0} style={{ width: "100%" }} />
+                <InputNumber min={0} style={{ width: "100%" }} size="large" />
               </Form.Item>
             </Col>
           </Row>
@@ -848,371 +975,368 @@ const InventoryManagement = () => {
             <Col span={12}>
               <Form.Item
                 name="location"
-                label="Vị trí"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Vị trí
+                  </span>
+                }
                 rules={[
                   { required: true, message: "Vui lòng nhập vị trí" },
                   { min: 2, message: "Vị trí phải có ít nhất 2 ký tự" },
                   { max: 200, message: "Vị trí không được vượt quá 200 ký tự" },
                 ]}
               >
-                <Input placeholder="VD: Kho A - Kệ 1" />
+                <Input placeholder="VD: Kho A - Kệ 1" size="large" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="warehouse" label="Kho">
-                <Input placeholder="VD: Kho chính" />
+              <Form.Item
+                name="warehouse"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Kho
+                  </span>
+                }
+              >
+                <Input placeholder="VD: Kho chính" size="large" />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="uom" label="Đơn vị tính">
-                <Input placeholder="VD: Cái, Bộ, Chiếc" />
+              <Form.Item
+                name="uom"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Đơn vị tính
+                  </span>
+                }
+              >
+                <Input placeholder="VD: Cái, Bộ, Chiếc" size="large" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="replacementCycle" label="Chu kỳ thay thế">
-                <Input placeholder="VD: 12 tháng, 6 tháng" />
+              <Form.Item
+                name="replacementCycle"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Chu kỳ thay thế
+                  </span>
+                }
+              >
+                <Input placeholder="VD: 12 tháng, 6 tháng" size="large" />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item name="documentUrl" label="URL tài liệu">
-                <Input placeholder="VD: /documents/SP001_datasheet.pdf" />
+              <Form.Item
+                name="documentUrl"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    URL tài liệu
+                  </span>
+                }
+              >
+                <Input placeholder="VD: /documents/SP001_datasheet.pdf" size="large" />
               </Form.Item>
             </Col>
           </Row>
-
-          <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
-            <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-              <Button
-                onClick={() => {
-                  setIsModalVisible(false);
-                  form.resetFields();
-                }}
-              >
-                Hủy
-              </Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={loading}
-                style={{
-                  backgroundColor: "#283652",
-                  borderColor: "#283652",
-                }}
-              >
-                {editingRecord ? "Cập nhật" : "Thêm mới"}
-              </Button>
-            </Space>
-          </Form.Item>
         </Form>
       </Modal>
 
       {/* Min quantity adjustment modal */}
       <Modal
-        title="Điều chỉnh số lượng tối thiểu"
+        title={
+          <div
+            style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}
+          >
+            Điều chỉnh số lượng tối thiểu
+          </div>
+        }
         open={showMinModal}
+        onOk={async () => {
+          try {
+            setSavingMin(true);
+            // Apply minValue to all active spare parts only
+            const activeParts = spareParts.filter(
+              (part) => part.isActive
+            );
+            for (const part of activeParts) {
+              // Send full payload with all required fields
+              await sparePartService.update(part.partId, {
+                partNumber: part.partNumber,
+                partName: part.partName,
+                quantity: part.quantity,
+                location: part.location || "",
+                minQuantity: minValue,
+              });
+            }
+            message.success(
+              `Áp dụng số lượng tối thiểu ${minValue} cho ${activeParts.length} phụ tùng đang sử dụng thành công`
+            );
+            setShowMinModal(false);
+            await loadParts();
+          } catch (err) {
+            console.error(err);
+            message.error("Không thể áp dụng số lượng tối thiểu");
+          } finally {
+            setSavingMin(false);
+          }
+        }}
         onCancel={() => setShowMinModal(false)}
-        footer={null}
-        width={700}
-        style={{ top: 20 }}
+        width={600}
+        centered
+        okText="Áp dụng cho tất cả"
+        cancelText="Hủy"
+        okButtonProps={{
+          style: {
+            backgroundColor: "#283652",
+            borderColor: "#283652",
+            height: "40px",
+            fontSize: "16px",
+            fontWeight: "500",
+            minWidth: "160px",
+          },
+          icon: <CheckCircleOutlined />,
+          loading: savingMin,
+        }}
+        cancelButtonProps={{
+          style: {
+            height: "40px",
+            fontSize: "16px",
+            minWidth: "120px",
+          },
+        }}
+        bodyStyle={{
+          padding: "24px",
+        }}
       >
         <Form layout="vertical">
-          <Form.Item label="Áp dụng số lượng tối thiểu cho tất cả phụ tùng">
+          <Form.Item
+            label={
+              <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                Áp dụng số lượng tối thiểu cho tất cả phụ tùng đang sử dụng
+              </span>
+            }
+          >
             <InputNumber
               min={0}
               value={minValue}
               onChange={(val) => setMinValue(val || 5)}
               style={{ width: "100%" }}
               placeholder="Nhập số lượng tối thiểu"
+              size="large"
             />
-          </Form.Item>
-          <Form.Item style={{ marginBottom: 0 }}>
-            <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-              <Button onClick={() => setShowMinModal(false)}>Hủy</Button>
-              <Button
-                type="primary"
-                loading={savingMin}
-                style={{
-                  backgroundColor: "#283652",
-                  borderColor: "#283652",
-                }}
-                onClick={async () => {
-                  try {
-                    setSavingMin(true);
-                    // Apply minValue to all active spare parts only
-                    const activeParts = spareParts.filter(
-                      (part) => part.isActive
-                    );
-                    for (const part of activeParts) {
-                      // Send full payload with all required fields
-                      await sparePartService.update(part.partId, {
-                        partNumber: part.partNumber,
-                        partName: part.partName,
-                        quantity: part.quantity,
-                        location: part.location || "",
-                        minQuantity: minValue,
-                      });
-                    }
-                    message.success(
-                      `Áp dụng số lượng tối thiểu ${minValue} cho ${activeParts.length} phụ tùng đang sử dụng thành công`
-                    );
-                    setShowMinModal(false);
-                    await loadParts();
-                  } catch (err) {
-                    console.error(err);
-                    message.error("Không thể áp dụng số lượng tối thiểu");
-                  } finally {
-                    setSavingMin(false);
-                  }
-                }}
-              >
-                Áp dụng cho tất cả
-              </Button>
-            </Space>
           </Form.Item>
         </Form>
       </Modal>
 
       {/* Detail Modal */}
       <Modal
-        title="Chi tiết phụ tùng"
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "50%",
+              backgroundColor: "#283652",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+              fontSize: "18px"
+            }}>
+              <InboxOutlined />
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: "16px" }}>
+                {viewingRecord?.partName}
+              </div>
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#6b7280",
+                  fontWeight: "normal",
+                }}
+              >
+                {viewingRecord?.partNumber} • {viewingRecord?.partType || "Chưa phân loại"}
+              </div>
+            </div>
+          </div>
+        }
         open={detailModalVisible}
         onCancel={() => {
           setDetailModalVisible(false);
           setViewingRecord(null);
         }}
+        width={1200}
+        centered
         footer={[
-          <Button key="close" onClick={() => setDetailModalVisible(false)}>
-            Đóng
-          </Button>,
           <Button
             key="edit"
             type="primary"
-            style={{
-              backgroundColor: "#283652",
-              borderColor: "#283652",
-            }}
+            icon={<EditOutlined />}
             onClick={() => {
               setDetailModalVisible(false);
               handleEdit(viewingRecord);
             }}
+            style={{
+              backgroundColor: "#283652",
+              borderColor: "#283652",
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
           >
             Chỉnh sửa
           </Button>,
+          <Button
+            key="close"
+            onClick={() => setDetailModalVisible(false)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
+            Đóng
+          </Button>,
         ]}
-        width={1200}
-        style={{ top: 20 }}
       >
         {viewingRecord && (
-          <div style={{ padding: "16px 0" }}>
-            <Row gutter={[16, 24]}>
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Mã phụ tùng:</strong>
-                </div>
-                <div style={{ fontSize: 16 }}>{viewingRecord.partNumber}</div>
-              </Col>
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Tên phụ tùng:</strong>
-                </div>
-                <div style={{ fontSize: 16 }}>{viewingRecord.partName}</div>
-              </Col>
+          <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
+            <Descriptions
+              column={2}
+              bordered
+              labelStyle={{
+                fontWeight: "bold",
+                fontSize: "14px",
+                backgroundColor: "#fafafa",
+                borderRight: "1px solid #d9d9d9",
+                padding: "12px 16px",
+                minWidth: "160px",
+              }}
+            >
+              <Descriptions.Item label="Mã phụ tùng">
+                {viewingRecord.partNumber}
+              </Descriptions.Item>
+              <Descriptions.Item label="Tên phụ tùng">
+                {viewingRecord.partName}
+              </Descriptions.Item>
 
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Loại phụ tùng:</strong>
-                </div>
-                <div style={{ fontSize: 16 }}>
-                  {viewingRecord.partType || "Chưa xác định"}
-                </div>
-              </Col>
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Nhà cung cấp:</strong>
-                </div>
-                <div style={{ fontSize: 16 }}>
-                  {viewingRecord.supplier || "Chưa xác định"}
-                </div>
-              </Col>
+              <Descriptions.Item label="Loại phụ tùng">
+                {viewingRecord.partType || "Chưa xác định"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Nhà cung cấp">
+                {viewingRecord.supplier || "Chưa xác định"}
+              </Descriptions.Item>
 
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Vật liệu:</strong>
-                </div>
-                <div style={{ fontSize: 16 }}>
-                  {viewingRecord.material || "Chưa xác định"}
-                </div>
-              </Col>
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Giá mua:</strong>
-                </div>
-                <div
-                  style={{ fontSize: 16, color: "#283652", fontWeight: "600" }}
-                >
-                  {viewingRecord.purchasePrice
-                    ? `${viewingRecord.purchasePrice.toLocaleString("vi-VN")} đ`
-                    : "Chưa xác định"}
-                </div>
-              </Col>
+              <Descriptions.Item label="Vật liệu">
+                {viewingRecord.material || "Chưa xác định"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Giá mua">
+                {viewingRecord.purchasePrice
+                  ? `${viewingRecord.purchasePrice.toLocaleString("vi-VN")} đ`
+                  : "Chưa xác định"}
+              </Descriptions.Item>
 
-              <Col span={24}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Thông số kỹ thuật:</strong>
-                </div>
-                <div style={{ fontSize: 16 }}>
-                  {viewingRecord.specifications || "Chưa xác định"}
-                </div>
-              </Col>
+              <Descriptions.Item label="Thông số kỹ thuật" span={2}>
+                {viewingRecord.specifications || "Chưa xác định"}
+              </Descriptions.Item>
 
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Số lượng hiện tại:</strong>
-                </div>
-                <div
-                  style={{ fontSize: 16, color: "#283652", fontWeight: "600" }}
-                >
-                  {viewingRecord.quantity ?? 0} {viewingRecord.uom || "cái"}
-                </div>
-              </Col>
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Số lượng tối thiểu:</strong>
-                </div>
-                <div style={{ fontSize: 16 }}>
-                  {viewingRecord.minQuantity ?? 0} {viewingRecord.uom || "cái"}
-                </div>
-              </Col>
+              <Descriptions.Item label="Số lượng hiện tại">
+                {viewingRecord.quantity ?? 0} {viewingRecord.uom || "cái"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Số lượng tối thiểu">
+                {viewingRecord.minQuantity ?? 0} {viewingRecord.uom || "cái"}
+              </Descriptions.Item>
 
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Vị trí:</strong>
-                </div>
-                <div style={{ fontSize: 16 }}>
-                  {viewingRecord.location || "Chưa xác định"}
-                </div>
-              </Col>
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Kho:</strong>
-                </div>
-                <div style={{ fontSize: 16 }}>
-                  {viewingRecord.warehouse || "Chưa xác định"}
-                </div>
-              </Col>
+              <Descriptions.Item label="Vị trí">
+                {viewingRecord.location || "Chưa xác định"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Kho">
+                {viewingRecord.warehouse || "Chưa xác định"}
+              </Descriptions.Item>
 
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Đơn vị tính:</strong>
-                </div>
-                <div style={{ fontSize: 16 }}>
-                  {viewingRecord.uom || "Chưa xác định"}
-                </div>
-              </Col>
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Chu kỳ thay thế:</strong>
-                </div>
-                <div style={{ fontSize: 16 }}>
-                  {viewingRecord.replacementCycle || "Chưa xác định"}
-                </div>
-              </Col>
+              <Descriptions.Item label="Đơn vị tính">
+                {viewingRecord.uom || "Chưa xác định"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Chu kỳ thay thế">
+                {viewingRecord.replacementCycle || "Chưa xác định"}
+              </Descriptions.Item>
 
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Ngày thêm:</strong>
-                </div>
-                <div style={{ fontSize: 16 }}>
-                  {viewingRecord.dateAdded
-                    ? new Date(viewingRecord.dateAdded).toLocaleDateString(
-                        "vi-VN"
-                      )
-                    : "Chưa xác định"}
-                </div>
-              </Col>
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Trạng thái:</strong>
-                </div>
-                <div>
-                  {(() => {
-                    let color = "success";
-                    let displayStatus = viewingRecord.status;
-                    const q = viewingRecord.quantity ?? 0;
-                    const minQ = viewingRecord.minQuantity ?? 5;
+              <Descriptions.Item label="Ngày thêm">
+                {viewingRecord.dateAdded
+                  ? new Date(viewingRecord.dateAdded).toLocaleDateString(
+                    "vi-VN"
+                  )
+                  : "Chưa xác định"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái">
+                {(() => {
+                  let color = "success";
+                  let displayStatus = viewingRecord.status;
+                  const q = viewingRecord.quantity ?? 0;
+                  const minQ = viewingRecord.minQuantity ?? 5;
 
-                    if (viewingRecord.status) {
-                      switch (viewingRecord.status) {
-                        case "Đủ hàng":
-                        case "Available":
-                          color = "success";
-                          displayStatus = "Đủ hàng";
-                          break;
-                        case "Sắp hết":
-                        case "Low Stock":
-                          color = "warning";
-                          displayStatus = "Sắp hết";
-                          break;
-                        case "Hết hàng":
-                        case "Out of Stock":
-                          color = "error";
-                          displayStatus = "Hết hàng";
-                          break;
-                        default:
-                          color = "default";
-                          displayStatus = viewingRecord.status;
-                      }
-                    } else {
-                      if (q === 0) {
-                        color = "error";
-                        displayStatus = "Hết hàng";
-                      } else if (q <= minQ) {
-                        color = "warning";
-                        displayStatus = "Sắp hết";
-                      } else {
+                  if (viewingRecord.status) {
+                    switch (viewingRecord.status) {
+                      case "Đủ hàng":
+                      case "Available":
                         color = "success";
                         displayStatus = "Đủ hàng";
-                      }
+                        break;
+                      case "Sắp hết":
+                      case "Low Stock":
+                        color = "warning";
+                        displayStatus = "Sắp hết";
+                        break;
+                      case "Hết hàng":
+                      case "Out of Stock":
+                        color = "error";
+                        displayStatus = "Hết hàng";
+                        break;
+                      default:
+                        color = "default";
+                        displayStatus = viewingRecord.status;
                     }
+                  } else {
+                    if (q === 0) {
+                      color = "error";
+                      displayStatus = "Hết hàng";
+                    } else if (q <= minQ) {
+                      color = "warning";
+                      displayStatus = "Sắp hết";
+                    } else {
+                      color = "success";
+                      displayStatus = "Đủ hàng";
+                    }
+                  }
 
-                    return <Tag color={color}>{displayStatus}</Tag>;
-                  })()}
-                </div>
-              </Col>
-              <Col span={12}>
-                <div style={{ marginBottom: 8 }}>
-                  <strong>Trạng thái hoạt động:</strong>
-                </div>
-                <div>
-                  <Tag color={viewingRecord.isActive ? "green" : "red"}>
-                    {viewingRecord.isActive ? "Đang sử dụng" : "Đã xóa"}
-                  </Tag>
-                </div>
-              </Col>
+                  return <Tag color={color}>{displayStatus}</Tag>;
+                })()}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái hoạt động">
+                <Tag color={viewingRecord.isActive ? "green" : "red"}>
+                  {viewingRecord.isActive ? "Đang sử dụng" : "Ngưng sử dụng"}
+                </Tag>
+              </Descriptions.Item>
 
               {viewingRecord.documentUrl && (
-                <Col span={24}>
-                  <div style={{ marginBottom: 8 }}>
-                    <strong>Tài liệu:</strong>
-                  </div>
-                  <div style={{ fontSize: 16 }}>
-                    <a
-                      href={viewingRecord.documentUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {viewingRecord.documentUrl}
-                    </a>
-                  </div>
-                </Col>
+                <Descriptions.Item label="Tài liệu" span={2}>
+                  <a
+                    href={viewingRecord.documentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {viewingRecord.documentUrl}
+                  </a>
+                </Descriptions.Item>
               )}
-            </Row>
+            </Descriptions>
           </div>
         )}
       </Modal>

@@ -779,7 +779,8 @@ const IncidentList = () => {
             icon: <EyeOutlined />,
             onClick: () => handleViewDetail(record),
           },
-          {
+          // Ẩn "Yêu cầu thay thế" khi sự cố đã hoàn thành
+          ...(record.status !== "Hoàn thành" ? [{
             key: "replacementRequests",
             label: "Yêu cầu thay thế",
             icon: <UserAddOutlined />,
@@ -793,7 +794,7 @@ const IncidentList = () => {
               });
               setApprovalModalVisible(true);
             },
-          },
+          }] : []),
           {
             key: "replacementHistory",
             label: "Xem lịch sử thay thế",

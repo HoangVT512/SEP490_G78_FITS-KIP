@@ -15,7 +15,7 @@ import {
   Table,
   Tag,
 } from "antd";
-import { PlusOutlined, DeleteOutlined } from "@ant-design/icons";
+import { PlusOutlined, DeleteOutlined, InboxOutlined } from "@ant-design/icons";
 import { sparePartService } from "../../services/sparePartService";
 import { replacementHistoryService } from "../../services/replacementHistoryService";
 import notificationService from "../../services/notificationService";
@@ -221,12 +221,21 @@ const SparepartRequestModal = ({ incident, open, onClose, onSuccess }) => {
 
   return (
     <Modal
-      title="Yêu cầu phụ tùng"
+      title={
+        <div style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}>
+          Yêu cầu phụ tùng
+        </div>
+      }
       open={open}
       onCancel={onClose}
-      width={900}
+      width={1200}
+      centered
       footer={[
-        <Button key="cancel" onClick={onClose}>
+        <Button key="cancel" onClick={onClose} style={{
+          height: "40px",
+          fontSize: "16px",
+          minWidth: "120px",
+        }}>
           Hủy
         </Button>,
         <Button
@@ -234,6 +243,12 @@ const SparepartRequestModal = ({ incident, open, onClose, onSuccess }) => {
           type="primary"
           loading={loading}
           onClick={handleSubmit}
+          style={{
+            height: "40px",
+            fontSize: "16px",
+            minWidth: "120px",
+            background: "#283652"
+          }}
         >
           Gửi yêu cầu
         </Button>,
@@ -242,25 +257,45 @@ const SparepartRequestModal = ({ incident, open, onClose, onSuccess }) => {
       <Spin spinning={loading}>
         <Space direction="vertical" style={{ width: "100%" }} size="large">
           {/* Incident info */}
-          <Card size="small">
+          <Card
+            size="small"
+            title={
+              <div style={{ fontSize: "16px", fontWeight: "600", color: "#283652" }}>
+                Thông tin sự cố
+              </div>
+            }
+            style={{ borderRadius: "8px" }}
+          >
             <Row gutter={16}>
               <Col span={12}>
-                <div>
-                  <strong>Sự cố:</strong> INC-
-                  {String(incident?.incidentId || 0).padStart(3, "0")}
+                <div style={{ marginBottom: "8px" }}>
+                  <strong style={{ color: "#666", fontSize: "14px" }}>Sự cố:</strong>
+                </div>
+                <div style={{ fontSize: "16px", fontWeight: "500" }}>
+                  INC-{String(incident?.incidentId || 0).padStart(3, "0")}
                 </div>
               </Col>
               <Col span={12}>
-                <div>
-                  <strong>Thiết bị:</strong> {incident?.equipmentCode} -{" "}
-                  {incident?.equipmentName}
+                <div style={{ marginBottom: "8px" }}>
+                  <strong style={{ color: "#666", fontSize: "14px" }}>Thiết bị:</strong>
+                </div>
+                <div style={{ fontSize: "16px", fontWeight: "500" }}>
+                  {incident?.equipmentCode} - {incident?.equipmentName}
                 </div>
               </Col>
             </Row>
           </Card>
 
           {/* Form to add parts */}
-          <Card title="Thêm phụ tùng" size="small">
+          <Card
+            title={
+              <div style={{ fontSize: "16px", fontWeight: "600", color: "#283652" }}>
+                Thêm phụ tùng yêu cầu
+              </div>
+            }
+            size="small"
+            style={{ borderRadius: "8px" }}
+          >
             <Form
               form={form}
               layout="vertical"
@@ -269,10 +304,14 @@ const SparepartRequestModal = ({ incident, open, onClose, onSuccess }) => {
               }}
             >
               <Row gutter={16}>
-                <Col span={16}>
+                <Col span={14}>
                   <Form.Item
                     name="partId"
-                    label="Chọn phụ tùng"
+                    label={
+                      <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                        Chọn phụ tùng
+                      </span>
+                    }
                     rules={[
                       {
                         required: true,
@@ -285,13 +324,19 @@ const SparepartRequestModal = ({ incident, open, onClose, onSuccess }) => {
                       showSearch
                       optionFilterProp="label"
                       options={sparePartOptions}
+                      size="large"
+                      style={{ width: "100%" }}
                     />
                   </Form.Item>
                 </Col>
-                <Col span={8}>
+                <Col span={5}>
                   <Form.Item
                     name="quantity"
-                    label="Số lượng"
+                    label={
+                      <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                        Số lượng
+                      </span>
+                    }
                     rules={[
                       {
                         required: true,
@@ -304,46 +349,74 @@ const SparepartRequestModal = ({ incident, open, onClose, onSuccess }) => {
                       },
                     ]}
                   >
-                    <InputNumber min={1} placeholder="VD: 2" />
+                    <InputNumber
+                      min={1}
+                      placeholder="VD: 2"
+                      size="large"
+                      style={{ width: "100%" }}
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={5} style={{ display: "flex", alignItems: "center" }}>
+                  <Form.Item style={{ marginBottom: 0, width: "100%" }}>
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      htmlType="submit"
+                      size="large"
+                      style={{
+                        height: "43px",
+                        fontSize: "16px",
+                        width: "100%",
+                        background: "#283652",
+                      }}
+                    >
+                      Thêm
+                    </Button>
                   </Form.Item>
                 </Col>
               </Row>
-              <Form.Item>
-                <Button
-                  type="primary"
-                  icon={<PlusOutlined />}
-                  htmlType="submit"
-                  block
-                >
-                  Thêm phụ tùng
-                </Button>
-              </Form.Item>
             </Form>
           </Card>
 
           {/* Selected parts table */}
           {selectedParts.length > 0 && (
-            <Card title="Danh sách phụ tùng yêu cầu" size="small">
+            <Card
+              title={
+                <div style={{ fontSize: "16px", fontWeight: "600", color: "#283652" }}>
+                  Danh sách phụ tùng yêu cầu ({selectedParts.length} mục)
+                </div>
+              }
+              size="small"
+              style={{ borderRadius: "8px" }}
+            >
               <Table
                 columns={columns}
                 dataSource={selectedParts}
                 rowKey="partId"
                 pagination={false}
-                size="small"
+                size="middle"
+                style={{ borderRadius: "6px" }}
               />
             </Card>
           )}
 
           {selectedParts.length === 0 && (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "20px",
-                color: "#999",
-              }}
-            >
-              Chưa thêm phụ tùng nào
-            </div>
+            <Card size="small" style={{ borderRadius: "8px", textAlign: "center" }}>
+              <div
+                style={{
+                  padding: "40px 20px",
+                  color: "#999",
+                  fontSize: "16px",
+                }}
+              >
+                <InboxOutlined style={{ fontSize: "48px", marginBottom: "16px", opacity: 0.5 }} />
+                <div>Chưa thêm phụ tùng nào</div>
+                <div style={{ fontSize: "14px", marginTop: "8px" }}>
+                  Sử dụng form ở trên để thêm phụ tùng cần yêu cầu
+                </div>
+              </div>
+            </Card>
           )}
         </Space>
       </Spin>

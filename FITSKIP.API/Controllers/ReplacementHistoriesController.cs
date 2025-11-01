@@ -19,13 +19,16 @@ namespace FITSKIP.API.Controllers
     {
         private readonly IReplacementHistoryService _service;
         private readonly FitskipDbContext _context;
+        private readonly IIncidentService _incidentService;
 
         public ReplacementHistoriesController(
             IReplacementHistoryService service,
-            FitskipDbContext context)
+            FitskipDbContext context,
+            IIncidentService incidentService)
         {
             _service = service;
             _context = context;
+            _incidentService = incidentService;
         }
 
         [HttpGet]
@@ -105,6 +108,16 @@ namespace FITSKIP.API.Controllers
             {
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
+
+                // Validation: Kiểm tra trạng thái incident - không cho phép tạo yêu cầu phụ tùng nếu incident đã hoàn thành
+                if (request.IncidentId.HasValue && request.IncidentId.Value > 0)
+                {
+                    var incident = await _incidentService.GetIncidentByIdAsync(request.IncidentId.Value, cancellationToken);
+                    if (incident != null && incident.Status == "Hoàn thành")
+                    {
+                        return BadRequest(new { message = "Không thể tạo yêu cầu phụ tùng cho sự cố đã hoàn thành" });
+                    }
+                }
 
                 // Mapping DTO to Entity
                 var replacementHistory = new ReplacementHistory
