@@ -67,6 +67,17 @@ export const replacementHistoryService = {
     return res;
   },
 
+  async batchRecordActualUsage(payload) {
+    const res = await apiRequest(
+      `/ReplacementHistories/batch-record-usage`,
+      {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      }
+    );
+    return res?.data || res;
+  },
+
   async confirmReturn(id, payload) {
     const res = await apiRequest(
       `/ReplacementHistories/${encodeURIComponent(id)}/confirm-return`,

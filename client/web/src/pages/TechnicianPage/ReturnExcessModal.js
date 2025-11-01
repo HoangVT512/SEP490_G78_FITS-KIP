@@ -1,15 +1,43 @@
 import React from "react";
-import { Modal, Button, Result, Space, Statistic, Row, Col } from "antd";
+import { Modal, Button, Result, Space, Statistic, Row, Col, Table, Tag } from "antd";
 import { WarningOutlined } from "@ant-design/icons";
 
 const ReturnExcessModal = ({
   visible,
-  excessQuantity,
-  partName,
+  excessData = [],
   onConfirm,
   onCancel,
   loading,
 }) => {
+  // Support both old format (single item) and new format (multiple items)
+  const isMultiple = Array.isArray(excessData) && excessData.length > 1;
+  const totalExcess = Array.isArray(excessData)
+    ? excessData.reduce((sum, item) => sum + (item.excessQuantity || item.quantityToReturn || 0), 0)
+    : (excessData?.excessQuantity || excessData?.quantityToReturn || 0);
+
+  const columns = [
+    {
+      title: "Phụ tùng",
+      dataIndex: "partName",
+      key: "partName",
+      render: (text) => <span style={{ fontWeight: 500 }}>{text}</span>,
+    },
+    {
+      title: "SL thừa",
+      dataIndex: "excessQuantity",
+      key: "excessQuantity",
+      align: "center",
+      render: (qty) => <Tag color="orange">{qty || 0}</Tag>,
+    },
+    {
+      title: "SL sử dụng",
+      dataIndex: "actualUsed",
+      key: "actualUsed",
+      align: "center",
+      render: (qty) => <Tag color="green">{qty || 0}</Tag>,
+    },
+  ];
+
   return (
     <Modal
       title={
@@ -21,15 +49,32 @@ const ReturnExcessModal = ({
       open={visible}
       onCancel={onCancel}
       footer={null}
-      width={500}
+      width={isMultiple ? 700 : 500}
       centered
     >
       <Result
         status="warning"
         title="Bạn có linh kiện thừa cần trả lại"
-        subTitle={`Hệ thống đã ghi nhận bạn sẽ trả lại ${excessQuantity} chiếc ${partName}`}
+        subTitle={
+          isMultiple
+            ? `Hệ thống đã ghi nhận bạn sẽ trả lại tổng cộng ${totalExcess} linh kiện từ ${excessData.length} loại phụ tùng khác nhau`
+            : `Hệ thống đã ghi nhận bạn sẽ trả lại ${totalExcess} chiếc ${excessData?.partName || 'linh kiện'}`
+        }
         style={{ marginBottom: "24px" }}
       />
+
+      {isMultiple && (
+        <div style={{ marginBottom: "24px" }}>
+          <Table
+            columns={columns}
+            dataSource={excessData}
+            rowKey={(record, index) => record.replacementId || index}
+            pagination={false}
+            size="small"
+            bordered
+          />
+        </div>
+      )}
 
       <div
         style={{
@@ -41,15 +86,25 @@ const ReturnExcessModal = ({
         }}
       >
         <Row gutter={16}>
-          <Col span={12}>
+          <Col span={isMultiple ? 8 : 12}>
             <Statistic
-              title="Số lượng thừa"
-              value={excessQuantity}
+              title="Tổng SL thừa"
+              value={totalExcess}
               suffix="chiếc"
               valueStyle={{ color: "#faad14" }}
             />
           </Col>
-          <Col span={12}>
+          {isMultiple && (
+            <Col span={8}>
+              <Statistic
+                title="Số loại phụ tùng"
+                value={excessData.length}
+                suffix="loại"
+                valueStyle={{ color: "#faad14" }}
+              />
+            </Col>
+          )}
+          <Col span={isMultiple ? 8 : 12}>
             <Statistic
               title="Trạng thái"
               value="Chờ trả lại"
@@ -72,7 +127,7 @@ const ReturnExcessModal = ({
           📍 Hướng dẫn trả lại:
         </p>
         <ol style={{ marginBottom: 0, paddingLeft: "20px" }}>
-          <li>Hãy đến kho để trả {excessQuantity} chiếc linh kiện ngay</li>
+          <li>Hãy đến kho để trả {totalExcess} chiếc linh kiện ngay</li>
           <li>Giao cho nhân viên kho để xác nhận nhận hàng</li>
           <li>Hệ thống sẽ tự động cập nhật trạng thái sau khi xác nhận</li>
         </ol>

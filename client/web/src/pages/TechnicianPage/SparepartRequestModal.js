@@ -42,9 +42,11 @@ const SparepartRequestModal = ({ incident, open, onClose, onSuccess }) => {
       setLoading(true);
       const res = await sparePartService.getAll();
       const data = Array.isArray(res) ? res : res?.data || [];
-      setSpareParts(data);
+      // Filter only active spare parts
+      const activeSpareParts = data.filter((item) => item.isActive !== false);
+      setSpareParts(activeSpareParts);
       setSparePartOptions(
-        data.map((item) => ({
+        activeSpareParts.map((item) => ({
           label: `${item.partNumber} - ${item.partName}`,
           value: item.partId || item.id,
           partNumber: item.partNumber,

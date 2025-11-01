@@ -11,6 +11,9 @@ import {
   Space,
   Row,
   Col,
+  Table,
+  Tag,
+  Divider,
 } from "antd";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import dayjs from "dayjs";
@@ -34,11 +37,12 @@ const ReplacementCreate = ({
 
   const [parts, setParts] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [quantityToReturn, setQuantityToReturn] = useState(0);
-  const [replacementData, setReplacementData] = useState(null);
+  const [replacementData, setReplacementData] = useState([]);
   const [equipmentName, setEquipmentName] = useState("");
-  const [partName, setPartName] = useState("");
+  const [equipmentCode, setEquipmentCode] = useState("");
+  const [incidentInfo, setIncidentInfo] = useState(null);
   const [returnModalVisible, setReturnModalVisible] = useState(false);
+  const [returnExcessData, setReturnExcessData] = useState([]);
 
   useEffect(() => {
     const init = async () => {
@@ -55,72 +59,6 @@ const ReplacementCreate = ({
       }
 
       try {
-        const replacementId =
-          propReplacementId || searchParams.get("replacementId");
-        if (replacementId) {
-          console.log("Loading replacement ID:", replacementId);
-          const replacement = await replacementHistoryService.getById(
-            replacementId
-          );
-          console.log("Loaded replacement data:", replacement);
-          console.log(
-            "Keys in replacement object:",
-            Object.keys(replacement || {})
-          );
-
-          if (replacement) {
-            setReplacementData(replacement);
-
-            const equipName =
-              replacement.equipmentName ||
-              replacement.EquipmentName ||
-              `Thiết bị #${replacement.equipmentId || replacement.EquipmentID}`;
-            const partDisplayName = `${replacement.partNumber || replacement.PartNumber
-              } - ${replacement.partName || replacement.PartName}`;
-
-            console.log("Equipment Name:", equipName);
-            console.log("Part Name:", partDisplayName);
-
-            setEquipmentName(equipName);
-            setPartName(partDisplayName);
-
-            const formValues = {
-              EquipmentName: equipName,
-              PartName: partDisplayName,
-              Quantity: replacement.quantity || replacement.Quantity,
-              ActualQuantityUsed:
-                replacement.actualQuantityUsed ||
-                replacement.ActualQuantityUsed,
-              ReplacedDate:
-                replacement.replacedDate || replacement.ReplacedDate
-                  ? dayjs(replacement.replacedDate || replacement.ReplacedDate)
-                  : dayjs(),
-              Remarks: replacement.remarks || replacement.Remarks,
-            };
-
-            console.log("Setting form values:", formValues);
-            form.setFieldsValue(formValues);
-
-            if (
-              replacement.actualQuantityUsed &&
-              replacement.actualQuantityUsed < replacement.quantity
-            ) {
-              setQuantityToReturn(
-                replacement.quantity - replacement.actualQuantityUsed
-              );
-            }
-          }
-          setLoading(false);
-          return;
-        }
-      } catch (err) {
-        console.error("Failed to load replacement data:", err);
-        message.error(
-          `Không thể tải dữ liệu thay thế: ${err?.message || String(err)}`
-        );
-      }
-
-      try {
         const incidentId = propIncidentId || searchParams.get("incidentId");
         if (incidentId) {
           console.log("Loading incident ID:", incidentId);
@@ -128,87 +66,67 @@ const ReplacementCreate = ({
           console.log("Loaded incident data:", inc);
 
           if (inc) {
+            setIncidentInfo(inc);
             const equipId =
               inc.equipmentId ||
               inc.equipmentID ||
               inc.equipment?.equipmentId ||
               inc.equipment?.equipmentID;
 
-            console.log(
-              "Looking for approved replacement for equipment:",
-              equipId
-            );
+            const equipName =
+              inc.equipment?.equipmentName ||
+              inc.equipmentName ||
+              `Thiết bị #${equipId}`;
+            const equipCode =
+              inc.equipment?.equipmentCode ||
+              inc.equipmentCode ||
+              "";
+
+            setEquipmentName(equipName);
+            setEquipmentCode(equipCode);
+
+            console.log("Looking for approved replacements for equipment:", equipId);
 
             try {
               const allReplacements =
                 await replacementHistoryService.getByEquipmentId(equipId);
               console.log("All replacements for equipment:", allReplacements);
 
-              const approvedReplacement = Array.isArray(allReplacements)
-                ? allReplacements.find(
+              const approvedReplacements = Array.isArray(allReplacements)
+                ? allReplacements.filter(
                   (r) =>
                     (r.status === "Đã duyệt cấp phát" ||
                       r.Status === "Đã duyệt cấp phát") &&
                     !r.actualQuantityUsed &&
                     !r.ActualQuantityUsed
                 )
-                : null;
+                : [];
 
-              if (approvedReplacement) {
-                console.log("Found approved replacement:", approvedReplacement);
+              if (approvedReplacements.length > 0) {
+                console.log("Found approved replacements:", approvedReplacements);
 
-                setReplacementData(approvedReplacement);
+                // Set form data for all replacements
+                const formData = approvedReplacements.map((replacement, index) => ({
+                  key: replacement.replacementID || replacement.ReplacementID || index,
+                  replacementId: replacement.replacementID || replacement.ReplacementID,
+                  partNumber: replacement.partNumber || replacement.PartNumber,
+                  partName: replacement.partName || replacement.PartName,
+                  quantity: replacement.quantity || replacement.Quantity,
+                  actualQuantityUsed: replacement.actualQuantityUsed || replacement.ActualQuantityUsed || 0,
+                  remarks: replacement.remarks || replacement.Remarks || "",
+                }));
 
-                const equipName =
-                  approvedReplacement.equipmentName ||
-                  approvedReplacement.EquipmentName ||
-                  inc.equipment?.equipmentName ||
-                  `Thiết bị #${equipId}`;
-                const partDisplayName = `${approvedReplacement.partNumber ||
-                  approvedReplacement.PartNumber
-                  } - ${approvedReplacement.partName || approvedReplacement.PartName
-                  }`;
+                setReplacementData(formData);
 
-                setEquipmentName(equipName);
-                setPartName(partDisplayName);
-
-                form.setFieldsValue({
-                  EquipmentName: equipName,
-                  PartName: partDisplayName,
-                  Quantity:
-                    approvedReplacement.quantity ||
-                    approvedReplacement.Quantity,
-                  ActualQuantityUsed:
-                    approvedReplacement.actualQuantityUsed ||
-                    approvedReplacement.ActualQuantityUsed,
-                  ReplacedDate:
-                    approvedReplacement.replacedDate ||
-                      approvedReplacement.ReplacedDate
-                      ? dayjs(
-                        approvedReplacement.replacedDate ||
-                        approvedReplacement.ReplacedDate
-                      )
-                      : dayjs(),
-                  Remarks:
-                    approvedReplacement.remarks || approvedReplacement.Remarks,
-                });
-
-                setLoading(false);
-                return;
+                console.log("Setting form data:", formData);
               } else {
-                console.warn(
-                  "No approved replacement found for equipment:",
-                  equipId
-                );
+                console.warn("No approved replacements found for equipment:", equipId);
                 message.warning(
                   "Không tìm thấy yêu cầu cấp phát đã được duyệt cho thiết bị này. Vui lòng tạo yêu cầu cấp phát trước."
                 );
               }
             } catch (repErr) {
-              console.error(
-                "Failed to load replacements for equipment:",
-                repErr
-              );
+              console.error("Failed to load replacements for equipment:", repErr);
             }
           }
         }
@@ -217,12 +135,6 @@ const ReplacementCreate = ({
         message.error(
           `Không thể tải thông tin sự cố: ${err?.message || String(err)}`
         );
-      }
-
-      try {
-        form.setFieldsValue({ ReplacedDate: dayjs() });
-      } catch (err) {
-        console.error("Failed to set default date:", err);
       } finally {
         setLoading(false);
       }
@@ -230,77 +142,70 @@ const ReplacementCreate = ({
     init();
   }, [propIncidentId, propReplacementId, searchParams]);
 
-  const handleActualQuantityChange = (value) => {
-    const requestedQty = form.getFieldValue("Quantity") || 0;
-    if (value && value < requestedQty) {
-      setQuantityToReturn(requestedQty - value);
-    } else {
-      setQuantityToReturn(0);
-    }
+  const handleActualQuantityChange = (value, record) => {
+    const updatedData = replacementData.map(item =>
+      item.replacementId === record.replacementId
+        ? { ...item, actualQuantityUsed: value || 0 }
+        : item
+    );
+    setReplacementData(updatedData);
   };
 
-  const handleSubmit = async (values) => {
-    if (!replacementData) {
-      message.error(
-        "Không thể tạo mới replacement từ form này. Vui lòng sử dụng chức năng yêu cầu cấp phát."
-      );
+  const handleRemarksChange = (value, record) => {
+    const updatedData = replacementData.map(item =>
+      item.replacementId === record.replacementId
+        ? { ...item, remarks: value || "" }
+        : item
+    );
+    setReplacementData(updatedData);
+  };
+
+  const handleSubmit = async () => {
+    // Validate all entries
+    const invalidEntries = replacementData.filter(item =>
+      !item.actualQuantityUsed || item.actualQuantityUsed < 0 || item.actualQuantityUsed > item.quantity
+    );
+
+    if (invalidEntries.length > 0) {
+      message.error("Vui lòng nhập số lượng sử dụng hợp lệ cho tất cả phụ tùng");
       return;
     }
 
     setLoading(true);
     try {
-      const requestedQty =
-        values.Quantity ||
-        replacementData.quantity ||
-        replacementData.Quantity ||
-        0;
-      const actualQty =
-        parseInt(values.actualQuantityUsed) || values.ActualQuantityUsed || 0;
-
-      if (actualQty === undefined || actualQty === null || actualQty === 0) {
-        message.error("Vui lòng nhập số lượng thực tế đã sử dụng");
-        setLoading(false);
-        return;
-      }
-
-      if (actualQty < 0) {
-        message.error("Số lượng sử dụng không được âm");
-        return;
-      }
-
-      let status = "Hoàn thành";
-
-      if (actualQty < requestedQty) {
-        status = "Chờ trả lại";
-      } else if (actualQty === requestedQty) {
-        status = "Hoàn thành";
-      } else {
-        status = "Chờ trả lại";
-      }
-
-      const payload = {
-        ActualQuantityUsed: actualQty,
-        Status: status,
-        Remarks:
-          values.Remarks || replacementData.remarks || replacementData.Remarks,
+      const requestData = {
+        Items: replacementData.map(item => ({
+          ReplacementId: item.replacementId,
+          ActualQuantityUsed: item.actualQuantityUsed,
+          Remarks: item.remarks || ""
+        }))
       };
 
-      console.log("Recording actual usage with payload:", payload);
+      console.log("Batch recording actual usage with data:", requestData);
 
-      await replacementHistoryService.recordActualUsage(
-        replacementData.replacementID || replacementData.ReplacementID,
-        payload
+      const results = await replacementHistoryService.batchRecordActualUsage(requestData);
+
+      // Check for excess quantities that need return
+      const excessItems = results.filter(result =>
+        (result.ActualQuantityUsed || result.actualQuantityUsed) <
+        (result.Quantity || result.quantity)
       );
 
-      if (actualQty > requestedQty) {
-        const toReturn = actualQty - requestedQty;
-        setQuantityToReturn(toReturn);
+      if (excessItems.length > 0) {
+        const excessData = excessItems.map(item => ({
+          replacementId: item.ReplacementID || item.replacementID,
+          partName: `${item.PartNumber || item.partNumber} - ${item.PartName || item.partName}`,
+          excessQuantity: (item.Quantity || item.quantity) - (item.ActualQuantityUsed || item.actualQuantityUsed),
+          actualUsed: item.ActualQuantityUsed || item.actualQuantityUsed
+        }));
+
+        setReturnExcessData(excessData);
         setReturnModalVisible(true);
         setLoading(false);
         return;
       }
 
-      message.success("Đã ghi nhận số lượng sử dụng thành công.");
+      message.success("Đã ghi nhận số lượng sử dụng thành công cho tất cả phụ tùng.");
 
       if (typeof onSuccess === "function") {
         onSuccess();
@@ -317,8 +222,9 @@ const ReplacementCreate = ({
 
   const handleReturnConfirm = () => {
     setReturnModalVisible(false);
+    const totalExcess = returnExcessData.reduce((sum, item) => sum + item.excessQuantity, 0);
     message.success(
-      `Bạn có ${quantityToReturn} linh kiện thừa. Vui lòng trực tiếp đến kho để trả hàng. QLKT sẽ xác nhận sau khi bạn trả.`
+      `Bạn có tổng cộng ${totalExcess} linh kiện thừa từ ${returnExcessData.length} loại phụ tùng. Vui lòng trực tiếp đến kho để trả hàng. QLKT sẽ xác nhận sau khi bạn trả.`
     );
 
     if (typeof onSuccess === "function") {
@@ -327,6 +233,77 @@ const ReplacementCreate = ({
       navigate("/technician/incident-list");
     }
   };
+
+  const columns = [
+    {
+      title: "Mã phụ tùng",
+      dataIndex: "partNumber",
+      key: "partNumber",
+      width: 120,
+      render: (text) => <Tag color="blue">{text}</Tag>,
+    },
+    {
+      title: "Tên phụ tùng",
+      dataIndex: "partName",
+      key: "partName",
+      width: 200,
+      ellipsis: {
+        showTitle: false,
+      },
+    },
+    {
+      title: "SL lấy từ kho",
+      dataIndex: "quantity",
+      key: "quantity",
+      width: 120,
+      align: "center",
+      render: (qty) => <Tag color="green">{qty}</Tag>,
+    },
+    {
+      title: "SL sử dụng thực tế",
+      dataIndex: "actualQuantityUsed",
+      key: "actualQuantityUsed",
+      width: 160,
+      render: (value, record) => (
+        <InputNumber
+          min={0}
+          max={record.quantity}
+          value={value}
+          onChange={(val) => handleActualQuantityChange(val, record)}
+          placeholder="Nhập SL"
+          style={{ width: "100%" }}
+        />
+      ),
+    },
+    {
+      title: "SL thừa",
+      key: "excess",
+      width: 100,
+      align: "center",
+      render: (_, record) => {
+        const excess = record.quantity - (record.actualQuantityUsed || 0);
+        return excess > 0 ? (
+          <Tag color="orange">{excess}</Tag>
+        ) : (
+          <Tag color="green">0</Tag>
+        );
+      },
+    },
+    {
+      title: "Ghi chú",
+      dataIndex: "remarks",
+      key: "remarks",
+      width: 200,
+      render: (value, record) => (
+        <Input
+          value={value}
+          onChange={(e) => handleRemarksChange(e.target.value, record)}
+          placeholder="Ghi chú (tùy chọn)"
+          style={{ width: "100%" }}
+        />
+      ),
+    },
+  ];
 
   if (loading) {
     return (
@@ -340,131 +317,79 @@ const ReplacementCreate = ({
 
   return (
     <Card title="Ghi nhận số lượng thực tế sử dụng" bordered={false}>
-      <Form form={form} layout="vertical" onFinish={handleSubmit}>
-        {/* Row 1: Equipment & Part Info - 2 columns */}
-        <Row gutter={[16, 0]}>
+      {/* Incident & Equipment Info */}
+      <Card size="small" style={{ marginBottom: "16px" }}>
+        <Row gutter={16}>
           <Col xs={24} sm={12}>
-            <Form.Item label="Thiết bị">
-              <Input
-                value={equipmentName}
-                disabled
-                placeholder="Thiết bị từ sự cố"
-                style={{ color: "#000", fontWeight: 500 }}
-              />
-            </Form.Item>
+            <div style={{ marginBottom: "8px" }}>
+              <strong>Sự cố:</strong>
+            </div>
+            <div style={{ fontSize: "16px", fontWeight: "500" }}>
+              INC-{String(incidentInfo?.incidentId || 0).padStart(3, "0")}
+            </div>
           </Col>
           <Col xs={24} sm={12}>
-            <Form.Item label="Phụ tùng">
-              <Input
-                value={partName}
-                disabled
-                placeholder="Phụ tùng đã được duyệt"
-                style={{ color: "#000", fontWeight: 500 }}
-              />
-            </Form.Item>
+            <div style={{ marginBottom: "8px" }}>
+              <strong>Thiết bị:</strong>
+            </div>
+            <div style={{ fontSize: "16px", fontWeight: "500" }}>
+              {equipmentCode} - {equipmentName}
+            </div>
           </Col>
         </Row>
+      </Card>
 
-        {/* Row 2: Quantity Info - 3 columns */}
-        <Row gutter={[16, 0]}>
-          <Col xs={24} sm={8}>
-            <Form.Item label="Số lượng lấy từ kho">
-              <InputNumber
-                value={replacementData?.quantity || replacementData?.Quantity}
-                disabled
-                style={{ width: "100%", color: "#000", fontWeight: 500 }}
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Form.Item
-              label="Số lượng sử dụng"
-              name="ActualQuantityUsed"
-              rules={[
-                {
-                  required: true,
-                  message: "Vui lòng nhập số lượng",
-                },
-                ({ getFieldValue }) => ({
-                  validator(_, value) {
-                    const quantity = getFieldValue("Quantity");
-                    if (!value || value <= quantity) {
-                      return Promise.resolve();
-                    }
-                    return Promise.reject(
-                      new Error(`Không được vượt quá ${quantity}`)
-                    );
-                  },
-                }),
-              ]}
-              tooltip="Số lượng thực tế đã sử dụng"
-            >
-              <InputNumber
-                min={0}
-                style={{ width: "100%" }}
-                onChange={handleActualQuantityChange}
-                placeholder="Nhập số lượng"
-              />
-            </Form.Item>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Form.Item label="Ngày thay thế" name="ReplacedDate">
-              <DatePicker
-                showTime
-                style={{ width: "100%" }}
-                disabled={!!replacementData}
-              />
-            </Form.Item>
-          </Col>
-        </Row>
+      {/* Replacements Table */}
+      {replacementData.length > 0 ? (
+        <>
+          <Divider orientation="left">
+            Danh sách phụ tùng đã duyệt ({replacementData.length} loại)
+          </Divider>
 
-        {/* Status Display */}
-        {replacementData && (
-          <Row gutter={[16, 0]}>
-            <Col xs={24} sm={12}>
-              <Form.Item label="Trạng thái">
-                <Input
-                  value={replacementData.status || replacementData.Status}
-                  disabled
-                  style={{ color: "#000", fontWeight: 500 }}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-        )}
-
-        {/* Quantity Return Alert */}
-        {quantityToReturn > 0 && (
-          <div
-            style={{
-              padding: "12px 16px",
-              backgroundColor: "#fff7e6",
-              border: "1px solid #ffc069",
-              borderRadius: "4px",
-              marginBottom: "16px",
-              color: "#ad6800",
-              fontSize: "13px",
-            }}
-          >
-            <strong>⚠️ Số lượng thừa: {quantityToReturn}</strong>
-            <p style={{ marginTop: "6px", marginBottom: 0 }}>
-              Vui lòng trực tiếp đến kho để trả {quantityToReturn} linh kiện. QLKT sẽ xác nhận.
-            </p>
-          </div>
-        )}
-
-        {/* Remarks */}
-        <Form.Item label="Ghi chú" name="Remarks">
-          <TextArea
-            rows={3}
-            placeholder="Ghi chú (tùy chọn)"
-            disabled={!!replacementData}
-            style={{ fontSize: "13px" }}
+          <Table
+            columns={columns}
+            dataSource={replacementData}
+            rowKey="replacementId"
+            pagination={false}
+            size="middle"
+            bordered
+            style={{ marginBottom: "16px" }}
           />
-        </Form.Item>
 
-        {/* Button Group */}
-        {replacementData && (
+          {/* Summary */}
+          <Card size="small" style={{ marginBottom: "16px" }}>
+            <Row gutter={16}>
+              <Col xs={24} sm={8}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "18px", fontWeight: "bold", color: "#1890ff" }}>
+                    {replacementData.reduce((sum, item) => sum + item.quantity, 0)}
+                  </div>
+                  <div style={{ color: "#666" }}>Tổng SL lấy kho</div>
+                </div>
+              </Col>
+              <Col xs={24} sm={8}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "18px", fontWeight: "bold", color: "#52c41a" }}>
+                    {replacementData.reduce((sum, item) => sum + (item.actualQuantityUsed || 0), 0)}
+                  </div>
+                  <div style={{ color: "#666" }}>Tổng SL sử dụng</div>
+                </div>
+              </Col>
+              <Col xs={24} sm={8}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "18px", fontWeight: "bold", color: "#faad14" }}>
+                    {replacementData.reduce((sum, item) => {
+                      const excess = item.quantity - (item.actualQuantityUsed || 0);
+                      return sum + (excess > 0 ? excess : 0);
+                    }, 0)}
+                  </div>
+                  <div style={{ color: "#666" }}>Tổng SL thừa</div>
+                </div>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Action Buttons */}
           <Form.Item>
             <Space style={{ display: "flex", justifyContent: "flex-end", width: "100%" }}>
               <Button
@@ -481,46 +406,40 @@ const ReplacementCreate = ({
               </Button>
               <Button
                 type="primary"
-                htmlType="submit"
+                onClick={handleSubmit}
                 loading={loading}
                 style={{
                   backgroundColor: "#283652",
                   height: "40px",
                   fontSize: "16px",
                   fontWeight: "500",
-                  minWidth: "120px",
+                  minWidth: "180px",
                 }}
               >
                 Lưu ghi nhận
               </Button>
             </Space>
           </Form.Item>
-        )}
-
-        {!replacementData && (
-          <div
-            style={{
-              padding: "16px",
-              backgroundColor: "#fff7e6",
-              border: "1px solid #ffc069",
-              borderRadius: "4px",
-              textAlign: "center",
-              fontSize: "13px",
-            }}
-          >
-            <p style={{ margin: 0, color: "#ad6800" }}>
-              ⚠️ Form này dùng để ghi nhận số lượng sử dụng sau khi sửa chữa.
-              <br />
-              Để yêu cầu cấp phát linh kiện mới, vui lòng sử dụng "Yêu cầu cấp phát" trong danh sách sự cố.
-            </p>
-          </div>
-        )}
-      </Form>
+        </>
+      ) : (
+        <div
+          style={{
+            padding: "40px 20px",
+            textAlign: "center",
+            color: "#999",
+            fontSize: "16px",
+          }}
+        >
+          <p>Không có phụ tùng nào cần ghi nhận số lượng sử dụng.</p>
+          <p style={{ fontSize: "14px", marginTop: "8px" }}>
+            Vui lòng kiểm tra lại danh sách yêu cầu cấp phát đã được duyệt.
+          </p>
+        </div>
+      )}
 
       <ReturnExcessModal
         visible={returnModalVisible}
-        excessQuantity={quantityToReturn}
-        partName={partName}
+        excessData={returnExcessData}
         onConfirm={handleReturnConfirm}
         onCancel={() => setReturnModalVisible(false)}
         loading={loading}

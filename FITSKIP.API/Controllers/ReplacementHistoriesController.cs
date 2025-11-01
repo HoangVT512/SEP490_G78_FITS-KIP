@@ -314,6 +314,100 @@ namespace FITSKIP.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Ghi nhận số lượng thực tế sử dụng cho nhiều replacement cùng lúc
+        /// </summary>
+        [HttpPut("batch-record-usage")]
+        public async Task<ActionResult<List<ReplacementHistoryDTO>>> BatchRecordActualUsage(
+            [FromBody] BatchRecordUsageRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                if (request.Items == null || !request.Items.Any())
+                    return BadRequest(new { message = "Danh sách replacement không được trống" });
+
+                var results = new List<ReplacementHistoryDTO>();
+
+                foreach (var item in request.Items)
+                {
+                    if (item.ActualQuantityUsed < 0)
+                        return BadRequest(new { message = $"Số lượng sử dụng cho replacement {item.ReplacementId} không được âm" });
+
+                    // Get existing replacement
+                    var existing = await _service.GetByIdAsync(item.ReplacementId, cancellationToken);
+                    if (existing == null)
+                        return NotFound(new { message = $"Replacement history với ID {item.ReplacementId} không tồn tại" });
+
+                    // Update only ActualQuantityUsed, QuantityToReturn, and Status
+                    existing.ActualQuantityUsed = item.ActualQuantityUsed;
+
+                    var toReturn = existing.Quantity - item.ActualQuantityUsed;
+                    existing.QuantityToReturn = toReturn > 0 ? toReturn : 0;
+
+                    // Determine status based on usage
+                    existing.Status = toReturn > 0 ? "Chờ trả lại" : "Hoàn thành";
+
+                    if (!string.IsNullOrEmpty(item.Remarks))
+                        existing.Remarks = item.Remarks;
+
+                    var result = await _service.UpdateAsync(item.ReplacementId, existing, cancellationToken);
+
+                    // Nếu status = "Hoàn thành" (dùng đủ), tự động trừ kho luôn
+                    if (result.Status == "Hoàn thành" && result.PartId > 0 && result.ActualQuantityUsed.HasValue && result.ActualQuantityUsed.Value > 0)
+                    {
+                        var sparePart = await _context.SpareParts.FindAsync(new object[] { result.PartId }, cancellationToken: cancellationToken);
+                        if (sparePart != null)
+                        {
+                            // Trừ số lượng = ActualQuantityUsed
+                            sparePart.Quantity -= result.ActualQuantityUsed.Value;
+
+                            // Đảm bảo quantity không âm
+                            if (sparePart.Quantity < 0)
+                                sparePart.Quantity = 0;
+
+                            _context.SpareParts.Update(sparePart);
+                            await _context.SaveChangesAsync(cancellationToken);
+
+                            Console.WriteLine($"✓ Auto-reduced SparePart {result.PartId}: Quantity -= {result.ActualQuantityUsed.Value}, New Quantity = {sparePart.Quantity}");
+                        }
+                    }
+
+                    var response = new ReplacementHistoryDTO
+                    {
+                        EquipmentID = result.EquipmentId,
+                        IncidentId = result.IncidentId,
+                        PartID = result.PartId,
+                        PartName = result.Part != null ? result.Part.PartName : null,
+                        PartNumber = result.Part != null ? result.Part.PartNumber : null,
+                        EquipmentName = result.Equipment != null ? result.Equipment.EquipmentName : null,
+                        EquipmentCode = result.Equipment != null ? result.Equipment.EquipmentCode : null,
+                        ReplacedBy = result.ReplacedBy,
+                        ReplacedByUserName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.UserName : null,
+                        ReplacedByEmail = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.Email : null,
+                        ReplacementID = result.ReplacementId,
+                        Quantity = result.Quantity,
+                        ActualQuantityUsed = result.ActualQuantityUsed,
+                        QuantityToReturn = result.QuantityToReturn,
+                        ReplacedDate = result.ReplacedDate,
+                        Status = result.Status,
+                        Remarks = result.Remarks
+                    };
+
+                    results.Add(response);
+                }
+
+                return Ok(results);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi không xác định", error = ex.Message });
+            }
+        }
+
         [HttpGet("equipment/{equipmentId:int}")]
         public async Task<ActionResult<IEnumerable<ReplacementHistoryDTO>>> GetByEquipmentId(int equipmentId, CancellationToken cancellationToken = default)
         {
