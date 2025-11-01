@@ -43,6 +43,7 @@ import { lineService } from "../../services/lineService";
 import { stageService } from "../../services/stageService";
 import signalRService from "../../services/signalRService";
 import { useAuth } from "../../contexts/AuthContext";
+import { useSignalR } from "../../contexts/SignalRContext";
 import ReplacementApprovalModal from "./ReplacementApprovalModal";
 
 const { Option } = Select;
@@ -75,6 +76,7 @@ const IncidentList = () => {
 
   // Get current user from auth context to filter by department
   const { user: currentUser } = useAuth();
+  const { subscribe } = useSignalR();
 
   const searchInput = useRef(null);
 
@@ -156,22 +158,29 @@ const IncidentList = () => {
 
   // Thêm useEffect để lắng nghe cập nhật dữ liệu real-time
   useEffect(() => {
-    // Lắng nghe cập nhật dữ liệu (tự động refresh danh sách)
-    const handleDataUpdate = (data) => {
-      console.log("🔄 Data updated:", data);
-      if (data.type === "incident") {
-        console.log("Incident data updated, reloading incidents...");
-        fetchIncidents(); // Tải lại dữ liệu khi có thay đổi
+    console.log("🔌 Setting up SignalR listeners for IncidentList...");
+
+    // Lắng nghe thông báo duyệt cấp phát linh kiện
+    const unsubscribeReplacementApproved = subscribe("ReplacementApproved", (data) => {
+      console.log("✅ Replacement approved notification received:", data);
+      
+      // Refresh spare parts status cho incident liên quan
+      if (data.incidentId) {
+        fetchSparePartsStatusForIncident(data.incidentId);
       }
-    };
+      
+      // Refresh toàn bộ data sau 2 giây để đảm bảo đồng bộ
+      setTimeout(() => {
+        fetchIncidents();
+      }, 2000);
+    });
 
-    // Đăng ký lắng nghe data updates (không lắng nghe notifications vì đã được handle ở layout)
-    signalRService.onDataUpdated(handleDataUpdate);
-
+    // Cleanup
     return () => {
-      signalRService.offDataUpdated();
+      unsubscribeReplacementApproved();
+      console.log("🧹 Cleaned up SignalR listeners for IncidentList");
     };
-  }, []);
+  }, [subscribe]);
 
   const fetchIncidents = async () => {
     setLoading(true);
@@ -369,6 +378,19 @@ const IncidentList = () => {
     } catch (err) {
       console.error("Lỗi khi tải danh sách công đoạn:", err);
       message.error("Không thể tải danh sách công đoạn");
+    }
+  };
+
+  const fetchSparePartsStatusForIncident = async (incidentId) => {
+    try {
+      const sparePartsStatus = await incidentService.checkHasSpareParts(incidentId);
+      setSparePartsStatusMap(prev => ({
+        ...prev,
+        [incidentId]: sparePartsStatus
+      }));
+      console.log(`✅ Updated spare parts status for incident ${incidentId}:`, sparePartsStatus);
+    } catch (err) {
+      console.error(`Error checking spare parts for incident ${incidentId}:`, err);
     }
   };
 

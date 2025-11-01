@@ -253,6 +253,35 @@ export const sendToTechnicalManagers = async (notificationData) => {
   }
 };
 
+/**
+ * Send notification to all Technicians
+ * @param {Object} notificationData - { message, type, data }
+ * @returns {Promise<boolean>} True if successful
+ */
+export const sendToTechnicians = async (notificationData) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/Notifications/send-to-technicians`,
+      getFetchConfig({
+        method: "POST",
+        body: JSON.stringify(notificationData),
+      })
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error sending notification to technicians:", error);
+    throw error;
+  }
+};
+
 export default {
   getNotifications,
   getUnreadCount,
@@ -263,4 +292,5 @@ export default {
   getNotificationSummary,
   deleteAllReadNotifications,
   sendToTechnicalManagers,
+  sendToTechnicians,
 };

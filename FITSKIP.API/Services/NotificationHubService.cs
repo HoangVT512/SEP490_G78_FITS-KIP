@@ -268,5 +268,20 @@ namespace FITSKIP.API.Services
             
             _logger.LogInformation($"✅ Sent WorkOrderReassigned notifications");
         }
+
+        /// <summary>
+        /// Gửi thông báo khi linh kiện thay thế được duyệt cấp phát (cho Technician)
+        /// </summary>
+        public async Task SendReplacementApprovedAsync(object replacementData)
+        {
+            _logger.LogInformation($"✅ Broadcasting ReplacementApproved to Technicians");
+            _logger.LogInformation($"   Data: {System.Text.Json.JsonSerializer.Serialize(replacementData)}");
+            
+            // Gửi đến tất cả Technicians (group "Technicians")
+            await _hubContext.Clients.Group("Technicians")
+                .SendAsync("ReplacementApproved", replacementData);
+            
+            _logger.LogInformation($"✅ Broadcasted ReplacementApproved to Technicians");
+        }
     }
 }   

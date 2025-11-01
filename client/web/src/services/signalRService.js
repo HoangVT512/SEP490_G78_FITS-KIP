@@ -8,6 +8,7 @@ class SignalRService {
       receiveNotification: [],
       receiveBroadcast: [],
       dataUpdated: [],
+      replacementApproved: [],
     };
   }
 
@@ -211,6 +212,61 @@ class SignalRService {
   offDataUpdated() {
     if (this.connection) {
       this.connection.off("DataUpdated");
+    }
+  }
+
+  // Đăng ký lắng nghe thông báo duyệt cấp phát linh kiện
+  onReplacementApproved(callback) {
+    if (!this.connection) {
+      console.warn("⚠️ Cannot set up ReplacementApproved listener - no connection");
+      return;
+    }
+
+    // Check if this callback already exists
+    if (this.listeners.replacementApproved.includes(callback)) {
+      console.log("📡 ReplacementApproved listener already registered, skipping");
+      return;
+    }
+
+    // Add to tracking
+    this.listeners.replacementApproved.push(callback);
+    
+    // Remove ALL existing event handlers first
+    this.connection.off("ReplacementApproved");
+    
+    // Set up new consolidated handler that calls all registered callbacks
+    console.log(`📡 Setting up ReplacementApproved listener (${this.listeners.replacementApproved.length} callbacks)`);
+    this.connection.on("ReplacementApproved", (data) => {
+      console.log(`📨 [SignalR Service] ReplacementApproved event fired, calling ${this.listeners.replacementApproved.length} callback(s)`);
+      
+      // Call all registered callbacks
+      this.listeners.replacementApproved.forEach((cb, index) => {
+        try {
+          console.log(`  └─ Calling callback #${index + 1}`);
+          cb(data);
+        } catch (error) {
+          console.error(`Error in ReplacementApproved callback #${index + 1}:`, error);
+        }
+      });
+    });
+  }
+
+  // Hủy đăng ký lắng nghe thông báo duyệt cấp phát linh kiện
+  offReplacementApproved(callback) {
+    if (this.connection) {
+      if (callback) {
+        // Remove specific callback
+        const index = this.listeners.replacementApproved.indexOf(callback);
+        if (index > -1) {
+          this.listeners.replacementApproved.splice(index, 1);
+          console.log(`🔇 Removed specific ReplacementApproved callback (${this.listeners.replacementApproved.length} remaining)`);
+        }
+      } else {
+        // Remove all callbacks
+        console.log("🔇 Removing ALL ReplacementApproved listeners");
+        this.listeners.replacementApproved = [];
+        this.connection.off("ReplacementApproved");
+      }
     }
   }
 }

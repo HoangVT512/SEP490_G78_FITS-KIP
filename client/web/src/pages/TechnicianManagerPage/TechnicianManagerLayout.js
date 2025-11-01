@@ -276,15 +276,15 @@ const TechnicianManagerLayout = () => {
     {
       key: "profile",
       icon: <UserOutlined />,
-      label: "Hồ sơ",
+      label: "Thông tin cá nhân",
       onClick: () => navigate("/profile"),
     },
-    {
-      key: "notifications",
-      icon: <BellOutlined />,
-      label: "Thông báo",
-      onClick: () => setNotificationDrawerOpen(true),
-    },
+    // {
+    //   key: "notifications",
+    //   icon: <BellOutlined />,
+    //   label: "Thông báo",
+    //   onClick: () => setNotificationDrawerOpen(true),
+    // },
     {
       key: "logout",
       icon: <LogoutOutlined />,

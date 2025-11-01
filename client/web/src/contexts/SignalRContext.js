@@ -77,7 +77,7 @@ export const SignalRProvider = ({ children }) => {
       newConnection.onclose((error) => {
         console.log("❌ SignalR connection closed:", error);
         setIsConnected(false);
-        
+
         // Auto reconnect after 5 seconds
         if (reconnectTimeoutRef.current) {
           clearTimeout(reconnectTimeoutRef.current);
@@ -89,12 +89,12 @@ export const SignalRProvider = ({ children }) => {
       });
 
       // ===== NOTIFICATION LISTENERS =====
-      
+
       // 1. Nhận thông báo chung
       newConnection.on("ReceiveNotification", (notification) => {
         console.log("🔔 Received notification:", notification);
         setNotifications((prev) => [notification, ...prev]);
-        
+
         // Hiển thị toast notification
         if (notification.type === "Success") {
           message.success(notification.message);
@@ -110,7 +110,7 @@ export const SignalRProvider = ({ children }) => {
       // 2. Cập nhật dữ liệu real-time
       newConnection.on("DataUpdated", (data) => {
         console.log("🔄 Data updated:", data);
-        
+
         // Trigger callbacks cho listeners đã đăng ký
         const listeners = listenersRef.current.get(data.type);
         if (listeners) {
@@ -121,12 +121,12 @@ export const SignalRProvider = ({ children }) => {
       // 3. Nhận thông báo phân công Work Order (cho Technician)
       newConnection.on("WorkOrderAssigned", (workOrder) => {
         console.log("📋 Work Order assigned to you:", workOrder);
-        
+
         const listeners = listenersRef.current.get("WorkOrderAssigned");
         if (listeners) {
           listeners.forEach(callback => callback(workOrder));
         }
-        
+
         message.info({
           content: `Bạn được giao công việc mới: ${workOrder.equipmentName}`,
           duration: 5,
@@ -136,12 +136,12 @@ export const SignalRProvider = ({ children }) => {
       // 4. Nhận thông báo Technician bắt đầu làm việc (cho TechManager)
       newConnection.on("WorkOrderStarted", (workOrder) => {
         console.log("▶️ Work Order started:", workOrder);
-        
+
         const listeners = listenersRef.current.get("WorkOrderStarted");
         if (listeners) {
           listeners.forEach(callback => callback(workOrder));
         }
-        
+
         message.info({
           content: `${workOrder.technicianName} đã bắt đầu công việc: ${workOrder.equipmentName}`,
           duration: 4,
@@ -151,12 +151,12 @@ export const SignalRProvider = ({ children }) => {
       // 5. Nhận thông báo Technician hoàn thành (cho TechManager)
       newConnection.on("WorkOrderCompleted", (workOrder) => {
         console.log("✅ Work Order completed:", workOrder);
-        
+
         const listeners = listenersRef.current.get("WorkOrderCompleted");
         if (listeners) {
           listeners.forEach(callback => callback(workOrder));
         }
-        
+
         message.success({
           content: `${workOrder.technicianName} đã hoàn thành: ${workOrder.equipmentName}`,
           duration: 5,
@@ -166,7 +166,7 @@ export const SignalRProvider = ({ children }) => {
       // 6. Nhận thông báo cập nhật checklist (cho TechManager)
       newConnection.on("ChecklistItemUpdated", (data) => {
         console.log("☑️ Checklist item updated:", data);
-        
+
         const listeners = listenersRef.current.get("ChecklistItemUpdated");
         if (listeners) {
           listeners.forEach(callback => callback(data));
@@ -176,7 +176,7 @@ export const SignalRProvider = ({ children }) => {
       // 7. Nhận thông báo tạo Work Order mới (cho Technician)
       newConnection.on("NewWorkOrderCreated", (workOrder) => {
         console.log("🆕 New Work Order created:", workOrder);
-        
+
         const listeners = listenersRef.current.get("NewWorkOrderCreated");
         if (listeners) {
           listeners.forEach(callback => callback(workOrder));
@@ -186,12 +186,12 @@ export const SignalRProvider = ({ children }) => {
       // 8. Nhận thông báo hủy Work Order (cho Technician)
       newConnection.on("WorkOrderCancelled", (workOrder) => {
         console.log("❌ Work Order cancelled:", workOrder);
-        
+
         const listeners = listenersRef.current.get("WorkOrderCancelled");
         if (listeners) {
           listeners.forEach(callback => callback(workOrder));
         }
-        
+
         message.warning({
           content: `Công việc ${workOrder.equipmentName} đã bị hủy: ${workOrder.reason}`,
           duration: 5,
@@ -201,12 +201,12 @@ export const SignalRProvider = ({ children }) => {
       // 9. Nhận thông báo hoãn bảo trì (cho TechManager)
       newConnection.on("MaintenancePostponed", (plan) => {
         console.log("⏰ Maintenance postponed:", plan);
-        
+
         const listeners = listenersRef.current.get("MaintenancePostponed");
         if (listeners) {
           listeners.forEach(callback => callback(plan));
         }
-        
+
         message.info({
           content: `Chu kỳ bảo trì ${plan.equipmentName} đã được hoãn`,
           duration: 4,
@@ -216,15 +216,30 @@ export const SignalRProvider = ({ children }) => {
       // 10. Nhận thông báo yêu cầu hỗ trợ từ Technician (cho TechManager)
       newConnection.on("TechnicianRequestHelp", (request) => {
         console.log("🆘 Technician request help:", request);
-        
+
         const listeners = listenersRef.current.get("TechnicianRequestHelp");
         if (listeners) {
           listeners.forEach(callback => callback(request));
         }
-        
+
         message.warning({
           content: `${request.technicianName} yêu cầu hỗ trợ: ${request.reason}`,
           duration: 6,
+        });
+      });
+
+      // 11. Nhận thông báo duyệt cấp phát linh kiện (cho Technician)
+      newConnection.on("ReplacementApproved", (data) => {
+        console.log("✅ Replacement approved:", data);
+
+        const listeners = listenersRef.current.get("ReplacementApproved");
+        if (listeners) {
+          listeners.forEach(callback => callback(data));
+        }
+
+        message.success({
+          content: `Linh kiện đã được duyệt: ${data.partName} cho ${data.equipmentName}`,
+          duration: 5,
         });
       });
 
@@ -233,13 +248,13 @@ export const SignalRProvider = ({ children }) => {
       console.log("✅ SignalR connected successfully!");
       setConnection(newConnection);
       setIsConnected(true);
-      
+
       message.success("Kết nối real-time thành công!", 2);
 
     } catch (error) {
       console.error("❌ SignalR connection error:", error);
       setIsConnected(false);
-      
+
       // Retry after 5 seconds
       if (reconnectTimeoutRef.current) {
         clearTimeout(reconnectTimeoutRef.current);
@@ -263,13 +278,13 @@ export const SignalRProvider = ({ children }) => {
         console.error("❌ Error disconnecting SignalR:", error);
       }
     }
-    
+
     // Clear reconnect timeout
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
     }
-    
+
     // Clear all listeners
     listenersRef.current.clear();
   }, [connection]);

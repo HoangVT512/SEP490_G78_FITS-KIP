@@ -502,6 +502,58 @@ namespace FITSKIP.API.Controllers
                 });
             }
         }
+
+        /// <summary>
+        /// Send notification to all Technicians (Manager only)
+        /// </summary>
+        [HttpPost("send-to-technicians")]
+        [Authorize(Roles = "Admin,Quản lý,Manager,Quản lý kỹ thuật")]
+        public async Task<ActionResult<ApiResponse<bool>>> SendToTechnicians([FromBody] SendSparePartRequestNotification request)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(new ApiResponse<bool>
+                    {
+                        Success = false,
+                        Message = "User not authenticated"
+                    });
+                }
+
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(new ApiResponse<bool>
+                    {
+                        Success = false,
+                        Message = "Invalid request data"
+                    });
+                }
+
+                // Send notification to all Technicians
+                await _notificationService.SendNotificationToRoleAsync(
+                    "Kỹ thuật viên",
+                    request.Message,
+                    request.Type ?? "replacementApproved"
+                );
+
+                return Ok(new ApiResponse<bool>
+                {
+                    Success = true,
+                    Message = "Notification sent to Technicians successfully",
+                    Data = true
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<bool>
+                {
+                    Success = false,
+                    Message = $"Internal server error: {ex.Message}"
+                });
+            }
+        }
     }
 
     /// <summary>

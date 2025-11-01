@@ -35,6 +35,12 @@ namespace FITSKIP.API.Hubs
                         await Groups.AddToGroupAsync(Context.ConnectionId, "TechnicalManagers");
                         Console.WriteLine($"User {userId} added to TechnicalManagers group");
                     }
+                    // Check for Technician role
+                    if (role == "Kỹ thuật viên" || role == "Technician" || role.Contains("Kỹ thuật viên"))
+                    {
+                        await Groups.AddToGroupAsync(Context.ConnectionId, "Technicians");
+                        Console.WriteLine($"User {userId} added to Technicians group");
+                    }
                 }
             }
 
@@ -48,6 +54,25 @@ namespace FITSKIP.API.Hubs
             if (!string.IsNullOrEmpty(userId))
             {
                 await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"user_{userId}");
+
+                // Remove from role-based groups
+                var roles = Context.User?.FindAll(ClaimTypes.Role)?.Select(c => c.Value) ?? Enumerable.Empty<string>();
+                foreach (var role in roles)
+                {
+                    if (role == "Quản lý" || role == "Manager")
+                    {
+                        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "Managers");
+                    }
+                    if (role == "Quản lý kỹ thuật" || role == "Technical Manager" || role.Contains("Quản lý kỹ thuật"))
+                    {
+                        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "TechnicalManagers");
+                    }
+                    if (role == "Kỹ thuật viên" || role == "Technician" || role.Contains("Kỹ thuật viên"))
+                    {
+                        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "Technicians");
+                    }
+                }
+
                 Console.WriteLine($"User {userId} disconnected from NotificationHub");
             }
 
@@ -98,6 +123,14 @@ namespace FITSKIP.API.Hubs
             var groupName = $"TechnicalManagers_Department_{departmentId}";
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
             Console.WriteLine($"Connection {Context.ConnectionId} left group {groupName}");
+        }
+
+        // Send replacement approved notification to technicians
+        public async Task SendReplacementApprovedNotification(object data)
+        {
+            // Send to all technicians (users with role "Kỹ thuật viên" or "Technician")
+            await Clients.Group("Technicians").SendAsync("ReplacementApproved", data);
+            Console.WriteLine($"Sent replacement approved notification to Technicians group");
         }
     }
 }

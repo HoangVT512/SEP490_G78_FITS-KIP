@@ -24,6 +24,8 @@ import dayjs from "dayjs";
 import { replacementHistoryService } from "../../services/replacementHistoryService";
 import { userService } from "../../services/userService";
 import { sparePartService } from "../../services/sparePartService";
+import { useSignalR } from "../../contexts/SignalRContext";
+import * as notificationService from "../../services/notificationService";
 
 const { Title, Text } = Typography;
 
@@ -44,6 +46,7 @@ const ReplacementApprovalModal = ({
   const [allUsers, setAllUsers] = useState([]);
   const [sparePartsStock, setSparePartsStock] = useState({}); // Store spare parts stock info
   const { user: currentUser } = useAuth();
+  const { sendMessage } = useSignalR();
 
   useEffect(() => {
     if (!open) return;
@@ -361,6 +364,40 @@ const ReplacementApprovalModal = ({
         console.log("Calling generic update with payload:", payload);
         await replacementHistoryService.update(replacementId, payload);
         message.success(`✅ Cập nhật trạng thái thành công (${newStatus})`);
+        
+        // Gửi notification real-time cho Technician nếu duyệt cấp phát
+        if (newStatus === "Đã duyệt cấp phát") {
+          try {
+            // Gửi notification qua API để đảm bảo chắc chắn
+            await notificationService.sendToTechnicians({
+              message: `Linh kiện ${record.partName || record.PartName || "N/A"} đã được duyệt cấp phát cho thiết bị ${equipmentInfo?.name || "N/A"}`,
+              type: "Success",
+              data: {
+                replacementId: replacementId,
+                partName: record.partName || record.PartName || "Linh kiện",
+                equipmentName: equipmentInfo?.name || "Thiết bị",
+                approvedBy: currentUser?.fullName || currentUser?.FullName || currentUser?.username || "Quản lý",
+                quantity: record.quantity || record.Quantity || 0,
+                incidentId: incidentId,
+              }
+            });
+            console.log("✅ Sent replacement approved notification via API");
+
+            // Đồng thời gửi qua SignalR để đảm bảo real-time
+            await sendMessage("SendReplacementApprovedNotification", {
+              replacementId: replacementId,
+              partName: record.partName || record.PartName || "Linh kiện",
+              equipmentName: equipmentInfo?.name || "Thiết bị",
+              approvedBy: currentUser?.fullName || currentUser?.FullName || currentUser?.username || "Quản lý",
+              quantity: record.quantity || record.Quantity || 0,
+              incidentId: incidentId,
+            });
+            console.log("✅ Sent replacement approved notification via SignalR");
+          } catch (notificationError) {
+            console.error("❌ Failed to send notification:", notificationError);
+            // Không throw error vì đây chỉ là notification, không ảnh hưởng đến logic chính
+          }
+        }
       }
 
       await load();

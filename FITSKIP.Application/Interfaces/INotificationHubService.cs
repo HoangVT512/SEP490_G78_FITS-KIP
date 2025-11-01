@@ -18,6 +18,7 @@ namespace FITSKIP.Application.Interfaces
         Task SendTechnicianRequestHelpAsync(object requestData);
         Task SendDataUpdatedAsync(string dataType, object data);
         Task SendWorkOrderReassignedAsync(string oldTechnicianId, string newTechnicianId, object workOrderData);
+        Task SendReplacementApprovedAsync(object replacementData);
     }
 }
 
