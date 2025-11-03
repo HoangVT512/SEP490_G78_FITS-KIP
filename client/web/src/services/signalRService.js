@@ -4,11 +4,29 @@ class SignalRService {
   constructor() {
     this.connection = null;
     this.isConnected = false;
+    this.listeners = {
+      receiveNotification: [],
+      receiveBroadcast: [],
+      dataUpdated: [],
+      replacementApproved: [],
+    };
   }
 
   // Khởi tạo kết nối
   async startConnection(token) {
     try {
+      // Nếu đã có connection và đang connected, return luôn
+      if (this.connection && this.isConnected) {
+        console.log("SignalR already connected, reusing existing connection");
+        return this.connection;
+      }
+
+      // Nếu có connection cũ nhưng chưa connected, stop nó trước
+      if (this.connection) {
+        console.log("Stopping old SignalR connection...");
+        await this.stopConnection();
+      }
+
       // Tạo connection với URL của NotificationHub
       // Đảm bảo URL không có undefined hoặc các tham số không cần thiết
       const baseUrl =
@@ -29,28 +47,28 @@ class SignalRService {
 
       // Xử lý khi kết nối lại thành công
       this.connection.onreconnecting((error) => {
-        console.warn("SignalR đang reconnecting...", error);
+        console.warn("⚠️ SignalR đang reconnecting...", error);
         this.isConnected = false;
       });
 
       this.connection.onreconnected((connectionId) => {
-        console.log("SignalR đã reconnected:", connectionId);
+        console.log("✅ SignalR đã reconnected:", connectionId);
         this.isConnected = true;
       });
 
       this.connection.onclose((error) => {
-        console.error("SignalR connection closed:", error);
+        console.error("❌ SignalR connection closed:", error);
         this.isConnected = false;
       });
 
       // Start connection
       await this.connection.start();
       this.isConnected = true;
-      console.log("SignalR Connected successfully!");
+      console.log("✅ SignalR Connected successfully! ConnectionId:", this.connection.connectionId);
 
       return this.connection;
     } catch (error) {
-      console.error("SignalR Connection Error:", error);
+      console.error("❌ SignalR Connection Error:", error);
       this.isConnected = false;
       throw error;
     }
@@ -58,21 +76,56 @@ class SignalRService {
 
   // Đăng ký lắng nghe thông báo
   onReceiveNotification(callback) {
-    if (this.connection) {
-      // Remove existing listeners first to prevent duplicates
-      this.connection.off("ReceiveNotification");
-
-      this.connection.on("ReceiveNotification", (notification) => {
-        console.log("Received notification:", notification);
-        callback(notification);
-      });
+    if (!this.connection) {
+      console.warn("⚠️ Cannot set up ReceiveNotification listener - no connection");
+      return;
     }
+
+    // Check if this callback already exists
+    if (this.listeners.receiveNotification.includes(callback)) {
+      console.log("📡 ReceiveNotification listener already registered, skipping");
+      return;
+    }
+
+    // Add to tracking
+    this.listeners.receiveNotification.push(callback);
+    
+    // Remove ALL existing event handlers first
+    this.connection.off("ReceiveNotification");
+    
+    // Set up new consolidated handler that calls all registered callbacks
+    console.log(`📡 Setting up ReceiveNotification listener (${this.listeners.receiveNotification.length} callbacks)`);
+    this.connection.on("ReceiveNotification", (notification) => {
+      console.log(`📨 [SignalR Service] ReceiveNotification event fired, calling ${this.listeners.receiveNotification.length} callback(s)`);
+      
+      // Call all registered callbacks
+      this.listeners.receiveNotification.forEach((cb, index) => {
+        try {
+          console.log(`  └─ Calling callback #${index + 1}`);
+          cb(notification);
+        } catch (error) {
+          console.error(`Error in ReceiveNotification callback #${index + 1}:`, error);
+        }
+      });
+    });
   }
 
   // Hủy đăng ký lắng nghe thông báo
-  offReceiveNotification() {
+  offReceiveNotification(callback) {
     if (this.connection) {
-      this.connection.off("ReceiveNotification");
+      if (callback) {
+        // Remove specific callback
+        const index = this.listeners.receiveNotification.indexOf(callback);
+        if (index > -1) {
+          this.listeners.receiveNotification.splice(index, 1);
+          console.log(`🔇 Removed specific ReceiveNotification callback (${this.listeners.receiveNotification.length} remaining)`);
+        }
+      } else {
+        // Remove all callbacks
+        console.log("🔇 Removing ALL ReceiveNotification listeners");
+        this.listeners.receiveNotification = [];
+        this.connection.off("ReceiveNotification");
+      }
     }
   }
 
@@ -159,6 +212,61 @@ class SignalRService {
   offDataUpdated() {
     if (this.connection) {
       this.connection.off("DataUpdated");
+    }
+  }
+
+  // Đăng ký lắng nghe thông báo duyệt cấp phát linh kiện
+  onReplacementApproved(callback) {
+    if (!this.connection) {
+      console.warn("⚠️ Cannot set up ReplacementApproved listener - no connection");
+      return;
+    }
+
+    // Check if this callback already exists
+    if (this.listeners.replacementApproved.includes(callback)) {
+      console.log("📡 ReplacementApproved listener already registered, skipping");
+      return;
+    }
+
+    // Add to tracking
+    this.listeners.replacementApproved.push(callback);
+    
+    // Remove ALL existing event handlers first
+    this.connection.off("ReplacementApproved");
+    
+    // Set up new consolidated handler that calls all registered callbacks
+    console.log(`📡 Setting up ReplacementApproved listener (${this.listeners.replacementApproved.length} callbacks)`);
+    this.connection.on("ReplacementApproved", (data) => {
+      console.log(`📨 [SignalR Service] ReplacementApproved event fired, calling ${this.listeners.replacementApproved.length} callback(s)`);
+      
+      // Call all registered callbacks
+      this.listeners.replacementApproved.forEach((cb, index) => {
+        try {
+          console.log(`  └─ Calling callback #${index + 1}`);
+          cb(data);
+        } catch (error) {
+          console.error(`Error in ReplacementApproved callback #${index + 1}:`, error);
+        }
+      });
+    });
+  }
+
+  // Hủy đăng ký lắng nghe thông báo duyệt cấp phát linh kiện
+  offReplacementApproved(callback) {
+    if (this.connection) {
+      if (callback) {
+        // Remove specific callback
+        const index = this.listeners.replacementApproved.indexOf(callback);
+        if (index > -1) {
+          this.listeners.replacementApproved.splice(index, 1);
+          console.log(`🔇 Removed specific ReplacementApproved callback (${this.listeners.replacementApproved.length} remaining)`);
+        }
+      } else {
+        // Remove all callbacks
+        console.log("🔇 Removing ALL ReplacementApproved listeners");
+        this.listeners.replacementApproved = [];
+        this.connection.off("ReplacementApproved");
+      }
     }
   }
 }

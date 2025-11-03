@@ -1,5 +1,6 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using FITSKIP.Domain.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -14,11 +15,13 @@ namespace FITSKIP.API.Controllers;
 public class IncidentsController : ControllerBase
 {
     private readonly IIncidentService _incidentService;
+    private readonly IUserRepository _userRepository;
     private readonly IHubContext<NotificationHub> _hubContext;
 
-    public IncidentsController(IIncidentService incidentService, IHubContext<NotificationHub> hubContext)
+    public IncidentsController(IIncidentService incidentService, IUserRepository userRepository, IHubContext<NotificationHub> hubContext)
     {
         _incidentService = incidentService;
+        _userRepository = userRepository;
         _hubContext = hubContext;
     }
 
@@ -64,6 +67,108 @@ public class IncidentsController : ControllerBase
         catch (Exception ex)
         {
             return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi lấy danh sách sự cố", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Lấy sự cố cần hỗ trợ kỹ thuật (IsTechSupport = true và Status chưa hoàn thành)
+    /// </summary>
+    [HttpGet("tech-support-pending")]
+    public async Task<IActionResult> GetTechSupportPendingIncidents([FromQuery] string? date = null)
+    {
+        try
+        {
+            var allIncidents = await _incidentService.GetIncidentsAsync();
+
+            // Filter: IsTechSupport = true AND Status != "Hoàn thành"
+            var pendingIncidents = allIncidents.Where(i =>
+                i.IsTechSupport &&
+                i.Status != "Hoàn thành"
+            );
+
+            // If date is provided, filter by date
+            if (!string.IsNullOrEmpty(date))
+            {
+                if (!DateTime.TryParseExact(date, "yyyy-MM-dd", null, System.Globalization.DateTimeStyles.None, out var parsedDate))
+                {
+                    return BadRequest(new { success = false, message = "Invalid date format. Use yyyy-MM-dd." });
+                }
+                pendingIncidents = pendingIncidents.Where(i =>
+                    i.StartTime.HasValue &&
+                    i.StartTime.Value.Date == parsedDate.Date
+                );
+            }
+
+            // Get all users for assignedTo lookup
+            var allUsers = await _userRepository.GetUsersWithRolesAsync();
+            var userLookup = allUsers.ToDictionary(u => u.Id, u => u.FullName);
+
+            // Group by LineId
+            var groupedByLine = pendingIncidents
+                .GroupBy(i => i.LineId)
+                .Select(g => new
+                {
+                    lineId = g.Key,
+                    incidentCount = g.Count(),
+                    totalDuration = g.Sum(i => i.Duration ?? 0),
+                    incidents = g.Select(i => new
+                    {
+                        incidentId = i.IncidentId,
+                        equipmentCode = i.Equipment?.EquipmentCode,
+                        equipmentName = i.Equipment?.EquipmentName,
+                        stage = i.Equipment?.Stage?.StageName,
+                        line = i.Line?.LineName,
+                        startTime = i.StartTime,
+                        duration = i.Duration,
+                        status = i.Status,
+                        issue = i.Issue,
+                        assignedTo = !string.IsNullOrEmpty(i.AssignedTo)
+                            ? userLookup.GetValueOrDefault(i.AssignedTo, "Unknown User")
+                            : null
+                    }).ToList()
+                })
+                .ToList();
+
+            return Ok(new { success = true, data = groupedByLine });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Error fetching tech support incidents", details = ex.Message });
+        }
+    }
+
+    [HttpGet("line/{lineId}/date")]
+    public async Task<IActionResult> GetIncidentsByLineAndDate(int lineId, [FromQuery] string date)
+    {
+        try
+        {
+            // Parse date string to DateTime with DD/MM/YYYY format
+            Console.WriteLine($"Đang parse date string: '{date}'");
+            var vietnameseCulture = new System.Globalization.CultureInfo("vi-VN");
+            if (!DateTime.TryParse(date, vietnameseCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
+            {
+                Console.WriteLine($"Không thể parse date: '{date}' với culture vi-VN");
+                return BadRequest(new { success = false, message = "Định dạng ngày không hợp lệ. Định dạng mong đợi: DD/MM/YYYY" });
+            }
+
+            Console.WriteLine($"Đang lấy incidents cho line {lineId} vào ngày {parsedDate:dd/MM/yyyy}");
+
+            // Get all incidents and filter by LineId and date (safely handle nullable StartTime)
+            var allIncidents = await _incidentService.GetIncidentsAsync();
+            var filteredIncidents = allIncidents.Where(i =>
+                i.LineId == lineId &&
+                i.StartTime.HasValue &&  // Ensure StartTime is not null
+                i.StartTime.Value.Date == parsedDate.Date  // Access .Date on the non-null value
+            ).ToList();
+
+            Console.WriteLine($"Tìm thấy {filteredIncidents.Count} incidents");
+
+            return Ok(new { success = true, data = filteredIncidents, message = "Lấy danh sách incidents theo line và ngày thành công" });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Lỗi khi lấy incidents: {ex.Message}");
+            return BadRequest(new { success = false, message = "Có lỗi xảy ra khi lấy danh sách incidents theo line và ngày", details = ex.Message });
         }
     }
 
@@ -181,11 +286,11 @@ public class IncidentsController : ControllerBase
                 return BadRequest(new { success = false, message = "Thời lượng không được âm" });
             }
 
-            // Validate ReportedByUserId
-            if (string.IsNullOrWhiteSpace(request.ReportedByUserId))
-            {
-                return BadRequest(new { success = false, message = "ID người báo cáo là bắt buộc" });
-            }
+            // Validate ReportedByUserId - optional, can be null if not selected
+            // if (string.IsNullOrWhiteSpace(request.ReportedByUserId))
+            // {
+            //     return BadRequest(new { success = false, message = "ID người báo cáo là bắt buộc" });
+            // }
 
             // Validate time logic
             if (request.EndTime.HasValue && request.StartTime.HasValue && request.EndTime.Value <= request.StartTime.Value)
@@ -203,12 +308,20 @@ public class IncidentsController : ControllerBase
                 return BadRequest(new { success = false, message = "Thời gian bắt đầu không thể trong tương lai" });
             }
 
-            // Set ReportedByUserId from authenticated user if available
-            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!string.IsNullOrEmpty(userId))
+            // Validate Duration against actual time if both start and end times are provided
+            if (request.Duration.HasValue && request.EndTime.HasValue && request.StartTime.HasValue)
             {
-                request.ReportedByUserId = userId;
+                var rawActualDuration = CalculateAdjustedDuration(request.StartTime.Value, request.EndTime.Value);
+                var actualDuration = Math.Round(rawActualDuration, 2);
+
+                if (request.Duration.Value > actualDuration)
+                {
+                    return BadRequest(new { success = false, message = $"Thời lượng ({request.Duration.Value:F2} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
+                }
             }
+
+            // Don't auto-set ReportedByUserId - allow it to be null if not selected
+            // If user doesn't select anyone, it should remain null in database
 
             var incident = await _incidentService.CreateIncidentAsync(request);
             // Note: Realtime notifications are already sent from IncidentService
@@ -278,20 +391,22 @@ public class IncidentsController : ControllerBase
                 {
                     return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Thời gian kết thúc không thể trong tương lai" });
                 }
-            }
 
-            // Set ReportedByUserId from authenticated user if not provided
-            var userId = User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-            if (!string.IsNullOrEmpty(userId))
-            {
-                foreach (var incident in request.Incidents)
+                // Validate Duration against actual time if both start and end times are provided
+                if (incident.Duration.HasValue && incident.EndTime.HasValue && incident.StartTime.HasValue)
                 {
-                    if (string.IsNullOrEmpty(incident.ReportedByUserId))
+                    var rawActualDuration = CalculateAdjustedDuration(incident.StartTime.Value, incident.EndTime.Value);
+                    var actualDuration = Math.Round(rawActualDuration, 2);
+
+                    if (incident.Duration.Value > actualDuration)
                     {
-                        incident.ReportedByUserId = userId;
+                        return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Thời lượng ({incident.Duration.Value:F2} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
                     }
                 }
             }
+
+            // Don't auto-set ReportedByUserId - allow it to be null if not selected
+            // If user doesn't select anyone, it should remain null in database
 
             var result = await _incidentService.CreateBulkIncidentsAsync(request);
 
@@ -386,11 +501,6 @@ public class IncidentsController : ControllerBase
                 return BadRequest(new { success = false, message = "Thời lượng không được âm" });
             }
 
-            if (string.IsNullOrWhiteSpace(request.ReportedByUserId))
-            {
-                return BadRequest(new { success = false, message = "ID người báo cáo là bắt buộc" });
-            }
-
             if (request.StartTime > DateTime.Now)
             {
                 return BadRequest(new { success = false, message = "Thời gian bắt đầu không thể trong tương lai" });
@@ -404,6 +514,18 @@ public class IncidentsController : ControllerBase
             if (request.EndTime.HasValue && request.EndTime.Value > DateTime.Now)
             {
                 return BadRequest(new { success = false, message = "Thời gian kết thúc không thể trong tương lai" });
+            }
+
+            // Validate Duration against actual time if both start and end times are provided
+            if (request.Duration.HasValue && request.EndTime.HasValue)
+            {
+                var rawActualDuration = CalculateAdjustedDuration(request.StartTime, request.EndTime.Value);
+                var actualDuration = Math.Round(rawActualDuration, 2);
+
+                if (request.Duration.Value > actualDuration)
+                {
+                    return BadRequest(new { success = false, message = $"Thời lượng ({request.Duration.Value:F2} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
+                }
             }
 
             var incident = await _incidentService.UpdateIncidentAsync(id, request);
@@ -681,5 +803,104 @@ public class IncidentsController : ControllerBase
         {
             return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi upload ảnh", details = ex.Message });
         }
+    }
+
+    /// <summary>
+    /// Kiểm tra trạng thái yêu cầu linh kiện của sự cố
+    /// </summary>
+    [HttpGet("{incidentId}/spare-parts-status")]
+    public async Task<IActionResult> GetIncidentSparePartsStatus(int incidentId)
+    {
+        try
+        {
+            var incident = await _incidentService.GetIncidentByIdAsync(incidentId);
+            if (incident == null)
+            {
+                return NotFound(new { success = false, message = "Không tìm thấy sự cố" });
+            }
+
+            var sparePartsStatus = await _incidentService.GetSparePartsStatusAsync(incidentId);
+
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    hasPendingRequests = sparePartsStatus.HasPendingRequests,
+                    hasReturnRequests = sparePartsStatus.HasReturnRequests,
+                    incidentId = incidentId
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi kiểm tra trạng thái linh kiện", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Kiểm tra xem sự cố có yêu cầu linh kiện không
+    /// </summary>
+    [HttpGet("{incidentId}/has-spare-parts")]
+    public async Task<IActionResult> CheckIncidentHasSpareParts(int incidentId)
+    {
+        try
+        {
+            var incident = await _incidentService.GetIncidentByIdAsync(incidentId);
+            if (incident == null)
+            {
+                return NotFound(new { success = false, message = "Không tìm thấy sự cố" });
+            }
+
+            // Call the service method directly with incidentId - this will check ReplacementHistories table for this specific incident
+            var hasSpareParts = await _incidentService.HasSparePartsRequiredAsync(incidentId);
+
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
+                    hasSpareParts = hasSpareParts,
+                    incidentId = incidentId
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Error: Có lỗi xảy ra khi kiểm tra linh kiện", details = ex.Message });
+        }
+    }
+
+    private decimal CalculateAdjustedDuration(DateTime startTime, DateTime endTime)
+    {
+        var rawDuration = (decimal)(endTime - startTime).TotalMinutes;
+        var adjustedDuration = rawDuration;
+
+        // Break times: 11:00-11:30 and 18:00-18:30
+        var break1Start = startTime.Date.AddHours(11);
+        var break1End = startTime.Date.AddHours(11).AddMinutes(30);
+        var break2Start = startTime.Date.AddHours(18);
+        var break2End = startTime.Date.AddHours(18).AddMinutes(30);
+
+        // Calculate overlap with break 1 (11:00-11:30)
+        var break1OverlapStart = startTime > break1Start ? startTime : break1Start;
+        var break1OverlapEnd = endTime < break1End ? endTime : break1End;
+        if (break1OverlapStart < break1OverlapEnd)
+        {
+            var break1Overlap = (decimal)(break1OverlapEnd - break1OverlapStart).TotalMinutes;
+            adjustedDuration -= break1Overlap;
+        }
+
+        // Calculate overlap with break 2 (18:00-18:30)
+        var break2OverlapStart = startTime > break2Start ? startTime : break2Start;
+        var break2OverlapEnd = endTime < break2End ? endTime : break2End;
+        if (break2OverlapStart < break2OverlapEnd)
+        {
+            var break2Overlap = (decimal)(break2OverlapEnd - break2OverlapStart).TotalMinutes;
+            adjustedDuration -= break2Overlap;
+        }
+
+        // Ensure duration is not negative
+        return Math.Max(0, adjustedDuration);
     }
 }

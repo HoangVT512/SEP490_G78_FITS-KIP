@@ -1,10 +1,17 @@
 package com.example.fitsforkip.ui.home;
 
+import android.Manifest;
 import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
+import android.provider.MediaStore;
+import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.animation.Animation;
@@ -18,6 +25,9 @@ import androidx.appcompat.app.ActionBarDrawerToggle;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 
@@ -25,22 +35,30 @@ import com.example.fitsforkip.R;
 import com.example.fitsforkip.data.local.AppDatabase;
 import com.example.fitsforkip.data.local.AppDatabaseSingleton;
 import com.example.fitsforkip.data.local.IncidentHistoryEntity;
+import com.example.fitsforkip.data.model.BulkIncidentResponse;
+import com.example.fitsforkip.data.model.CreateBulkIncidentRequest;
 import com.example.fitsforkip.data.model.IncidentRequestWrapper;
+import com.example.fitsforkip.data.model.UploadImageResponse;
 import com.example.fitsforkip.ui.equipment.EquipmentListActivity;
 import com.example.fitsforkip.ui.incident.IncidentHistoryActivity;
 import com.example.fitsforkip.ui.login.LoginActivity;
+import com.example.fitsforkip.ui.scan.AddTechnicalSupportImagesDialog;
 import com.example.fitsforkip.ui.scan.DeviceInfoDialog;
 import com.example.fitsforkip.ui.scan.QRScannerActivity;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.navigation.NavigationView;
 import com.google.android.material.card.MaterialCardView;
 
+import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Arrays;
 
 import com.example.fitsforkip.data.model.Equipment;
 import com.example.fitsforkip.data.remote.ApiClient;
@@ -48,11 +66,15 @@ import com.example.fitsforkip.data.remote.ApiService;
 import com.example.fitsforkip.data.model.ApiResponse;
 import com.example.fitsforkip.data.model.CreateIncidentRequest;
 import com.example.fitsforkip.data.model.IncidentHistory;
+
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.RequestBody;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-public class HomeActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, DeviceInfoDialog.OnOptionsSelectedListener {
+public class HomeActivity extends AppCompatActivity implements NavigationView.OnNavigationItemSelectedListener, DeviceInfoDialog.OnOptionsSelectedListener, AddTechnicalSupportImagesDialog.OnImageCaptureRequested {
 
     private DrawerLayout drawerLayout;
     private NavigationView navigationView;
@@ -86,6 +108,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     private Animation fabOpenRotate, fabCloseRotate, fabOpen, fabClose;
 
     private String employeeId;
+    private String userId;
     private String productionLine;
 
     private String currentDeviceCode;
@@ -101,6 +124,11 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     private ProgressDialog progressDialog;
 
     private List<Equipment> equipmentList;
+
+    private AddTechnicalSupportImagesDialog currentImageDialog;
+    private Uri currentPhotoUri;
+
+    private int lineId;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -119,7 +147,9 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
     private void loadUserData() {
         SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         employeeId = prefs.getString("employee_id", "Unknown");
+        userId = prefs.getString("user_id", null);
         productionLine = prefs.getString("production_line", "Unknown");
+        lineId = prefs.getInt("line_id", -1);
 
         // Hoặc lấy từ Intent
         Intent intent = getIntent();
@@ -295,6 +325,19 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
                 DeviceInfoDialog dialog = new DeviceInfoDialog(this, equipment, this);
                 dialog.show();
             }
+        } else if (requestCode == AddTechnicalSupportImagesDialog.REQUEST_CAMERA) {
+            // XỬ LÝ KẾT QUẢ TỪ CAMERA
+            if (resultCode == RESULT_OK && currentImageDialog != null) {
+                // Tạo Intent với URI đã lưu
+                Intent cameraData = new Intent();
+                cameraData.setData(currentPhotoUri);
+                currentImageDialog.onActivityResult(requestCode, resultCode, cameraData);
+            }
+        } else if (requestCode == AddTechnicalSupportImagesDialog.REQUEST_GALLERY) {
+            // XỬ LÝ KẾT QUẢ TỪ GALLERY
+            if (currentImageDialog != null) {
+                currentImageDialog.onActivityResult(requestCode, resultCode, data);
+            }
         }
     }
 
@@ -332,111 +375,303 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
                 .show();
     }
 
+//    @Override
+//    public void onOptionsSelected(List<String> selectedOptions) {
+//        boolean hasRelevantOption = false;
+//        String type = "";
+//        String problem = "";
+//        Equipment equipment = null;
+//
+//        for (String option : selectedOptions) {
+//            if (option.equals("Phế phẩm")) {
+//                hasRelevantOption = true;
+//                type = "Phế phẩm";
+//                problem = "";
+//            } else if (option.equals("Đổi mã")) {
+//                hasRelevantOption = true;
+//                type = "Đổi mã";
+//                problem = "";
+//            } else if (!option.equals("Cần hỗ trợ kỹ thuật") && !option.equals("Báo cáo sự cố")) {
+//                hasRelevantOption = true;
+//                if (type.isEmpty()) {
+//                    type = "Chưa xác định";
+//                }
+//                if (problem.isEmpty()) {
+//                    problem = option;
+//                } else {
+//                    problem += ", " + option;
+//                }
+//            } else if (option.equals("Cần hỗ trợ kỹ thuật")) {
+//                hasRelevantOption = true;
+//                if (type.isEmpty()) {
+//                    type = "Cần hỗ trợ kỹ thuật";
+//                }
+//                if (problem.isEmpty()) {
+//                    problem = "Chưa xác định";
+//                } else {
+//                    problem += ", Cần hỗ trợ kỹ thuật";
+//                }
+//            }
+//        }
+//
+//        if (hasRelevantOption) {
+//            if (equipmentList != null) {
+//                for (Equipment eq : equipmentList) {
+//                    if (eq.getQrcode().equals(currentDeviceCode)) {
+//                        equipment = eq;
+//                        break;
+//                    }
+//                }
+//            }
+//
+//            if (equipment == null) {
+//                Toast.makeText(this, "Không tìm thấy thông tin thiết bị", Toast.LENGTH_SHORT).show();
+//                return;
+//            }
+//
+//            final Equipment finalEquipment = equipment;
+//            final String finalType = type;
+//            final String finalProblem = problem;
+//            final List<String> finalSelectedOptions = selectedOptions;
+//
+//            if (selectedOptions.contains("Cần hỗ trợ kỹ thuật")) {
+//                // ĐỔI: imagePaths thay vì imageUrls
+//                AddTechnicalSupportImagesDialog dialog = new AddTechnicalSupportImagesDialog(this, imagePaths -> {
+//                    // Lưu paths local, chưa upload
+//                    createIncidentForEquipment(finalEquipment, finalType, finalProblem, finalSelectedOptions, imagePaths);
+//                });
+//
+//                dialog.setImageCaptureRequestedListener(this);
+//                currentImageDialog = dialog;
+//                dialog.show();
+//            } else {
+//                createIncidentForEquipment(finalEquipment, finalType, finalProblem, finalSelectedOptions, new ArrayList<>());
+//            }
+//        }
+//    }
+
     @Override
     public void onOptionsSelected(List<String> selectedOptions) {
-        // Check if selected options include relevant ones (exclude "Báo cáo sự cố")
-        boolean hasRelevantOption = false;
-        String type = "";
-        String problem = "";
-        Equipment equipment = null;
+        if (selectedOptions.contains("Cần hỗ trợ kỹ thuật")) {
+            // Xử lý riêng cho "Cần hỗ trợ kỹ thuật"
+            handleTechnicalSupport(selectedOptions);
+        } else if (selectedOptions.contains("Vệ sinh đầu/cuối ca") || selectedOptions.contains("Đổi mã")) {
+            // Xử lý riêng cho "Vệ sinh đầu/cuối ca" và "Đổi mã" - không có equipmentId
+            handleSpecialIncidents(selectedOptions);
+        } else {
+            // Xử lý các loại khác (giữ nguyên logic cũ)
+            handleOtherIncidents(selectedOptions);
+        }
+    }
 
-        for (String option : selectedOptions) {
-            if (option.equals("Phế phẩm")) {
-                hasRelevantOption = true;
-                type = "Phế phẩm";
-                problem = "";
-            } else if (option.equals("Đổi mã")) {
-                hasRelevantOption = true;
-                type = "Đổi mã";
-                problem = "";
-            } else if (!option.equals("Cần hỗ trợ kỹ thuật") && !option.equals("Báo cáo sự cố")) {
-                // XỬ LÝ CÁC OPTIONS KHÁC TỪ EQUIPMENT ISSUES
-                hasRelevantOption = true;
-                if (type.isEmpty()) {
-                    type = "Chưa xác định";
-                }
-                if (problem.isEmpty()) {
-                    problem = option;
-                } else {
-                    problem += ", " + option;
-                }
-            } else if (option.equals("Cần hỗ trợ kỹ thuật")) {
-                hasRelevantOption = true;
-                if (type.isEmpty()) {
-                    type = "Cần hỗ trợ kỹ thuật";
-                }
-                if (problem.isEmpty()) {
-                    problem = "Chưa xác định";
-                } else {
-                    problem += ", Cần hỗ trợ kỹ thuật";
-                }
+    private void handleTechnicalSupport(List<String> selectedOptions) {
+        Equipment equipment = findEquipmentByQrCode();
+        if (equipment == null) {
+            Toast.makeText(this, "Không tìm thấy thiết bị", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // Hiển thị dialog chọn ảnh
+        AddTechnicalSupportImagesDialog dialog = new AddTechnicalSupportImagesDialog(this, imagePaths -> {
+            // Gọi upload ngay, không tạo card
+            createAndUploadTechnicalSupportIncident(equipment, selectedOptions, imagePaths);
+        });
+        dialog.setImageCaptureRequestedListener(this);
+        currentImageDialog = dialog;
+        dialog.show();
+    }
+
+    private void createAndUploadTechnicalSupportIncident(Equipment equipment, List<String> selectedOptions, List<String> imagePaths) {
+        showLoading("Đang gửi yêu cầu hỗ trợ kỹ thuật...");
+
+        // Tạo entity
+        Date startTime = new Date();
+        double durationMinutes = 0; // chưa có endtime
+        int typeId = 2; // Dừng dài 2
+        boolean isTechSupport = true;
+
+        String problem = "";
+        for (String opt : selectedOptions) {
+            if (!opt.equals("Cần hỗ trợ kỹ thuật")) {
+                if (!problem.isEmpty()) problem += ", ";
+                problem += opt;
             }
         }
 
-        if (hasRelevantOption) {
-            // Find the equipment details
-            if (equipmentList != null) {
-                for (Equipment eq : equipmentList) {
-                    if (eq.getQrcode().equals(currentDeviceCode)) {
-                        equipment = eq;
-                        break;
-                    }
-                }
+        IncidentHistoryEntity entity = new IncidentHistoryEntity(
+                equipment.getEquipmentId(),
+                startTime,
+                null, // endTime = null
+                durationMinutes,
+                typeId,
+                "",
+                "",
+                problem,
+                "Đang chờ hỗ trợ",
+                new Date(),
+                userId,
+                "",
+                isTechSupport,
+                false,
+                imagePaths,
+                new ArrayList<>(),
+                lineId
+        );
+
+        // Upload ảnh + incident
+        new Thread(() -> {
+            List<String> uploadedUrls = new ArrayList<>();
+            for (String path : imagePaths) {
+                String url = uploadImageSync(path);
+                if (url != null) uploadedUrls.add(url);
             }
+            entity.setImageUrls(uploadedUrls);
 
-            // NẾU KHÔNG TÌM THẤY EQUIPMENT THÌ THÔNG BÁO LỖI - GIỮ NGUYÊN LOGIC CŨ
-            if (equipment == null) {
-                Toast.makeText(this, "Không tìm thấy thông tin thiết bị", Toast.LENGTH_SHORT).show();
-                return;
+            // Lưu DB
+            AppDatabase db = AppDatabaseSingleton.getInstance(this);
+            long id = db.incidentHistoryDao().insert(entity);
+
+            runOnUiThread(() -> {
+                hideLoading();
+                Toast.makeText(this, "Đã gửi yêu cầu hỗ trợ kỹ thuật!", Toast.LENGTH_LONG).show();
+            });
+
+            // Upload server
+            uploadIncidentToServer(entity, id);
+        }).start();
+    }
+
+
+    private void handleSpecialIncidents(List<String> selectedOptions) {
+        // Xử lý riêng cho "Vệ sinh đầu/cuối ca" và "Đổi mã" - không có equipmentId
+        String type = "", problem = "";
+        for (String opt : selectedOptions) {
+            if (opt.equals("Phế phẩm")) { type = "Phế phẩm"; }
+            else if (opt.equals("Đổi mã")) { type = "Đổi mã"; }
+            else if (opt.equals("Vệ sinh đầu/cuối ca")) { type = "Vệ sinh đầu/cuối ca"; }
+            else if (!opt.equals("Cần hỗ trợ kỹ thuật")) {
+                if (!problem.isEmpty()) problem += ", ";
+                problem += opt;
             }
+        }
 
-            // Check if device is already running
-            if (deviceCards.containsKey(currentDeviceCode)) {
-                // Second scan: confirm to stop and remove
-                DeviceCard card = deviceCards.get(currentDeviceCode);
-                long currentElapsed = card.totalElapsed;
-                if (card.isTimerRunning) {
-                    currentElapsed += System.currentTimeMillis() - card.lastStartTime;
-                }
-                long totalSeconds = currentElapsed / 1000;
-                int hours = (int) (totalSeconds / 3600);
-                int minutes = (int) ((totalSeconds % 3600) / 60);
-                int seconds = (int) (totalSeconds % 60);
-                String currentRunningTime = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+        if (type.isEmpty()) type = "Chưa xác định";
 
-                new AlertDialog.Builder(this)
-                        .setTitle("Xác nhận kết thúc")
-                        .setMessage("Thiết bị: " + currentDeviceCode + "\nThời gian bắt đầu: " + card.startTime + "\nThời gian chạy hiện tại: " + currentRunningTime + "\nBạn có muốn kết thúc và ghi nhận không?")
-                        .setPositiveButton("Xác nhận", (dialog, which) -> {
-                            // Show loading
-                            showLoading("Đang lưu bản ghi...");
+        final String finalType = type, finalProblem = problem;
 
-                            // Simulate API call with delay
-                            new Handler().postDelayed(() -> {
-                                // Calculate total time
-                                card.stopAndRemove();
-                                hideLoading();
-                                //Toast.makeText(HomeActivity.this, "Đã ghi nhận thành công cho thiết bị " + currentDeviceCode, Toast.LENGTH_SHORT).show();
-                            }, 2000); // Simulate 2s API call
-                        })
-                        .setNegativeButton("Hủy", null)
-                        .show();
-            } else {
-                // First scan: create new card VÀ HIỂN THỊ LÊN MÀN HÌNH - CODE MỚI THÊM
-                String startTimeStr = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
-                DeviceCard newCard = new DeviceCard(
-                        equipment.getEquipmentCode(),
-                        equipment.getEquipmentName(),
-                        startTimeStr,
-                        type,
-                        problem,
-                        selectedOptions, // Gửi selectedOptions vào đây
-                        equipment.getEquipmentId() // Lưu equipmentId trực tiếp
-                );
-                deviceCards.put(currentDeviceCode, newCard);
+        if (deviceCards.containsKey(currentDeviceCode)) {
+            showStopConfirmationDialog(currentDeviceCode);
+        } else {
+//            String startTimeStr = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
+//            DeviceCard card = new DeviceCard(
+//                    "", // Không có mã thiết bị
+//                    "", // Không có tên thiết bị
+//                    startTimeStr,
+//                    finalType,
+//                    finalProblem,
+//                    selectedOptions,
+//                    null, // equipmentId = null
+//                    new ArrayList<>()
+//            );
+//            deviceCards.put(currentDeviceCode, card);
+            String startTimeStr = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
+            DeviceCard card = new DeviceCard(
+                    "", "", startTimeStr, finalType, finalProblem, selectedOptions, null, new ArrayList<>(), productionLine
+            );
+            deviceCards.put(currentDeviceCode, card);
+        }
+    }
 
-                //Toast.makeText(this, "Đã bắt đầu ghi nhận thiết bị " + currentDeviceCode, Toast.LENGTH_SHORT).show();
+    private void handleOtherIncidents(List<String> selectedOptions) {
+        Equipment equipment = findEquipmentByQrCode();
+        if (equipment == null) {
+            Toast.makeText(this, "Không tìm thấy thiết bị", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        String type = "", problem = "";
+        for (String opt : selectedOptions) {
+            if (opt.equals("Phế phẩm")) { type = "Phế phẩm"; }
+            else if (opt.equals("Đổi mã")) { type = "Đổi mã"; }
+            else if (!opt.equals("Cần hỗ trợ kỹ thuật")) {
+                if (!problem.isEmpty()) problem += ", ";
+                problem += opt;
             }
+        }
+
+        if (type.isEmpty()) type = "Chưa xác định";
+
+        final String finalType = type, finalProblem = problem;
+
+        if (deviceCards.containsKey(currentDeviceCode)) {
+            showStopConfirmationDialog(currentDeviceCode);
+        } else {
+            String startTimeStr = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
+            DeviceCard card = new DeviceCard(
+                    equipment.getEquipmentCode(),
+                    equipment.getEquipmentName(),
+                    startTimeStr,
+                    finalType,
+                    finalProblem,
+                    selectedOptions,
+                    equipment.getEquipmentId(),
+                    new ArrayList<>()
+            );
+            deviceCards.put(currentDeviceCode, card);
+        }
+    }
+
+    private Equipment findEquipmentByQrCode() {
+        if (equipmentList == null) return null;
+        for (Equipment eq : equipmentList) {
+            if (eq.getQrcode().equals(currentDeviceCode)) {
+                return eq;
+            }
+        }
+        return null;
+    }
+
+    // ĐỔI: Tham số từ imageUrls → imagePaths
+    private void createIncidentForEquipment(Equipment equipment, String type, String problem, List<String> selectedOptions, List<String> imagePaths) {
+        if (deviceCards.containsKey(currentDeviceCode)) {
+            DeviceCard card = deviceCards.get(currentDeviceCode);
+            long currentElapsed = card.totalElapsed;
+            if (card.isTimerRunning) {
+                currentElapsed += System.currentTimeMillis() - card.lastStartTime;
+            }
+            long totalSeconds = currentElapsed / 1000;
+            int hours = (int) (totalSeconds / 3600);
+            int minutes = (int) ((totalSeconds % 3600) / 60);
+            int seconds = (int) (totalSeconds % 60);
+            String currentRunningTime = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+
+            new AlertDialog.Builder(this)
+                    .setTitle("Xác nhận kết thúc")
+                    .setMessage("Thiết bị: " + currentDeviceCode + "\nThời gian bắt đầu: " + card.startTime + "\nThời gian chạy hiện tại: " + currentRunningTime + "\nBạn có muốn kết thúc và ghi nhận không?")
+                    .setPositiveButton("Xác nhận", (dialog, which) -> {
+                        showLoading("Đang lưu bản ghi...");
+                        new Handler().postDelayed(() -> {
+                            card.stopAndRemove();
+                            deviceCards.remove(currentDeviceCode);
+                            hideLoading();
+                            Toast.makeText(HomeActivity.this, "Đã ghi nhận thành công cho thiết bị " + currentDeviceCode, Toast.LENGTH_SHORT).show();
+                        }, 2000);
+                    })
+                    .setNegativeButton("Hủy", null)
+                    .show();
+        } else {
+            String startTimeStr = new SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(new Date());
+            DeviceCard newCard = new DeviceCard(
+                    equipment.getEquipmentCode(),
+                    equipment.getEquipmentName(),
+                    startTimeStr,
+                    type,
+                    problem,
+                    selectedOptions,
+                    equipment.getEquipmentId(),
+                    imagePaths // ĐỔI: Lưu paths thay vì URLs
+            );
+            deviceCards.put(currentDeviceCode, newCard);
         }
     }
 
@@ -526,6 +761,46 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         });
     }
 
+    // CẬP NHẬT phương thức requestCamera()
+    @Override
+    public void requestCamera() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, AddTechnicalSupportImagesDialog.CAMERA_PERMISSION_REQUEST);
+            return;
+        }
+
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        if (takePictureIntent.resolveActivity(getPackageManager()) != null) {
+            File photoFile = null;
+            try {
+                photoFile = createImageFile();
+            } catch (IOException ex) {
+                Toast.makeText(this, "Lỗi tạo file ảnh", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (photoFile != null) {
+                // LƯU URI ĐỂ SỬ DỤNG SAU
+                currentPhotoUri = FileProvider.getUriForFile(this, "com.example.fitsforkip.fileprovider", photoFile);
+                takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, currentPhotoUri);
+                startActivityForResult(takePictureIntent, AddTechnicalSupportImagesDialog.REQUEST_CAMERA);
+            }
+        }
+    }
+
+    @Override
+    public void requestGallery() {
+        Intent intent = new Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+        startActivityForResult(intent, AddTechnicalSupportImagesDialog.REQUEST_GALLERY);
+    }
+
+    private File createImageFile() throws IOException {
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+        String imageFileName = "JPEG_" + timeStamp + "_";
+        File storageDir = getExternalFilesDir("Pictures");
+        File image = File.createTempFile(imageFileName, ".jpg", storageDir);
+        return image;
+    }
+
     private class DeviceCard {
         String deviceCode;
         String deviceName;
@@ -541,9 +816,13 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         View cardView;
         TextView tvRunningTime;
         ImageButton btnToggleTimer;
-        int equipmentId; // Thêm trường equipmentId
+        Integer equipmentId;
+        List<String> imagePaths; // ĐỔI: Lưu paths thay vì URLs
+        Integer lineId;
+        String lineName;
 
-        DeviceCard(String deviceCode, String deviceName, String startTime, String type, String problem, List<String> selectedOptions, int equipmentId) {
+        DeviceCard(String deviceCode, String deviceName, String startTime, String type, String problem,
+                   List<String> selectedOptions, Integer equipmentId, List<String> imagePaths) {
             this.deviceCode = deviceCode;
             this.deviceName = deviceName;
             this.startTime = startTime;
@@ -551,16 +830,15 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             this.problem = problem;
             this.selectedOptions = selectedOptions;
             this.equipmentId = equipmentId;
+            this.imagePaths = imagePaths; // Lưu paths
             this.totalElapsed = 0;
             this.lastStartTime = 0;
             this.isTimerRunning = false;
             this.timerHandler = new Handler();
 
-            // Inflate the card view
             cardView = getLayoutInflater().inflate(R.layout.item_device_card, llDeviceCardsContainer, false);
             llDeviceCardsContainer.addView(cardView);
 
-            // Initialize views
             TextView tvDeviceCode = cardView.findViewById(R.id.tv_device_code);
             TextView tvDeviceName = cardView.findViewById(R.id.tv_device_name);
             TextView tvStartTime = cardView.findViewById(R.id.tv_start_time);
@@ -569,7 +847,6 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             tvRunningTime = cardView.findViewById(R.id.tv_running_time);
             btnToggleTimer = cardView.findViewById(R.id.btn_toggle_timer);
 
-            // Populate fields
             tvDeviceCode.setText("Mã TB: " + deviceCode);
             tvDeviceName.setText("Tên TB: " + deviceName);
             tvStartTime.setText("TG BD: " + startTime);
@@ -581,10 +858,66 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
                 tvProblem.setVisibility(View.GONE);
             }
 
-            // Start timer
             startTimer();
+            btnToggleTimer.setOnClickListener(v -> toggleTimer());
+        }
 
-            // Set up toggle button listener
+        // Trong class DeviceCard, cập nhật constructor
+        DeviceCard(String deviceCode, String deviceName, String startTime, String type, String problem,
+                   List<String> selectedOptions, Integer equipmentId, List<String> imagePaths, String lineName) {
+            this.deviceCode = deviceCode;
+            this.deviceName = deviceName;
+            this.startTime = startTime;
+            this.type = type;
+            this.problem = problem;
+            this.selectedOptions = selectedOptions;
+            this.equipmentId = equipmentId;
+            this.imagePaths = imagePaths;
+            this.lineName = lineName; // Lưu tên dây chuyền
+            this.totalElapsed = 0;
+            this.lastStartTime = 0;
+            this.isTimerRunning = false;
+            this.timerHandler = new Handler();
+
+            cardView = getLayoutInflater().inflate(R.layout.item_device_card, llDeviceCardsContainer, false);
+            llDeviceCardsContainer.addView(cardView);
+
+            TextView tvDeviceCode = cardView.findViewById(R.id.tv_device_code);
+            TextView tvDeviceName = cardView.findViewById(R.id.tv_device_name);
+            TextView tvStartTime = cardView.findViewById(R.id.tv_start_time);
+            TextView tvType = cardView.findViewById(R.id.tv_type);
+            TextView tvProblem = cardView.findViewById(R.id.tv_problem);
+            tvRunningTime = cardView.findViewById(R.id.tv_running_time);
+            btnToggleTimer = cardView.findViewById(R.id.btn_toggle_timer);
+
+            // Ẩn Mã TB và Tên TB nếu equipmentId == null
+            if (equipmentId == null) {
+                tvDeviceCode.setVisibility(View.GONE);
+                //tvDeviceName.setVisibility(View.GONE);
+
+                tvDeviceName.setText("Dây chuyền: " + lineName);
+                tvStartTime.setText("TG BD: " + startTime);
+                tvType.setText("Loại: " + type);
+                if (!problem.isEmpty()) {
+                    tvProblem.setText("Vấn đề: " + problem);
+                    tvProblem.setVisibility(View.VISIBLE);
+                } else {
+                    tvProblem.setVisibility(View.GONE);
+                }
+            } else {
+                tvDeviceCode.setText("Mã TB: " + deviceCode);
+                tvDeviceName.setText("Tên TB: " + deviceName);
+                tvStartTime.setText("TG BD: " + startTime);
+                tvType.setText("Loại: " + type);
+                if (!problem.isEmpty()) {
+                    tvProblem.setText("Vấn đề: " + problem);
+                    tvProblem.setVisibility(View.VISIBLE);
+                } else {
+                    tvProblem.setVisibility(View.GONE);
+                }
+            }
+
+            startTimer();
             btnToggleTimer.setOnClickListener(v -> toggleTimer());
         }
 
@@ -614,13 +947,11 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
 
         void toggleTimer() {
             if (isTimerRunning) {
-                // Pause timer
                 totalElapsed += System.currentTimeMillis() - lastStartTime;
                 isTimerRunning = false;
                 btnToggleTimer.setImageResource(android.R.drawable.ic_media_play);
                 timerHandler.removeCallbacks(timerRunnable);
             } else {
-                // Resume timer
                 lastStartTime = System.currentTimeMillis();
                 isTimerRunning = true;
                 btnToggleTimer.setImageResource(android.R.drawable.ic_media_pause);
@@ -629,34 +960,33 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         }
 
         void stopAndRemove() {
-            // Stop timer
             if (isTimerRunning) {
                 totalElapsed += System.currentTimeMillis() - lastStartTime;
                 timerHandler.removeCallbacks(timerRunnable);
             }
 
-            // Calculate total time
             long totalSeconds = totalElapsed / 1000;
             int hours = (int) (totalSeconds / 3600);
             int minutes = (int) ((totalSeconds % 3600) / 60);
             int seconds = (int) (totalSeconds % 60);
             String totalTime = String.format("%02d:%02d:%02d", hours, minutes, seconds);
 
-            // Calculate duration in minutes
             double durationMinutes = totalElapsed / (1000.0 * 60.0);
 
-            // Determine typeId
-            int typeId; // default dung ngan
+            int typeId;
             boolean isTechSupport;
             if (selectedOptions.contains("Phế phẩm")) {
                 isTechSupport = false;
                 typeId = 3;
-            } else if (selectedOptions.contains("Đổi mã")) {
+            } else if (selectedOptions.contains("Vệ sinh đầu/cuối ca")) {
                 isTechSupport = false;
                 typeId = 4;
+            } else if (selectedOptions.contains("Đổi mã")) {
+                isTechSupport = false;
+                typeId = 5;
             } else {
                 if (durationMinutes > 5) {
-                    typeId = 2; // dung dai
+                    typeId = 2;
                 } else {
                     typeId = 1;
                 }
@@ -667,110 +997,291 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
                 }
             }
 
-            // Status: Hoàn thành since endTime is set
             String status = "Hoàn thành";
+            Integer equipmentId = this.equipmentId;
+            Integer lineId = HomeActivity.this.lineId;
+            List<String> imagePaths = this.imagePaths;
 
-            // Use the stored equipmentId instead of searching again
-            int equipmentId = this.equipmentId;
-
-            // Create entity
-            Date startDate = new Date(); // Need to parse startTime, but for simplicity, use current - totalElapsed
+            Date startDate = new Date();
             Date endDate = new Date();
             startDate.setTime(endDate.getTime() - totalElapsed);
 
             IncidentHistoryEntity entity = new IncidentHistoryEntity(
-                equipmentId,
-                startDate,
-                endDate,
-                durationMinutes,
-                typeId,
-                "", // reason
-                "", // solution
-                problem,
-                status,
-                new Date(), // createdDate
-                employeeId, // reportedByUserId
-                "", // assignedTo
-                isTechSupport,
-                false // synced
+                    equipmentId,
+                    startDate,
+                    endDate,
+                    durationMinutes,
+                    typeId,
+                    "",
+                    "",
+                    problem,
+                    status,
+                    new Date(),
+                    userId,
+                    "",
+                    isTechSupport,
+                    false,
+                    imagePaths, // Lưu paths vào DB
+                    new ArrayList<>(), // imageUrls sẽ được cập nhật sau khi upload
+                    lineId
             );
 
-            // Insert to DB
-            int finalEquipmentId = equipmentId;
+            // MỚI: Upload ảnh TRƯỚC KHI insert/upload incident
             new Thread(() -> {
+                List<String> uploadedUrls = new ArrayList<>();
+
+                // Upload từng ảnh
+                for (String imagePath : imagePaths) {
+                    //String url = uploadImageSync(imagePath);
+                    String url = HomeActivity.this.uploadImageSync(imagePath);
+                    if (url != null) {
+                        uploadedUrls.add(url);
+                    }
+                }
+
+                // Cập nhật URLs vào entity
+                entity.setImageUrls(uploadedUrls);
+
+                // Insert vào DB
                 AppDatabase db = AppDatabaseSingleton.getInstance(HomeActivity.this);
                 long id = db.incidentHistoryDao().insert(entity);
-                // SET incidentId cho entity sau khi insert
                 entity.setIncidentId((int)id);
 
-                // Log
-                android.util.Log.d("Sự cố đã được thêm vào lịch sử", "Đã thêm sự cố: ID=" + id + ", EquipmentId=" + finalEquipmentId + ", Duration=" + durationMinutes + ", TypeId=" + typeId + ", Status=" + status + ", IsTechSupport=" + isTechSupport + ", Synced=" + false);
+                android.util.Log.d("Incident", "Đã thêm sự cố: ID=" + id + ", Images=" + uploadedUrls.size());
 
-                // Now upload to server
-                uploadIncidentToServer(entity, id);
-                // Log when upload to server is done
-                android.util.Log.d("Upload sự cố", "Đã upload sự cố với ID cục bộ=" + id);
+                // Upload incident lên server
+                //uploadIncidentToServer(entity, id);
+                HomeActivity.this.uploadIncidentToServer(entity, id);
             }).start();
 
-            // Log or save the total time (placeholder)
             Toast.makeText(HomeActivity.this, "Thiết bị " + deviceCode + " tổng thời gian: " + totalTime, Toast.LENGTH_SHORT).show();
 
-            // Remove from container and map
             llDeviceCardsContainer.removeView(cardView);
             deviceCards.remove(deviceCode);
         }
 
-        private void uploadIncidentToServer(IncidentHistoryEntity entity, long localId) {
-            SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
-            String token = prefs.getString("token", null);
+        // MỚI: Upload ảnh đồng bộ (gọi trong background thread)
+//        private String uploadImageSync(String imagePath) {
+//            try {
+//                android.util.Log.d("UploadImage", "Đang upload: " + imagePath);
+//
+//                File file = new File(imagePath);
+//                if (!file.exists()) {
+//                    android.util.Log.e("UploadImage", "File không tồn tại: " + imagePath);
+//                    return null;
+//                }
+//
+//                RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
+//                MultipartBody.Part body = MultipartBody.Part.createFormData("imageFile", file.getName(), requestFile);
+//
+//                SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+//                String token = prefs.getString("token", null);
+//                if (token == null) {
+//                    android.util.Log.e("UploadImage", "Không tìm thấy token");
+//                    return null;
+//                }
+//
+//                ApiService apiService = ApiClient.getAuthenticatedClient(HomeActivity.this).create(ApiService.class);
+//                Call<ApiResponse<UploadImageResponse>> call = apiService.uploadImage("Bearer " + token, body);
+//
+//                // Thực thi đồng bộ
+//                Response<ApiResponse<UploadImageResponse>> response = call.execute();
+//
+//                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+//                    String url = response.body().getData().getImageUrl();
+//                    android.util.Log.d("UploadImage", "Upload thành công: " + url);
+//                    return url;
+//                } else {
+//                    android.util.Log.e("UploadImage", "Upload thất bại: " + response.code());
+//                    return null;
+//                }
+//            } catch (Exception e) {
+//                android.util.Log.e("UploadImage", "Lỗi upload: " + e.getMessage());
+//                e.printStackTrace();
+//                return null;
+//            }
+//        }
+//
+//        private void uploadIncidentToServer(IncidentHistoryEntity entity, long localId) {
+//            SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+//            String token = prefs.getString("token", null);
+//
+//            if (token == null) {
+//                android.util.Log.e("Upload sự cố", "Không tìm thấy token xác thực");
+//                return;
+//            }
+//
+//            CreateIncidentRequest incidentRequest = new CreateIncidentRequest();
+//            incidentRequest.setEquipmentId(entity.getEquipmentId());
+//            incidentRequest.setLineId(HomeActivity.this.lineId);
+//            incidentRequest.setStartTime(formatDate(entity.getStartTime()));
+//            incidentRequest.setEndTime(formatDate(entity.getEndTime()));
+//            incidentRequest.setDuration(entity.getDuration());
+//            incidentRequest.setTypeId(entity.getTypeId());
+//            incidentRequest.setReason(entity.getReason());
+//            incidentRequest.setSolution(entity.getSolution());
+//            incidentRequest.setIssue(entity.getIssue());
+//            incidentRequest.setStatus(entity.getStatus());
+//            incidentRequest.setCreatedDate(formatDate(entity.getCreatedDate()));
+//            incidentRequest.setReportedByUserId(entity.getReportedByUserId());
+//            incidentRequest.setTechSupport(entity.isTechSupport());
+//            incidentRequest.setImageUrls(entity.getImageUrls()); // Gửi URLs đã upload
+//
+//            CreateBulkIncidentRequest bulkRequest = new CreateBulkIncidentRequest();
+//            bulkRequest.setIncidents(Arrays.asList(incidentRequest));
+//
+//            ApiService apiService = ApiClient.getClient().create(ApiService.class);
+//            Call<ApiResponse<BulkIncidentResponse>> call = apiService.createBulkIncidents("Bearer " + token, bulkRequest);
+//            call.enqueue(new Callback<ApiResponse<BulkIncidentResponse>>() {
+//                @Override
+//                public void onResponse(Call<ApiResponse<BulkIncidentResponse>> call, Response<ApiResponse<BulkIncidentResponse>> response) {
+//                    if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+//                        BulkIncidentResponse bulkResponse = response.body().getData();
+//                        if (bulkResponse.getSuccessCount() > 0) {
+//                            new Thread(() -> {
+//                                AppDatabase db = AppDatabaseSingleton.getInstance(HomeActivity.this);
+//                                db.incidentHistoryDao().updateSyncedStatus((int) localId, true);
+//                                android.util.Log.d("Upload sự cố", "Tải lên thành công, cập nhật đồng bộ cho ID=" + localId);
+//                            }).start();
+//                        } else {
+//                            android.util.Log.e("Upload sự cố", "Upload thất bại: " + bulkResponse.getErrors().get(0).getErrorMessage());
+//                        }
+//                    } else {
+//                        android.util.Log.e("Upload sự cố", "Upload lỗi: " + response.message());
+//                    }
+//                }
+//
+//                @Override
+//                public void onFailure(Call<ApiResponse<BulkIncidentResponse>> call, Throwable t) {
+//                    android.util.Log.e("Upload sự cố", "Upload lỗi: " + t.getMessage(), t);
+//                }
+//            });
+//        }
 
-            if (token == null) {
-                android.util.Log.e("Upload sự cố", "Không tìm thấy token xác thực");
-                return;
+//        private String formatDate(Date date) {
+//            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
+//            return sdf.format(date);
+//        }
+    }
+
+
+    // DÁN VÀO TRONG HomeActivity, NGAY SAU createImageFile() HOẶC TRƯỚC DeviceCard
+    private String uploadImageSync(String imagePath) {
+        try {
+            Log.d("UploadImage", "Đang upload: " + imagePath);
+
+            File file = new File(imagePath);
+            if (!file.exists()) {
+                Log.e("UploadImage", "File không tồn tại: " + imagePath);
+                return null;
             }
 
-            CreateIncidentRequest request = new CreateIncidentRequest();
-            request.setEquipmentId(entity.getEquipmentId());
-            request.setStartTime(formatDate(entity.getStartTime()));
-            request.setEndTime(formatDate(entity.getEndTime()));
-            request.setDuration(entity.getDuration());
-            request.setTypeId(entity.getTypeId());
-            request.setReason(entity.getReason());
-            request.setSolution(entity.getSolution());
-            request.setIssue(entity.getIssue());
-            request.setStatus(entity.getStatus());
-            request.setCreatedDate(formatDate(entity.getCreatedDate()));
-            request.setReportedByUserId(entity.getReportedByUserId());
-            request.setTechSupport(entity.isTechSupport());
+            RequestBody requestFile = RequestBody.create(MediaType.parse("image/*"), file);
+            MultipartBody.Part body = MultipartBody.Part.createFormData("imageFile", file.getName(), requestFile);
 
-            ApiService apiService = ApiClient.getClient().create(ApiService.class);
-            Call<ApiResponse<IncidentHistory>> call = apiService.createIncident("Bearer " + token, request);
-            call.enqueue(new Callback<ApiResponse<IncidentHistory>>() {
-                @Override
-                public void onResponse(Call<ApiResponse<IncidentHistory>> call, Response<ApiResponse<IncidentHistory>> response) {
-                    if (response.isSuccessful()) {
-                        // QUAN TRỌNG: Cập nhật synced bằng incidentId
-                        new Thread(() -> {
-                            AppDatabase db = AppDatabaseSingleton.getInstance(HomeActivity.this);
-                            // SỬ DỤNG localId thay vì entity.incidentId
-                            db.incidentHistoryDao().updateSyncedStatus((int)localId, true);
-                            android.util.Log.d("Upload sự cố", "Tải lên thành công, cập nhật đồng bộ cho ID=" + localId);
-                        }).start();
-                    } else {
-                        android.util.Log.e("Upload sự cố", "Upload lỗi: " + response.message());
-                    }
-                }
+            SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+            String token = prefs.getString("token", null);
+            if (token == null) {
+                Log.e("UploadImage", "Không tìm thấy token");
+                return null;
+            }
 
-                @Override
-                public void onFailure(Call<ApiResponse<IncidentHistory>> call, Throwable t) {
-                    android.util.Log.e("Upload sự cố", "Upload lỗi: " + t.getMessage(), t);
-                }
-            });
+            ApiService apiService = ApiClient.getAuthenticatedClient(this).create(ApiService.class);
+            Call<ApiResponse<UploadImageResponse>> call = apiService.uploadImage("Bearer " + token, body);
+
+            Response<ApiResponse<UploadImageResponse>> response = call.execute();
+
+            if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                String url = response.body().getData().getImageUrl();
+                Log.d("UploadImage", "Upload thành công: " + url);
+                return url;
+            } else {
+                Log.e("UploadImage", "Upload thất bại: " + response.code());
+                return null;
+            }
+        } catch (Exception e) {
+            Log.e("UploadImage", "Lỗi upload: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private void uploadIncidentToServer(IncidentHistoryEntity entity, long localId) {
+        SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+        String token = prefs.getString("token", null);
+
+        if (token == null) {
+            Log.e("Upload sự cố", "Không tìm thấy token xác thực");
+            return;
         }
 
-        private String formatDate(Date date) {
-            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
-            return sdf.format(date);
+        CreateIncidentRequest incidentRequest = new CreateIncidentRequest();
+        incidentRequest.setEquipmentId(entity.getEquipmentId());
+        incidentRequest.setLineId(lineId);
+        incidentRequest.setStartTime(formatDate(entity.getStartTime()));
+        // endTime = null → không set
+        if (entity.getEndTime() != null) {
+            incidentRequest.setEndTime(formatDate(entity.getEndTime()));
+        }
+        incidentRequest.setDuration(entity.getDuration());
+        incidentRequest.setTypeId(entity.getTypeId());
+        incidentRequest.setReason(entity.getReason());
+        incidentRequest.setSolution(entity.getSolution());
+        incidentRequest.setIssue(entity.getIssue());
+        incidentRequest.setStatus(entity.getStatus());
+        incidentRequest.setCreatedDate(formatDate(entity.getCreatedDate()));
+        incidentRequest.setReportedByUserId(entity.getReportedByUserId());
+        incidentRequest.setTechSupport(entity.isTechSupport());
+        incidentRequest.setImageUrls(entity.getImageUrls());
+
+        CreateBulkIncidentRequest bulkRequest = new CreateBulkIncidentRequest();
+        bulkRequest.setIncidents(Arrays.asList(incidentRequest));
+
+        ApiService apiService = ApiClient.getClient().create(ApiService.class);
+        Call<ApiResponse<BulkIncidentResponse>> call = apiService.createBulkIncidents("Bearer " + token, bulkRequest);
+        call.enqueue(new Callback<ApiResponse<BulkIncidentResponse>>() {
+            @Override
+            public void onResponse(Call<ApiResponse<BulkIncidentResponse>> call, Response<ApiResponse<BulkIncidentResponse>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    BulkIncidentResponse bulkResponse = response.body().getData();
+                    if (bulkResponse.getSuccessCount() > 0) {
+                        new Thread(() -> {
+                            AppDatabase db = AppDatabaseSingleton.getInstance(HomeActivity.this);
+                            db.incidentHistoryDao().updateSyncedStatus((int) localId, true);
+                            Log.d("Upload sự cố", "Tải lên thành công, cập nhật đồng bộ cho ID=" + localId);
+                        }).start();
+                    } else {
+                        Log.e("Upload sự cố", "Upload thất bại: " + bulkResponse.getErrors().get(0).getErrorMessage());
+                    }
+                } else {
+                    Log.e("Upload sự cố", "Upload lỗi: " + response.message());
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ApiResponse<BulkIncidentResponse>> call, Throwable t) {
+                Log.e("Upload sự cố", "Upload lỗi: " + t.getMessage(), t);
+            }
+        });
+    }
+
+    private String formatDate(Date date) {
+        if (date == null) return null;
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
+        return sdf.format(date);
+    }
+
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == AddTechnicalSupportImagesDialog.CAMERA_PERMISSION_REQUEST) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted, thử lại requestCamera
+                requestCamera();
+            } else {
+                Toast.makeText(this, "Quyền truy cập camera bị từ chối", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 }

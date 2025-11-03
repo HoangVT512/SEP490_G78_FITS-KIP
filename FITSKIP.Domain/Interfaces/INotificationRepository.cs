@@ -15,6 +15,7 @@ namespace FITSKIP.Domain.Interfaces
         Task<bool> DeleteAsync(int notificationId);
         Task DeleteAllReadByUserIdAsync(string userId);
         Task<IEnumerable<Notification>> GetAllAsync();
+        Task<int> DeleteOldReadNotificationsAsync(DateTime cutoffDate);
     }
 }
 

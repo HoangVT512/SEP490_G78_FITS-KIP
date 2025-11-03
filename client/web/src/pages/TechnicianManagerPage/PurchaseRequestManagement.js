@@ -70,13 +70,16 @@ const PurchaseRequestManagement = () => {
       // Also load spare parts for the select
       try {
         const parts = await sparePartService.getAll();
+        console.log("Loaded spare parts:", parts);
         // Filter only active parts (IsActive = true)
         const activeParts = (Array.isArray(parts) ? parts : []).filter(
           (part) => part.isActive !== false
         );
+        console.log("Filtered active parts:", activeParts);
         setAvailableParts(activeParts);
       } catch (e) {
         console.warn("Could not load spare parts for select", e);
+        setAvailableParts([]);
       }
     } catch (err) {
       message.error("Không thể tải danh sách yêu cầu. Vui lòng thử lại.");
@@ -242,11 +245,34 @@ const PurchaseRequestManagement = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
-      // The Select now returns the partId as value
-      const partId = values.partNumber || values.partId || null;
+      console.log("Form values:", values);
+      console.log("Available parts:", availableParts);
 
-      if (!partId) {
-        throw new Error("Phụ tùng không hợp lệ");
+      // The Select now returns the partId as value
+      const partId = values.partNumber;
+
+      console.log("Extracted partId:", partId, typeof partId);
+      console.log("Available parts sample:", availableParts.slice(0, 3).map(p => ({
+        id: p.id,
+        partId: p.partId,
+        PartId: p.PartId,
+        partNumber: p.partNumber,
+        partName: p.partName
+      })));
+
+      if (!partId || partId === null || partId === undefined) {
+        throw new Error("Phụ tùng không hợp lệ - partId is null/undefined");
+      }
+
+      // Validate that the partId exists in availableParts
+      const selectedPart = availableParts.find(p => {
+        const pId = p.partId || p.PartId || p.id;
+        console.log(`Comparing partId ${partId} (${typeof partId}) with p.id ${pId} (${typeof pId})`);
+        return pId == partId; // Use loose equality to handle type differences
+      });
+      if (!selectedPart) {
+        console.log("Available parts IDs:", availableParts.map(p => p.partId || p.PartId || p.id));
+        throw new Error("Phụ tùng không hợp lệ - không tìm thấy trong danh sách");
       }
 
       // Backend expects { partId, quantity, reason }
@@ -255,6 +281,8 @@ const PurchaseRequestManagement = () => {
         quantity: values.quantity,
         reason: values.reason,
       };
+
+      console.log("Payload:", payload);
 
       // If editing an existing request (selectedRequest is set)
       if (selectedRequest) {
@@ -420,13 +448,16 @@ const PurchaseRequestManagement = () => {
       form={form}
       layout="vertical"
       onFinish={handleSubmit}
-      labelCol={{ style: { fontSize: "15px", fontWeight: 600 } }}
+      scrollToFirstError
     >
       <Form.Item
         name="partNumber"
-        label="Mã phụ tùng"
+        label={
+          <span style={{ fontWeight: "600", fontSize: "14px" }}>
+            Mã phụ tùng
+          </span>
+        }
         rules={[{ required: true, message: "Vui lòng chọn phụ tùng" }]}
-        style={{ marginBottom: 16 }}
       >
         <Select
           placeholder="Chọn phụ tùng"
@@ -440,6 +471,7 @@ const PurchaseRequestManagement = () => {
               .toLowerCase()
               .indexOf(input.toLowerCase()) >= 0
           }
+          size="large"
         >
           {(availableParts || []).map((p) => (
             <Option key={p.partId || p.PartId} value={p.partId || p.PartId}>
@@ -455,50 +487,33 @@ const PurchaseRequestManagement = () => {
 
       <Form.Item
         name="quantity"
-        label="Số lượng"
+        label={
+          <span style={{ fontWeight: "600", fontSize: "14px" }}>
+            Số lượng
+          </span>
+        }
         rules={[
           { required: true, message: "Vui lòng nhập số lượng" },
           { type: "number", min: 1, message: "Số lượng phải lớn hơn 0" },
         ]}
-        style={{ marginBottom: 16 }}
       >
-        <InputNumber min={1} style={{ width: "100%" }} />
+        <InputNumber min={1} style={{ width: "100%" }} size="large" />
       </Form.Item>
 
       <Form.Item
         name="reason"
-        label="Lý do yêu cầu"
+        label={
+          <span style={{ fontWeight: "600", fontSize: "14px" }}>
+            Lý do yêu cầu
+          </span>
+        }
         rules={[]}
-        style={{ marginBottom: 16 }}
       >
         <TextArea
           rows={3}
           placeholder="Mô tả lý do cần mua phụ tùng... (tùy chọn)"
+          size="large"
         />
-      </Form.Item>
-
-      <Form.Item style={{ marginBottom: 0 }}>
-        <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-          <Button
-            onClick={() => {
-              setIsModalVisible(false);
-              form.resetFields();
-            }}
-          >
-            Hủy
-          </Button>
-          <Button
-            type="primary"
-            htmlType="submit"
-            loading={loading}
-            style={{
-              backgroundColor: "#283652",
-              borderColor: "#283652",
-            }}
-          >
-            Tạo yêu cầu
-          </Button>
-        </Space>
       </Form.Item>
     </Form>
   );
@@ -506,7 +521,8 @@ const PurchaseRequestManagement = () => {
   const RequestListTable = (
     <Card
       title="Danh sách yêu cầu"
-      variant="outlined"
+      className={styles.tableCard}
+      style={{ borderRadius: "8px", border: "1px solid #e8e8e8", margin: "20px 0px" }}
       extra={
         <Button
           type="primary"
@@ -572,11 +588,11 @@ const PurchaseRequestManagement = () => {
       {/* Statistics */}
       <Row gutter={[16, 16]} className={styles.statsRow}>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard}>
+          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #e8e8e8" }}>
             <Statistic
-              title="Tổng yêu cầu"
+              title={<span style={{ color: "#283652", fontWeight: "600" }}>Tổng yêu cầu</span>}
               value={stats.total}
-              prefix={<InboxOutlined />}
+              prefix={<InboxOutlined style={{ color: "#283652" }} />}
               valueStyle={{
                 color: "#283652",
                 fontSize: "28px",
@@ -586,11 +602,11 @@ const PurchaseRequestManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard}>
+          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #ffe58f" }}>
             <Statistic
-              title="Chờ duyệt"
+              title={<span style={{ color: "#faad14", fontWeight: "600" }}>Chờ duyệt</span>}
               value={stats.pending}
-              prefix={<ClockCircleOutlined />}
+              prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />}
               valueStyle={{
                 color: "#faad14",
                 fontSize: "28px",
@@ -600,11 +616,11 @@ const PurchaseRequestManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard}>
+          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #b7eb8f" }}>
             <Statistic
-              title="Đã duyệt"
+              title={<span style={{ color: "#52c41a", fontWeight: "600" }}>Đã duyệt</span>}
               value={stats.approved}
-              prefix={<CheckOutlined />}
+              prefix={<CheckOutlined style={{ color: "#52c41a" }} />}
               valueStyle={{
                 color: "#52c41a",
                 fontSize: "28px",
@@ -614,11 +630,11 @@ const PurchaseRequestManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard}>
+          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #ffccc7" }}>
             <Statistic
-              title="Từ chối"
+              title={<span style={{ color: "#ff4d4f", fontWeight: "600" }}>Từ chối</span>}
               value={stats.rejected}
-              prefix={<CloseOutlined />}
+              prefix={<CloseOutlined style={{ color: "#ff4d4f" }} />}
               valueStyle={{
                 color: "#ff4d4f",
                 fontSize: "28px",
@@ -635,113 +651,212 @@ const PurchaseRequestManagement = () => {
       {/* Create/Edit Request Modal */}
       <Modal
         title={
-          selectedRequest
-            ? `Chỉnh sửa yêu cầu REQ${String(
+          <div style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}>
+            {selectedRequest
+              ? `Chỉnh sửa yêu cầu REQ${String(
                 selectedRequest.requestId
               ).padStart(3, "0")}`
-            : "Tạo yêu cầu mua hàng mới"
+              : "Tạo yêu cầu mua hàng mới"}
+          </div>
         }
         open={isModalVisible}
+        onOk={() => form.submit()}  // ✅ Gọi form.submit()
         onCancel={() => {
           setIsModalVisible(false);
           form.resetFields();
           setSelectedRequest(null);
         }}
-        footer={null}
         width={700}
-        style={{ top: 20 }}
+        centered
+        okText={selectedRequest ? "Cập nhật" : "Tạo yêu cầu"}
+        cancelText="Hủy"
+        okButtonProps={{
+          style: {
+            backgroundColor: "#283652",
+            borderColor: "#283652",
+            height: "40px",
+            fontSize: "16px",
+            fontWeight: "500",
+            minWidth: "120px",
+          },
+          htmlType: "submit",  // ✅ Thêm dòng này
+          loading: loading,
+        }}
+        cancelButtonProps={{
+          style: {
+            height: "40px",
+            fontSize: "16px",
+            minWidth: "120px",
+          },
+        }}
+        bodyStyle={{
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          padding: "24px",
+        }}
       >
         {CreateRequestForm}
       </Modal>
 
       {/* Detail Modal */}
       <Modal
-        title={`Chi tiết yêu cầu REQ${String(
-          selectedRequest?.requestId
-        ).padStart(3, "0")}`}
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "50%",
+              backgroundColor: "#283652",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+              fontSize: "18px"
+            }}>
+              <InboxOutlined />
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: "16px" }}>
+                Chi tiết yêu cầu
+              </div>
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#6b7280",
+                  fontWeight: "normal",
+                }}
+              >
+                REQ{String(selectedRequest?.requestId).padStart(3, "0")} • {selectedRequest?.partName}
+              </div>
+            </div>
+          </div>
+        }
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
+        width={1200}
+        centered
         footer={[
-          <Button key="close" onClick={() => setDetailModalVisible(false)}>
+          selectedRequest?.status === "Chờ duyệt" && (
+            <Button
+              key="edit"
+              type="primary"
+              icon={<CheckOutlined />}
+              onClick={() => {
+                setDetailModalVisible(false);
+                handleEditRequest(selectedRequest);
+              }}
+              style={{
+                backgroundColor: "#283652",
+                borderColor: "#283652",
+                height: "40px",
+                fontSize: "16px",
+                minWidth: "120px",
+              }}
+            >
+              Chỉnh sửa
+            </Button>
+          ),
+          <Button
+            key="close"
+            onClick={() => setDetailModalVisible(false)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
             Đóng
           </Button>,
         ]}
-        width={650}
-        style={{ top: 20 }}
-        bodyStyle={{ padding: 12 }}
       >
         {selectedRequest && (
-          <Descriptions
-            bordered={false}
-            size="small"
-            column={1}
-            layout="horizontal"
-            labelStyle={{ fontWeight: 600, width: 160, fontSize: "15px" }}
-            contentStyle={{ fontSize: "15px" }}
-          >
-            <Descriptions.Item label="Mã phụ tùng">
-              {selectedRequest.partNumber}
-            </Descriptions.Item>
-            <Descriptions.Item label="Tên phụ tùng">
-              {selectedRequest.partName}
-            </Descriptions.Item>
-            <Descriptions.Item label="Số lượng">
-              {selectedRequest.quantity}
-            </Descriptions.Item>
-            <Descriptions.Item label="Trạng thái">
-              <Tag
-                color={
-                  selectedRequest.status === "Chờ duyệt"
-                    ? "warning"
-                    : selectedRequest.status === "Đã duyệt"
-                    ? "success"
-                    : selectedRequest.status === "Đã nhập"
-                    ? "processing"
-                    : "error"
-                }
-              >
-                {selectedRequest.status}
-              </Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Người yêu cầu">
-              {selectedRequest.requestedByName}
-            </Descriptions.Item>
-            <Descriptions.Item label="Ngày yêu cầu">
-              {dayjs(selectedRequest.requestDate).format("DD/MM/YYYY")}
-            </Descriptions.Item>
-            {selectedRequest.approvedBy && (
-              <>
-                <Descriptions.Item label="Người duyệt">
-                  {selectedRequest.approvedByName}
-                </Descriptions.Item>
-                <Descriptions.Item label="Ngày duyệt">
-                  {dayjs(selectedRequest.approvedDate).format("DD/MM/YYYY")}
-                </Descriptions.Item>
-              </>
-            )}
-            {selectedRequest.rejectedBy && (
-              <>
-                <Descriptions.Item label="Người từ chối">
-                  {selectedRequest.rejectedByName}
-                </Descriptions.Item>
-                <Descriptions.Item label="Ngày từ chối">
-                  {dayjs(selectedRequest.rejectedDate).format("DD/MM/YYYY")}
-                </Descriptions.Item>
-              </>
-            )}
-            <Descriptions.Item label="Lý do yêu cầu">
-              <div style={{ whiteSpace: "pre-wrap", margin: 0 }}>
-                {selectedRequest.reason}
-              </div>
-            </Descriptions.Item>
-            {selectedRequest.notes && (
-              <Descriptions.Item label="Ghi chú">
+          <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
+            <Descriptions
+              column={2}
+              bordered
+              labelStyle={{
+                fontWeight: "bold",
+                fontSize: "14px",
+                backgroundColor: "#fafafa",
+                borderRight: "1px solid #d9d9d9",
+                padding: "12px 16px",
+                minWidth: "160px",
+              }}
+            >
+              <Descriptions.Item label="Mã yêu cầu">
+                REQ{String(selectedRequest.requestId).padStart(3, "0")}
+              </Descriptions.Item>
+              <Descriptions.Item label="Mã phụ tùng">
+                {selectedRequest.partNumber}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Tên phụ tùng">
+                {selectedRequest.partName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Số lượng">
+                {selectedRequest.quantity}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Người yêu cầu">
+                {selectedRequest.requestedByName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Ngày yêu cầu">
+                {dayjs(selectedRequest.requestDate).format("DD/MM/YYYY")}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Trạng thái">
+                <Tag
+                  color={
+                    selectedRequest.status === "Chờ duyệt"
+                      ? "warning"
+                      : selectedRequest.status === "Đã duyệt"
+                        ? "success"
+                        : selectedRequest.status === "Đã nhập"
+                          ? "processing"
+                          : "error"
+                  }
+                >
+                  {selectedRequest.status}
+                </Tag>
+              </Descriptions.Item>
+
+              {selectedRequest.approvedBy && (
+                <>
+                  <Descriptions.Item label="Người duyệt">
+                    {selectedRequest.approvedByName}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Ngày duyệt">
+                    {dayjs(selectedRequest.approvedDate).format("DD/MM/YYYY")}
+                  </Descriptions.Item>
+                </>
+              )}
+
+              {selectedRequest.rejectedBy && (
+                <>
+                  <Descriptions.Item label="Người từ chối">
+                    {selectedRequest.rejectedByName}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Ngày từ chối">
+                    {dayjs(selectedRequest.rejectedDate).format("DD/MM/YYYY")}
+                  </Descriptions.Item>
+                </>
+              )}
+
+              <Descriptions.Item label="Lý do yêu cầu" span={2}>
                 <div style={{ whiteSpace: "pre-wrap", margin: 0 }}>
-                  {selectedRequest.notes}
+                  {selectedRequest.reason || "Không có lý do"}
                 </div>
               </Descriptions.Item>
-            )}
-          </Descriptions>
+
+              {selectedRequest.notes && (
+                <Descriptions.Item label="Ghi chú" span={2}>
+                  <div style={{ whiteSpace: "pre-wrap", margin: 0 }}>
+                    {selectedRequest.notes}
+                  </div>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          </div>
         )}
       </Modal>
     </div>

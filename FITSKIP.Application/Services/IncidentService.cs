@@ -16,6 +16,7 @@ public class IncidentService : IIncidentService
     private readonly INotificationService _notificationService;
     private readonly IUserService _userService;
     private readonly IAzureStorageService _azureStorageService;
+    private readonly IReplacementHistoryRepository _replacementHistoryRepository;
 
     public IncidentService(
         IIncidentRepository incidentRepository,
@@ -25,7 +26,8 @@ public class IncidentService : IIncidentService
         IUserRepository userRepository,
         INotificationService notificationService,
         IUserService userService,
-        IAzureStorageService azureStorageService)
+        IAzureStorageService azureStorageService,
+        IReplacementHistoryRepository replacementHistoryRepository)
     {
         _incidentRepository = incidentRepository;
         _equipmentRepository = equipmentRepository;
@@ -35,6 +37,7 @@ public class IncidentService : IIncidentService
         _notificationService = notificationService;
         _userService = userService;
         _azureStorageService = azureStorageService;
+        _replacementHistoryRepository = replacementHistoryRepository;
     }
 
     public Task<IReadOnlyList<IncidentHistory>> GetIncidentsAsync(CancellationToken cancellationToken = default)
@@ -513,12 +516,63 @@ public class IncidentService : IIncidentService
             Console.WriteLine($"⏭️ Skipping notification on update - Status: {updatedIncident?.Status}, IsTechSupport: {updatedIncident?.IsTechSupport}, Changed: {wasNotTechSupport || wasNotPending}");
         }
 
+        // Always broadcast to Managers group for OEE Dashboard realtime updates (for any update)
+        if (updatedIncident != null)
+        {
+            try
+            {
+                var updatedEquipment = updatedIncident.EquipmentId.HasValue ? await _equipmentRepository.GetByIdAsync(updatedIncident.EquipmentId.Value, cancellationToken) : null;
+                var updatedLine = updatedIncident.LineId.HasValue ? await _lineRepository.GetByIdAsync(updatedIncident.LineId.Value, cancellationToken) : null;
+
+                Console.WriteLine($"📡 Broadcasting incident update to Managers group for OEE Dashboard - Incident ID: {updatedIncident.IncidentId}");
+                await _notificationService.SendNotificationToGroupAsync(
+                    "Managers",
+                    "Cập nhật sự cố",
+                    $"Sự cố {updatedIncident.IncidentId} đã được cập nhật tại {(updatedEquipment != null ? $"thiết bị {updatedEquipment.EquipmentName}" : $"dây chuyền {updatedLine?.LineName ?? "Chưa xác định"}")}",
+                    "incident"
+                );
+                Console.WriteLine($"✅ Broadcast to Managers group completed for incident update");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error broadcasting incident update: {ex.Message}");
+            }
+        }
+
         return updatedIncident;
     }
 
-    public Task<bool> DeleteIncidentAsync(int id, CancellationToken cancellationToken = default)
+    public async Task<bool> DeleteIncidentAsync(int id, CancellationToken cancellationToken = default)
     {
-        return _incidentRepository.DeleteAsync(id, cancellationToken);
+        // Get incident info before deleting for notification
+        var incident = await _incidentRepository.GetByIdAsync(id, cancellationToken);
+
+        var result = await _incidentRepository.DeleteAsync(id, cancellationToken);
+
+        // Broadcast to Managers group for OEE Dashboard realtime updates
+        if (result && incident != null)
+        {
+            try
+            {
+                var equipment = incident.EquipmentId.HasValue ? await _equipmentRepository.GetByIdAsync(incident.EquipmentId.Value, cancellationToken) : null;
+                var line = incident.LineId.HasValue ? await _lineRepository.GetByIdAsync(incident.LineId.Value, cancellationToken) : null;
+
+                Console.WriteLine($"📡 Broadcasting incident deletion to Managers group for OEE Dashboard - Incident ID: {id}");
+                await _notificationService.SendNotificationToGroupAsync(
+                    "Managers",
+                    "Xóa sự cố",
+                    $"Sự cố {id} đã được xóa tại {(equipment != null ? $"thiết bị {equipment.EquipmentName}" : $"dây chuyền {line?.LineName ?? "Chưa xác định"}")}",
+                    "incident"
+                );
+                Console.WriteLine($"✅ Broadcast to Managers group completed for incident deletion");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error broadcasting incident deletion: {ex.Message}");
+            }
+        }
+
+        return result;
     }
 
     public async Task<DowntimeStatsDTO> GetDowntimeStatsAsync(string period, DateTime? startDate = null, DateTime? endDate = null, int? lineId = null, CancellationToken cancellationToken = default)
@@ -882,6 +936,16 @@ public class IncidentService : IIncidentService
                 }
             }
             Console.WriteLine($"   ✅ Notifications sent successfully to {technicalManagers.Count} managers");
+
+            // Also broadcast to all Managers group for OEE Dashboard realtime updates
+            Console.WriteLine($"   📡 Broadcasting incident update to Managers group for OEE Dashboard");
+            await _notificationService.SendNotificationToGroupAsync(
+                "Managers",
+                "Cập nhật sự cố",
+                $"Có sự cố mới tại {(equipment != null ? $"thiết bị {equipment.EquipmentName}" : $"dây chuyền {line?.LineName ?? "Chưa xác định"}")} - Mã sự cố: {incident.IncidentId}",
+                "incident"
+            );
+            Console.WriteLine($"   ✅ Broadcast to Managers group completed");
         }
         catch (Exception ex)
         {
@@ -915,5 +979,73 @@ public class IncidentService : IIncidentService
         {
             throw new InvalidOperationException($"Có lỗi xảy ra khi upload ảnh: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Kiểm tra trạng thái yêu cầu linh kiện của sự cố
+    /// </summary>
+    public async Task<SparePartsStatus> GetSparePartsStatusAsync(int incidentId, CancellationToken cancellationToken = default)
+    {
+        if (incidentId <= 0)
+            return new SparePartsStatus { HasPendingRequests = false, HasReturnRequests = false };
+
+        try
+        {
+            // First, get the incident to know its equipment
+            var incident = await _incidentRepository.GetByIdAsync(incidentId, cancellationToken);
+            if (incident == null || !incident.EquipmentId.HasValue)
+                return new SparePartsStatus { HasPendingRequests = false, HasReturnRequests = false };
+
+            // Get all replacement histories for this incident (new records with IncidentId)
+            var replacementsByIncident = await _replacementHistoryRepository.GetByIncidentIdAsync(incidentId, cancellationToken);
+
+            // For backward compatibility: Check replacement records by equipment (old records without IncidentId)
+            var replacementsByEquipment = await _replacementHistoryRepository.GetByEquipmentIdAsync(incident.EquipmentId.Value, cancellationToken);
+
+            // Filter to only include records that don't have IncidentId set (legacy records)
+            // or records that have IncidentId matching this incident
+            var relevantReplacements = replacementsByEquipment?.Where(r =>
+                !r.IncidentId.HasValue || r.IncidentId.Value == incidentId
+            ) ?? Enumerable.Empty<ReplacementHistory>();
+
+            // Combine all relevant replacements
+            var allReplacements = (replacementsByIncident ?? Enumerable.Empty<ReplacementHistory>())
+                .Concat(relevantReplacements)
+                .DistinctBy(r => r.ReplacementId)
+                .ToList();
+
+            // Check for pending requests (not approved yet)
+            var hasPendingRequests = allReplacements.Any(r =>
+                string.IsNullOrEmpty(r.Status) ||
+                r.Status == "Chờ duyệt cấp phát" ||
+                r.Status == "Pending"
+            );
+
+            // Check for return requests (waiting to be returned)
+            var hasReturnRequests = allReplacements.Any(r =>
+                r.Status == "Chờ trả lại" ||
+                r.Status == "Đã giao kho"
+            );
+
+            return new SparePartsStatus
+            {
+                HasPendingRequests = hasPendingRequests,
+                HasReturnRequests = hasReturnRequests
+            };
+        }
+        catch
+        {
+            // If there's an error, return no requests
+            return new SparePartsStatus { HasPendingRequests = false, HasReturnRequests = false };
+        }
+    }
+
+    /// <summary>
+    /// Kiểm tra xem sự cố có yêu cầu linh kiện không (dựa trên bảng ReplacementHistories)
+    /// </summary>
+    public async Task<bool> HasSparePartsRequiredAsync(int incidentId, CancellationToken cancellationToken = default)
+    {
+        var status = await GetSparePartsStatusAsync(incidentId, cancellationToken);
+        return status.HasPendingRequests || status.HasReturnRequests;
     }
 }

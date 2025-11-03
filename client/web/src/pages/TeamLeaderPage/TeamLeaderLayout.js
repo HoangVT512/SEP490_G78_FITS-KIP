@@ -32,12 +32,10 @@ import styles from "../../styles/components/TeamLeaderLayout.module.css";
 // Import team leader pages
 import TeamLeaderDashboard from "./TeamLeaderDashboard";
 import TeamLeaderEquipment from "./TeamLeaderEquipment";
-import ProductionManagement from "./ProductionManagement";
+// import ProductionManagement from "./ProductionManagement";
 import ReplacementComponents from "./ReplacementComponents";
 import IncidentManagement from "./IncidentManagement";
 import EFormSystem from "./EFormSystem";
-import FactoryMap from "./FactoryMap";
-import OEEDashboard from "./OEEDashboard";
 import DowntimeChartDashboard from "../ManagerPage/DowntimeChartDashboard";
 
 const { Header, Sider, Content } = AntLayout;
@@ -66,8 +64,8 @@ const TeamLeaderLayout = () => {
       setSelectedKey("equipment");
     } else if (path.includes("/EFormProductionInput")) {
       setSelectedKey("EFormProductionInput");
-    } else if (path.includes("/production")) {
-      setSelectedKey("production");
+      // } else if (path.includes("/production")) {
+      //   setSelectedKey("production");
     } else if (path.includes("/replacement")) {
       setSelectedKey("replacement");
     } else if (path.includes("/incidents")) {
@@ -103,18 +101,14 @@ const TeamLeaderLayout = () => {
 
     if (path.includes("/equipment")) {
       return <TeamLeaderEquipment />;
-    } else if (path.includes("/production")) {
-      return <ProductionManagement />;
+      // } else if (path.includes("/production")) {
+      //   return <ProductionManagement />;
     } else if (path.includes("/EFormProductionInput")) {
       return <EFormSystem />;
     } else if (path.includes("/replacement")) {
       return <ReplacementComponents />;
     } else if (path.includes("/incidents")) {
       return <IncidentManagement />;
-    } else if (path.includes("/factory-map")) {
-      return <FactoryMap />;
-    } else if (path.includes("/oee-dashboard")) {
-      return <OEEDashboard />;
     } else if (path.includes("/downtime-chart")) {
       return <DowntimeChartDashboard />;
     } else if (path === "/team-leader" || path.includes("/dashboard")) {
@@ -132,16 +126,6 @@ const TeamLeaderLayout = () => {
       label: "Tổng quan",
     },
     {
-      key: "factory-map",
-      icon: <AppstoreOutlined />,
-      label: "Sơ đồ nhà máy",
-    },
-    {
-      key: "oee-dashboard",
-      icon: <BarChartOutlined />,
-      label: "Biểu đồ OEE",
-    },
-    {
       key: "downtime-chart",
       icon: <BarChartOutlined />,
       label: "Biểu đồ thời gian ngừng",
@@ -151,11 +135,11 @@ const TeamLeaderLayout = () => {
       icon: <EditOutlined />,
       label: "E-Form Nhập liệu sản lượng",
     },
-    {
-      key: "production",
-      icon: <BarChartOutlined />,
-      label: "Quản lý sản xuất",
-    },
+    // {
+    //   key: "production",
+    //   icon: <BarChartOutlined />,
+    //   label: "Quản lý sản xuất",
+    // },
     {
       key: "equipment",
       icon: <ToolOutlined />,
@@ -184,21 +168,15 @@ const TeamLeaderLayout = () => {
       case "dashboard":
         navigate("/team-leader/dashboard");
         break;
-      case "factory-map":
-        navigate("/team-leader/factory-map");
-        break;
-      case "oee-dashboard":
-        navigate("/team-leader/oee-dashboard");
-        break;
       case "downtime-chart":
         navigate("/team-leader/downtime-chart");
         break;
       case "EFormProductionInput":
         navigate("/team-leader/EFormProductionInput");
         break;
-      case "production":
-        navigate("/team-leader/production");
-        break;
+      // case "production":
+      //   navigate("/team-leader/production");
+      //   break;
       case "equipment":
         navigate("/team-leader/equipment");
         break;

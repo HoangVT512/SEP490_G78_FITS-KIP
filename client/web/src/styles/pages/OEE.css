@@ -13,6 +13,18 @@
     overflow-y: auto;
 }
 
+/* Realtime indicator pulse animation */
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.5;
+        transform: scale(1.2);
+    }
+}
+
 .main-container {
     width: 100%;
     min-height: 100vh;
@@ -152,7 +164,7 @@
     border: 1px solid black;
     padding: 5px;
     display: flex;
-    gap: 12px;
+    gap: 18px;
 }
 
 /* Mechanical grid areas */
@@ -202,14 +214,26 @@
 }
 
 /* Assembly grid areas */
-.assembly-grid .area-top-full {
-    grid-column: 1 / 4;
+.assembly-grid .area-top-left {
+    grid-column: 1 / 2;
     grid-row: 1 / 2;
     margin-top: 10px;
 }
 
-.assembly-grid .area-empty-right {
-    grid-column: 3 / 3;
+.assembly-grid .area-top-center {
+    grid-column: 2 / 3;
+    grid-row: 1 / 2;
+    margin-top: 10px;
+}
+
+.assembly-grid .area-top-right {
+    grid-column: 3 / 4;
+    grid-row: 1 / 2;
+    margin-top: 10px;
+}
+
+.assembly-grid .area-empty {
+    grid-column: 1 / 2;
     grid-row: 2 / 3;
     background-color: #666;
     color: white;
@@ -219,20 +243,14 @@
     font-size: 0.5em;
 }
 
-.assembly-grid .area-center-full {
-    grid-column: 1 / 3;
+.assembly-grid .area-center-left {
+    grid-column: 2 / 3;
     grid-row: 2 / 3;
-    flex-direction: column;
 }
 
-.assembly-grid .area-bottom-left {
-    grid-column: 1 / 2;
-    grid-row: 3 / 4;
-}
-
-.assembly-grid .area-bottom-right {
-    grid-column: 2 / 4;
-    grid-row: 3 / 4;
+.assembly-grid .area-center-right {
+    grid-column: 3 / 4;
+    grid-row: 2 / 3;
 }
 
 /* Wire grid areas */
@@ -285,13 +303,13 @@
 .box {
     flex-grow: 1;
     flex-shrink: 1;
-    flex-basis: 0;
+    flex-basis: 120px;
     border: 1px solid black;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    min-height: 50px;
+    min-height: 100px;
     font-size: 0.9em;
     text-align: center;
     position: relative;

@@ -13,6 +13,20 @@ export const incidentService = {
     return res?.data || res;
   },
 
+  async getIncidentsByLineAndDate(lineId, date) {
+    try {
+      // date should be in DD/MM/YYYY format
+      const url = `/Incidents/line/${lineId}/date?date=${encodeURIComponent(
+        date
+      )}`;
+      const data = await apiRequest(url);
+      return data?.data || [];
+    } catch (error) {
+      console.error("Lỗi lấy những sự cố theo dây chuyền và ngày:", error);
+      throw error;
+    }
+  },
+
   async getById(id) {
     const res = await apiRequest(`/Incidents/${encodeURIComponent(id)}`, {
       method: "GET",
@@ -108,5 +122,23 @@ export const incidentService = {
     // Backend returns {imageUrl: "..."}, extract the URL string
     const data = res?.data || res;
     return data?.imageUrl || data;
+  },
+
+  async getTechSupportPendingIncidents(date = null) {
+    const params = date ? `?date=${encodeURIComponent(date)}` : "";
+    const res = await apiRequest(`/Incidents/tech-support-pending${params}`, {
+      method: "GET",
+    });
+    return res;
+  },
+
+  async checkHasSpareParts(incidentId) {
+    const res = await apiRequest(
+      `/Incidents/${encodeURIComponent(incidentId)}/spare-parts-status`,
+      {
+        method: "GET",
+      }
+    );
+    return res?.data || { hasPendingRequests: false, hasReturnRequests: false };
   },
 };

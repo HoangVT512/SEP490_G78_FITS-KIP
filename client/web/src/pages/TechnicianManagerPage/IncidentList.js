@@ -16,6 +16,8 @@ import {
   Empty,
   Tabs,
   Dropdown,
+  Image,
+  Carousel,
 } from "antd";
 import {
   EyeOutlined,
@@ -28,30 +30,53 @@ import {
   CheckCircleOutlined,
   UserAddOutlined,
   DownOutlined,
+  LeftOutlined,
+  RightOutlined,
+  PictureOutlined,
+  PushpinOutlined,
+  UndoOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { incidentService } from "../../services/incidentService";
 import { userService } from "../../services/userService";
+import { lineService } from "../../services/lineService";
+import { stageService } from "../../services/stageService";
 import signalRService from "../../services/signalRService";
 import { useAuth } from "../../contexts/AuthContext";
+import { useSignalR } from "../../contexts/SignalRContext";
+import ReplacementApprovalModal from "./ReplacementApprovalModal";
 
 const { Option } = Select;
-
 const IncidentList = () => {
   const [loading, setLoading] = useState(false);
   const [incidents, setIncidents] = useState([]);
+  const [allIncidents, setAllIncidents] = useState([]); // Store all incidents for tab counts
   const [filteredIncidents, setFilteredIncidents] = useState([]);
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [approvalModalVisible, setApprovalModalVisible] = useState(false);
+  const [approvalEquipmentId, setApprovalEquipmentId] = useState(null);
+  const [approvalIncidentId, setApprovalIncidentId] = useState(null);
+  const [approvalEquipmentInfo, setApprovalEquipmentInfo] = useState(null); // Equipment name and code
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [activeTab, setActiveTab] = useState("pending");
   const [technicians, setTechnicians] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [selectedTechnicianId, setSelectedTechnicianId] = useState(null);
+  const [sparePartsStatusMap, setSparePartsStatusMap] = useState({}); // Track spare parts status for each incident
+  const [historyModalVisible, setHistoryModalVisible] = useState(false); // Xem lịch sử thay thế
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState(null); // Equipment ID để xem lịch sử
+  const [selectedIncidentId, setSelectedIncidentId] = useState(null); // Incident ID để xem lịch sử
+  const [selectedEquipmentInfo, setSelectedEquipmentInfo] = useState(null); // Equipment info for history modal
+  const [imagePreviewVisible, setImagePreviewVisible] = useState(false); // Modal xem hình ảnh
+  const [currentImageIndex, setCurrentImageIndex] = useState(0); // Index hình ảnh hiện tại
+  const [lines, setLines] = useState([]); // Danh sách dây chuyền
+  const [stages, setStages] = useState([]); // Danh sách công đoạn
 
   // Get current user from auth context to filter by department
   const { user: currentUser } = useAuth();
+  const { subscribe } = useSignalR();
 
   const searchInput = useRef(null);
 
@@ -118,86 +143,69 @@ const IncidentList = () => {
   useEffect(() => {
     fetchIncidents();
     fetchTechnicians();
+    fetchLines();
+    fetchStages();
   }, []);
 
   useEffect(() => {
     // Fetch incidents again when activeTab changes
-    if (activeTab === "myTasks") {
-      fetchIncidents();
-    }
+    fetchIncidents();
   }, [activeTab]);
 
   useEffect(() => {
     handleFilter();
   }, [searchText, filterStatus, incidents, activeTab]);
 
-  // Thêm useEffect để lắng nghe cập nhật dữ liệu real-time và thông báo
+  // Thêm useEffect để lắng nghe cập nhật dữ liệu real-time
   useEffect(() => {
-    // Lắng nghe thông báo toast khi có sự cố mới
-    const handleReceiveNotification = (notification) => {
-      console.log("📢 Received notification:", notification);
-      message.info({
-        content:
-          notification.Message ||
-          notification.message ||
-          "Có sự cố mới cần hỗ trợ kỹ thuật",
-        duration: 5,
-        icon: <WarningOutlined style={{ color: "#ff4d4f" }} />,
-      });
-    };
+    console.log("🔌 Setting up SignalR listeners for IncidentList...");
 
-    // Lắng nghe cập nhật dữ liệu (tự động refresh danh sách)
-    const handleDataUpdate = (data) => {
-      console.log("🔄 Data updated:", data);
-      if (data.type === "incident") {
-        console.log("Incident data updated, reloading incidents...");
-        fetchIncidents(); // Tải lại dữ liệu khi có thay đổi
+    // Lắng nghe thông báo duyệt cấp phát linh kiện
+    const unsubscribeReplacementApproved = subscribe("ReplacementApproved", (data) => {
+      console.log("✅ Replacement approved notification received:", data);
+      
+      // Refresh spare parts status cho incident liên quan
+      if (data.incidentId) {
+        fetchSparePartsStatusForIncident(data.incidentId);
       }
-    };
+      
+      // Refresh toàn bộ data sau 2 giây để đảm bảo đồng bộ
+      setTimeout(() => {
+        fetchIncidents();
+      }, 2000);
+    });
 
-    // Đăng ký lắng nghe cả hai event
-    signalRService.onReceiveNotification(handleReceiveNotification);
-    signalRService.onDataUpdated(handleDataUpdate);
-
+    // Cleanup
     return () => {
-      signalRService.offReceiveNotification();
-      signalRService.offDataUpdated();
+      unsubscribeReplacementApproved();
+      console.log("🧹 Cleaned up SignalR listeners for IncidentList");
     };
-  }, []);
+  }, [subscribe]);
 
   const fetchIncidents = async () => {
     setLoading(true);
     try {
       let res;
 
-      // If viewing "My Tasks" tab, fetch only incidents assigned to current user
-      if (activeTab === "myTasks") {
-        res = await incidentService.getAssignedToMe();
-      } else {
-        // Otherwise, fetch all incidents
-        res = await incidentService.getAll();
-      }
+      // Always fetch all incidents for tab counts and statistics
+      res = await incidentService.getAll();
 
       // backend returns { success, data }
       const items = Array.isArray(res) ? res : res?.data || [];
 
-      // Filter only incidents that need technical support (skip for myTasks as they're already filtered)
-      let techSupportIncidents = items;
-      if (activeTab !== "myTasks") {
-        techSupportIncidents = items.filter(
-          (item) => item.isTechSupport === true
-        );
-      }
+      // Filter only incidents that need technical support
+      let techSupportIncidents = items.filter(
+        (item) => item.isTechSupport === true
+      );
 
       // For Technical Manager: Show ALL tech support incidents from all departments
-      // (no department filtering needed for technical managers)
-      let departmentFilteredIncidents = techSupportIncidents;
+      let allIncidentsData = techSupportIncidents;
       console.log(
-        `✅ Showing ${departmentFilteredIncidents.length} incidents for Technical Manager (all departments)`
+        `✅ Showing ${allIncidentsData.length} incidents for Technical Manager (all departments)`
       );
 
       // Normalize to frontend shape
-      const mapped = (departmentFilteredIncidents || []).map((it) => {
+      const mapped = (allIncidentsData || []).map((it) => {
         // compute downtime in minutes if possible
         let downtime = 0;
         try {
@@ -277,14 +285,50 @@ const IncidentList = () => {
           downtime: downtime,
           impact: it.impact || it.Impact || null,
           attachments: it.attachments || it.files || [],
+          imageUrls:
+            it.incidentImages?.map((img) => img.imageUrl) ||
+            it.IncidentImages?.map((img) => img.ImageUrl) ||
+            [],
           startSlotTime:
             it.slot?.slotStartTime || it.slot?.SlotStartTime || null,
           endSlotTime: it.slot?.slotEndTime || it.slot?.SlotEndTime || null,
           isTechSupport: it.isTechSupport || false,
         };
       });
-      setIncidents(mapped);
-      setFilteredIncidents(mapped);
+
+      // Always store all incidents for tab counts and statistics
+      setAllIncidents(mapped);
+
+      // Filter incidents based on active tab for display
+      let displayIncidents = mapped;
+      if (activeTab === "myTasks") {
+        const currentUserId = currentUser?.userId || currentUser?.id;
+        displayIncidents = mapped.filter((i) => {
+          const assignedId = i.assignedTo || i.assignedToId;
+          return assignedId && assignedId === currentUserId;
+        });
+      }
+
+      setIncidents(displayIncidents);
+      setFilteredIncidents(displayIncidents);
+
+      // Check spare parts status for each incident
+      const sparePartsMap = {};
+      for (const incident of mapped) {
+        try {
+          const sparePartsStatus = await incidentService.checkHasSpareParts(
+            incident.id
+          );
+          sparePartsMap[incident.id] = sparePartsStatus;
+        } catch (err) {
+          console.error(
+            `Error checking spare parts for incident ${incident.id}:`,
+            err
+          );
+          sparePartsMap[incident.id] = { hasPendingRequests: false, hasReturnRequests: false };
+        }
+      }
+      setSparePartsStatusMap(sparePartsMap);
     } catch (err) {
       console.error("Lỗi khi tải danh sách sự cố:", err);
       message.error(err?.message || "Không thể tải danh sách sự cố");
@@ -312,6 +356,41 @@ const IncidentList = () => {
     } catch (err) {
       console.error("Lỗi khi tải danh sách kỹ thuật viên:", err);
       message.error("Không thể tải danh sách kỹ thuật viên");
+    }
+  };
+
+  const fetchLines = async () => {
+    try {
+      const res = await lineService.getActiveLines();
+      const lineData = Array.isArray(res) ? res : res?.data || [];
+      setLines(lineData);
+    } catch (err) {
+      console.error("Lỗi khi tải danh sách dây chuyền:", err);
+      message.error("Không thể tải danh sách dây chuyền");
+    }
+  };
+
+  const fetchStages = async () => {
+    try {
+      const res = await stageService.getActiveStages();
+      const stageData = Array.isArray(res) ? res : res?.data || [];
+      setStages(stageData);
+    } catch (err) {
+      console.error("Lỗi khi tải danh sách công đoạn:", err);
+      message.error("Không thể tải danh sách công đoạn");
+    }
+  };
+
+  const fetchSparePartsStatusForIncident = async (incidentId) => {
+    try {
+      const sparePartsStatus = await incidentService.checkHasSpareParts(incidentId);
+      setSparePartsStatusMap(prev => ({
+        ...prev,
+        [incidentId]: sparePartsStatus
+      }));
+      console.log(`✅ Updated spare parts status for incident ${incidentId}:`, sparePartsStatus);
+    } catch (err) {
+      console.error(`Error checking spare parts for incident ${incidentId}:`, err);
     }
   };
 
@@ -358,6 +437,8 @@ const IncidentList = () => {
     }
 
     await assignTechnician(selectedIncident.id, selectedTechnicianId, true);
+    // Đóng modal sau khi cập nhật thành công
+    setDetailModalVisible(false);
   };
 
   const handleFilter = () => {
@@ -408,6 +489,25 @@ const IncidentList = () => {
     setSelectedIncident(record);
     setSelectedTechnicianId(record.assignedTo);
     setDetailModalVisible(true);
+    setCurrentImageIndex(0); // Reset image index
+  };
+
+  const handleImagePreview = (index) => {
+    setCurrentImageIndex(index);
+    setImagePreviewVisible(true);
+  };
+
+  const handleImageNavigation = (direction) => {
+    const imageUrls = selectedIncident?.imageUrls || [];
+    if (direction === "next") {
+      setCurrentImageIndex((prev) =>
+        prev < imageUrls.length - 1 ? prev + 1 : 0
+      );
+    } else {
+      setCurrentImageIndex((prev) =>
+        prev > 0 ? prev - 1 : imageUrls.length - 1
+      );
+    }
   };
 
   const getStatusColor = (status) => {
@@ -445,7 +545,59 @@ const IncidentList = () => {
       key: "rowIndex",
       width: 80,
       fixed: "left",
-      render: (text) => <span style={{ fontWeight: 500 }}>{text}</span>,
+      render: (text, record) => (
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <span style={{ fontWeight: 500 }}>{text}</span>
+          {sparePartsStatusMap[record.id]?.hasPendingRequests && (
+            <Tooltip title="Có yêu cầu linh kiện thay thế đang chờ duyệt">
+              <div style={{
+                backgroundColor: "#ff4d4f",
+                borderRadius: "50%",
+                width: "24px",
+                height: "24px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                animation: "pulse 2s infinite",
+                boxShadow: "0 0 8px rgba(255, 77, 79, 0.5)",
+                border: "2px solid white"
+              }}>
+                <PushpinOutlined
+                  style={{
+                    color: "white",
+                    fontSize: "14px",
+                    fontWeight: "bold"
+                  }}
+                />
+              </div>
+            </Tooltip>
+          )}
+          {sparePartsStatusMap[record.id]?.hasReturnRequests && (
+            <Tooltip title="Có linh kiện cần trả lại">
+              <div style={{
+                backgroundColor: "#faad14",
+                borderRadius: "50%",
+                width: "24px",
+                height: "24px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                animation: "pulse 2s infinite",
+                boxShadow: "0 0 8px rgba(250, 173, 20, 0.5)",
+                border: "2px solid white"
+              }}>
+                <UndoOutlined
+                  style={{
+                    color: "white",
+                    fontSize: "14px",
+                    fontWeight: "bold"
+                  }}
+                />
+              </div>
+            </Tooltip>
+          )}
+        </div>
+      ),
     },
     {
       title: "Thiết bị",
@@ -458,9 +610,8 @@ const IncidentList = () => {
       ...getColumnSearchProps("equipmentName", "Tìm thiết bị"),
       render: (text, record) => (
         <Tooltip
-          title={`${text}${
-            record.equipmentCode ? ` (${record.equipmentCode})` : ""
-          }`}
+          title={`${text}${record.equipmentCode ? ` (${record.equipmentCode})` : ""
+            }`}
         >
           <div>
             <div style={{ fontWeight: 500 }}>{text}</div>
@@ -481,7 +632,16 @@ const IncidentList = () => {
       ellipsis: {
         showTitle: false,
       },
-      ...getColumnSearchProps("lineName", "Tìm dây chuyền"),
+      filters: Array.isArray(lines)
+        ? lines.map((line) => ({
+          text: line.lineName,
+          value: line.lineName,
+        }))
+        : [],
+      onFilter: (value, record) => record.lineName === value,
+      filterIcon: (filtered) => (
+        <FilterOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
+      ),
       render: (text) => (
         <Tooltip title={text}>
           <Tag color="purple">{text}</Tag>
@@ -496,7 +656,16 @@ const IncidentList = () => {
       ellipsis: {
         showTitle: false,
       },
-      ...getColumnSearchProps("stageName", "Tìm công đoạn"),
+      filters: Array.isArray(stages)
+        ? stages.map((stage) => ({
+          text: stage.stageName,
+          value: stage.stageName,
+        }))
+        : [],
+      onFilter: (value, record) => record.stageName === value,
+      filterIcon: (filtered) => (
+        <FilterOutlined style={{ color: filtered ? "#1677ff" : undefined }} />
+      ),
       render: (text) => (
         <Tooltip title={text || " "}>
           <Tag color="blue">{text || " "}</Tag>
@@ -518,6 +687,39 @@ const IncidentList = () => {
         </Tooltip>
       ),
     },
+
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 120,
+      render: (status) => (
+        <Tag icon={getStatusIcon(status)} color={getStatusColor(status)}>
+          {status}
+        </Tag>
+      ),
+    },
+    // Remove the separate "Yêu cầu linh kiện" column as it's now integrated into the # column
+    // {
+    //   title: "Yêu cầu linh kiện",
+    //   dataIndex: "id",
+    //   key: "hasSpareParts",
+    //   width: 120,
+    //   align: "center",
+    //   render: (incidentId) => {
+    //     const hasSpareParts = sparePartsRequiredMap[incidentId];
+    //     if (hasSpareParts === undefined) {
+    //       return <span style={{ color: "#999" }}>Kiểm tra...</span>;
+    //     }
+    //     return hasSpareParts ? (
+    //       <Tag color="red" icon={<ExclamationCircleOutlined />}>
+    //         Có yêu cầu
+    //       </Tag>
+    //     ) : (
+    //       <Tag color="default">Không</Tag>
+    //     );
+    //   },
+    // },
     {
       title: "Ngày báo cáo",
       dataIndex: "reportDate",
@@ -535,36 +737,25 @@ const IncidentList = () => {
     // Hide downtime column for pending/solving incidents
     ...(activeTab === "completed"
       ? [
-          {
-            title: "Thời lượng (phút)",
-            dataIndex: "downtime",
-            key: "downtime",
-            width: 120,
-            align: "center",
-            render: (val) => (
-              <span
-                style={{
-                  color: val > 5 ? "#ff4d4f" : "#1890ff",
-                  fontWeight: 500,
-                }}
-              >
-                {typeof val === "number" ? val.toFixed(2) : val}
-              </span>
-            ),
-          },
-        ]
+        {
+          title: "Thời lượng (phút)",
+          dataIndex: "downtime",
+          key: "downtime",
+          width: 120,
+          align: "center",
+          render: (val) => (
+            <span
+              style={{
+                color: val > 5 ? "#ff4d4f" : "#1890ff",
+                fontWeight: 500,
+              }}
+            >
+              {typeof val === "number" ? val.toFixed(2) : val}
+            </span>
+          ),
+        },
+      ]
       : []),
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      key: "status",
-      width: 120,
-      render: (status) => (
-        <Tag icon={getStatusIcon(status)} color={getStatusColor(status)}>
-          {status}
-        </Tag>
-      ),
-    },
     {
       title: "Người đảm nhiệm",
       dataIndex: "assignedTo",
@@ -588,6 +779,36 @@ const IncidentList = () => {
             icon: <EyeOutlined />,
             onClick: () => handleViewDetail(record),
           },
+          // Ẩn "Yêu cầu thay thế" khi sự cố đã hoàn thành
+          ...(record.status !== "Hoàn thành" ? [{
+            key: "replacementRequests",
+            label: "Yêu cầu thay thế",
+            icon: <UserAddOutlined />,
+            onClick: () => {
+              setSelectedIncident(record);
+              setApprovalEquipmentId(record.equipmentId || record.equipmentId);
+              setApprovalIncidentId(record.id);
+              setApprovalEquipmentInfo({
+                name: record.equipmentName,
+                code: record.equipmentCode,
+              });
+              setApprovalModalVisible(true);
+            },
+          }] : []),
+          {
+            key: "replacementHistory",
+            label: "Xem lịch sử thay thế",
+            icon: <EyeOutlined />,
+            onClick: () => {
+              setSelectedIncidentId(record.id); // Use record.id instead of record.incidentId
+              setSelectedEquipmentId(record.equipmentId);
+              setSelectedEquipmentInfo({
+                name: record.equipmentName,
+                code: record.equipmentCode,
+              });
+              setHistoryModalVisible(true);
+            },
+          },
         ];
 
         return (
@@ -605,17 +826,17 @@ const IncidentList = () => {
 
   // Calculate statistics based on active tab
   const getStats = () => {
-    let filteredIncidents = incidents;
+    let filteredIncidents = allIncidents;
 
     if (activeTab === "pending") {
-      filteredIncidents = incidents.filter(
+      filteredIncidents = allIncidents.filter(
         (i) => i.status === "Chờ xử lý" || i.status === "Đang xử lý"
       );
     } else if (activeTab === "completed") {
-      filteredIncidents = incidents.filter((i) => i.status === "Hoàn thành");
+      filteredIncidents = allIncidents.filter((i) => i.status === "Hoàn thành");
     } else if (activeTab === "myTasks") {
       const currentUserId = currentUser?.userId || currentUser?.id;
-      filteredIncidents = incidents.filter((i) => {
+      filteredIncidents = allIncidents.filter((i) => {
         const assignedId = i.assignedTo || i.assignedToId;
         return assignedId && assignedId === currentUserId;
       });
@@ -645,7 +866,7 @@ const IncidentList = () => {
           <ExclamationCircleOutlined />
           Chờ xử lý (
           {
-            incidents.filter(
+            allIncidents.filter(
               (i) => i.status === "Chờ xử lý" || i.status === "Đang xử lý"
             ).length
           }
@@ -678,7 +899,7 @@ const IncidentList = () => {
                 style={{ width: 300 }}
                 allowClear
               />
-              <Select
+              {/* <Select
                 value={filterStatus}
                 onChange={setFilterStatus}
                 style={{ width: 150 }}
@@ -689,7 +910,7 @@ const IncidentList = () => {
                 <Option value="Đang xử lý">Đang xử lý</Option>
                 <Option value="Hoàn thành">Hoàn thành</Option>
                 <Option value="Hủy">Hủy</Option>
-              </Select>
+              </Select> */}
             </Space>
           </div>
 
@@ -723,7 +944,7 @@ const IncidentList = () => {
         <span>
           <CheckCircleOutlined />
           Hoàn thành (
-          {incidents.filter((i) => i.status === "Hoàn thành").length})
+          {allIncidents.filter((i) => i.status === "Hoàn thành").length})
         </span>
       ),
       children: (
@@ -752,7 +973,7 @@ const IncidentList = () => {
                 style={{ width: 300 }}
                 allowClear
               />
-              <Select
+              {/* <Select
                 value={filterStatus}
                 onChange={setFilterStatus}
                 style={{ width: 150 }}
@@ -763,7 +984,7 @@ const IncidentList = () => {
                 <Option value="Đang xử lý">Đang xử lý</Option>
                 <Option value="Hoàn thành">Hoàn thành</Option>
                 <Option value="Hủy">Hủy</Option>
-              </Select>
+              </Select> */}
             </Space>
           </div>
 
@@ -791,91 +1012,132 @@ const IncidentList = () => {
         </Card>
       ),
     },
-    {
-      key: "myTasks",
-      label: (
-        <span>
-          <UserAddOutlined />
-          Nhiệm vụ của tôi (
-          {
-            incidents.filter((i) => {
-              const currentUserId = currentUser?.userId || currentUser?.id;
-              const assignedId = i.assignedTo || i.assignedToId;
-              return assignedId && assignedId === currentUserId;
-            }).length
-          }
-          )
-        </span>
-      ),
-      children: (
-        <Card
-          title={
-            <Space>
-              <UserAddOutlined />
-              <span>Sự cố được phân công cho tôi</span>
-            </Space>
-          }
-          extra={
-            <Button icon={<ReloadOutlined />} onClick={fetchIncidents}>
-              Làm mới
-            </Button>
-          }
-          variant="borderless"
-        >
-          {/* Filters */}
-          <div style={{ marginBottom: 16 }}>
-            <Space size="middle" wrap>
-              <Input
-                placeholder="Tìm kiếm mã, tiêu đề, thiết bị..."
-                prefix={<SearchOutlined />}
-                value={searchText}
-                onChange={(e) => setSearchText(e.target.value)}
-                style={{ width: 300 }}
-                allowClear
-              />
-              <Select
-                value={filterStatus}
-                onChange={setFilterStatus}
-                style={{ width: 150 }}
-                placeholder="Trạng thái"
-              >
-                <Option value="all">Tất cả</Option>
-                <Option value="Chờ xử lý">Chờ xử lý</Option>
-                <Option value="Đang xử lý">Đang xử lý</Option>
-                <Option value="Hoàn thành">Hoàn thành</Option>
-                <Option value="Hủy">Hủy</Option>
-              </Select>
-            </Space>
-          </div>
+    // {
+    //   key: "myTasks",
+    //   label: (
+    //     <span>
+    //       <UserAddOutlined />
+    //       Nhiệm vụ của tôi (
+    //       {
+    //         allIncidents.filter((i) => {
+    //           const currentUserId = currentUser?.userId || currentUser?.id;
+    //           const assignedId = i.assignedTo || i.assignedToId;
+    //           return assignedId && assignedId === currentUserId;
+    //         }).length
+    //       }
+    //       )
+    //     </span>
+    //   ),
+    //   children: (
+    //     <Card
+    //       title={
+    //         <Space>
+    //           <UserAddOutlined />
+    //           <span>Sự cố được phân công cho tôi</span>
+    //         </Space>
+    //       }
+    //       extra={
+    //         <Button icon={<ReloadOutlined />} onClick={fetchIncidents}>
+    //           Làm mới
+    //         </Button>
+    //       }
+    //       variant="borderless"
+    //     >
+    //       {/* Filters */}
+    //       <div style={{ marginBottom: 16 }}>
+    //         <Space size="middle" wrap>
+    //           <Input
+    //             placeholder="Tìm kiếm mã, tiêu đề, thiết bị..."
+    //             prefix={<SearchOutlined />}
+    //             value={searchText}
+    //             onChange={(e) => setSearchText(e.target.value)}
+    //             style={{ width: 300 }}
+    //             allowClear
+    //           />
+    //           <Select
+    //             value={filterStatus}
+    //             onChange={setFilterStatus}
+    //             style={{ width: 150 }}
+    //             placeholder="Trạng thái"
+    //           >
+    //             <Option value="all">Tất cả</Option>
+    //             <Option value="Chờ xử lý">Chờ xử lý</Option>
+    //             <Option value="Đang xử lý">Đang xử lý</Option>
+    //             <Option value="Hoàn thành">Hoàn thành</Option>
+    //             <Option value="Hủy">Hủy</Option>
+    //           </Select>
+    //         </Space>
+    //       </div>
 
-          {/* Table */}
-          <Table
-            columns={columns}
-            dataSource={filteredIncidents}
-            rowKey="id"
-            loading={loading}
-            scroll={{ x: "max-content" }}
-            pagination={{
-              pageSize: 10,
-              showSizeChanger: true,
-              showTotal: (total) => `Tổng ${total} nhiệm vụ của tôi`,
-            }}
-            locale={{
-              emptyText: (
-                <Empty
-                  description="Không có nhiệm vụ nào được phân công cho bạn"
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                />
-              ),
-            }}
-          />
-        </Card>
-      ),
-    },
+    //       {/* Table */}
+    //       <Table
+    //         columns={columns}
+    //         dataSource={filteredIncidents}
+    //         rowKey="id"
+    //         loading={loading}
+    //         scroll={{ x: "max-content" }}
+    //         pagination={{
+    //           pageSize: 10,
+    //           showSizeChanger: true,
+    //           showTotal: (total) => `Tổng ${total} nhiệm vụ của tôi`,
+    //         }}
+    //         locale={{
+    //           emptyText: (
+    //             <Empty
+    //               description="Không có nhiệm vụ nào được phân công cho bạn"
+    //               image={Empty.PRESENTED_IMAGE_SIMPLE}
+    //             />
+    //           ),
+    //         }}
+    //       />
+    //     </Card>
+    //   ),
+    // },
   ];
 
   return (
     <div>
+      {/* Add CSS animation for pulsing effect */}
+      <style>
+        {`
+          @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+          }
+        `}
+      </style>
+
+      {/* Replacement approvals modal */}
+      <ReplacementApprovalModal
+        equipmentId={approvalEquipmentId}
+        incidentId={approvalIncidentId}
+        equipmentInfo={approvalEquipmentInfo}
+        open={approvalModalVisible}
+        onClose={() => {
+          setApprovalModalVisible(false);
+          setApprovalEquipmentId(null);
+          setApprovalIncidentId(null);
+          setApprovalEquipmentInfo(null);
+        }}
+        onUpdated={() => fetchIncidents()}
+      />
+
+      {/* Replacement History Modal */}
+      <ReplacementApprovalModal
+        equipmentId={selectedEquipmentId}
+        incidentId={selectedIncidentId}
+        equipmentInfo={selectedEquipmentInfo}
+        open={historyModalVisible}
+        onClose={() => {
+          setHistoryModalVisible(false);
+          setSelectedEquipmentId(null);
+          setSelectedIncidentId(null);
+          setSelectedEquipmentInfo(null);
+        }}
+        onUpdated={fetchIncidents}
+        viewMode={true}
+      />
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
         <Col xs={24} sm={12} lg={6}>
@@ -885,8 +1147,8 @@ const IncidentList = () => {
                 activeTab === "pending"
                   ? "Tổng sự cố chờ xử lý"
                   : activeTab === "completed"
-                  ? "Tổng sự cố hoàn thành"
-                  : "Tổng nhiệm vụ của tôi"
+                    ? "Tổng sự cố hoàn thành"
+                    : "Tổng nhiệm vụ của tôi"
               }
               value={stats.total}
               prefix={<WarningOutlined />}
@@ -947,7 +1209,15 @@ const IncidentList = () => {
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
         footer={[
-          <Button key="close" onClick={() => setDetailModalVisible(false)}>
+          <Button
+            key="close"
+            onClick={() => setDetailModalVisible(false)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
             Đóng
           </Button>,
           selectedIncident && selectedIncident.status !== "Hoàn thành" && (
@@ -955,13 +1225,19 @@ const IncidentList = () => {
               key="update"
               type="primary"
               onClick={handleUpdateAssignment}
-              style={{ backgroundColor: "#334766", borderColor: "#334766" }}
+              style={{
+                backgroundColor: "#334766",
+                borderColor: "#334766",
+                height: "40px",
+                fontSize: "16px",
+                minWidth: "120px",
+              }}
             >
               Cập nhật
             </Button>
           ),
         ]}
-        width={1000}
+        width={1200}
         style={{ top: 20 }}
       >
         {selectedIncident && (
@@ -1122,8 +1398,8 @@ const IncidentList = () => {
                       <div style={{ fontSize: "14px" }}>
                         {selectedIncident.reportDate
                           ? dayjs(selectedIncident.reportDate).format(
-                              "DD/MM/YYYY"
-                            )
+                            "DD/MM/YYYY"
+                          )
                           : "-"}
                       </div>
                     </Col>
@@ -1153,8 +1429,8 @@ const IncidentList = () => {
                       <div style={{ fontSize: "14px", fontWeight: 500 }}>
                         {selectedIncident.reportDate
                           ? dayjs(selectedIncident.reportDate).format(
-                              "DD/MM/YYYY HH:mm:ss"
-                            )
+                            "DD/MM/YYYY HH:mm:ss"
+                          )
                           : "-"}
                       </div>
                     </Col>
@@ -1172,8 +1448,8 @@ const IncidentList = () => {
                       <div style={{ fontSize: "14px", fontWeight: 500 }}>
                         {selectedIncident.resolveDate
                           ? dayjs(selectedIncident.resolveDate).format(
-                              "DD/MM/YYYY HH:mm:ss"
-                            )
+                            "DD/MM/YYYY HH:mm:ss"
+                          )
                           : "-"}
                       </div>
                     </Col>
@@ -1365,7 +1641,194 @@ const IncidentList = () => {
                   </Row>
                 </Card>
               </Col>
+
+              {/* Incident Images */}
+              {selectedIncident.imageUrls && selectedIncident.imageUrls.length > 0 && (
+                <Col span={24}>
+                  <Card
+                    size="small"
+                    title={
+                      <Space>
+                        <PictureOutlined />
+                        <span>Hình ảnh sự cố ({selectedIncident.imageUrls.length} ảnh)</span>
+                      </Space>
+                    }
+                    variant="outlined"
+                  >
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
+                      {selectedIncident.imageUrls.map((imageUrl, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            position: "relative",
+                            cursor: "pointer",
+                            borderRadius: "8px",
+                            overflow: "hidden",
+                            border: "2px solid #f0f0f0",
+                            transition: "all 0.3s ease",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = "#1890ff";
+                            e.currentTarget.style.transform = "scale(1.05)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = "#f0f0f0";
+                            e.currentTarget.style.transform = "scale(1)";
+                          }}
+                          onClick={() => handleImagePreview(index)}
+                        >
+                          <Image
+                            src={imageUrl}
+                            alt={`Hình ảnh sự cố ${index + 1}`}
+                            width={120}
+                            height={120}
+                            style={{
+                              objectFit: "cover",
+                              borderRadius: "6px"
+                            }}
+                            preview={false}
+                            fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1xkE8O+ePLf3AAAAAElFTkSuQmCC"
+                          />
+                          <div
+                            style={{
+                              position: "absolute",
+                              bottom: "4px",
+                              right: "4px",
+                              backgroundColor: "rgba(0, 0, 0, 0.6)",
+                              color: "white",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
+                              fontSize: "12px",
+                              fontWeight: 500,
+                            }}
+                          >
+                            {index + 1}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div
+                      style={{
+                        marginTop: "12px",
+                        fontSize: "12px",
+                        color: "#999",
+                        fontStyle: "italic"
+                      }}
+                    >
+                      * Nhấp vào ảnh để xem chi tiết với chế độ xem toàn màn hình
+                    </div>
+                  </Card>
+                </Col>
+              )}
             </Row>
+          </div>
+        )}
+      </Modal>
+
+      {/* Image Preview Modal */}
+      <Modal
+        title={
+          <Space>
+            <PictureOutlined />
+            <span>
+              Hình ảnh sự cố - {currentImageIndex + 1}/{selectedIncident?.imageUrls?.length || 0}
+            </span>
+          </Space>
+        }
+        open={imagePreviewVisible}
+        onCancel={() => setImagePreviewVisible(false)}
+        width="90vw"
+        style={{ top: 20 }}
+        footer={[
+          // <Button 
+          //   key="prev" 
+          //   icon={<LeftOutlined />} 
+          //   onClick={() => handleImageNavigation("prev")}
+          //   disabled={!selectedIncident?.imageUrls?.length || selectedIncident.imageUrls.length <= 1}
+          // >
+          //   Ảnh trước
+          // </Button>,
+          // <Button 
+          //   key="next" 
+          //   type="primary" 
+          //   icon={<RightOutlined />} 
+          //   onClick={() => handleImageNavigation("next")}
+          //   disabled={!selectedIncident?.imageUrls?.length || selectedIncident.imageUrls.length <= 1}
+          //   style={{ backgroundColor: "#334766", borderColor: "#334766" }}
+          // >
+          //   Ảnh tiếp theo
+          // </Button>,
+          <Button
+            key="close"
+            onClick={() => setImagePreviewVisible(false)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
+            Đóng
+          </Button>,
+        ]}
+      >
+        {selectedIncident?.imageUrls?.length > 0 && (
+          <div style={{ textAlign: "center" }}>
+            <Image
+              src={selectedIncident.imageUrls[currentImageIndex]}
+              alt={`Hình ảnh sự cố ${currentImageIndex + 1}`}
+              style={{
+                maxWidth: "100%",
+                maxHeight: "70vh",
+                objectFit: "contain"
+              }}
+              fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1xkE8O+ePLf3AAAAAElFTkSuQmCC"
+            />
+
+            {/* Image thumbnails navigation */}
+            {selectedIncident.imageUrls.length > 1 && (
+              <div style={{
+                marginTop: "20px",
+                display: "flex",
+                justifyContent: "center",
+                gap: "8px",
+                flexWrap: "wrap"
+              }}>
+                {selectedIncident.imageUrls.map((imageUrl, index) => (
+                  <div
+                    key={index}
+                    style={{
+                      cursor: "pointer",
+                      border: index === currentImageIndex ? "3px solid #1890ff" : "2px solid #f0f0f0",
+                      borderRadius: "6px",
+                      overflow: "hidden",
+                      transition: "all 0.3s ease",
+                    }}
+                    onClick={() => setCurrentImageIndex(index)}
+                  >
+                    <Image
+                      src={imageUrl}
+                      alt={`Thumbnail ${index + 1}`}
+                      width={60}
+                      height={60}
+                      style={{
+                        objectFit: "cover"
+                      }}
+                      preview={false}
+                      fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1xkE8O+ePLf3AAAAAElFTkSuQmCC"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{
+              marginTop: "16px",
+              fontSize: "14px",
+              color: "#666",
+              fontStyle: "italic"
+            }}>
+              Sử dụng nút "Ảnh trước" và "Ảnh tiếp theo" hoặc nhấp vào ảnh nhỏ bên dưới để điều hướng
+            </div>
           </div>
         )}
       </Modal>

@@ -202,9 +202,9 @@ namespace FITSKIP.API.Controllers
                     Status = request.Status,
                     DocumentUrl = request.DocumentUrl
                 };
-                if(request.Quantity <= 0)
+                if (request.Quantity < 0)
                 {
-                    return BadRequest(new { message = "Số lượng phụ tùng phải lớn hơn 0" });    
+                    return BadRequest(new { message = "Số lượng phụ tùng phải lớn hơn hoặc bằng 0" });
                 }
 
                 var result = await _service.UpdateSparePartAsync(id, sparePart, cancellationToken);

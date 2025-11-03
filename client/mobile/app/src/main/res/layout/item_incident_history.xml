@@ -17,35 +17,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:padding="16dp"
+            android:paddingEnd="56dp">
 
-            <!-- Row 1: QR Code, Equipment Code, Equipment Name -->
-<!--        <LinearLayout-->
-<!--            android:layout_width="match_parent"-->
-<!--            android:layout_height="wrap_content"-->
-<!--            android:orientation="horizontal"-->
-<!--            android:layout_marginBottom="8dp">-->
+            <!-- Equipment Information Section -->
+            <!-- THAY THẾ 3 LinearLayout cũ bằng 3 cái mới có ID -->
 
-<!--            <TextView-->
-<!--                android:layout_width="0dp"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:layout_weight="1"-->
-<!--                android:text="QR Code: "-->
-<!--                android:textColor="@color/primary_color"-->
-<!--                android:textSize="12sp"-->
-<!--                android:textStyle="bold" />-->
-
-<!--            <TextView-->
-<!--                android:id="@+id/tv_qr_code"-->
-<!--                android:layout_width="0dp"-->
-<!--                android:layout_height="wrap_content"-->
-<!--                android:layout_weight="2"-->
-<!--                android:textColor="@color/text_primary"-->
-<!--                android:textSize="12sp" />-->
-
-<!--        </LinearLayout>-->
-
+            <!-- MÃ TB -->
             <LinearLayout
+                android:id="@+id/ll_equipment_code"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -77,7 +57,7 @@
                         android:textStyle="bold" />
 
                     <ImageView
-                        android:id="@+id/iv_tech_support"
+                        android:id="@+id/iv_tech_support_small"
                         android:layout_width="20dp"
                         android:layout_height="20dp"
                         android:layout_marginStart="8dp"
@@ -86,20 +66,21 @@
                         android:contentDescription="@string/need_tech_support" />
 
                     <TextView
-                        android:id="@+id/tv_tech_support_label"
+                        android:id="@+id/tv_tech_support_label_small"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="4dp"
                         android:text="@string/need_tech_support"
-                        android:textSize="6sp"
+                        android:textSize="10sp"
                         android:textColor="@color/text_primary"
                         android:visibility="gone" />
 
                 </LinearLayout>
-
             </LinearLayout>
 
+            <!-- TÊN TB -->
             <LinearLayout
+                android:id="@+id/ll_equipment_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -121,11 +102,11 @@
                     android:layout_weight="2"
                     android:textColor="@color/text_primary"
                     android:textSize="12sp" />
-
             </LinearLayout>
 
-            <!-- Row 2: Công đoạn, Dây chuyền -->
+            <!-- CÔNG ĐOẠN -->
             <LinearLayout
+                android:id="@+id/ll_stage"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
@@ -147,7 +128,6 @@
                     android:layout_weight="2"
                     android:textColor="@color/text_primary"
                     android:textSize="12sp" />
-
             </LinearLayout>
 
             <LinearLayout
@@ -175,7 +155,7 @@
 
             </LinearLayout>
 
-            <!-- Row 3: Vấn đề, Thời gian bắt đầu, Thời gian kết thúc -->
+            <!-- Issue Information Section -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -201,6 +181,32 @@
 
             </LinearLayout>
 
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="8dp">
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="@string/issue_type_label"
+                    android:textColor="@color/primary_color"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tv_issue_type"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="2"
+                    android:textColor="@color/text_primary"
+                    android:textSize="12sp" />
+
+            </LinearLayout>
+
+            <!-- Time Information Section -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -251,7 +257,6 @@
 
             </LinearLayout>
 
-            <!-- Row 4: Tổng thời gian, Loại vấn đề -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -277,36 +282,12 @@
 
             </LinearLayout>
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="@string/issue_type_label"
-                    android:textColor="@color/primary_color"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tv_issue_type"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="2"
-                    android:textColor="@color/text_primary"
-                    android:textSize="12sp" />
-
-            </LinearLayout>
-
-            <!-- Row 5: Đồng bộ -->
+            <!-- Sync Status Section -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
-                android:layout_marginTop="8dp">
+                android:layout_marginBottom="8dp">
 
                 <TextView
                     android:layout_width="0dp"
@@ -327,6 +308,84 @@
 
             </LinearLayout>
 
+            <!-- Images Section -->
+<!--            <LinearLayout-->
+<!--                android:layout_width="match_parent"-->
+<!--                android:layout_height="wrap_content"-->
+<!--                android:orientation="horizontal"-->
+<!--                android:layout_marginBottom="8dp">-->
+
+<!--                <TextView-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_weight="1"-->
+<!--                    android:text="@string/incident_images_label"-->
+<!--                    android:textColor="@color/primary_color"-->
+<!--                    android:textSize="12sp"-->
+<!--                    android:textStyle="bold" />-->
+
+<!--                <LinearLayout-->
+<!--                    android:layout_width="0dp"-->
+<!--                    android:layout_height="wrap_content"-->
+<!--                    android:layout_weight="2"-->
+<!--                    android:orientation="horizontal"-->
+<!--                    android:gravity="center_vertical">-->
+
+<!--                    <ImageView-->
+<!--                        android:id="@+id/iv_tech_support"-->
+<!--                        android:layout_width="16dp"-->
+<!--                        android:layout_height="16dp"-->
+<!--                        android:layout_marginEnd="4dp"-->
+<!--                        android:src="@drawable/ic_tech_support"-->
+<!--                        android:visibility="gone"-->
+<!--                        android:contentDescription="@string/has_images" />-->
+
+<!--                    <TextView-->
+<!--                        android:id="@+id/tv_tech_support_label"-->
+<!--                        android:layout_width="wrap_content"-->
+<!--                        android:layout_height="wrap_content"-->
+<!--                        android:text="@string/has_attached_images"-->
+<!--                        android:textColor="@color/text_primary"-->
+<!--                        android:textSize="12sp"-->
+<!--                        android:visibility="gone" />-->
+
+<!--                </LinearLayout>-->
+
+<!--            </LinearLayout>-->
+
+            <!-- Image Gallery Section -->
+            <LinearLayout
+                android:id="@+id/ll_images"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/images_preview_label"
+                    android:textColor="@color/primary_color"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:layout_marginEnd="8dp" />
+
+                <HorizontalScrollView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/ll_image_container"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal" />
+
+                </HorizontalScrollView>
+
+            </LinearLayout>
+
         </LinearLayout>
 
         <!-- Delete Button -->
@@ -334,7 +393,7 @@
             android:id="@+id/btn_delete"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_alignParentRight="true"
+            android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
             android:layout_marginEnd="16dp"
             android:background="?attr/selectableItemBackgroundBorderless"

@@ -49,6 +49,7 @@ import {
   TeamOutlined,
   LockOutlined,
   UnlockOutlined,
+  TagOutlined,
 } from "@ant-design/icons";
 import { ArchiveIcon } from "../../assets/icons";
 import Layout from "../../components/Layout/Layout";
@@ -191,6 +192,7 @@ const LineManagement = ({ showHeader = true }) => {
         setEditingLine(line);
         form.setFieldsValue({
           lineName: line.lineName,
+          lineCode: line.lineCode,
           departmentId: line.departmentId,
           isActive: line.isActive,
         });
@@ -412,6 +414,13 @@ const LineManagement = ({ showHeader = true }) => {
 
   const columns = [
     {
+      title: "Mã Dây chuyền",
+      key: "lineCode",
+      width: 120,
+      ...getColumnSearchProps("lineCode", "Tìm kiếm mã dây chuyền"),
+      render: (_, record) => <div>{record.lineCode}</div>,
+    },
+    {
       title: "Dây chuyền",
       key: "line",
       width: 280,
@@ -517,6 +526,7 @@ const LineManagement = ({ showHeader = true }) => {
   const filteredLines = lines.filter((line) => {
     const matchesSearch =
       line.lineName?.toLowerCase().includes(searchText.toLowerCase()) ||
+      line.lineCode?.toLowerCase().includes(searchText.toLowerCase()) ||
       line.department?.departmentName
         ?.toLowerCase()
         .includes(searchText.toLowerCase());
@@ -584,7 +594,7 @@ const LineManagement = ({ showHeader = true }) => {
           <Col xs={24} sm={12} md={8}>
             <Input.Group compact>
               <Input
-                placeholder="Tìm kiếm dây chuyền..."
+                placeholder="Tìm kiếm theo tên hoặc mã dây chuyền..."
                 size="large"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
@@ -755,6 +765,36 @@ const LineManagement = ({ showHeader = true }) => {
           <Row gutter={16}>
             <Col span={12}>
               <Form.Item
+                name="lineCode"
+                label={
+                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                    Mã dây chuyền
+                    <span style={{ fontWeight: "400", fontSize: "12px", color: "#8c8c8c", marginLeft: "8px" }}>
+                      (chỉ chứa chữ cái, số, -, _)
+                    </span>
+                  </span>
+                }
+                rules={[
+                  {
+                    required: true,
+                    message: "Vui lòng nhập mã dây chuyền",
+                  },
+                  {
+                    pattern: /^[a-zA-Z0-9\-_]+$/,
+                    message: "Mã dây chuyền chỉ chứa chữ cái, số, dấu gạch ngang (-) và gạch dưới (_), không có khoảng trắng",
+                  },
+                  {
+                    min: 2,
+                    max: 50,
+                    message: "Mã dây chuyền phải từ 2 đến 50 ký tự",
+                  },
+                ]}
+              >
+                <Input placeholder="Nhập mã dây chuyền (vd: CK-C01, LINE_001)" size="large" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
                 name="lineName"
                 label={
                   <span style={{ fontWeight: "600", fontSize: "14px" }}>
@@ -771,6 +811,8 @@ const LineManagement = ({ showHeader = true }) => {
                 <Input placeholder="Nhập tên dây chuyền" size="large" />
               </Form.Item>
             </Col>
+          </Row>
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="departmentId"
@@ -808,8 +850,6 @@ const LineManagement = ({ showHeader = true }) => {
                 </Select>
               </Form.Item>
             </Col>
-          </Row>
-          <Row gutter={16}>
             <Col span={12}>
               {editingLine ? (
                 <Form.Item
@@ -904,6 +944,12 @@ const LineManagement = ({ showHeader = true }) => {
                 minWidth: "160px",
               }}
             >
+              <Descriptions.Item label="Mã dây chuyền">
+                <Space>
+                  <TagOutlined style={{ color: "#334766" }} />
+                  {viewingLine.lineCode}
+                </Space>
+              </Descriptions.Item>
               <Descriptions.Item label="Tên dây chuyền">
                 {viewingLine.lineName}
               </Descriptions.Item>

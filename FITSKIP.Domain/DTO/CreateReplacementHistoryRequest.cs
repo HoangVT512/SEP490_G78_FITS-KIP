@@ -11,6 +11,8 @@ namespace FITSKIP.Domain.DTO
     {
         public int? EquipmentId { get; set; }
 
+        public int? IncidentId { get; set; } // Add IncidentId field
+
         public int PartId { get; set; }
 
         public int Quantity { get; set; }
@@ -19,7 +21,7 @@ namespace FITSKIP.Domain.DTO
 
         public string ReplacedBy { get; set; } = null!;
 
-        public string Status { get; set; } = "Pending";
+        public string Status { get; set; } = "Chờ duyệt cấp phát"; // Trạng thái mặc định (tiếng Việt)
 
         public string? Remarks { get; set; }
     }

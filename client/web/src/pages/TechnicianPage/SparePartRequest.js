@@ -25,11 +25,13 @@ import {
 } from "@ant-design/icons";
 import { sparePartService } from "../../services/sparePartService";
 import notificationService from "../../services/notificationService";
+import { replacementHistoryService } from "../../services/replacementHistoryService";
 import { useAuth } from "../../contexts/AuthContext";
 
 const { TextArea } = Input;
 
-const SparePartRequest = () => {
+// If an incident prop is passed, technicians can record replacement used for that incident
+const SparePartRequest = ({ incident = null }) => {
   const [loading, setLoading] = useState(false);
   const [spareParts, setSpareParts] = useState([]);
   const [searchText, setSearchText] = useState("");
@@ -158,6 +160,52 @@ const SparePartRequest = () => {
     } catch (err) {
       console.error("Lỗi khi gửi yêu cầu:", err);
       message.error(err?.message || "Không thể gửi yêu cầu. Vui lòng thử lại.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Record replacement usage (creates ReplacementHistory and updates inventory on backend)
+  const handleRecordReplacement = async () => {
+    if (!selectedPart) return;
+
+    if (requestQuantity <= 0) {
+      message.warning("Số lượng phải lớn hơn 0");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        EquipmentId: incident?.equipmentId || incident?.equipmentID || null,
+        PartId: selectedPart.partId,
+        Quantity: requestQuantity,
+        ReplacedDate: new Date().toISOString(),
+        ReplacedBy:
+          currentUser?.userId ||
+          currentUser?.id ||
+          currentUser?.username ||
+          null,
+        Status: "Completed",
+        Remarks: requestReason || null,
+      };
+
+      await replacementHistoryService.create(payload);
+
+      message.success("Đã ghi nhận thay thế thành công và cập nhật tồn kho.");
+
+      // refresh spare parts list to show updated stock
+      await loadSpareParts();
+
+      setRequestModalVisible(false);
+      setSelectedPart(null);
+      setRequestQuantity(1);
+      setRequestReason("");
+    } catch (err) {
+      console.error("Lỗi khi ghi nhận thay thế:", err);
+      message.error(
+        err?.message || "Không thể ghi nhận thay thế. Vui lòng thử lại."
+      );
     } finally {
       setLoading(false);
     }
@@ -367,25 +415,55 @@ const SparePartRequest = () => {
           setRequestQuantity(1);
           setRequestReason("");
         }}
-        footer={[
-          <Button
-            key="cancel"
-            onClick={() => {
-              setRequestModalVisible(false);
-              setSelectedPart(null);
-            }}
-          >
-            Hủy
-          </Button>,
-          <Button
-            key="submit"
-            type="primary"
-            onClick={handleSubmitRequest}
-            loading={loading}
-          >
-            Gửi yêu cầu đến QLKT
-          </Button>,
-        ]}
+        footer={
+          // If an incident is provided, show both options: notify QLKT or directly record replacement
+          incident
+            ? [
+                <Button
+                  key="cancel"
+                  onClick={() => {
+                    setRequestModalVisible(false);
+                    setSelectedPart(null);
+                  }}
+                >
+                  Hủy
+                </Button>,
+                <Button
+                  key="notify"
+                  onClick={handleSubmitRequest}
+                  loading={loading}
+                >
+                  Gửi yêu cầu đến QLKT
+                </Button>,
+                <Button
+                  key="record"
+                  type="primary"
+                  onClick={handleRecordReplacement}
+                  loading={loading}
+                >
+                  Ghi nhận thay thế
+                </Button>,
+              ]
+            : [
+                <Button
+                  key="cancel"
+                  onClick={() => {
+                    setRequestModalVisible(false);
+                    setSelectedPart(null);
+                  }}
+                >
+                  Hủy
+                </Button>,
+                <Button
+                  key="submit"
+                  type="primary"
+                  onClick={handleSubmitRequest}
+                  loading={loading}
+                >
+                  Gửi yêu cầu đến QLKT
+                </Button>,
+              ]
+        }
         width={600}
       >
         {selectedPart && (

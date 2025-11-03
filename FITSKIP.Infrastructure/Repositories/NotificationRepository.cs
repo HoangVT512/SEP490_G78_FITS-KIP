@@ -122,6 +122,23 @@ namespace FITSKIP.Infrastructure.Repositories
                 .OrderByDescending(n => n.CreatedDate)
                 .ToListAsync();
         }
+
+        public async Task<int> DeleteOldReadNotificationsAsync(DateTime cutoffDate)
+        {
+            // Find all read notifications older than the cutoff date
+            var oldReadNotifications = await _context.Notifications
+                .Where(n => n.IsRead && n.CreatedDate < cutoffDate)
+                .ToListAsync();
+
+            if (oldReadNotifications.Any())
+            {
+                _context.Notifications.RemoveRange(oldReadNotifications);
+                await _context.SaveChangesAsync();
+                return oldReadNotifications.Count;
+            }
+
+            return 0;
+        }
     }
 }
 

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Layout as AntLayout,
   Menu,
@@ -8,6 +8,11 @@ import {
   Button,
   message,
   Typography,
+  List,
+  Empty,
+  Divider,
+  Spin,
+  Drawer,
 } from "antd";
 import {
   DashboardOutlined,
@@ -23,9 +28,14 @@ import {
   BellOutlined,
   SafetyOutlined,
   EditOutlined,
+  CheckCircleOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
+import signalRService from "../../services/signalRService";
+import * as notificationService from "../../services/notificationService";
+import NotificationsList from "../ManagerPage/NotificationsList";
 import styles from "../../styles/components/TechnicianLayout.module.css";
 
 // Import technician pages
@@ -34,7 +44,8 @@ import IncidentAssignList from "./IncidentAssignList";
 import MaintenanceTasks from "./MaintenanceTasks";
 import MaintenanceSchedule from "./MaintenanceSchedule";
 import MaintenanceChecklist from "./MaintenanceChecklist";
-import SparePartRequest from "./SparePartRequest";
+import ReplacementCreate from "./ReplacementCreate";
+// SparePartRequest is embedded inside IncidentAssignList; remove standalone route/menu
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -43,6 +54,10 @@ const TechnicianLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [hovered, setHovered] = useState(false);
   const [selectedKey, setSelectedKey] = useState("dashboard");
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationLoading, setNotificationLoading] = useState(false);
+  const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -60,8 +75,6 @@ const TechnicianLayout = () => {
     const path = location.pathname;
     if (path.includes("/incident-list")) {
       setSelectedKey("incident-list");
-    } else if (path.includes("/spare-parts")) {
-      setSelectedKey("spare-request");
     } else if (path.includes("/maintenance-tasks")) {
       setSelectedKey("maintenance-tasks");
     } else if (path.includes("/maintenance-schedule")) {
@@ -73,14 +86,170 @@ const TechnicianLayout = () => {
     }
   }, [location]);
 
+  // Fetch notifications on component mount
+  useEffect(() => {
+    fetchNotifications();
+    fetchUnreadCount();
+  }, []);
+
+  // Initialize SignalR connection
+  useEffect(() => {
+    let notificationHandler = null;
+    let replacementApprovedHandler = null;
+
+    const initializeSignalR = async () => {
+      try {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          console.warn("No token found, skipping SignalR connection");
+          return;
+        }
+
+        // Check if already connected to avoid duplicate connections
+        if (signalRService.isConnected) {
+          console.log("SignalR already connected, setting up listener only");
+        } else {
+          // Start SignalR connection
+          await signalRService.startConnection(token);
+        }
+
+        // Define notification handler
+        notificationHandler = (notificationData) => {
+          console.log("� [TechnicianLayout] Received notification:", notificationData);
+
+          // Tăng số lượng notification badge NGAY LẬP TỨC
+          setUnreadCount((prev) => {
+            const newCount = prev + 1;
+            console.log(`📊 Badge count updated: ${prev} -> ${newCount}`);
+            return newCount;
+          });
+
+          // Tự động refresh danh sách nếu drawer đang mở
+          if (notificationDrawerOpen) {
+            fetchNotifications();
+          }
+
+          // Hiển thị message toast CHỈ MỘT LẦN
+          message.success({
+            content: `🔔 ${notificationData.title || notificationData.message || "Bạn có thông báo mới"}`,
+            duration: 5,
+            key: `notification-${Date.now()}`, // Unique key để tránh duplicate
+          });
+        };
+
+        // Define replacement approved handler
+        replacementApprovedHandler = (data) => {
+          console.log("✅ [TechnicianLayout] Replacement approved:", data);
+
+          // Tăng số lượng notification badge
+          setUnreadCount((prev) => {
+            const newCount = prev + 1;
+            console.log(`📊 Replacement badge count updated: ${prev} -> ${newCount}`);
+            return newCount;
+          });
+
+          // Tự động refresh danh sách nếu drawer đang mở
+          if (notificationDrawerOpen) {
+            fetchNotifications();
+          }
+
+          // Hiển thị message toast cho replacement approved
+          message.success({
+            content: `✅ Linh kiện đã được duyệt: ${data.partName || data.Message} cho ${data.equipmentName}`,
+            duration: 5,
+            key: `replacement-${Date.now()}`, // Unique key để tránh duplicate
+          });
+        };
+
+        // Lắng nghe thông báo cá nhân (listener được track trong service để tránh duplicate)
+        signalRService.onReceiveNotification(notificationHandler);
+
+        // Lắng nghe thông báo duyệt cấp phát linh kiện
+        signalRService.onReplacementApproved(replacementApprovedHandler);
+      } catch (error) {
+        console.error("❌ Error initializing SignalR:", error);
+      }
+    };
+
+    initializeSignalR();
+
+    // Cleanup function - pass the specific handler to remove
+    return () => {
+      console.log("🧹 Cleaning up SignalR listeners in TechnicianLayout");
+      if (notificationHandler) {
+        signalRService.offReceiveNotification(notificationHandler);
+      }
+      if (replacementApprovedHandler) {
+        signalRService.offReplacementApproved(replacementApprovedHandler);
+      }
+    };
+  }, []); // Empty dependency array - only run once on mount
+
+  // Fetch notifications from API
+  const fetchNotifications = async () => {
+    try {
+      setNotificationLoading(true);
+      const data = await notificationService.getNotifications(false); // Get all notifications
+      setNotifications(data || []);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
+
+  // Fetch unread count
+  const fetchUnreadCount = async () => {
+    try {
+      const count = await notificationService.getUnreadCount();
+      setUnreadCount(count || 0);
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+    }
+  };
+
+  // Mark notification as read
+  const markAsRead = async (notificationId) => {
+    try {
+      await notificationService.markNotificationAsRead(notificationId);
+      // Update local state
+      setNotifications(prev =>
+        prev.map(notif =>
+          notif.notificationId === notificationId
+            ? { ...notif, isRead: true }
+            : notif
+        )
+      );
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+    }
+  };
+
+  // Mark all notifications as read
+  const markAllAsRead = async () => {
+    try {
+      await notificationService.markAllNotificationsAsRead();
+      setNotifications(prev =>
+        prev.map(notif => ({ ...notif, isRead: true }))
+      );
+      setUnreadCount(0);
+      message.success("Đã đánh dấu tất cả thông báo là đã đọc");
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      message.error("Không thể đánh dấu đã đọc");
+    }
+  };
+
   // Render page content based on selectedKey
   const renderContent = () => {
     const path = location.pathname;
 
     if (path.includes("/incident-list")) {
       return <IncidentAssignList />;
-    } else if (path.includes("/spare-parts")) {
-      return <SparePartRequest />;
+    } else if (path.includes("/replacement/create")) {
+      return <ReplacementCreate />;
     } else if (path.includes("/maintenance-tasks")) {
       return <MaintenanceTasks />;
     } else if (path.includes("/maintenance-schedule")) {
@@ -112,11 +281,6 @@ const TechnicianLayout = () => {
       label: "Nhiệm vụ bảo trì",
     },
     {
-      key: "spare-request",
-      icon: <ToolOutlined />,
-      label: "Yêu cầu phụ tùng",
-    },
-    {
       key: "maintenance-schedule",
       icon: <CalendarOutlined />,
       label: "Lịch bảo trì",
@@ -137,9 +301,6 @@ const TechnicianLayout = () => {
       case "incident-list":
         navigate("/technician/incident-list");
         break;
-      case "spare-request":
-        navigate("/technician/spare-parts");
-        break;
       case "maintenance-tasks":
         navigate("/technician/maintenance-tasks");
         break;
@@ -154,6 +315,7 @@ const TechnicianLayout = () => {
     }
   };
 
+  // User dropdown menu
   const userMenuItems = [
     {
       key: "profile",
@@ -161,18 +323,18 @@ const TechnicianLayout = () => {
       label: "Thông tin cá nhân",
       onClick: () => navigate("/profile"),
     },
-    {
-      key: "edit-profile",
-      icon: <EditOutlined />,
-      label: "Chỉnh sửa thông tin",
-      onClick: () => navigate("/profile/edit"),
-    },
-    {
-      key: "change-password",
-      icon: <SafetyOutlined />,
-      label: "Đổi mật khẩu",
-      onClick: () => navigate("/profile/change-password"),
-    },
+    // {
+    //   key: "edit-profile",
+    //   icon: <EditOutlined />,
+    //   label: "Chỉnh sửa thông tin",
+    //   onClick: () => navigate("/profile/edit"),
+    // },
+    // {
+    //   key: "change-password",
+    //   icon: <SafetyOutlined />,
+    //   label: "Đổi mật khẩu",
+    //   onClick: () => navigate("/profile/change-password"),
+    // },
     {
       type: "divider",
     },
@@ -328,12 +490,18 @@ const TechnicianLayout = () => {
 
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             {/* Notifications */}
-            <Badge count={5} size="small" className={styles.notificationBadge}>
-              <Button
-                type="text"
-                icon={<BellOutlined />}
-                style={{ color: "#6b7280" }}
-              />
+            <Badge
+              count={unreadCount}
+              onClick={() => {
+                setNotificationDrawerOpen(true);
+                // Tự động load danh sách thông báo khi mở drawer
+                fetchNotifications();
+                // Refresh unread count from server
+                fetchUnreadCount();
+              }}
+              style={{ cursor: "pointer" }}
+            >
+              <BellOutlined style={{ fontSize: "18px", cursor: "pointer" }} />
             </Badge>
 
             {/* User dropdown */}
@@ -363,6 +531,26 @@ const TechnicianLayout = () => {
           <div className={styles.technicianContent}>{renderContent()}</div>
         </Content>
       </AntLayout>
+
+      {/* Notifications Drawer */}
+      <Drawer
+        title="Thông báo"
+        placement="right"
+        onClose={() => setNotificationDrawerOpen(false)}
+        open={notificationDrawerOpen}
+        width={720}
+        styles={{ body: { padding: 0 } }}
+      >
+        <NotificationsList
+          onClose={() => setNotificationDrawerOpen(false)}
+          onNotificationCountChange={(newCount) =>
+            setUnreadCount(newCount)
+          }
+          initialNotifications={notifications}
+          initialLoading={notificationLoading}
+          onRefresh={fetchNotifications}
+        />
+      </Drawer>
     </AntLayout>
   );
 };

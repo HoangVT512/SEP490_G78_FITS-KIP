@@ -73,6 +73,10 @@
     <string name="upload_desc">Tải lên</string>
     <string name="save_temp_desc">Lưu tạm thời</string>
     <string name="delete_all_desc">Xóa tất cả</string>
+    <string name="incident_images_label">Ảnh sự cố:</string>
+    <string name="has_attached_images">Có ảnh đính kèm</string>
+    <string name="images_preview_label">Ảnh:</string>
+    <string name="has_images">Có hình ảnh</string>
 
     <!-- Toast Messages -->
     <string name="history_toast">Lịch sử</string>

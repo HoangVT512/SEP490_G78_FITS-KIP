@@ -63,7 +63,7 @@ public class DeviceInfoDialog extends Dialog {
 
         // Options list
         ListView listOptions = view.findViewById(R.id.list_options);
-        List<String> options = new ArrayList<>(Arrays.asList("Phế phẩm", "Đổi mã", "Cần hỗ trợ kỹ thuật"));
+        List<String> options = new ArrayList<>(Arrays.asList("Phế phẩm", "Vệ sinh đầu/cuối ca", "Đổi mã", "Cần hỗ trợ kỹ thuật"));
         // Add issues from equipment
         if (equipment.getIssue() != null && !equipment.getIssue().trim().isEmpty()) {
             String[] issueArray = equipment.getIssue().split(";");
@@ -244,3 +244,5 @@ public class DeviceInfoDialog extends Dialog {
         }
     }
 }
+
+

@@ -25,6 +25,8 @@ import com.example.fitsforkip.data.model.ApiResponse;
 import com.example.fitsforkip.data.model.CreateIncidentRequest;
 import com.example.fitsforkip.data.model.Equipment;
 import com.example.fitsforkip.data.model.IncidentHistory;
+import com.example.fitsforkip.data.model.CreateBulkIncidentRequest;
+import com.example.fitsforkip.data.model.BulkIncidentResponse;
 import com.example.fitsforkip.data.remote.ApiClient;
 import com.example.fitsforkip.data.remote.ApiService;
 import com.example.fitsforkip.ui.login.LoginActivity;
@@ -53,6 +55,7 @@ public class IncidentHistoryActivity extends AppCompatActivity {
     private IncidentHistoryAdapter adapter;
     private List<IncidentHistoryEntity> incidentList = new ArrayList<>();
     private List<Equipment> equipmentList = new ArrayList<>();
+    private List<String> lineList = new ArrayList<>();
 
     private MaterialCardView cvNavHome;
     private MaterialCardView cvNavEquipment;
@@ -63,10 +66,11 @@ public class IncidentHistoryActivity extends AppCompatActivity {
     private TextView tvHeaderProductionLine;
 
     private FloatingActionButton fabDeleteAll;
-    private FloatingActionButton fabSaveTemp;
+    //private FloatingActionButton fabSaveTemp;
     private ImageButton fabUpload;
 
     private String employeeId;
+    private String userId;
     private String productionLine;
     private int lineId;
 
@@ -90,6 +94,7 @@ public class IncidentHistoryActivity extends AppCompatActivity {
     private void loadUserData() {
         SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
         employeeId = prefs.getString("employee_id", "Unknown");
+        userId = prefs.getString("user_id", null);
         productionLine = prefs.getString("production_line", "Unknown");
         lineId = prefs.getInt("line_id", -1);
     }
@@ -111,9 +116,15 @@ public class IncidentHistoryActivity extends AppCompatActivity {
             public void onResponse(Call<ApiResponse<List<Equipment>>> call, Response<ApiResponse<List<Equipment>>> response) {
                 if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
                     equipmentList = response.body().getData();
+
+                    lineList.clear();
+                    lineList.add(productionLine); // Chỉ có 1 dây chuyền đang làm việc
+
                     // Update adapter with equipment data
                     if (adapter != null) {
                         adapter.setEquipmentList(equipmentList);
+
+                        adapter.setLineList(lineList); // Truyền lineList
                     }
                     // Now load incidents after equipment is loaded
                     loadIncidentData();
@@ -156,7 +167,7 @@ public class IncidentHistoryActivity extends AppCompatActivity {
 
         // FABs
         fabDeleteAll = findViewById(R.id.fab_delete_all);
-        fabSaveTemp = findViewById(R.id.fab_save_temp);
+        //fabSaveTemp = findViewById(R.id.fab_save_temp);
         fabUpload = findViewById(R.id.btn_upload_toolbar);
     }
 
@@ -173,17 +184,13 @@ public class IncidentHistoryActivity extends AppCompatActivity {
     }
 
     private void loadIncidentData() {
-        if (equipmentList == null || equipmentList.isEmpty()) {
+        if (lineId == -1) {
             return;
-        }
-        List<Integer> equipmentIds = new ArrayList<>();
-        for (Equipment eq : equipmentList) {
-            equipmentIds.add(eq.getEquipmentId());
         }
         Executors.newSingleThreadExecutor().execute(() -> {
             AppDatabase db = AppDatabaseSingleton.getInstance(this);
-            // LẤY TẤT CẢ INCIDENTS (cả synced và unsynced)
-            List<IncidentHistoryEntity> entities = db.incidentHistoryDao().getAllIncidentsByEquipmentIds(equipmentIds);
+            // LẤY TẤT CẢ INCIDENTS CỦA LINE (CẢ SYNCED VÀ UNSYNCED)
+            List<IncidentHistoryEntity> entities = db.incidentHistoryDao().getIncidentsByLineId(lineId);
             runOnUiThread(() -> {
                 incidentList = entities;
                 adapter.setIncidentList(incidentList);
@@ -194,7 +201,8 @@ public class IncidentHistoryActivity extends AppCompatActivity {
     }
 
     private void setupRecyclerView() {
-        adapter = new IncidentHistoryAdapter(incidentList, equipmentList, this::onDeleteIncident);
+        //adapter = new IncidentHistoryAdapter(incidentList, equipmentList, this::onDeleteIncident);
+        adapter = new IncidentHistoryAdapter(incidentList, equipmentList, lineList, this::onDeleteIncident);
         rvIncidentHistory.setLayoutManager(new LinearLayoutManager(this));
         rvIncidentHistory.setAdapter(adapter);
     }
@@ -276,9 +284,9 @@ public class IncidentHistoryActivity extends AppCompatActivity {
                     .show();
         });
 
-        fabSaveTemp.setOnClickListener(v -> {
-            Toast.makeText(this, "Đã lưu tạm thời", Toast.LENGTH_SHORT).show();
-        });
+//        fabSaveTemp.setOnClickListener(v -> {
+//            Toast.makeText(this, "Đã lưu tạm thời", Toast.LENGTH_SHORT).show();
+//        });
 
         fabUpload.setOnClickListener(v -> {
             uploadUnsyncedIncidents();
@@ -299,69 +307,81 @@ public class IncidentHistoryActivity extends AppCompatActivity {
             return;
         }
 
-        ApiService apiService = ApiClient.getClient().create(ApiService.class);
-
-        int uploadCount = 0;
+        // Collect unsynced incidents
+        List<IncidentHistoryEntity> unsyncedIncidents = new ArrayList<>();
         for (IncidentHistoryEntity entity : incidentList) {
             if (!entity.isSynced()) {
-                uploadCount++;
-
-                // LƯU incidentId trước khi gọi API
-                final int incidentId = entity.getIncidentId();
-
-                CreateIncidentRequest request = new CreateIncidentRequest();
-                request.setEquipmentId(entity.getEquipmentId());
-                request.setStartTime(formatDate(entity.getStartTime()));
-                request.setEndTime(formatDate(entity.getEndTime()));
-                request.setDuration(entity.getDuration());
-                request.setTypeId(entity.getTypeId());
-                request.setReason(entity.getReason());
-                request.setSolution(entity.getSolution());
-                request.setIssue(entity.getIssue());
-                request.setStatus(entity.getStatus());
-                request.setCreatedDate(formatDate(entity.getCreatedDate()));
-                request.setReportedByUserId(entity.getReportedByUserId());
-                request.setTechSupport(entity.isTechSupport());
-
-                Call<ApiResponse<IncidentHistory>> call = apiService.createIncident("Bearer " + token, request);
-                call.enqueue(new Callback<ApiResponse<IncidentHistory>>() {
-                    @Override
-                    public void onResponse(Call<ApiResponse<IncidentHistory>> call, Response<ApiResponse<IncidentHistory>> response) {
-                        if (response.isSuccessful()) {
-                            // SỬ DỤNG incidentId đã lưu
-                            Executors.newSingleThreadExecutor().execute(() -> {
-                                AppDatabase db = AppDatabaseSingleton.getInstance(IncidentHistoryActivity.this);
-                                db.incidentHistoryDao().updateSyncedStatus(incidentId, true);
-
-                                runOnUiThread(() -> {
-                                    loadIncidentData(); // reload data
-                                    android.util.Log.d("Upload", "Đã đồng bộ thành công ID=" + incidentId);
-                                });
-                            });
-                        } else {
-                            runOnUiThread(() -> {
-                                android.util.Log.e("Upload", "Lỗi server: " + response.code() + " - " + response.message());
-                                Toast.makeText(IncidentHistoryActivity.this, "Lỗi tải lên: " + response.message(), Toast.LENGTH_SHORT).show();
-                            });
-                        }
-                    }
-
-                    @Override
-                    public void onFailure(Call<ApiResponse<IncidentHistory>> call, Throwable t) {
-                        runOnUiThread(() -> {
-                            android.util.Log.e("Upload", "Lỗi mạng: " + t.getMessage(), t);
-                            Toast.makeText(IncidentHistoryActivity.this, "Lỗi mạng: " + t.getMessage(), Toast.LENGTH_SHORT).show();
-                        });
-                    }
-                });
+                unsyncedIncidents.add(entity);
             }
         }
 
-        if (uploadCount > 0) {
-            Toast.makeText(this, "Đang tải lên " + uploadCount + " sự cố chưa đồng bộ", Toast.LENGTH_SHORT).show();
-        } else {
+        if (unsyncedIncidents.isEmpty()) {
             Toast.makeText(this, "Tất cả sự cố đã được đồng bộ", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        // Prepare bulk request
+        List<CreateIncidentRequest> incidentRequests = new ArrayList<>();
+        for (IncidentHistoryEntity entity : unsyncedIncidents) {
+            CreateIncidentRequest request = new CreateIncidentRequest();
+            request.setEquipmentId(entity.getEquipmentId());
+            request.setLineId(lineId); // Add lineId
+            request.setStartTime(formatDate(entity.getStartTime()));
+            request.setEndTime(formatDate(entity.getEndTime()));
+            request.setDuration(entity.getDuration());
+            request.setTypeId(entity.getTypeId());
+            request.setReason(entity.getReason());
+            request.setSolution(entity.getSolution());
+            request.setIssue(entity.getIssue());
+            request.setStatus(entity.getStatus());
+            request.setCreatedDate(formatDate(entity.getCreatedDate()));
+            request.setReportedByUserId(userId);
+            request.setTechSupport(entity.isTechSupport());
+            request.setImageUrls(entity.getImageUrls());
+            incidentRequests.add(request);
+        }
+
+        CreateBulkIncidentRequest bulkRequest = new CreateBulkIncidentRequest();
+        bulkRequest.setIncidents(incidentRequests);
+
+        ApiService apiService = ApiClient.getClient().create(ApiService.class);
+        Call<ApiResponse<BulkIncidentResponse>> call = apiService.createBulkIncidents("Bearer " + token, bulkRequest);
+        call.enqueue(new Callback<ApiResponse<BulkIncidentResponse>>() {
+            @Override
+            public void onResponse(Call<ApiResponse<BulkIncidentResponse>> call, Response<ApiResponse<BulkIncidentResponse>> response) {
+                if (response.isSuccessful() && response.body() != null && response.body().isSuccess()) {
+                    BulkIncidentResponse bulkResponse = response.body().getData();
+                    if (bulkResponse.getSuccessCount() > 0) {
+                        // Update synced status for all unsynced incidents
+                        Executors.newSingleThreadExecutor().execute(() -> {
+                            AppDatabase db = AppDatabaseSingleton.getInstance(IncidentHistoryActivity.this);
+                            for (IncidentHistoryEntity entity : unsyncedIncidents) {
+                                db.incidentHistoryDao().updateSyncedStatus(entity.getIncidentId(), true);
+                            }
+                            runOnUiThread(() -> {
+                                loadIncidentData(); // reload data
+                                Toast.makeText(IncidentHistoryActivity.this, "Đã đồng bộ " + bulkResponse.getSuccessCount() + " sự cố thành công", Toast.LENGTH_SHORT).show();
+                            });
+                        });
+                    } else {
+                        runOnUiThread(() -> {
+                            Toast.makeText(IncidentHistoryActivity.this, "Không thể đồng bộ sự cố: " + bulkResponse.getErrors().get(0).getErrorMessage(), Toast.LENGTH_SHORT).show();
+                        });
+                    }
+                } else {
+                    runOnUiThread(() -> {
+                        Toast.makeText(IncidentHistoryActivity.this, "Lỗi server: " + response.message(), Toast.LENGTH_SHORT).show();
+                    });
+                }
+            }
+
+            @Override
+            public void onFailure(Call<ApiResponse<BulkIncidentResponse>> call, Throwable t) {
+                runOnUiThread(() -> {
+                    Toast.makeText(IncidentHistoryActivity.this, "Lỗi mạng: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+            }
+        });
     }
 
     private String formatDate(Date date) {

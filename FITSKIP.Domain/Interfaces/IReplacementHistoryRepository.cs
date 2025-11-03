@@ -17,6 +17,7 @@ namespace FITSKIP.Domain.Interfaces
         Task<bool> ExistsAsync(int replacementId, CancellationToken cancellationToken = default);
         Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
         Task<IEnumerable<ReplacementHistory>> GetByEquipmentIdAsync(int equipmentId, CancellationToken cancellationToken = default);
+        Task<IEnumerable<ReplacementHistory>> GetByIncidentIdAsync(int incidentId, CancellationToken cancellationToken = default);
         Task<IEnumerable<ReplacementHistory>> GetByPartIdAsync(int partId, CancellationToken cancellationToken = default);
         Task<IEnumerable<ReplacementHistory>> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default);
         Task<IEnumerable<ReplacementHistory>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);

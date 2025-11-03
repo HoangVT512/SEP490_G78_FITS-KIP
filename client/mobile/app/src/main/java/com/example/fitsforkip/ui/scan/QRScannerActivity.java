@@ -91,3 +91,4 @@ public class QRScannerActivity extends AppCompatActivity implements BarcodeCallb
         }
     }
 }
+

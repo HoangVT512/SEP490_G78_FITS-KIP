@@ -1,35 +1,43 @@
+// Factory layout configuration - mapping LineID to box positions and structure
+export const LINE_CONFIG = {
+  1: { code: 'CK-C01', name: 'Gia công tiện / khoan / phay', factory: 'mechanical' },
+  2: { code: 'CK-C02', name: 'Dập / uốn / cắt tôn', factory: 'mechanical' },
+  3: { code: 'CK-C03', name: 'Mạ / xử lý bề mặt', factory: 'mechanical' },
+  4: { code: 'CK-C04', name: 'Hàn linh kiện cơ khí', factory: 'mechanical' },
+  5: { code: 'CK-C05', name: 'Cắt dây kim loại & tấm', factory: 'mechanical' },
+  6: { code: 'CK-C06', name: 'Đánh bóng & hoàn thiện', factory: 'mechanical' },
+  7: { code: 'LR-L01', name: 'Lắp ráp thân & vỏ thiết bị', factory: 'assembly' },
+  8: { code: 'LR-L02', name: 'Lắp linh kiện điện & đấu nối', factory: 'assembly' },
+  9: { code: 'LR-L03', name: 'Thử chức năng điện – aptomat', factory: 'assembly' },
+  10: { code: 'LR-L04', name: 'Lắp ráp quạt & thiết bị chiếu sáng', factory: 'assembly' },
+  11: { code: 'LR-L05', name: 'Hàn & gắn phụ kiện', factory: 'assembly' },
+  12: { code: 'LR-L06', name: 'Đóng gói sơ bộ & dán nhãn', factory: 'assembly' },
+  13: { code: 'LR-L07', name: 'Kiểm tra cuối & đóng kiện xuất hàng', factory: 'assembly' },
+  14: { code: 'DY-D01', name: 'Kéo / bện dây dẫn', factory: 'wire' },
+  15: { code: 'DY-D02', name: 'Bọc cách điện PVC/XLPE', factory: 'wire' },
+  16: { code: 'DY-D03', name: 'Máy tuốt đầu dây & cắt dây', factory: 'wire' },
+  17: { code: 'DY-D04', name: 'Đánh cuộn & cuộn dây lớn', factory: 'wire' },
+  18: { code: 'DY-D05', name: 'In nhãn & đóng gói dây/cáp', factory: 'wire' },
+};
+
+// Helper function to get color based on OEE value
+export function getOEEColor(oee) {
+  if (oee === null || oee === undefined || oee === 0) return '#FFFFFF'; // White for no data
+  if (oee > 85) return '#4CAF50'; // Green
+  if (oee >= 70) return '#FFEB3B'; // Yellow
+  return '#F44336'; // Red
+}
+
+// Original layout structure preserved
 export const mechanicalData = [
   {
     className: 'area-container area-top-left',
-    boxes: [
-      { code: 'MCCB1', oee: '85.2', availability: '92.1', performance: '92.5', quality: '98.7', status: 'Running', colorClass: 'box-green' },
-      { code: 'MCB1', oee: '72.5', availability: '88.3', performance: '82.1', quality: '97.4', status: 'Running', colorClass: 'box-yellow' }
-    ]
+    lineIds: [1, 2] // CK-C01, CK-C02
   },
   {
     className: 'area-container area-top-right',
-    boxes: [
-      {
-        code: 'RCBO1',
-        oee: '45.8',
-        availability: '65.2',
-        performance: '70.4',
-        quality: '95.8',
-        status: 'Down',
-        colorClass: 'box-red',
-        incident: {
-          hours: '2.3',
-          equipmentCode: 'EQ-RCBO-001',
-          equipmentName: 'RCBO Breaker Machine',
-          stage: 'Assembly',
-          line: 'RCBO1',
-          startTime: '2025-10-24 14:25:30',
-          assignee: 'Nguyen Van A'
-        }
-      },
-      { code: 'ARO1', oee: '90.1', availability: '94.7', performance: '95.2', quality: '99.1', status: 'Running', colorClass: 'box-green' },
-      { code: 'OFF1', oee: '-', availability: '-', performance: '-', quality: '-', status: 'Office', colorClass: 'box-white' }
-    ]
+    lineIds: [3, 4], // CK-C03, CK-C04
+    hasOffice: true
   },
   {
     className: 'area-empty',
@@ -38,126 +46,58 @@ export const mechanicalData = [
   },
   {
     className: 'area-container area-center-left',
-    boxes: [
-      { code: 'ARB1', oee: '68.3', availability: '85.6', performance: '79.8', quality: '96.2', status: 'Running', colorClass: 'box-yellow' },
-      { code: 'VKE1', oee: '88.7', availability: '91.4', performance: '97.1', quality: '98.9', status: 'Running', colorClass: 'box-green' },
-      {
-        code: 'VKN1',
-        oee: '52.4',
-        availability: '72.8',
-        performance: '72.1',
-        quality: '94.7',
-        status: 'Down',
-        colorClass: 'box-red',
-        incident: {
-          hours: '1.8',
-          equipmentCode: 'EQ-VKN-002',
-          equipmentName: 'VKN Cutting Machine',
-          stage: 'Cutting',
-          line: 'VKN1',
-          startTime: '2025-10-24 15:45:12',
-          assignee: 'Tran Thi B'
-        }
-      },
-      { code: 'GN1', oee: '86.5', availability: '89.2', performance: '96.8', quality: '99.3', status: 'Running', colorClass: 'box-green' }
-    ]
+    lineIds: [5, 6] // CK-C05, CK-C06
   },
   {
     className: 'area-container area-center-right',
     boxes: [
-      { code: 'OKOM1', oee: '71.8', availability: '87.9', performance: '81.7', quality: '97.1', status: 'Running', colorClass: 'box-yellow' },
-      { code: 'KN202C1', oee: '46.2', availability: '68.4', performance: '67.5', quality: '95.4', status: 'Down', colorClass: 'box-red' }
-    ]
-  },
-  {
-    className: 'area-container area-bottom-left',
-    boxes: [
-      { code: 'G631', oee: '89.4', availability: '92.7', performance: '96.5', quality: '98.8', status: 'Running', colorClass: 'box-green' },
-      { code: 'OFF2', oee: '-', availability: '-', performance: '-', quality: '-', status: 'Office', colorClass: 'box-white' },
-      { code: 'A1251', oee: '69.7', availability: '86.1', performance: '80.9', quality: '96.8', status: 'Running', colorClass: 'box-yellow' },
-      { code: 'G1251', oee: '87.3', availability: '90.5', performance: '96.2', quality: '99.0', status: 'Running', colorClass: 'box-green' }
-    ]
-  },
-  {
-    className: 'area-container area-bottom-right',
-    boxes: [
-      { code: 'CDKH1', oee: '53.1', availability: '71.9', performance: '73.8', quality: '95.1', status: 'Down', colorClass: 'box-red' },
-      { code: 'CK011', oee: '84.9', availability: '88.6', performance: '95.4', quality: '98.5', status: 'Running', colorClass: 'box-green' },
-      { code: 'CK021', oee: '73.2', availability: '89.7', performance: '81.9', quality: '97.3', status: 'Running', colorClass: 'box-yellow' }
+      { code: 'CK-C07', oee: '-', availability: '-', performance: '-', quality: '-', status: 'Không sản xuất', colorClass: 'box-white' }
     ]
   }
-]
+];
+
 export const assemblyData = [
   {
-    className: 'area-container area-top-full',
-    boxes: [
-      { code: 'MCCB1', oee: '85.2', availability: '92.1', performance: '92.5', quality: '98.7', status: 'Running', colorClass: 'box-green' },
-      { code: 'MCB1', oee: '72.5', availability: '88.3', performance: '82.1', quality: '97.4', status: 'Running', colorClass: 'box-yellow' },
-      { code: 'RCBO1', oee: '45.8', availability: '65.2', performance: '70.4', quality: '95.8', status: 'Down', colorClass: 'box-red' },
-      { code: 'ARO1', oee: '90.1', availability: '94.7', performance: '95.2', quality: '99.1', status: 'Running', colorClass: 'box-green' },
-      { code: 'OFF1', oee: '-', availability: '-', performance: '-', quality: '-', status: 'Office', colorClass: 'box-white' }
-    ]
+    className: 'area-container area-top-left',
+    lineIds: [7, 8] // LR-L01, LR-L02
   },
   {
-    className: 'area-empty-right',
+    className: 'area-container area-top-center',
+    lineIds: [9] // LR-L03
+  },
+  {
+    className: 'area-container area-top-right',
+    lineIds: [10], // LR-L04
+    hasOffice: true
+  },
+  {
+    className: 'area-empty',
     isEmpty: true,
     boxes: []
   },
   {
-    className: 'area-container area-center-full',
-    boxes: [
-      { code: 'ARB1', oee: '68.3', availability: '85.6', performance: '79.8', quality: '96.2', status: 'Running', colorClass: 'box-yellow' },
-      { code: 'VKE1', oee: '88.7', availability: '91.4', performance: '97.1', quality: '98.9', status: 'Running', colorClass: 'box-green' },
-      { code: 'VKN1', oee: '52.4', availability: '72.8', performance: '72.1', quality: '94.7', status: 'Down', colorClass: 'box-red' },
-      { code: 'GN1', oee: '86.5', availability: '89.2', performance: '96.8', quality: '99.3', status: 'Running', colorClass: 'box-green' },
-      { code: 'OKOM1', oee: '71.8', availability: '87.9', performance: '81.7', quality: '97.1', status: 'Running', colorClass: 'box-yellow' }
-    ]
+    className: 'area-container area-center-left',
+    lineIds: [11, 12] // LR-L05, LR-L06
   },
   {
-    className: 'area-container area-bottom-left',
-    boxes: [
-      { code: 'G631', oee: '89.4', availability: '92.7', performance: '96.5', quality: '98.8', status: 'Running', colorClass: 'box-green' },
-      { code: 'OFF2', oee: '-', availability: '-', performance: '-', quality: '-', status: 'Office', colorClass: 'box-white' },
-      { code: 'A1251', oee: '69.7', availability: '86.1', performance: '80.9', quality: '96.8', status: 'Running', colorClass: 'box-yellow' },
-      { code: 'G1251', oee: '87.3', availability: '90.5', performance: '96.2', quality: '99.0', status: 'Running', colorClass: 'box-green' }
-    ]
-  },
-  {
-    className: 'area-container area-bottom-right',
-    boxes: [
-      { code: 'CDKH1', oee: '53.1', availability: '71.9', performance: '73.8', quality: '95.1', status: 'Down', colorClass: 'box-red' },
-      { code: 'CK011', oee: '84.9', availability: '88.6', performance: '95.4', quality: '98.5', status: 'Running', colorClass: 'box-green' },
-      { code: 'CK021', oee: '73.2', availability: '89.7', performance: '81.9', quality: '97.3', status: 'Running', colorClass: 'box-yellow' },
-      { code: 'CK031', oee: '44.5', availability: '66.3', performance: '67.2', quality: '94.9', status: 'Down', colorClass: 'box-red' },
-      { code: 'CK041', oee: '91.6', availability: '95.1', performance: '96.1', quality: '99.4', status: 'Running', colorClass: 'box-green' },
-      { code: 'ASM21', oee: '53.2', availability: '72.5', performance: '73.6', quality: '95.3', status: 'Down', colorClass: 'box-red' },
-      { code: 'ASM22', oee: '89.8', availability: '93.2', performance: '96.1', quality: '98.8', status: 'Running', colorClass: 'box-green' },
-      { code: 'ASM23', oee: '74.5', availability: '90.8', performance: '82.3', quality: '97.6', status: 'Running', colorClass: 'box-yellow' }
-    ]
+    className: 'area-container area-center-right',
+    lineIds: [13] // LR-L07
   }
-]
+];
+
 export const wireData = [
   {
     className: 'area-container area-top-center',
-    boxes: [
-      { code: 'WIRE1', oee: '84.7', availability: '91.8', performance: '92.2', quality: '98.6', status: 'Running', colorClass: 'box-green' },
-      { code: 'WIRE2', oee: '76.4', availability: '89.1', performance: '85.6', quality: '97.8', status: 'Running', colorClass: 'box-yellow' },
-      { code: 'WIRE3', oee: '57.2', availability: '74.5', performance: '76.8', quality: '96.1', status: 'Down', colorClass: 'box-red' }
-    ]
+    lineIds: [14, 15] // DY-D01, DY-D02
   },
   {
     className: 'area-container area-top-sides',
-    boxes: [
-      { code: 'WIRE4', oee: '92.8', availability: '96.2', performance: '96.3', quality: '99.6', status: 'Running', colorClass: 'box-green' },
-      { code: 'OFFW1', oee: '-', availability: '-', performance: '-', quality: '-', status: 'Office', colorClass: 'box-white' }
-    ]
+    lineIds: [16], // DY-D03
+    hasOffice: true
   },
   {
     className: 'area-container area-top-sides-right',
-    boxes: [
-      { code: 'WIRE5', oee: '70.9', availability: '87.4', performance: '81.2', quality: '97.0', status: 'Running', colorClass: 'box-yellow' },
-      { code: 'WIRE6', oee: '88.5', availability: '92.1', performance: '96.0', quality: '98.9', status: 'Running', colorClass: 'box-green' }
-    ]
+    lineIds: [17, 18] // DY-D04, DY-D05
   },
   {
     className: 'area-empty-center',
@@ -167,35 +107,14 @@ export const wireData = [
   {
     className: 'area-container area-center-left',
     boxes: [
-      { code: 'WIRE7', oee: '50.6', availability: '70.9', performance: '71.3', quality: '95.2', status: 'Down', colorClass: 'box-red' },
-      { code: 'WIRE8', oee: '90.4', availability: '93.7', performance: '96.6', quality: '99.0', status: 'Running', colorClass: 'box-green' },
-      { code: 'WIRE9', oee: '74.7', availability: '90.3', performance: '82.8', quality: '97.4', status: 'Running', colorClass: 'box-yellow' },
-      { code: 'WIRE10', oee: '48.3', availability: '69.6', performance: '69.5', quality: '94.9', status: 'Down', colorClass: 'box-red' }
+      { code: 'DY-D06', oee: '-', availability: '-', performance: '-', quality: '-', status: 'Không sản xuất', colorClass: 'box-white' }
     ]
   },
   {
     className: 'area-container area-center-right',
     boxes: [
-      { code: 'WIRE11', oee: '89.9', availability: '92.8', performance: '96.9', quality: '98.7', status: 'Running', colorClass: 'box-green' },
-      { code: 'OFFW2', oee: '-', availability: '-', performance: '-', quality: '-', status: 'Office', colorClass: 'box-white' },
-      { code: 'WIRE12', oee: '67.5', availability: '84.2', performance: '79.8', quality: '96.4', status: 'Running', colorClass: 'box-yellow' },
-      { code: 'WIRE13', oee: '86.1', availability: '89.5', performance: '96.3', quality: '98.5', status: 'Running', colorClass: 'box-green' }
-    ]
-  },
-  {
-    className: 'area-container area-bottom-full',
-    boxes: [
-      { code: 'WIRE14', oee: '54.8', availability: '73.7', performance: '74.6', quality: '95.4', status: 'Down', colorClass: 'box-red' },
-      { code: 'WIRE15', oee: '91.7', availability: '95.3', performance: '96.2', quality: '99.3', status: 'Running', colorClass: 'box-green' },
-      { code: 'WIRE16', oee: '72.3', availability: '88.6', performance: '81.6', quality: '97.2', status: 'Running', colorClass: 'box-yellow' },
-      { code: 'WIRE17', oee: '49.1', availability: '70.4', performance: '69.8', quality: '95.0', status: 'Down', colorClass: 'box-red' },
-      { code: 'WIRE18', oee: '93.2', availability: '96.5', performance: '96.8', quality: '99.4', status: 'Running', colorClass: 'box-green' },
-      { code: 'OFFW3', oee: '-', availability: '-', performance: '-', quality: '-', status: 'Office', colorClass: 'box-white' },
-      { code: 'WIRE19', oee: '69.4', availability: '86.1', performance: '80.3', quality: '96.8', status: 'Running', colorClass: 'box-yellow' },
-      { code: 'WIRE20', oee: '87.8', availability: '91.2', performance: '96.0', quality: '98.6', status: 'Running', colorClass: 'box-green' },
-      { code: 'WIRE21', oee: '52.9', availability: '72.3', performance: '73.2', quality: '95.1', status: 'Down', colorClass: 'box-red' },
-      { code: 'WIRE22', oee: '90.6', availability: '94.1', performance: '96.1', quality: '98.9', status: 'Running', colorClass: 'box-green' },
-      { code: 'WIRE23', oee: '75.2', availability: '91.5', performance: '82.5', quality: '97.7', status: 'Running', colorClass: 'box-yellow' }
+      { code: 'DY-D07', oee: '-', availability: '-', performance: '-', quality: '-', status: 'Không sản xuất', colorClass: 'box-white' },
+      { code: 'OFFW2', oee: '-', availability: '-', performance: '-', quality: '-', status: 'Office', colorClass: 'box-white' }
     ]
   }
-]
+];

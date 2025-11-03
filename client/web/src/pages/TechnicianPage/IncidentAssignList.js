@@ -18,6 +18,8 @@ import {
   Badge,
   Tooltip,
   Divider,
+  Dropdown,
+  Statistic,
 } from "antd";
 import {
   WarningOutlined,
@@ -27,9 +29,16 @@ import {
   EditOutlined,
   FileTextOutlined,
   ToolOutlined,
+  DownOutlined,
+  InboxOutlined,
+  ExclamationCircleOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { incidentService } from "../../services/incidentService";
+import SparepartRequestModal from "./SparepartRequestModal";
+import ReplacementCreate from "./ReplacementCreate";
+import ReplacementHistoryList from "./ReplacementHistoryList";
 import styles from "../../styles/pages/IncidentAssignList.module.css";
 
 const { TextArea } = Input;
@@ -41,8 +50,22 @@ const IncidentAssignList = () => {
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [updateModalVisible, setUpdateModalVisible] = useState(false);
+  const [spareModalVisible, setSpareModalVisible] = useState(false);
+  const [spareForIncident, setSpareForIncident] = useState(null);
+  const [replacementModalVisible, setReplacementModalVisible] = useState(false);
+  const [replacementForIncident, setReplacementForIncident] = useState(null);
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [historyEquipmentId, setHistoryEquipmentId] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
   const [form] = Form.useForm();
+
+  // Statistics calculation
+  const stats = {
+    total: incidents.length,
+    pending: incidents.filter((i) => i.status === "Chưa xử lý").length,
+    inProgress: incidents.filter((i) => i.status === "Đang xử lý").length,
+    completed: incidents.filter((i) => i.status === "Hoàn thành").length,
+  };
 
   // Fetch incidents assigned to current user
   useEffect(() => {
@@ -222,30 +245,85 @@ const IncidentAssignList = () => {
     {
       title: "Thao tác",
       key: "action",
-      width: 150,
+      width: 120,
       fixed: "right",
-      render: (record) => (
-        <Space size="small">
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            size="small"
-            onClick={() => handleViewDetail(record)}
+      render: (record) => {
+        const items = [
+          {
+            key: "detail",
+            icon: <EyeOutlined />,
+            label: "Chi tiết",
+            onClick: () => handleViewDetail(record),
+          },
+        ];
+
+        // Chỉ hiển thị "Ghi nhận thay thế" khi sự cố chưa hoàn thành
+        if (record.status !== "Hoàn thành") {
+          items.push({
+            key: "recordReplacement",
+            icon: <ToolOutlined />,
+            label: "Ghi nhận thay thế",
+            onClick: () => {
+              setReplacementForIncident(record);
+              setReplacementModalVisible(true);
+            },
+          });
+        }
+
+        items.push({
+          key: "history",
+          icon: <ToolOutlined />,
+          label: "Lịch sử thay thế",
+          onClick: () => {
+            setHistoryEquipmentId(record?.equipmentId || record.equipmentId);
+            setHistoryModalVisible(true);
+          },
+        });
+
+        // Chỉ hiển thị "Yêu cầu phụ tùng" khi sự cố chưa hoàn thành
+        if (record.status !== "Hoàn thành") {
+          items.push({
+            key: "spare",
+            icon: <ToolOutlined />,
+            label: "Yêu cầu phụ tùng",
+            onClick: () => {
+              setSpareForIncident(record);
+              setSpareModalVisible(true);
+            },
+          });
+        }
+
+        // Chỉ hiển thị "Cập nhật" khi sự cố chưa hoàn thành
+        if (record.status !== "Hoàn thành") {
+          items.push({
+            key: "update",
+            icon: <EditOutlined />,
+            label: "Cập nhật",
+            onClick: () => handleUpdateIncident(record),
+          });
+        }
+
+        return (
+          <Dropdown
+            menu={{ items }}
+            trigger={["click"]}
+            placement="bottomRight"
           >
-            Chi tiết
-          </Button>
-          {record.status !== "Hoàn thành" && (
-            <Button
-              type="link"
-              icon={<EditOutlined />}
-              size="small"
-              onClick={() => handleUpdateIncident(record)}
+            <span
+              style={{
+                cursor: "pointer",
+                display: "inline-flex",
+                alignItems: "center",
+                padding: 4,
+              }}
+              aria-label="thao-tac"
+              title="Thao tác"
             >
-              Cập nhật
-            </Button>
-          )}
-        </Space>
-      ),
+              <DownOutlined style={{ fontSize: 16 }} />
+            </span>
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -300,7 +378,67 @@ const IncidentAssignList = () => {
   };
 
   return (
-    <div className={styles.incidentList}>
+    <div className={styles.container}>
+      {/* Statistics */}
+      <Row gutter={[16, 16]} className={styles.statsRow}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #e8e8e8" }}>
+            <Statistic
+              title={<span style={{ color: "#283652", fontWeight: "600" }}>Tổng sự cố</span>}
+              value={stats.total}
+              prefix={<InboxOutlined style={{ color: "#283652" }} />}
+              valueStyle={{
+                color: "#283652",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #ffccc7" }}>
+            <Statistic
+              title={<span style={{ color: "#ff4d4f", fontWeight: "600" }}>Chưa xử lý</span>}
+              value={stats.pending}
+              prefix={<ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />}
+              valueStyle={{
+                color: "#ff4d4f",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #ffe58f" }}>
+            <Statistic
+              title={<span style={{ color: "#faad14", fontWeight: "600" }}>Đang xử lý</span>}
+              value={stats.inProgress}
+              prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />}
+              valueStyle={{
+                color: "#faad14",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #b7eb8f" }}>
+            <Statistic
+              title={<span style={{ color: "#52c41a", fontWeight: "600" }}>Hoàn thành</span>}
+              value={stats.completed}
+              prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
+              valueStyle={{
+                color: "#52c41a",
+                fontSize: "28px",
+                fontWeight: "600",
+              }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
       <Card
         title={
           <Space>
@@ -308,14 +446,15 @@ const IncidentAssignList = () => {
             <span>Danh sách sự cố được giao</span>
           </Space>
         }
+        className={styles.tableCard}
         extra={
           <Space>
-            <Button type="primary" onClick={fetchIncidents} loading={loading}>
+            <Button icon={<ReloadOutlined />} onClick={fetchIncidents}>
               Làm mới
             </Button>
           </Space>
         }
-        bordered={false}
+         variant="borderless"
       >
         {/* Filter Tabs */}
         <div className={styles.filterTabs}>
@@ -323,21 +462,48 @@ const IncidentAssignList = () => {
             <Button
               type={filterStatus === "all" ? "primary" : "default"}
               onClick={() => setFilterStatus("all")}
+              style={filterStatus === "all" ? {
+                borderRadius: "6px",
+                fontWeight: "500",
+              } : {
+                borderColor: "#d9d9d9",
+                color: "#595959",
+                borderRadius: "6px",
+                fontWeight: "500",
+              }}
             >
               Tất cả ({incidents.length})
             </Button>
-            <Badge count={getStatusBadge("Chưa xử lý").count} color="orange">
+            <Badge count={getStatusBadge("Chưa xử lý").count} color="red">
               <Button
                 type={filterStatus === "Chưa xử lý" ? "primary" : "default"}
                 onClick={() => setFilterStatus("Chưa xử lý")}
+                style={filterStatus === "Chưa xử lý" ? {
+                  borderRadius: "6px",
+                  fontWeight: "500",
+                } : {
+                  borderColor: "#d9d9d9",
+                  color: "#595959",
+                  borderRadius: "6px",
+                  fontWeight: "500",
+                }}
               >
                 Chưa xử lý
               </Button>
             </Badge>
-            <Badge count={getStatusBadge("Đang xử lý").count} color="blue">
+            <Badge count={getStatusBadge("Đang xử lý").count} color="orange">
               <Button
                 type={filterStatus === "Đang xử lý" ? "primary" : "default"}
                 onClick={() => setFilterStatus("Đang xử lý")}
+                style={filterStatus === "Đang xử lý" ? {
+                  borderRadius: "6px",
+                  fontWeight: "500",
+                } : {
+                  borderColor: "#d9d9d9",
+                  color: "#595959",
+                  borderRadius: "6px",
+                  fontWeight: "500",
+                }}
               >
                 Đang xử lý
               </Button>
@@ -346,6 +512,15 @@ const IncidentAssignList = () => {
               <Button
                 type={filterStatus === "Hoàn thành" ? "primary" : "default"}
                 onClick={() => setFilterStatus("Hoàn thành")}
+                style={filterStatus === "Hoàn thành" ? {
+                  borderRadius: "6px",
+                  fontWeight: "500",
+                } : {
+                  borderColor: "#d9d9d9",
+                  color: "#595959",
+                  borderRadius: "6px",
+                  fontWeight: "500",
+                }}
               >
                 Hoàn thành
               </Button>
@@ -365,23 +540,117 @@ const IncidentAssignList = () => {
             pageSize: 10,
             showSizeChanger: true,
             showTotal: (total) => `Tổng số ${total} sự cố`,
+            style: { marginTop: "16px" },
           }}
+          style={{ borderRadius: "6px" }}
         />
       </Card>
+
+      {/* Spare parts modal (request spare parts) */}
+      <SparepartRequestModal
+        incident={spareForIncident}
+        open={spareModalVisible}
+        onClose={() => {
+          setSpareModalVisible(false);
+          setSpareForIncident(null);
+        }}
+        onSuccess={() => {
+          fetchIncidents(); // Refresh incidents list
+        }}
+      />
+
+      {/* Replacement create modal (embedded form) */}
+      <Modal
+        title={
+          <div style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}>
+            Ghi nhận thay thế (liên quan sự cố)
+          </div>
+        }
+        open={replacementModalVisible}
+        onCancel={() => {
+          setReplacementModalVisible(false);
+          setReplacementForIncident(null);
+        }}
+        footer={null}
+        width={1200}
+        centered
+        destroyOnClose
+      >
+        <ReplacementCreate
+          incidentId={replacementForIncident?.incidentId}
+          onSuccess={() => {
+            setReplacementModalVisible(false);
+            setReplacementForIncident(null);
+            fetchIncidents();
+          }}
+          onCancel={() => {
+            setReplacementModalVisible(false);
+            setReplacementForIncident(null);
+          }}
+        />
+      </Modal>
 
       {/* Detail Modal */}
       <Modal
         title={
-          <Space>
-            <FileTextOutlined />
-            <span>Chi tiết sự cố</span>
-          </Space>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <div style={{
+              width: "40px",
+              height: "40px",
+              borderRadius: "50%",
+              backgroundColor: "#283652",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+              fontSize: "18px"
+            }}>
+              <FileTextOutlined />
+            </div>
+            <div>
+              <div style={{ fontWeight: 600, fontSize: "16px" }}>
+                Chi tiết sự cố
+              </div>
+              <div
+                style={{
+                  fontSize: "12px",
+                  color: "#6b7280",
+                  fontWeight: "normal",
+                }}
+              >
+                {selectedIncident?.incidentCode} • {selectedIncident?.equipmentName}
+              </div>
+            </div>
+          </div>
         }
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
+        width={1200}
+        centered
         footer={[
-          <Button key="close" onClick={() => setDetailModalVisible(false)}>
+          <Button key="close" onClick={() => setDetailModalVisible(false)} style={{
+            height: "40px",
+            fontSize: "16px",
+            minWidth: "120px",
+          }}>
             Đóng
+          </Button>,
+          <Button
+            key="history"
+            icon={<ToolOutlined />}
+            onClick={() => {
+              setHistoryEquipmentId(
+                selectedIncident?.equipmentId || selectedIncident?.equipmentId
+              );
+              setHistoryModalVisible(true);
+            }}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
+            Lịch sử thay thế
           </Button>,
           selectedIncident?.status !== "Hoàn thành" && (
             <Button
@@ -392,16 +661,33 @@ const IncidentAssignList = () => {
                 setDetailModalVisible(false);
                 handleUpdateIncident(selectedIncident);
               }}
+              style={{
+                backgroundColor: "#1890ff",
+                borderColor: "#1890ff",
+                height: "40px",
+                fontSize: "16px",
+                minWidth: "120px",
+              }}
             >
               Cập nhật
             </Button>
           ),
         ]}
-        width={800}
       >
         {selectedIncident && (
-          <div>
-            <Descriptions bordered column={2} size="small">
+          <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
+            <Descriptions
+              column={2}
+              bordered
+              labelStyle={{
+                fontWeight: "bold",
+                fontSize: "14px",
+                backgroundColor: "#fafafa",
+                borderRight: "1px solid #d9d9d9",
+                padding: "12px 16px",
+                minWidth: "160px",
+              }}
+            >
               <Descriptions.Item label="Mã sự cố" span={1}>
                 <strong>{selectedIncident.incidentCode}</strong>
               </Descriptions.Item>
@@ -411,8 +697,8 @@ const IncidentAssignList = () => {
                     selectedIncident.status === "Hoàn thành"
                       ? "success"
                       : selectedIncident.status === "Đang xử lý"
-                      ? "processing"
-                      : "warning"
+                        ? "processing"
+                        : "warning"
                   }
                 >
                   {selectedIncident.status}
@@ -440,8 +726,8 @@ const IncidentAssignList = () => {
                     selectedIncident.priority === "Cao"
                       ? "red"
                       : selectedIncident.priority === "Trung bình"
-                      ? "orange"
-                      : "green"
+                        ? "orange"
+                        : "green"
                   }
                 >
                   {selectedIncident.priority}
@@ -467,13 +753,46 @@ const IncidentAssignList = () => {
         )}
       </Modal>
 
+      {/* Replacement history modal */}
+      <Modal
+        title={
+          <div style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}>
+            Lịch sử thay thế
+          </div>
+        }
+        open={historyModalVisible}
+        onCancel={() => {
+          setHistoryModalVisible(false);
+          setHistoryEquipmentId(null);
+        }}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => {
+              setHistoryModalVisible(false);
+              setHistoryEquipmentId(null);
+            }}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
+            Đóng
+          </Button>,
+        ]}
+        width={1200}
+        destroyOnClose
+      >
+        <ReplacementHistoryList equipmentId={historyEquipmentId} />
+      </Modal>
+
       {/* Update Modal */}
       <Modal
         title={
-          <Space>
-            <EditOutlined />
-            <span>Cập nhật sự cố</span>
-          </Space>
+          <div style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}>
+            Cập nhật sự cố
+          </div>
         }
         open={updateModalVisible}
         onCancel={() => {
@@ -481,27 +800,51 @@ const IncidentAssignList = () => {
           form.resetFields();
         }}
         footer={null}
-        width={600}
+        width={700}
+        centered
+        bodyStyle={{
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          padding: "24px",
+        }}
       >
-        <Form form={form} layout="vertical" onFinish={handleUpdateSubmit}>
+        <Form form={form} layout="vertical" onFinish={handleUpdateSubmit} scrollToFirstError>
           <Form.Item
-            label="Trạng thái"
+            label={
+              <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                Trạng thái
+              </span>
+            }
             name="status"
             rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
           >
-            <Select placeholder="Chọn trạng thái">
+            <Select placeholder="Chọn trạng thái" size="large">
               <Option value="Chưa xử lý">Chưa xử lý</Option>
               <Option value="Đang xử lý">Đang xử lý</Option>
               <Option value="Hoàn thành">Hoàn thành</Option>
             </Select>
           </Form.Item>
 
-          <Form.Item label="Giải pháp" name="solution">
-            <TextArea rows={4} placeholder="Mô tả giải pháp đã thực hiện..." />
+          <Form.Item
+            label={
+              <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                Giải pháp
+              </span>
+            }
+            name="solution"
+          >
+            <TextArea rows={4} placeholder="Mô tả giải pháp đã thực hiện..." size="large" />
           </Form.Item>
 
-          <Form.Item label="Ghi chú thêm" name="notes">
-            <TextArea rows={3} placeholder="Ghi chú thêm (nếu có)..." />
+          <Form.Item
+            label={
+              <span style={{ fontWeight: "600", fontSize: "14px" }}>
+                Ghi chú thêm
+              </span>
+            }
+            name="notes"
+          >
+            <TextArea rows={3} placeholder="Ghi chú thêm (nếu có)..." size="large" />
           </Form.Item>
 
           <Form.Item>
@@ -511,10 +854,26 @@ const IncidentAssignList = () => {
                   setUpdateModalVisible(false);
                   form.resetFields();
                 }}
+                style={{
+                  height: "40px",
+                  fontSize: "16px",
+                  minWidth: "120px",
+                }}
               >
                 Hủy
               </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                style={{
+                  backgroundColor: "#283652",
+                  height: "40px",
+                  fontSize: "16px",
+                  fontWeight: "500",
+                  minWidth: "120px",
+                }}
+              >
                 Cập nhật
               </Button>
             </Space>

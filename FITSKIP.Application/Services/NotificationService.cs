@@ -134,7 +134,7 @@ namespace FITSKIP.Application.Services
                 {
                     UserId = user.Id, // IdentityUser uses Id, not UserId
                     Message = message,
-                    Title = "Yêu cầu phụ tùng", // Default title for spare part requests
+                    Title = type == "replacementApproved" ? "Linh kiện đã được duyệt" : "Thông báo",
                     IsRead = false,
                     CreatedDate = DateTime.UtcNow
                 };
@@ -142,16 +142,33 @@ namespace FITSKIP.Application.Services
                 await _notificationRepository.CreateAsync(notification);
             }
 
-            // Send real-time notification to SignalR group based on role
-            var groupName = roleName == "Quản lý kỹ thuật" ? "TechnicalManagers" : roleName;
-            var notificationData = new
+            // Send real-time notification based on role
+            if (roleName == "Kỹ thuật viên" && type == "replacementApproved")
             {
-                Message = message,
-                Type = type,
-                Timestamp = DateTime.UtcNow
-            };
+                // Send specific ReplacementApproved event for technicians
+                var replacementData = new
+                {
+                    Message = message,
+                    Type = type,
+                    Timestamp = DateTime.UtcNow
+                };
 
-            await _notificationHubService.SendToGroupAsync(groupName, notificationData);
+                await _notificationHubService.SendReplacementApprovedAsync(replacementData);
+            }
+            else
+            {
+                // Send to SignalR group based on role
+                var groupName = roleName == "Quản lý kỹ thuật" ? "TechnicalManagers" : 
+                               roleName == "Kỹ thuật viên" ? "Technicians" : roleName;
+                var notificationData = new
+                {
+                    Message = message,
+                    Type = type,
+                    Timestamp = DateTime.UtcNow
+                };
+
+                await _notificationHubService.SendToGroupAsync(groupName, notificationData);
+            }
         }
 
         public async Task DeleteAllReadNotificationsAsync(string userId)
@@ -197,7 +214,7 @@ namespace FITSKIP.Application.Services
                 Message = notification.Message,
                 Title = notification.Title,
                 IsRead = notification.IsRead,
-                CreatedDate = notification.CreatedDate,
+                CreatedDate = notification.CreatedDate.ToLocalTime(), // Convert UTC to local time
                 UserName = notification.User?.UserName,
                 UserEmail = notification.User?.Email
             };

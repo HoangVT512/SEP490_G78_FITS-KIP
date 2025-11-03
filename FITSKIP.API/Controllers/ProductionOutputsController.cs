@@ -66,7 +66,7 @@ public class ProductionOutputsController : ControllerBase
                 return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = ModelState });
 
             var output = await _productionOutputService.CreateProductionOutputAsync(request, cancellationToken);
-            return CreatedAtAction(nameof(GetProductionOutput), new { id = output.OutputId }, 
+            return CreatedAtAction(nameof(GetProductionOutput), new { id = output.OutputId },
                 new { success = true, data = output, message = "Tạo sản lượng sản xuất thành công" });
         }
         catch (ArgumentException ex)
@@ -163,17 +163,56 @@ public class ProductionOutputsController : ControllerBase
     /// <summary>
     /// Lấy danh sách sản lượng sản xuất theo chuyền và ngày
     /// </summary>
-    [HttpGet("line/{lineId}/date/{date:datetime}")]
-    public async Task<IActionResult> GetProductionOutputsByLineAndDate(int lineId, DateTime date, CancellationToken cancellationToken)
+    [HttpGet("line/{lineId}/date")]
+    public async Task<IActionResult> GetProductionOutputsByLineAndDate(int lineId, [FromQuery] string date, CancellationToken cancellationToken)
     {
         try
         {
-            var outputs = await _productionOutputService.GetProductionOutputsByLineAndDateAsync(lineId, date, cancellationToken);
+            // Parse date string to DateTime with DD/MM/YYYY format
+            Console.WriteLine($"Đang parse date string: '{date}'");
+
+            // Try parsing with Vietnamese culture first (supports DD/MM/YYYY)
+            var vietnameseCulture = new System.Globalization.CultureInfo("vi-VN");
+            if (!DateTime.TryParse(date, vietnameseCulture, System.Globalization.DateTimeStyles.None, out var parsedDate))
+            {
+                Console.WriteLine($"Không thể parse date: '{date}' với culture vi-VN");
+                return BadRequest(new { success = false, message = "Định dạng ngày không hợp lệ. Định dạng mong đợi: DD/MM/YYYY" });
+            }
+
+            Console.WriteLine($"Đang lấy sản lượng sản xuất cho chuyền {lineId} vào ngày {parsedDate:dd/MM/yyyy}");
+
+            var outputs = await _productionOutputService.GetProductionOutputsByLineAndDateAsync(lineId, parsedDate, cancellationToken);
+
+            Console.WriteLine($"Tìm thấy {outputs.Count} bản ghi sản lượng sản xuất");
+
             return Ok(new { success = true, data = outputs, message = "Lấy danh sách sản lượng sản xuất theo chuyền và ngày thành công" });
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"Lỗi khi lấy sản lượng sản xuất: {ex.Message}");
             return BadRequest(new { success = false, message = "Có lỗi xảy ra khi lấy danh sách sản lượng sản xuất theo chuyền và ngày", details = ex.Message });
+        }
+    }
+
+    [HttpPost("upsert")]
+    public async Task<IActionResult> UpsertProductionOutput([FromBody] CreateProductionOutputRequest request, CancellationToken cancellationToken)
+    {
+        // Check if exists, update if yes, create if no
+        var existing = await _productionOutputService.GetProductionOutputsByLineAndDateAsync(request.LineId, request.Date, cancellationToken);
+        var record = existing.FirstOrDefault(e => e.ShiftId == request.ShiftId && e.SlotTime == request.SlotTime);
+        if (record != null)
+        {
+            var updateRequest = new UpdateProductionOutputRequest
+            {
+                LoadingTime = request.LoadingTime,
+                TargetAmount = request.TargetAmount,
+                ResultAmount = request.ResultAmount
+            };
+            return await UpdateProductionOutput(record.OutputId, updateRequest, cancellationToken);
+        }
+        else
+        {
+            return await CreateProductionOutput(request, cancellationToken);
         }
     }
 
@@ -209,7 +248,7 @@ public class ProductionOutputsController : ControllerBase
                 return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = ModelState });
 
             var loadingTime = await _productionOutputService.CalculateLoadingTimeAsync(
-                request.LineId, request.Date, request.ShiftId, request.SlotTime, cancellationToken);
+                request.LineId, request.Date, request.ShiftId, request.SlotTime, request.LoadingTime, cancellationToken);
 
             return Ok(new { success = true, data = new { loadingTime }, message = "Tính toán loading time thành công" });
         }
@@ -234,18 +273,24 @@ public class ProductionOutputsController : ControllerBase
             if (!ModelState.IsValid)
                 return BadRequest(new { success = false, message = "Dữ liệu không hợp lệ", errors = ModelState });
 
+            // Tính runTime = loadingTime - downtime trước
+            var runTime = await _productionOutputService.CalculateLoadingTimeAsync(
+                request.LineId, request.Date, request.ShiftId, request.SlotTime, request.LoadingTime, cancellationToken);
+
             var oee = await _productionOutputService.CalculateOEEAsync(
-                request.LineId, request.Date, request.ShiftId, request.SlotTime, request.TargetAmount, request.ResultAmount, cancellationToken);
+                request.LineId, request.Date, request.ShiftId, request.SlotTime, request.TargetAmount, request.ResultAmount, runTime, cancellationToken);
 
             // Convert OEE to percentage for display
             var oeePercentage = Math.Round(oee * 100, 2);
 
-            return Ok(new { 
-                success = true, 
-                data = new {
+            return Ok(new
+            {
+                success = true,
+                data = new
+                {
                     oeePercentage
-                }, 
-                message = "Tính toán OEE thành công" 
+                },
+                message = "Tính toán OEE thành công"
             });
         }
         catch (ArgumentException ex)
@@ -272,10 +317,11 @@ public class ProductionOutputsController : ControllerBase
             var oeeResult = await _productionOutputService.CalculateOEEForShiftAsync(
                 request.LineId, request.Date, request.ShiftId, cancellationToken);
 
-            return Ok(new { 
-                success = true, 
-                data = oeeResult, 
-                message = "Tính toán OEE cho ca làm việc thành công" 
+            return Ok(new
+            {
+                success = true,
+                data = oeeResult,
+                message = "Tính toán OEE cho ca làm việc thành công"
             });
         }
         catch (ArgumentException ex)
@@ -302,10 +348,11 @@ public class ProductionOutputsController : ControllerBase
             var oeeResult = await _productionOutputService.CalculateOEEForDayAsync(
                 request.LineId, request.Date, cancellationToken);
 
-            return Ok(new { 
-                success = true, 
-                data = oeeResult, 
-                message = "Tính toán OEE cho ngày thành công" 
+            return Ok(new
+            {
+                success = true,
+                data = oeeResult,
+                message = "Tính toán OEE cho ngày thành công"
             });
         }
         catch (ArgumentException ex)
@@ -325,8 +372,8 @@ public class ProductionOutputsController : ControllerBase
             return 100;
 
         var targetParts = targetAmount.Split('/');
-        if (targetParts.Length == 2 && 
-            int.TryParse(targetParts[0], out int targetGood) && 
+        if (targetParts.Length == 2 &&
+            int.TryParse(targetParts[0], out int targetGood) &&
             int.TryParse(targetParts[1], out int targetTotal))
         {
             return targetTotal > 0 ? Math.Round((decimal)targetGood / targetTotal * 100, 2) : 0;
@@ -344,6 +391,7 @@ public class CalculateLoadingTimeRequest
     public DateTime Date { get; set; }
     public int ShiftId { get; set; }
     public string SlotTime { get; set; } = string.Empty;
+    public int LoadingTime { get; set; }        
 }
 
 /// <summary>
@@ -355,6 +403,8 @@ public class CalculateOEERequest
     public DateTime Date { get; set; }
     public int ShiftId { get; set; }
     public string SlotTime { get; set; } = string.Empty;
+
+    public int LoadingTime { get; set; }
     public int? TargetAmount { get; set; }
     public int? ResultAmount { get; set; }
 }

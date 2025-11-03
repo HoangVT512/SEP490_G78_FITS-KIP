@@ -39,6 +39,9 @@ public class LineService : ILineService
         // Chuẩn hóa tên line: trim và thay thế nhiều khoảng trắng liên tiếp thành 1 khoảng trắng
         var normalizedLineName = System.Text.RegularExpressions.Regex.Replace(request.LineName.Trim(), @"\s+", " ");
 
+        // Chuẩn hóa LineCode: trim và chuyển về uppercase để so sánh case-insensitive
+        var normalizedLineCode = request.LineCode.Trim().ToUpper();
+
         // Check duplicate line name in same department
         var existingLines = await _lineRepository.GetByDepartmentIdAsync(request.DepartmentId, cancellationToken);
         var duplicateLine = existingLines.FirstOrDefault(l =>
@@ -48,9 +51,17 @@ public class LineService : ILineService
             throw new InvalidOperationException($"Phòng ban '{department.DepartmentName}' đã có chuyền sản xuất tên '{duplicateLine.LineName}'");
         }
 
+        // Check duplicate LineCode globally (unique across all lines)
+        var existingLineByCode = await _lineRepository.GetByLineCodeAsync(normalizedLineCode, cancellationToken);
+        if (existingLineByCode != null)
+        {
+            throw new InvalidOperationException($"Mã chuyền '{request.LineCode}' đã tồn tại trong hệ thống");
+        }
+
         var line = new Line
         {
             LineName = normalizedLineName, // Sử dụng tên đã chuẩn hóa
+            LineCode = normalizedLineCode, // Sử dụng mã đã chuẩn hóa
             DepartmentId = request.DepartmentId,
         };
 
@@ -80,6 +91,9 @@ public class LineService : ILineService
         // Chuẩn hóa tên line: trim và thay thế nhiều khoảng trắng liên tiếp thành 1 khoảng trắng
         var normalizedLineName = System.Text.RegularExpressions.Regex.Replace(request.LineName.Trim(), @"\s+", " ");
 
+        // Chuẩn hóa LineCode: trim và chuyển về uppercase để so sánh case-insensitive
+        var normalizedLineCode = request.LineCode.Trim().ToUpper();
+
         // Check duplicate line name in same department (exclude current line)
         var existingLines = await _lineRepository.GetByDepartmentIdAsync(request.DepartmentId, cancellationToken);
         var duplicateLine = existingLines.FirstOrDefault(l => l.LineId != id &&
@@ -89,6 +103,13 @@ public class LineService : ILineService
             throw new InvalidOperationException($"Phòng ban '{department.DepartmentName}' đã có chuyền sản xuất tên '{duplicateLine.LineName}'");
         }
 
+        // Check duplicate LineCode globally (unique across all lines, exclude current line)
+        var existingLineByCode = await _lineRepository.GetByLineCodeAsync(normalizedLineCode, cancellationToken);
+        if (existingLineByCode != null && existingLineByCode.LineId != id)
+        {
+            throw new InvalidOperationException($"Mã chuyền '{request.LineCode}' đã tồn tại trong hệ thống");
+        }
+
         // Nếu department thay đổi, remove tất cả UserLines cho line này
         if (existingLine.DepartmentId != request.DepartmentId)
         {
@@ -96,6 +117,7 @@ public class LineService : ILineService
         }
 
         existingLine.LineName = normalizedLineName; // Sử dụng tên đã chuẩn hóa
+        existingLine.LineCode = normalizedLineCode; // Sử dụng mã đã chuẩn hóa
         existingLine.DepartmentId = request.DepartmentId;
         existingLine.IsActive = request.IsActive;
 
