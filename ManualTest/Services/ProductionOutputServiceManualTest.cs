@@ -13,6 +13,7 @@ public class ProductionOutputServiceManualTest
     private readonly Mock<ILineRepository> _mockLineRepository;
     private readonly Mock<IShiftRepository> _mockShiftRepository;
     private readonly Mock<IIncidentRepository> _mockIncidentRepository;
+    private readonly Mock<INotificationService> _mockNotificationService;
     private readonly ProductionOutputService _service;
     private readonly List<ProductionOutput> _testData;
     private readonly List<Line> _testLines;
@@ -24,12 +25,14 @@ public class ProductionOutputServiceManualTest
         _mockLineRepository = new Mock<ILineRepository>();
         _mockShiftRepository = new Mock<IShiftRepository>();
         _mockIncidentRepository = new Mock<IIncidentRepository>();
+        _mockNotificationService = new Mock<INotificationService>();
         
         _service = new ProductionOutputService(
             _mockRepository.Object,
             _mockLineRepository.Object,
             _mockShiftRepository.Object,
-            _mockIncidentRepository.Object);
+            _mockIncidentRepository.Object,
+            _mockNotificationService.Object);
         
         _testData = InitializeTestData();
         _testLines = InitializeLineData();
@@ -257,7 +260,7 @@ public class ProductionOutputServiceManualTest
             .ReturnsAsync(shift);
 
         // Setup mock - Check if slot exists
-        _mockRepository.Setup(x => x.ExistsAsync(lineId, date, shiftId, slotTime, It.IsAny<CancellationToken>()))
+        _mockRepository.Setup(x => x.ExistsAsync(lineId, date, shiftId, slotTime ?? "7h-8h", It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         // Setup mock - Get incidents for calculating loading time
@@ -372,8 +375,8 @@ public class ProductionOutputServiceManualTest
                 : 0,
             CreatedAt = existingOutput?.CreatedAt ?? DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
-            Line = existingOutput?.Line,
-            Shift = existingOutput?.Shift
+            Line = existingOutput?.Line ?? null,
+            Shift = existingOutput?.Shift ?? null
         };
 
         _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<ProductionOutput>(), It.IsAny<CancellationToken>()))
@@ -683,6 +686,14 @@ public class ProductionOutputServiceManualTest
         {
             resultAmount = r;
         }
+        
+        Console.Write("[INPUT] Enter Run Time in minutes (default 60): ");
+        var runTimeInput = Console.ReadLine();
+        int runTime = 60;
+        if (!string.IsNullOrWhiteSpace(runTimeInput) && int.TryParse(runTimeInput, out int rt))
+        {
+            runTime = rt;
+        }
 
         // Setup mock - Get incidents
         _mockIncidentRepository.Setup(x => x.GetByLineIdAsync(
@@ -696,7 +707,7 @@ public class ProductionOutputServiceManualTest
         
         try
         {
-            var result = await _service.CalculateOEEAsync(lineId, date, shiftId, slotTime, targetAmount, resultAmount);
+            var result = await _service.CalculateOEEAsync(lineId, date, shiftId, slotTime, targetAmount, resultAmount, runTime);
             
             Console.WriteLine($"[SUCCESS] OEE: {result:F4} ({result * 100:F2}%)");
             Console.WriteLine($"[INFO] OEE = Availability × Performance × Quality");
