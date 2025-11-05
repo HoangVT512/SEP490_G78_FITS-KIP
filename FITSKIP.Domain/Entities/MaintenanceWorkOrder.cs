@@ -19,6 +19,12 @@ public partial class MaintenanceWorkOrder
 
     public DateTime AssignedDate { get; set; }
 
+    /// <summary>
+    /// Ngày dự định bảo trì - Ngày máy sẽ dừng để bảo trì
+    /// KTV chỉ được phép Start WorkOrder từ ngày này trở đi
+    /// </summary>
+    public DateTime ScheduledDate { get; set; }
+
     public DateTime DueDate { get; set; }
 
     public string? AssignedToElectrical { get; set; }

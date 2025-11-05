@@ -227,5 +227,17 @@ namespace FITSKIP.Application.Interfaces
         /// Gửi thông báo nhắc nhở cho TechManager về plans sắp đến hạn
         /// </summary>
         Task SendMaintenanceRemindersAsync();
+        
+        // ===== EXCEL IMPORT/EXPORT =====
+        
+        /// <summary>
+        /// Import maintenance templates từ Excel file
+        /// </summary>
+        Task<List<CreateMaintenanceTemplateRequest>> ImportTemplatesFromExcelAsync(Stream fileStream);
+        
+        /// <summary>
+        /// Generate Excel template file cho maintenance templates
+        /// </summary>
+        byte[] GenerateTemplateExcelTemplate();
     }
 }

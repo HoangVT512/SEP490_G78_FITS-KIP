@@ -20,7 +20,7 @@ export const SignalRProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const listenersRef = useRef(new Map());
   const reconnectTimeoutRef = useRef(null);
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "https://localhost:7003";
+  const SIGNALR_BASE_URL = process.env.REACT_APP_SIGNALR_BASE_URL || "http://localhost:7003";
 
   // Kết nối SignalR khi user đăng nhập
   useEffect(() => {
@@ -46,7 +46,7 @@ export const SignalRProvider = ({ children }) => {
       console.log("🔌 Connecting to SignalR Hub...");
 
       const newConnection = new signalR.HubConnectionBuilder()
-        .withUrl(`${API_BASE_URL}/hubs/notifications`, {
+        .withUrl(`${SIGNALR_BASE_URL}/hubs/notifications`, {
           accessTokenFactory: () => token,
           transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.ServerSentEvents | signalR.HttpTransportType.LongPolling,
         })

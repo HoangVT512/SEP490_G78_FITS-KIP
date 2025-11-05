@@ -29,6 +29,7 @@ import {
   Divider,
   Steps,
   Empty,
+  Upload,
 } from "antd";
 import {
   PlusOutlined,
@@ -52,6 +53,8 @@ import {
   StopOutlined,
   BellOutlined,
   WifiOutlined,
+  DownloadOutlined,
+  UploadOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
@@ -107,6 +110,7 @@ const MaintenanceManagement = () => {
   const [isChecklistModalVisible, setIsChecklistModalVisible] = useState(false);
   const [isAssignMultipleModalVisible, setIsAssignMultipleModalVisible] = useState(false);
   const [isPostponeModalVisible, setIsPostponeModalVisible] = useState(false);
+  const [isImportModalVisible, setIsImportModalVisible] = useState(false);
   
   const [editingPlan, setEditingPlan] = useState(null);
   const [editingTemplate, setEditingTemplate] = useState(null);
@@ -552,6 +556,203 @@ const MaintenanceManagement = () => {
     setChecklistItems(updatedItems);
   };
 
+  // ===== EXCEL IMPORT FOR TEMPLATES =====
+  
+  const handleDownloadTemplateExcel = async () => {
+    try {
+      // ✅ Sửa biến môi trường đúng + URL đúng format
+      const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:7003/api';
+      window.location.href = `${apiBaseUrl}/maintenance/templates/download-template`;
+      
+      message.success("Đang tải Excel mẫu...");
+    } catch (error) {
+      message.error("Tải Excel mẫu thất bại: " + error.message);
+    }
+  };
+
+  const [uploadedFile, setUploadedFile] = useState(null);
+  const [importLoading, setImportLoading] = useState(false);
+
+  const handleFileChange = (info) => {
+    // ✅ Khi beforeUpload return false, file.originFileObj luôn tồn tại
+    // Không cần check status vì không có auto upload
+    const file = info.file.originFileObj || info.file;
+    setUploadedFile(file);
+    console.log("✅ File đã chọn:", file.name);
+  };
+
+  const handleImportExcel = async () => {
+    if (!uploadedFile) {
+      message.error("Vui lòng chọn file Excel để import");
+      return;
+    }
+
+    setImportLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", uploadedFile);
+
+      const token = localStorage.getItem("token");
+      
+      // ✅ Sửa biến môi trường đúng
+      const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:7003/api';
+      
+      const response = await fetch(
+        `${apiBaseUrl}/maintenance/templates/import`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        message.success(
+          `Import thành công ${result.data.successCount} mẫu bảo trì!`
+        );
+        
+        if (result.data.errors && result.data.errors.length > 0) {
+          Modal.warning({
+            title: "Một số lỗi khi import",
+            content: (
+              <div>
+                <p>Đã import thành công {result.data.successCount} mẫu.</p>
+                <p>Có {result.data.errorCount} lỗi:</p>
+                <ul>
+                  {result.data.errors.slice(0, 5).map((err, idx) => (
+                    <li key={idx}>{err}</li>
+                  ))}
+                </ul>
+                {result.data.errors.length > 5 && (
+                  <p>...và {result.data.errors.length - 5} lỗi khác</p>
+                )}
+              </div>
+            ),
+          });
+        }
+
+        setIsImportModalVisible(false);
+        setUploadedFile(null);
+        loadTemplates();
+      } else {
+        message.error(result.message || "Import thất bại");
+      }
+    } catch (error) {
+      message.error("Import thất bại: " + error.message);
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  // ===== EXCEL IMPORT FOR MAINTENANCE PLANS =====
+  
+  const handleDownloadPlanExcel = async () => {
+    try {
+      const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:7003/api';
+      window.location.href = `${apiBaseUrl}/maintenance/plans/download-template`;
+      
+      message.success("Đang tải Excel mẫu Chu kỳ bảo trì...");
+    } catch (error) {
+      message.error("Tải Excel mẫu thất bại: " + error.message);
+    }
+  };
+
+  const [uploadedPlanFile, setUploadedPlanFile] = useState(null);
+  const [importPlanLoading, setImportPlanLoading] = useState(false);
+  const [isPlanImportModalVisible, setIsPlanImportModalVisible] = useState(false);
+
+  const handlePlanFileChange = (info) => {
+    const file = info.file.originFileObj || info.file;
+    setUploadedPlanFile(file);
+    console.log("✅ File đã chọn:", file.name);
+  };
+
+  const handleImportPlanExcel = async () => {
+    if (!uploadedPlanFile) {
+      message.error("Vui lòng chọn file Excel để import");
+      return;
+    }
+
+    setImportPlanLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", uploadedPlanFile);
+
+      const token = localStorage.getItem("token");
+      const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:7003/api';
+      
+      const response = await fetch(
+        `${apiBaseUrl}/maintenance/plans/import`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        message.success(
+          `Import thành công ${result.data.successCount} chu kỳ bảo trì!`
+        );
+        
+        if (result.data.errors && result.data.errors.length > 0) {
+          Modal.warning({
+            title: "Một số lỗi khi import",
+            content: (
+              <div>
+                <p>Đã import thành công {result.data.successCount} chu kỳ.</p>
+                <p>Có {result.data.errorCount} lỗi:</p>
+                <ul style={{ maxHeight: 300, overflow: 'auto' }}>
+                  {result.data.errors.map((err, idx) => (
+                    <li key={idx}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            ),
+            width: 600,
+          });
+        }
+
+        setIsPlanImportModalVisible(false);
+        setUploadedPlanFile(null);
+        loadMaintenancePlans();
+        loadStats();
+      } else {
+        // Hiển thị lỗi validation chi tiết
+        if (result.errors && result.errors.length > 0) {
+          Modal.error({
+            title: "⛔ Lỗi validation",
+            content: (
+              <div>
+                <p><strong>{result.message}</strong></p>
+                <ul style={{ maxHeight: 400, overflow: 'auto' }}>
+                  {result.errors.map((err, idx) => (
+                    <li key={idx}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            ),
+            width: 700,
+          });
+        } else {
+          message.error(result.message || "Import thất bại");
+        }
+      }
+    } catch (error) {
+      message.error("Import thất bại: " + error.message);
+    } finally {
+      setImportPlanLoading(false);
+    }
+  };
+
   // ===== WORK ORDER MANAGEMENT =====
   
   const handleCreateWorkOrder = (plan) => {
@@ -561,11 +762,14 @@ const MaintenanceManagement = () => {
     
     // Nếu có plan (từ tab sắp đến hạn), tự động điền thông tin
     if (plan) {
+      // ✅ Xác định scheduledDate MẶC ĐỊNH (ngày đến hạn của plan)
+      const defaultScheduledDate = plan.postponedDueDate ? dayjs(plan.postponedDueDate) : dayjs(plan.nextDueDate);
+      
       workOrderForm.setFieldsValue({
         planId: plan.planId,
         equipmentId: plan.equipmentId,
         templateId: plan.templateId,
-        dueDate: plan.postponedDueDate ? dayjs(plan.postponedDueDate) : dayjs(plan.nextDueDate),
+        scheduledDate: defaultScheduledDate, // ✅ Giá trị mặc định = NextDueDate
         // Không set assignedTo, để user chọn
       });
       
@@ -575,7 +779,7 @@ const MaintenanceManagement = () => {
       }
     } else {
       workOrderForm.setFieldsValue({
-        dueDate: dayjs().add(7, 'days'),
+        scheduledDate: dayjs().add(1, 'day'),
       });
     }
     setIsWorkOrderModalVisible(true);
@@ -612,20 +816,19 @@ const MaintenanceManagement = () => {
     try {
       if (editingWorkOrder) {
         await updateWorkOrder(editingWorkOrder.workOrderId, {
-          dueDate: values.dueDate?.toISOString(),
+          scheduledDate: values.scheduledDate?.toISOString(),
           assignedToElectrical: values.assignedToElectrical,
           assignedToMechanical: values.assignedToMechanical,
-          // ❌ REMOVED: usageUnit, inspectionCode, repairTime - không sử dụng
           notes: values.notes,
         });
         message.success("Cập nhật phiếu bảo trì thành công!");
       } else {
+        // ✅ Chỉ gửi scheduledDate lên API (ngày bảo trì)
         await createWorkOrder({
           planId: values.planId,
-          dueDate: values.dueDate.toISOString(),
+          scheduledDate: values.scheduledDate.toISOString(), // ✅ Ngày bảo trì
           assignedToElectrical: values.assignedToElectrical,
           assignedToMechanical: values.assignedToMechanical,
-          // ❌ REMOVED: usageUnit, inspectionCode, repairTime - không sử dụng
           notes: values.notes,
         });
         message.success("Tạo phiếu bảo trì thành công!");
@@ -1346,9 +1549,25 @@ const MaintenanceManagement = () => {
             />
           </Col>
           <Col xs={24} sm={12} style={{ textAlign: "right" }}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddPlan}>
-              Thêm chu kỳ bảo trì
-            </Button>
+            <Space>
+              <Button
+                type="button"
+                icon={<DownloadOutlined />}
+                onClick={handleDownloadPlanExcel}
+              >
+                Tải Excel mẫu
+              </Button>
+              <Button
+                type="button"
+                icon={<UploadOutlined />}
+                onClick={() => setIsPlanImportModalVisible(true)}
+              >
+                Import từ Excel
+              </Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleAddPlan}>
+                Thêm chu kỳ bảo trì
+              </Button>
+            </Space>
           </Col>
         </Row>
 
@@ -1365,6 +1584,50 @@ const MaintenanceManagement = () => {
           }}
         />
       </Space>
+
+      {/* Import Plan Modal */}
+      <Modal
+        title="Import Chu kỳ bảo trì từ Excel"
+        open={isPlanImportModalVisible}
+        onCancel={() => {
+          setIsPlanImportModalVisible(false);
+          setUploadedPlanFile(null);
+        }}
+        footer={null}
+        width={600}
+      >
+        <Upload
+          accept=".xlsx"
+          beforeUpload={() => false}
+          onChange={handlePlanFileChange}
+          maxCount={1}
+        >
+          <Button icon={<UploadOutlined />}>Chọn file Excel</Button>
+        </Upload>
+        {uploadedPlanFile && (
+          <div style={{ marginTop: 16 }}>
+            <Text strong>File đã chọn:</Text> {uploadedPlanFile.name}
+          </div>
+        )}
+        <div style={{ marginTop: 24, textAlign: "right" }}>
+          <Button
+            onClick={() => {
+              setIsPlanImportModalVisible(false);
+              setUploadedPlanFile(null);
+            }}
+            style={{ marginRight: 8 }}
+          >
+            Hủy
+          </Button>
+          <Button
+            type="primary"
+            onClick={handleImportPlanExcel}
+            loading={importPlanLoading}
+          >
+            Import
+          </Button>
+        </div>
+      </Modal>
     </Card>
   );
 
@@ -1382,9 +1645,25 @@ const MaintenanceManagement = () => {
             />
           </Col>
           <Col xs={24} sm={12} style={{ textAlign: "right" }}>
-            <Button type="primary" icon={<PlusOutlined />} onClick={handleAddTemplate}>
-              Thêm mẫu bảo trì
-            </Button>
+            <Space>
+              <Button
+                type="button"
+                icon={<DownloadOutlined />}
+                onClick={handleDownloadTemplateExcel}
+              >
+                Tải Excel mẫu
+              </Button>
+              <Button
+                type="button"
+                icon={<UploadOutlined />}
+                onClick={() => setIsImportModalVisible(true)}
+              >
+                Import từ Excel
+              </Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={handleAddTemplate}>
+                Thêm mẫu bảo trì
+              </Button>
+            </Space>
           </Col>
         </Row>
 
@@ -1401,6 +1680,50 @@ const MaintenanceManagement = () => {
           }}
         />
       </Space>
+
+      {/* Import Modal */}
+      <Modal
+        title="Import Mẫu Bảo Trì từ Excel"
+        open={isImportModalVisible}
+        onCancel={() => {
+          setIsImportModalVisible(false);
+          setUploadedFile(null);
+        }}
+        footer={null}
+        width={600}
+      >
+        <Upload
+          accept=".xlsx"
+          beforeUpload={() => false}
+          onChange={handleFileChange}
+          maxCount={1}
+        >
+          <Button icon={<UploadOutlined />}>Chọn file Excel</Button>
+        </Upload>
+        {uploadedFile && (
+          <div style={{ marginTop: 16 }}>
+            <Text strong>File đã chọn:</Text> {uploadedFile.name}
+          </div>
+        )}
+        <div style={{ marginTop: 24, textAlign: "right" }}>
+          <Button
+            onClick={() => {
+              setIsImportModalVisible(false);
+              setUploadedFile(null);
+            }}
+            style={{ marginRight: 8 }}
+          >
+            Hủy
+          </Button>
+          <Button
+            type="primary"
+            onClick={handleImportExcel}
+            loading={importLoading}
+          >
+            Import
+          </Button>
+        </div>
+      </Modal>
     </Card>
   );
 
@@ -1727,48 +2050,61 @@ const MaintenanceManagement = () => {
             <>
               <Alert
                 message="Chế độ chỉnh sửa trạng thái"
-                description="Bạn chỉ có thể bật/tắt trạng thái hoạt động của chu kỳ bảo trì. Không thể thay đổi các thông tin khác."
+                description={
+                  <Descriptions bordered column={2} style={{ marginTop: 16 }}>
+                    <Descriptions.Item label="Thiết bị" span={2}>
+                      {editingPlan.equipmentName} ({editingPlan.equipmentCode})
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Vị trí" span={2}>
+                      {editingPlan.lineName} - {editingPlan.stageName}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Chu kỳ" span={2}>
+                      {editingPlan.intervalValue}{" "}
+                      {editingPlan.intervalType === "Days"
+                        ? "ngày"
+                        : editingPlan.intervalType === "Months"
+                        ? "tháng"
+                        : editingPlan.intervalType === "Hours"
+                        ? "giờ"
+                        : "chu kỳ"}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Ngày bắt đầu">
+                      {dayjs(editingPlan.startDate).format("DD/MM/YYYY")}
+                    </Descriptions.Item>
+                  </Descriptions>
+                }
                 type="info"
                 showIcon
-                style={{ marginBottom: 24 }}
+                style={{ marginBottom: 16 }}
               />
-              
-              <Descriptions bordered column={2} style={{ marginBottom: 24 }}>
-                <Descriptions.Item label="Thiết bị" span={2}>
-                  {editingPlan.equipmentName} ({editingPlan.equipmentCode})
-                </Descriptions.Item>
-                <Descriptions.Item label="Vị trí" span={2}>
-                  {editingPlan.lineName} - {editingPlan.stageName}
-                </Descriptions.Item>
-                <Descriptions.Item label="Chu kỳ">
-                  {editingPlan.intervalValue}{" "}
-                  {editingPlan.intervalType === "Days"
-                    ? "ngày"
-                    : editingPlan.intervalType === "Months"
-                    ? "tháng"
-                    : editingPlan.intervalType === "Hours"
-                    ? "giờ"
-                    : "chu kỳ"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Ngày bắt đầu">
-                  {dayjs(editingPlan.startDate).format("DD/MM/YYYY")}
-                </Descriptions.Item>
-              </Descriptions>
 
               <Form.Item
                 name="isActive"
                 label="Trạng thái hoạt động"
                 valuePropName="checked"
+                initialValue={editingPlan.isActive}
               >
-                <Switch 
-                  checkedChildren="Đang hoạt động" 
-                  unCheckedChildren="Đã tắt"
-                  style={{ width: 150 }}
-                />
+                <Switch checkedChildren="Hoạt động" unCheckedChildren="Không hoạt động" />
+              </Form.Item>
+
+              <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
+                <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+                  <Button
+                    onClick={() => {
+                      setIsPlanModalVisible(false);
+                      planForm.resetFields();
+                    }}
+                  >
+                    Hủy
+                  </Button>
+                  <Button type="primary" htmlType="submit" loading={loading}>
+                    Cập nhật trạng thái
+                  </Button>
+                </Space>
               </Form.Item>
             </>
           ) : (
-            // Khi THÊM MỚI: hiển thị đầy đủ form
+            // Khi ADD: hiển thị form đầy đủ để tạo mới
             <>
               <Row gutter={16}>
                 <Col span={12}>
@@ -1802,6 +2138,7 @@ const MaintenanceManagement = () => {
                     <Select
                       placeholder="Chọn công đoạn"
                       onChange={handleStageChange}
+                      disabled={!selectedLine}
                       showSearch
                       filterOption={(input, option) =>
                         option.children.toLowerCase().includes(input.toLowerCase())
@@ -1826,14 +2163,15 @@ const MaintenanceManagement = () => {
                   >
                     <Select
                       placeholder="Chọn thiết bị"
+                      disabled={!selectedStage}
                       showSearch
                       filterOption={(input, option) =>
                         option.children.toLowerCase().includes(input.toLowerCase())
                       }
                     >
-                      {filteredEquipments.map((eq) => (
-                        <Option key={eq.equipmentId} value={eq.equipmentId}>
-                          {eq.equipmentCode} - {eq.equipmentName}
+                      {filteredEquipments.map((equipment) => (
+                        <Option key={equipment.equipmentId} value={equipment.equipmentId}>
+                          {equipment.equipmentName} - {equipment.equipmentCode}
                         </Option>
                       ))}
                     </Select>
@@ -1847,14 +2185,15 @@ const MaintenanceManagement = () => {
                   >
                     <Select
                       placeholder="Chọn mẫu bảo trì"
+                      disabled={!selectedStage}
                       showSearch
                       filterOption={(input, option) =>
                         option.children.toLowerCase().includes(input.toLowerCase())
                       }
                     >
-                      {filteredTemplates.map((tpl) => (
-                        <Option key={tpl.templateId} value={tpl.templateId}>
-                          {tpl.templateName}
+                      {filteredTemplates.map((template) => (
+                        <Option key={template.templateId} value={template.templateId}>
+                          {template.templateName}
                         </Option>
                       ))}
                     </Select>
@@ -1863,71 +2202,57 @@ const MaintenanceManagement = () => {
               </Row>
 
               <Row gutter={16}>
-                <Col span={12}>
+                <Col span={8}>
+                  <Form.Item
+                    name="intervalValue"
+                    label="Giá trị chu kỳ"
+                    rules={[{ required: true, message: "Vui lòng nhập giá trị chu kỳ" }]}
+                  >
+                    <InputNumber min={1} style={{ width: "100%" }} placeholder="Nhập số" />
+                  </Form.Item>
+                </Col>
+                <Col span={8}>
                   <Form.Item
                     name="intervalType"
                     label="Loại chu kỳ"
-                    rules={[
-                      { required: true, message: "Vui lòng chọn loại chu kỳ" },
-                    ]}
+                    rules={[{ required: true, message: "Vui lòng chọn loại chu kỳ" }]}
                   >
-                    <Select placeholder="Chọn loại">
-                      <Option value="Months">Tháng</Option>
+                    <Select placeholder="Chọn loại chu kỳ">
                       <Option value="Days">Ngày</Option>
-                      <Option value="Hours">Giờ hoạt động</Option>
+                      <Option value="Months">Tháng</Option>
+                      <Option value="Hours">Giờ</Option>
                       <Option value="UsageCycles">Chu kỳ sử dụng</Option>
                     </Select>
                   </Form.Item>
                 </Col>
-                <Col span={12}>
-                  <Form.Item
-                    name="intervalValue"
-                    label="Giá trị chu kỳ"
-                    rules={[{ required: true, message: "Vui lòng nhập giá trị" }]}
-                  >
-                    <InputNumber min={1} style={{ width: "100%" }} />
-                  </Form.Item>
-                </Col>
-              </Row>
-
-              <Row gutter={16}>
-                <Col span={12}>
+                <Col span={8}>
                   <Form.Item
                     name="startDate"
                     label="Ngày bắt đầu"
-                    initialValue={dayjs()}
-                    rules={[{ required: true, message: "Vui lòng chọn ngày" }]}
+                    rules={[{ required: true, message: "Vui lòng chọn ngày bắt đầu" }]}
                   >
-                    <DatePicker 
-                      format="DD/MM/YYYY" 
-                      style={{ width: "100%" }}
-                      disabledDate={(current) => {
-                        // Không cho chọn ngày trước hôm nay
-                        return current && current < dayjs().startOf('day');
-                      }}
-                      placeholder="Chọn ngày bắt đầu"
-                    />
+                    <DatePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
                   </Form.Item>
                 </Col>
               </Row>
+
+              <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
+                <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+                  <Button
+                    onClick={() => {
+                      setIsPlanModalVisible(false);
+                      planForm.resetFields();
+                    }}
+                  >
+                    Hủy
+                  </Button>
+                  <Button type="primary" htmlType="submit" loading={loading}>
+                    Thêm mới
+                  </Button>
+                </Space>
+              </Form.Item>
             </>
           )}
-
-          <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
-            <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-              <Button
-                onClick={() => {
-                  setIsPlanModalVisible(false);
-                  planForm.resetFields();
-                }}
-              >
-                Hủy
-              </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
-                {editingPlan ? "Cập nhật trạng thái" : "Thêm mới"}
-              </Button>
-            </Space>
-          </Form.Item>
         </Form>
       </Modal>
 
@@ -2184,7 +2509,7 @@ const MaintenanceManagement = () => {
             <>
               <Alert
                 message="Tạo phiếu bảo trì từ chu kỳ"
-                description="Thông tin chu kỳ bảo trì và ngày đến hạn không thể thay đổi. Vui lòng chọn kỹ thuật viên để giao việc."
+                description="Vui lòng chọn ngày bảo trì và phân công kỹ thuật viên."
                 type="info"
                 showIcon
                 style={{ marginBottom: 24 }}
@@ -2198,32 +2523,20 @@ const MaintenanceManagement = () => {
                 <Descriptions.Item label="Vị trí" span={2}>
                   {selectedRecord.lineName} - {selectedRecord.stageName}
                 </Descriptions.Item>
-                <Descriptions.Item label="Chu kỳ bảo trì">
-                  {selectedRecord.intervalValue}{" "}
-                  {selectedRecord.intervalType === "Days"
-                    ? "ngày"
-                    : selectedRecord.intervalType === "Months"
-                    ? "tháng"
-                    : selectedRecord.intervalType === "Hours"
-                    ? "giờ"
-                    : "chu kỳ"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Ngày đến hạn">
-                  <Tag color={selectedRecord.postponedDueDate ? "purple" : "blue"}>
+                <Descriptions.Item label="Ngày đến hạn (DueDate)" span={2}>
+                  <Text strong style={{ color: '#ff4d4f' }}>
                     {selectedRecord.postponedDueDate 
                       ? dayjs(selectedRecord.postponedDueDate).format("DD/MM/YYYY")
                       : dayjs(selectedRecord.nextDueDate).format("DD/MM/YYYY")
                     }
-                  </Tag>
-                  {selectedRecord.postponedDueDate && (
-                    <Text type="secondary" style={{ marginLeft: 8, fontSize: 12 }}>
-                      (Đã hoãn từ {dayjs(selectedRecord.nextDueDate).format("DD/MM/YYYY")})
-                    </Text>
-                  )}
+                  </Text>
+                  <Text type="secondary" style={{ marginLeft: 8 }}>
+                    (Ngày bảo trì phải trước hoặc bằng ngày này)
+                  </Text>
                 </Descriptions.Item>
               </Descriptions>
 
-              {/* Hidden fields để submit */}
+              {/* Hidden fields để submit planId, equipmentId, templateId */}
               <Form.Item name="planId" hidden>
                 <Input />
               </Form.Item>
@@ -2233,9 +2546,66 @@ const MaintenanceManagement = () => {
               <Form.Item name="templateId" hidden>
                 <Input />
               </Form.Item>
-              <Form.Item name="dueDate" hidden>
-                <Input />
-              </Form.Item>
+
+              <Divider>Lịch trình bảo trì</Divider>
+              
+              <Row gutter={16}>
+                <Col span={24}>
+                  <Form.Item
+                    name="scheduledDate"
+                    label={
+                      <span>
+                        <CalendarOutlined style={{ color: '#faad14', marginRight: 4 }} />
+                        Ngày bảo trì
+                      </span>
+                    }
+                    rules={[
+                      { required: true, message: "Vui lòng chọn ngày bảo trì" },
+                      () => ({
+                        validator(_, value) {
+                          if (!value) return Promise.resolve();
+                          
+                          const today = dayjs().startOf('day');
+                          if (value.isBefore(today)) {
+                            return Promise.reject(new Error('Ngày bảo trì không được là quá khứ'));
+                          }
+                          
+                          // ✅ Validation: Ngày bảo trì phải <= NextDueDate
+                          const dueDate = selectedRecord.postponedDueDate 
+                            ? dayjs(selectedRecord.postponedDueDate) 
+                            : dayjs(selectedRecord.nextDueDate);
+                            
+                          if (value.isAfter(dueDate)) {
+                            return Promise.reject(
+                              new Error('Không được tạo bảo trì sau ngày đến hạn. Phải hoãn bảo trì.')
+                            );
+                          }
+                          
+                          return Promise.resolve();
+                        },
+                      }),
+                    ]}
+                    extra={`Ngày máy dừng hoạt động để bảo trì (không được sau ${selectedRecord.postponedDueDate ? dayjs(selectedRecord.postponedDueDate).format("DD/MM/YYYY") : dayjs(selectedRecord.nextDueDate).format("DD/MM/YYYY")})`}
+                  >
+                    <DatePicker 
+                      format="DD/MM/YYYY" 
+                      style={{ width: "100%" }}
+                      placeholder="Chọn ngày bảo trì"
+                      disabledDate={(current) => {
+                        // Không cho chọn ngày quá khứ
+                        const today = dayjs().startOf('day');
+                        if (current && current < today) return true;
+                        
+                        // Không cho chọn ngày sau DueDate
+                        const dueDate = selectedRecord.postponedDueDate 
+                          ? dayjs(selectedRecord.postponedDueDate) 
+                          : dayjs(selectedRecord.nextDueDate);
+                        return current && current.isAfter(dueDate);
+                      }}
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
 
               <Divider>Phân công kỹ thuật viên</Divider>
               

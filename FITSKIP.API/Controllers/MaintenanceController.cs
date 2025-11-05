@@ -8,7 +8,6 @@ namespace FITSKIP.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
     public class MaintenanceController : ControllerBase
     {
         private readonly IMaintenanceService _maintenanceService;
@@ -151,6 +150,204 @@ namespace FITSKIP.API.Controllers
             catch (InvalidOperationException ex)
             {
                 return BadRequest(ApiResponse.ErrorResponse(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse.ErrorResponse($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Tải file Excel mẫu cho Maintenance Template
+        /// </summary>
+        [HttpGet("templates/download-template")]
+        [AllowAnonymous] // ✅ CHO PHÉP DOWNLOAD MÀ KHÔNG CẦN ĐĂNG NHẬP
+        public IActionResult DownloadTemplateExcel([FromServices] IExcelImportService excelService)
+        {
+            try
+            {
+                var fileBytes = excelService.GenerateTemplateExcelTemplate();
+                var fileName = $"MauBaoTri_Template_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                
+                return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse.ErrorResponse($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Import Maintenance Templates từ Excel
+        /// </summary>
+        [HttpPost("templates/import")]
+        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
+        public async Task<IActionResult> ImportTemplatesFromExcel(
+            IFormFile file, 
+            [FromServices] IExcelImportService excelService,
+            [FromServices] IStageService stageService)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                {
+                    return BadRequest(ApiResponse.ErrorResponse("Vui lòng chọn file Excel để import"));
+                }
+
+                if (!file.FileName.EndsWith(".xlsx") && !file.FileName.EndsWith(".xls"))
+                {
+                    return BadRequest(ApiResponse.ErrorResponse("File phải có định dạng Excel (.xlsx hoặc .xls)"));
+                }
+
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(ApiResponse.ErrorResponse("Không xác định được người dùng"));
+                }
+
+                // Đọc file Excel
+                using var stream = file.OpenReadStream();
+                var templateRequests = await excelService.ImportTemplatesFromExcelAsync(stream);
+
+                if (templateRequests == null || !templateRequests.Any())
+                {
+                    return BadRequest(ApiResponse.ErrorResponse("Không có dữ liệu hợp lệ trong file Excel"));
+                }
+
+                // Lấy danh sách stages để resolve StageName -> StageId
+                var allStages = await stageService.GetStagesAsync();
+                var stageDict = allStages.ToDictionary(s => s.StageName.ToLower(), s => s);
+                
+                // Lấy tất cả templates hiện có trong database
+                var allExistingTemplates = await _maintenanceService.GetAllTemplatesAsync();
+
+                var validationErrors = new List<string>();
+                var rowNumber = 2; // Bắt đầu từ dòng 2 (dòng 1 là header)
+
+                // ✅ BƯỚC 1: VALIDATE TOÀN BỘ FILE EXCEL TRƯỚC KHI IMPORT
+                foreach (var templateRequest in templateRequests)
+                {
+                    var currentTemplateName = templateRequest.TemplateName;
+                    
+                    // Validate: StageName phải tồn tại
+                    if (!string.IsNullOrEmpty(templateRequest.StageName))
+                    {
+                        var stageNameLower = templateRequest.StageName.ToLower();
+                        if (!stageDict.ContainsKey(stageNameLower))
+                        {
+                            validationErrors.Add($"[Dòng {rowNumber}] Không tìm thấy công đoạn '{templateRequest.StageName}' cho template '{currentTemplateName}'");
+                            rowNumber++;
+                            continue;
+                        }
+                        
+                        var stage = stageDict[stageNameLower];
+                        templateRequest.StageId = stage.StageId;
+                        
+                        // ✅ CHECK TRÙNG TEMPLATE: So sánh với templates hiện có trong DB
+                        var existingTemplate = allExistingTemplates.FirstOrDefault(t => 
+                            t.StageId == stage.StageId &&
+                            t.TemplateName.Trim().Equals(currentTemplateName.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                            t.IsActive
+                        );
+                        
+                        if (existingTemplate != null)
+                        {
+                            validationErrors.Add(
+                                $"[Dòng {rowNumber}] ❌ Template TRÙNG: '{currentTemplateName}' đã tồn tại trong công đoạn '{stage.StageName}' " +
+                                $"(TemplateId: {existingTemplate.TemplateId}, được tạo lúc {existingTemplate.CreatedDate:dd/MM/yyyy}). " +
+                                $"Vui lòng đổi tên hoặc xóa template cũ."
+                            );
+                        }
+                    }
+                    else
+                    {
+                        validationErrors.Add($"[Dòng {rowNumber}] Template '{currentTemplateName}' thiếu thông tin công đoạn (Stage)");
+                    }
+                    
+                    // ✅ CHECK TRÙNG ITEM TRONG CÙNG TEMPLATE
+                    if (templateRequest.TemplateItems != null && templateRequest.TemplateItems.Any())
+                    {
+                        var duplicateItems = templateRequest.TemplateItems
+                            .GroupBy(item => new { 
+                                StepName = item.StepName.Trim().ToLower(), 
+                                Category = item.Category 
+                            })
+                            .Where(g => g.Count() > 1)
+                            .Select(g => new { 
+                                StepName = g.First().StepName, 
+                                Category = g.First().Category, 
+                                Count = g.Count() 
+                            })
+                            .ToList();
+
+                        if (duplicateItems.Any())
+                        {
+                            var duplicateList = string.Join(", ", duplicateItems.Select(d => 
+                                $"'{d.StepName}' ({d.Category}) xuất hiện {d.Count} lần"
+                            ));
+                            validationErrors.Add(
+                                $"[Dòng {rowNumber}] ❌ Phát hiện các bước kiểm tra BỊ TRÙNG trong template '{currentTemplateName}': {duplicateList}. " +
+                                $"Mỗi bước kiểm tra phải có tên duy nhất trong cùng loại công việc."
+                            );
+                        }
+                    }
+                    
+                    rowNumber++;
+                }
+
+                if (validationErrors.Any())
+                {
+                    var errorMessage = $"⛔ Phát hiện {validationErrors.Count} lỗi trong file Excel. Vui lòng sửa các lỗi sau và import lại:\n\n" +
+                                      string.Join("\n", validationErrors);
+                    
+                    // ✅ Sửa: Tạo object riêng để trả về với ApiResponse<object>
+                    return BadRequest(ApiResponse<object>.ErrorResponse(
+                        errorMessage,
+                        validationErrors  // ✅ Truyền List<string> vào parameter thứ 2
+                    ));
+                }
+
+                // ✅ BƯỚC 2: NẾU KHÔNG CÓ LỖI → TIẾN HÀNH IMPORT
+                var createdTemplates = new List<MaintenanceTemplateDTO>();
+                var importErrors = new List<string>();
+                rowNumber = 2; // Reset row number
+
+                foreach (var templateRequest in templateRequests)
+                {
+                    try
+                    {
+                        var created = await _maintenanceService.CreateTemplateAsync(templateRequest, userId);
+                        createdTemplates.Add(created);
+                    }
+                    catch (Exception ex)
+                    {
+                        importErrors.Add($"[Dòng {rowNumber}] Lỗi khi tạo template '{templateRequest.TemplateName}': {ex.Message}");
+                    }
+                    rowNumber++;
+                }
+
+                var result = new
+                {
+                    SuccessCount = createdTemplates.Count,
+                    ErrorCount = importErrors.Count,
+                    CreatedTemplates = createdTemplates,
+                    Errors = importErrors
+                };
+
+                if (createdTemplates.Any())
+                {
+                    return Ok(ApiResponse<object>.SuccessResponse(
+                        result, 
+                        $"✅ Import thành công {createdTemplates.Count}/{templateRequests.Count} mẫu bảo trì"
+                    ));
+                }
+                else
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResponse(
+                        "Không thể import template nào. Vui lòng kiểm tra lại dữ liệu.",
+                        importErrors  // ✅ Truyền List<string> thay vì object
+                    ));
+                }
             }
             catch (Exception ex)
             {
@@ -337,6 +534,228 @@ namespace FITSKIP.API.Controllers
             catch (InvalidOperationException ex)
             {
                 return BadRequest(ApiResponse.ErrorResponse(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse.ErrorResponse($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Tải file Excel mẫu cho Maintenance Plan (Chu kỳ bảo trì)
+        /// </summary>
+        [HttpGet("plans/download-template")]
+        [AllowAnonymous]
+        public IActionResult DownloadMaintenancePlanExcel([FromServices] IExcelImportService excelService)
+        {
+            try
+            {
+                var fileBytes = excelService.GenerateMaintenancePlanExcelTemplate();
+                var fileName = $"ChuKyBaoTri_Template_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                
+                return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse.ErrorResponse($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Import Maintenance Plans (Chu kỳ bảo trì) từ Excel
+        /// </summary>
+        [HttpPost("plans/import")]
+        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
+        public async Task<IActionResult> ImportMaintenancePlansFromExcel(
+            IFormFile file,
+            [FromServices] IExcelImportService excelService,
+            [FromServices] IEquipmentService equipmentService)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                {
+                    return BadRequest(ApiResponse.ErrorResponse("Vui lòng chọn file Excel để import"));
+                }
+
+                if (!file.FileName.EndsWith(".xlsx") && !file.FileName.EndsWith(".xls"))
+                {
+                    return BadRequest(ApiResponse.ErrorResponse("File phải có định dạng Excel (.xlsx hoặc .xls)"));
+                }
+
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(ApiResponse.ErrorResponse("Không xác định được người dùng"));
+                }
+
+                // Đọc file Excel
+                using var stream = file.OpenReadStream();
+                var planRequests = await excelService.ImportMaintenancePlansFromExcelAsync(stream);
+
+                if (planRequests == null || !planRequests.Any())
+                {
+                    return BadRequest(ApiResponse.ErrorResponse("Không có dữ liệu hợp lệ trong file Excel"));
+                }
+
+                // Lấy danh sách Equipment, Template, User để resolve code -> ID
+                var allEquipments = await equipmentService.GetEquipmentsAsync();
+                var equipmentDict = allEquipments.ToDictionary(e => e.EquipmentCode.ToLower(), e => e);
+
+                var allTemplates = await _maintenanceService.GetAllTemplatesAsync();
+                var templateDict = allTemplates
+                    .Where(t => !string.IsNullOrEmpty(t.InspectionCode))
+                    .ToDictionary(t => t.InspectionCode!.ToLower(), t => t);
+
+                var allTechnicians = await _maintenanceService.GetAllTechniciansAsync();
+                var technicianDict = allTechnicians.ToDictionary(t => t.EmployeeCode.ToLower(), t => t);
+
+                // Lấy tất cả plans hiện có để check trùng
+                var allExistingPlans = await _maintenanceService.GetAllPlansAsync();
+
+                var validationErrors = new List<string>();
+                var rowNumber = 2; // Bắt đầu từ dòng 2
+
+                // ✅ BƯỚC 1: VALIDATE TOÀN BỘ FILE EXCEL TRƯỚC KHI IMPORT
+                foreach (var planRequest in planRequests)
+                {
+                    // Validate: EquipmentCode phải tồn tại
+                    if (!string.IsNullOrEmpty(planRequest.EquipmentCode))
+                    {
+                        var equipmentCodeLower = planRequest.EquipmentCode.ToLower();
+                        if (!equipmentDict.ContainsKey(equipmentCodeLower))
+                        {
+                            validationErrors.Add($"[Dòng {rowNumber}] Không tìm thấy thiết bị '{planRequest.EquipmentCode}'");
+                            rowNumber++;
+                            continue;
+                        }
+
+                        var equipment = equipmentDict[equipmentCodeLower];
+                        planRequest.EquipmentId = equipment.EquipmentId;
+
+                        // Validate: TemplateCode phải tồn tại
+                        if (!string.IsNullOrEmpty(planRequest.TemplateCode))
+                        {
+                            var templateCodeLower = planRequest.TemplateCode.ToLower();
+                            if (!templateDict.ContainsKey(templateCodeLower))
+                            {
+                                validationErrors.Add($"[Dòng {rowNumber}] Không tìm thấy mẫu bảo trì '{planRequest.TemplateCode}'");
+                                rowNumber++;
+                                continue;
+                            }
+
+                            var template = templateDict[templateCodeLower];
+                            planRequest.TemplateId = template.TemplateId;
+
+                            // ✅ CHECK TRÙNG CHU KỲ BẢO TRÌ
+                            var duplicatePlan = allExistingPlans.FirstOrDefault(p =>
+                                p.EquipmentId == equipment.EquipmentId &&
+                                p.TemplateId == template.TemplateId &&
+                                p.IntervalType == planRequest.IntervalType &&
+                                p.IntervalValue == planRequest.IntervalValue &&
+                                p.IsActive
+                            );
+
+                            if (duplicatePlan != null)
+                            {
+                                validationErrors.Add(
+                                    $"[Dòng {rowNumber}] ❌ Chu kỳ TRÙNG: Thiết bị '{equipment.EquipmentCode}' đã có chu kỳ bảo trì " +
+                                    $"{planRequest.IntervalValue} {planRequest.IntervalType} với mẫu '{template.TemplateName}' " +
+                                    $"(PlanId: {duplicatePlan.PlanId}, được tạo lúc {duplicatePlan.CreatedDate:dd/MM/yyyy}). " +
+                                    $"Vui lòng kiểm tra lại hoặc xóa chu kỳ cũ."
+                                );
+                            }
+                        }
+                        else
+                        {
+                            validationErrors.Add($"[Dòng {rowNumber}] Thiết bị '{planRequest.EquipmentCode}' thiếu mã mẫu bảo trì");
+                        }
+
+                        // Resolve Technician Codes
+                        if (!string.IsNullOrEmpty(planRequest.ElectricalTechCode))
+                        {
+                            var techCodeLower = planRequest.ElectricalTechCode.ToLower();
+                            if (technicianDict.ContainsKey(techCodeLower))
+                            {
+                                planRequest.AssignedToElectrical = technicianDict[techCodeLower].UserId;
+                            }
+                            else
+                            {
+                                validationErrors.Add($"[Dòng {rowNumber}] Không tìm thấy KTV Điện '{planRequest.ElectricalTechCode}'");
+                            }
+                        }
+
+                        if (!string.IsNullOrEmpty(planRequest.MechanicalTechCode))
+                        {
+                            var techCodeLower = planRequest.MechanicalTechCode.ToLower();
+                            if (technicianDict.ContainsKey(techCodeLower))
+                            {
+                                planRequest.AssignedToMechanical = technicianDict[techCodeLower].UserId;
+                            }
+                            else
+                            {
+                                validationErrors.Add($"[Dòng {rowNumber}] Không tìm thấy KTV Cơ '{planRequest.MechanicalTechCode}'");
+                            }
+                        }
+                    }
+                    else
+                    {
+                        validationErrors.Add($"[Dòng {rowNumber}] Thiếu mã thiết bị");
+                    }
+
+                    rowNumber++;
+                }
+
+                // ✅ NẾU CÓ LỖI VALIDATION → DỪNG LẠI
+                if (validationErrors.Any())
+                {
+                    var errorMessage = $"⛔ Phát hiện {validationErrors.Count} lỗi trong file Excel. Vui lòng sửa các lỗi sau và import lại:\n\n" +
+                                      string.Join("\n", validationErrors);
+
+                    return BadRequest(ApiResponse<object>.ErrorResponse(errorMessage, validationErrors));
+                }
+
+                // ✅ BƯỚC 2: NẾU KHÔNG CÓ LỖI → TIẾN HÀNH IMPORT
+                var createdPlans = new List<MaintenancePlanDTO>();
+                var importErrors = new List<string>();
+                rowNumber = 2;
+
+                foreach (var planRequest in planRequests)
+                {
+                    try
+                    {
+                        var created = await _maintenanceService.CreatePlanAsync(planRequest, userId);
+                        createdPlans.Add(created);
+                    }
+                    catch (Exception ex)
+                    {
+                        importErrors.Add($"[Dòng {rowNumber}] Lỗi khi tạo chu kỳ: {ex.Message}");
+                    }
+                    rowNumber++;
+                }
+
+                var result = new
+                {
+                    SuccessCount = createdPlans.Count,
+                    ErrorCount = importErrors.Count,
+                    CreatedPlans = createdPlans,
+                    Errors = importErrors
+                };
+
+                if (createdPlans.Any())
+                {
+                    return Ok(ApiResponse<object>.SuccessResponse(
+                        result,
+                        $"✅ Import thành công {createdPlans.Count}/{planRequests.Count} chu kỳ bảo trì"
+                    ));
+                }
+                else
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResponse(
+                        "Không thể import chu kỳ nào. Vui lòng kiểm tra lại dữ liệu.",
+                        importErrors
+                    ));
+                }
             }
             catch (Exception ex)
             {
