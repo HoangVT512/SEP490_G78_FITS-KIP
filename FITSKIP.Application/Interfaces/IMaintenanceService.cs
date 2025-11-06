@@ -210,6 +210,11 @@ namespace FITSKIP.Application.Interfaces
         /// Lấy danh sách kỹ thuật viên điện
         /// </summary>
         Task<IEnumerable<TechnicianDTO>> GetElectricalTechniciansAsync();
+        
+        /// <summary>
+        /// Đếm số công việc đã giao cho các KTV trong một ngày cụ thể
+        /// </summary>
+        Task<IEnumerable<TechnicianWorkloadDTO>> GetTechniciansWorkloadByDateAsync(DateTime date);
 
         // ===== BACKGROUND TASKS =====
         

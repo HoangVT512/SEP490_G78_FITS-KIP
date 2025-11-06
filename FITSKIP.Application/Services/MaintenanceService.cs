@@ -245,6 +245,19 @@ namespace FITSKIP.Application.Services
             if (equipment == null)
                 throw new InvalidOperationException($"Equipment not found: {request.EquipmentId}");
 
+            var existingPlans = await _planRepository.GetByEquipmentIdAsync(request.EquipmentId);
+            var hasActivePlan = existingPlans.Any(p => p.IsActive);
+            
+            if (hasActivePlan)
+            {
+                var activePlan = existingPlans.First(p => p.IsActive);
+                throw new InvalidOperationException(
+                    $"Thiết bị '{equipment.EquipmentName}' ({equipment.EquipmentCode}) đã có kế hoạch bảo trì định kỳ. " +
+                    $"Chu kỳ hiện tại: {activePlan.IntervalValue} {activePlan.IntervalType}. " +
+                    $"Vui lòng vô hiệu hóa kế hoạch cũ trước khi tạo kế hoạch mới."
+                );
+            }
+
             // Validate template if provided
             if (request.TemplateId.HasValue)
             {
@@ -363,8 +376,20 @@ namespace FITSKIP.Application.Services
             if (plan == null)
                 throw new InvalidOperationException($"Plan not found: {planId}");
 
-            // Delete all work orders
+            // ✅ VALIDATION 2: Kiểm tra có WorkOrder đang In-Progress không
             var workOrders = await _workOrderRepository.GetByPlanIdAsync(planId);
+            var hasInProgressWorkOrder = workOrders.Any(wo => wo.Status == "InProgress");
+            
+            if (hasInProgressWorkOrder)
+            {
+                var inProgressWO = workOrders.First(wo => wo.Status == "InProgress");
+                throw new InvalidOperationException(
+                    $"Không thể xóa kế hoạch bảo trì này vì đang có phiếu bảo trì #{inProgressWO.WorkOrderCode} đang thực hiện. " +
+                    $"Vui lòng hoàn thành hoặc hủy phiếu bảo trì trước khi xóa kế hoạch."
+                );
+            }
+
+            // Delete all work orders (only Pending, Completed, or Cancelled ones remain)
             foreach (var wo in workOrders)
             {
                 await _checklistRepository.DeleteByWorkOrderIdAsync(wo.WorkOrderId);
@@ -780,6 +805,40 @@ namespace FITSKIP.Application.Services
             Console.WriteLine($"[DEBUG] isElectrical: {isElectrical}, isMechanical: {isMechanical}");
             Console.WriteLine($"[DEBUG] hasBothTechnicians: {hasBothTechnicians}");
             
+            // ✅ VALIDATION 3: Kiểm tra required items TRƯỚC KHI update
+            // Lấy tất cả checklist items hiện tại
+            var allChecklistItems = await _checklistRepository.GetByWorkOrderIdAsync(workOrderId);
+            
+            // Lọc required items thuộc category của technician hiện tại
+            var myRequiredItems = allChecklistItems.Where(item => {
+                if (isElectrical && item.Category == "Electrical" && item.RequiredRole == "Electrical")
+                    return true;
+                if (isMechanical && item.Category == "Mechanical" && item.RequiredRole == "Mechanical")
+                    return true;
+                return false;
+            }).ToList();
+            
+            // Kiểm tra xem tất cả required items có được check trong request không
+            var uncheckedRequiredItems = new List<string>();
+            foreach (var requiredItem in myRequiredItems)
+            {
+                var requestItem = request.ChecklistItems.FirstOrDefault(r => r.ChecklistId == requiredItem.ChecklistId);
+                if (requestItem == null || !requestItem.IsChecked)
+                {
+                    uncheckedRequiredItems.Add(requiredItem.StepName);
+                }
+            }
+            
+            if (uncheckedRequiredItems.Any())
+            {
+                var categoryName = isElectrical ? "điện" : "cơ khí";
+                throw new InvalidOperationException(
+                    $"Không thể hoàn thành phiếu bảo trì. Các bước kiểm tra bắt buộc ({categoryName}) chưa được thực hiện:\n" +
+                    $"- {string.Join("\n- ", uncheckedRequiredItems)}\n\n" +
+                    $"Vui lòng hoàn thành tất cả các bước bắt buộc trước khi hoàn tất công việc."
+                );
+            }
+            
             // CHỈ update những checklist items thuộc loại công việc của KTV này
             foreach (var itemCompletion in request.ChecklistItems)
             {
@@ -810,7 +869,7 @@ namespace FITSKIP.Application.Services
             }
 
             // Lấy lại tất cả checklist items sau khi update
-            var allChecklistItems = await _checklistRepository.GetByWorkOrderIdAsync(workOrderId);
+             allChecklistItems = await _checklistRepository.GetByWorkOrderIdAsync(workOrderId);
             
             Console.WriteLine($"[DEBUG] Total checklist items: {allChecklistItems.Count()}");
             
@@ -1482,6 +1541,40 @@ namespace FITSKIP.Application.Services
         {
             // Delegate to ExcelImportService
             throw new NotImplementedException("Use IExcelImportService.GenerateTemplateExcelTemplate instead");
+        }
+
+        // Lines 1284-1321 (bạn đang mở file này)
+
+        public async Task<IEnumerable<TechnicianWorkloadDTO>> GetTechniciansWorkloadByDateAsync(DateTime date)
+        {
+            // ✅ ĐÂY MỚI LÀ CODE THỰC SỰ CHẠY
+            var allTechs = await _userRepository.GetUsersByRoleAsync("Kỹ thuật viên");
+
+            var allWorkOrders = await _workOrderRepository.GetAllAsync();
+            var workOrdersOnDate = allWorkOrders.Where(wo =>
+                wo.ScheduledDate.Date == date.Date
+            ).ToList();
+
+            var workloadList = new List<TechnicianWorkloadDTO>();
+
+            foreach (var tech in allTechs)
+            {
+                var workOrderCount = workOrdersOnDate.Count(wo =>
+                    wo.AssignedToElectrical == tech.Id ||
+                    wo.AssignedToMechanical == tech.Id
+                );
+
+                workloadList.Add(new TechnicianWorkloadDTO
+                {
+                    UserId = tech.Id,
+                    FullName = tech.FullName ?? "",
+                    EmployeeCode = tech.EmployeeCode ?? "",
+                    RoleName = tech.Role?.Name ?? "",
+                    WorkOrderCount = workOrderCount
+                });
+            }
+
+            return workloadList;
         }
     }
 }

@@ -244,6 +244,10 @@ namespace FITSKIP.Domain.DTO
         public string WorkOrderCode { get; set; } = string.Empty;
         public int PlanId { get; set; }
         
+        // ✅ THÊM: TemplateId để frontend có thể load checklist
+        public int? TemplateId { get; set; }
+        public string? TemplateName { get; set; }
+        
         // Equipment info
         public int EquipmentId { get; set; }
         public string EquipmentName { get; set; } = string.Empty;
@@ -435,6 +439,18 @@ namespace FITSKIP.Domain.DTO
         public string? PhoneNumber { get; set; }
         public string RoleName { get; set; } = string.Empty; // "Mechanical Technician" or "Electrical Technician"
         public bool IsActive { get; set; }
+    }
+
+    /// <summary>
+    /// DTO cho workload của technician theo ngày
+    /// </summary>
+    public class TechnicianWorkloadDTO
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string EmployeeCode { get; set; } = string.Empty;
+        public string RoleName { get; set; } = string.Empty;
+        public int WorkOrderCount { get; set; } // Số công việc đã giao trong ngày
     }
 
     // ===== ADDITIONAL REQUEST DTOs =====

@@ -1290,6 +1290,24 @@ namespace FITSKIP.API.Controllers
             }
         }
 
+        /// <summary>
+        /// Đếm số công việc đã giao cho các KTV trong một ngày cụ thể
+        /// </summary>
+        [HttpGet("technicians/workload")]
+        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
+        public async Task<IActionResult> GetTechniciansWorkloadByDate([FromQuery] DateTime date)
+        {
+            try
+            {
+                var workload = await _maintenanceService.GetTechniciansWorkloadByDateAsync(date);
+                return Ok(ApiResponse<IEnumerable<TechnicianWorkloadDTO>>.SuccessResponse(workload, "Lấy thống kê công việc theo KTV thành công"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Lỗi: {ex.Message}"));
+            }
+        }
+
         // ===== STATISTICS & REPORTS =====
 
         /// <summary>
