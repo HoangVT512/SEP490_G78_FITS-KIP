@@ -50,6 +50,7 @@ import {
 } from "../../services/maintenanceService";
 import { authService } from "../../services/authService";
 import { sparePartService } from "../../services/sparePartService";
+import { replacementHistoryService } from "../../services/replacementHistoryService";
 import styles from "../../styles/pages/MaintenanceTasks.module.css";
 
 const { TextArea } = Input;
@@ -62,6 +63,8 @@ const MaintenanceTasks = () => {
   const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [checklistModalVisible, setChecklistModalVisible] = useState(false);
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [replacementHistories, setReplacementHistories] = useState([]);
   const [updatingChecklist, setUpdatingChecklist] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
   const [checklistNotes, setChecklistNotes] = useState({}); // Lưu notes cho từng item
@@ -301,6 +304,12 @@ const MaintenanceTasks = () => {
             label: "Chi tiết",
             onClick: () => handleViewDetail(record),
           },
+          {
+            key: "history",
+            icon: <FileTextOutlined />,
+            label: "Lịch sử linh kiện",
+            onClick: () => handleViewSparePartsHistory(record),
+          },
           (record.status === "Pending" || record.status === "InProgress") && {
             key: "execute",
             icon: <CheckCircleOutlined />,
@@ -329,6 +338,23 @@ const MaintenanceTasks = () => {
   const handleViewDetail = (workOrder) => {
     setSelectedWorkOrder(workOrder);
     setDetailModalVisible(true);
+  };
+
+  const handleViewSparePartsHistory = async (workOrder) => {
+    try {
+      setLoading(true);
+      setSelectedWorkOrder(workOrder);
+      const histories = await replacementHistoryService.getByWorkOrderId(
+        workOrder.workOrderId
+      );
+      setReplacementHistories(histories || []);
+      setHistoryModalVisible(true);
+    } catch (error) {
+      console.error("Fetch replacement history error:", error);
+      message.error("Không thể tải lịch sử linh kiện: " + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleOpenChecklist = (workOrder) => {
@@ -1439,6 +1465,160 @@ const MaintenanceTasks = () => {
                   />
                 </Card>
               </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        title={
+          <Space>
+            <FileTextOutlined />
+            <span>Lịch sử linh kiện</span>
+          </Space>
+        }
+        open={historyModalVisible}
+        onCancel={() => {
+          setHistoryModalVisible(false);
+          setReplacementHistories([]);
+        }}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => {
+              setHistoryModalVisible(false);
+              setReplacementHistories([]);
+            }}
+          >
+            Đóng
+          </Button>,
+        ]}
+        width={1000}
+      >
+        {selectedWorkOrder && (
+          <div>
+            <Alert
+              message={`Phiếu bảo trì: ${
+                selectedWorkOrder.workOrderCode ||
+                `WO${String(selectedWorkOrder.workOrderId).padStart(3, "0")}`
+              } - ${selectedWorkOrder.equipmentCode} (${
+                selectedWorkOrder.equipmentName
+              })`}
+              type="info"
+              style={{ marginBottom: 16 }}
+            />
+
+            {replacementHistories && replacementHistories.length > 0 ? (
+              <AntTable
+                columns={[
+                  {
+                    title: "Tên linh kiện",
+                    dataIndex: "partName",
+                    key: "partName",
+                    render: (text, record) => (
+                      <div>
+                        <div style={{ fontWeight: 500 }}>{text || "-"}</div>
+                        <div style={{ fontSize: "12px", color: "#888" }}>
+                          Mã: {record.partNumber || "-"}
+                        </div>
+                      </div>
+                    ),
+                  },
+                  {
+                    title: "Số lượng",
+                    key: "quantity",
+                    width: 100,
+                    render: (_, record) => (
+                      <div>
+                        <div style={{ fontSize: "12px", color: "#888" }}>
+                          Yêu cầu: <strong>{record.quantity}</strong>
+                        </div>
+                        {record.actualQuantityUsed !== null &&
+                          record.actualQuantityUsed !== undefined && (
+                            <div style={{ fontSize: "12px", color: "#52c41a" }}>
+                              Sử dụng:{" "}
+                              <strong>{record.actualQuantityUsed}</strong>
+                            </div>
+                          )}
+                        {record.quantityToReturn !== null &&
+                          record.quantityToReturn !== undefined && (
+                            <div style={{ fontSize: "12px", color: "#faad14" }}>
+                              Trả lại:{" "}
+                              <strong>{record.quantityToReturn}</strong>
+                            </div>
+                          )}
+                      </div>
+                    ),
+                  },
+                  {
+                    title: "Trạng thái",
+                    dataIndex: "status",
+                    key: "status",
+                    width: 140,
+                    render: (status) => {
+                      let color = "default";
+                      let text = status || "-";
+                      if (status === "Chờ duyệt cấp phát") {
+                        color = "warning";
+                      } else if (
+                        status === "Đã cấp phát" ||
+                        status === "Được cấp phát"
+                      ) {
+                        color = "blue";
+                        text = "Đã cấp phát";
+                      } else if (status === "Chờ trả lại") {
+                        color = "orange";
+                      } else if (status === "Hoàn thành") {
+                        color = "success";
+                      }
+                      return <Tag color={color}>{text}</Tag>;
+                    },
+                  },
+                  {
+                    title: "Ngày yêu cầu",
+                    dataIndex: "replacedDate",
+                    key: "replacedDate",
+                    width: 120,
+                    render: (date) =>
+                      date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "-",
+                  },
+                  {
+                    title: "Ghi chú",
+                    dataIndex: "remarks",
+                    key: "remarks",
+                    render: (text) =>
+                      text ? (
+                        <Tooltip title={text}>
+                          <span style={{ color: "#666", fontSize: "12px" }}>
+                            {text.length > 20
+                              ? `${text.substring(0, 20)}...`
+                              : text}
+                          </span>
+                        </Tooltip>
+                      ) : (
+                        <span style={{ color: "#ccc" }}>-</span>
+                      ),
+                  },
+                ]}
+                dataSource={replacementHistories.map((item, idx) => ({
+                  ...item,
+                  key: item.replacementID || idx,
+                }))}
+                pagination={{
+                  pageSize: 10,
+                  showSizeChanger: true,
+                  showTotal: (total) => `Tổng số ${total} linh kiện`,
+                }}
+                size="small"
+                loading={loading}
+              />
+            ) : (
+              <Alert
+                message="Chưa có yêu cầu linh kiện"
+                description="Phiếu bảo trì này chưa có yêu cầu linh kiện nào"
+                type="info"
+                showIcon
+              />
             )}
           </div>
         )}

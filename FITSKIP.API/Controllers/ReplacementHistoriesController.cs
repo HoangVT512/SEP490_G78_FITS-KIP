@@ -547,6 +547,50 @@ namespace FITSKIP.API.Controllers
             }
         }
 
+        [HttpGet("workorder/{workOrderId:int}")]
+        public async Task<ActionResult<IEnumerable<ReplacementHistoryDTO>>> GetByWorkOrderId(int workOrderId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var result = await _context.ReplacementHistories
+                    .Where(r => r.WorkOrderId == workOrderId)
+                    .Include(r => r.Part)
+                    .Include(r => r.Equipment)
+                    .Include(r => r.ReplacedByNavigation)
+                    .ToListAsync(cancellationToken);
+
+                var responses = result.Select(s => new ReplacementHistoryDTO
+                {
+                    ReplacementID = s.ReplacementId,
+                    EquipmentID = s.EquipmentId,
+                    IncidentId = s.IncidentId,
+                    WorkOrderId = s.WorkOrderId,
+                    PartID = s.PartId,
+                    PartName = s.Part != null ? s.Part.PartName : null,
+                    PartNumber = s.Part != null ? s.Part.PartNumber : null,
+                    EquipmentName = s.Equipment != null ? s.Equipment.EquipmentName : null,
+                    EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
+                    ReplacedBy = s.ReplacedBy,
+                    ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
+                    ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
+                    Quantity = s.Quantity,
+                    ActualQuantityUsed = s.ActualQuantityUsed,
+                    QuantityToReturn = s.QuantityToReturn,
+                    ReplacedDate = s.ReplacedDate,
+                    ReturnedDate = s.ReturnedDate,
+                    ReturnRemarks = s.ReturnRemarks,
+                    Status = s.Status,
+                    Remarks = s.Remarks
+                }).OrderByDescending(x => x.ReplacedDate);
+
+                return Ok(responses);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi khi lấy lịch sử linh kiện", error = ex.Message });
+            }
+        }
+
         [HttpGet("date-range")]
         public async Task<ActionResult<IEnumerable<ReplacementHistoryDTO>>> GetByDateRange(
             [FromQuery] DateTime startDate,
