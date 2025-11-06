@@ -992,10 +992,10 @@ const MaintenanceManagement = () => {
   const handleApproveSparepart = async (record) => {
     try {
       setLoading(true);
-      // Update status to "Đã cấp phát"
+      // Update status to "Đã duyệt cấp phát"
       const updateData = {
         ...record,
-        status: "Đã cấp phát",
+        status: "Đã duyệt cấp phát",
       };
 
       await replacementHistoryService.update(record.replacementID, updateData);
@@ -3578,7 +3578,7 @@ const MaintenanceManagement = () => {
                         let color = "default";
                         if (status === "Chờ duyệt cấp phát") {
                           color = "warning";
-                        } else if (status === "Đã cấp phát") {
+                        } else if (status === "Đã duyệt cấp phát") {
                           color = "blue";
                         } else if (status === "Chờ trả lại") {
                           color = "orange";
@@ -3620,7 +3620,7 @@ const MaintenanceManagement = () => {
                               </Button>
                             </>
                           )}
-                          {record.status === "Đã cấp phát" && (
+                          {record.status === "Đã duyệt cấp phát" && (
                             <Tag color="success">Đã duyệt</Tag>
                           )}
                         </Space>

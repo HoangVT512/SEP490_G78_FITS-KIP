@@ -70,6 +70,9 @@ const MaintenanceTasks = () => {
   const [checklistNotes, setChecklistNotes] = useState({}); // Lưu notes cho từng item
   const [spareParts, setSpareParts] = useState([]); // Lưu danh sách linh kiện yêu cầu
   const [sparePartsList, setSparePartsList] = useState([]); // Danh sách linh kiện từ DB
+  const [recordModalVisible, setRecordModalVisible] = useState(false); // Modal ghi nhận thay thế
+  const [selectedRecord, setSelectedRecord] = useState(null); // Record đang edit
+  const [actualQuantity, setActualQuantity] = useState(0); // Số lượng thực tế
   const [form] = Form.useForm();
 
   const currentUser = authService.getStoredUser();
@@ -352,6 +355,69 @@ const MaintenanceTasks = () => {
     } catch (error) {
       console.error("Fetch replacement history error:", error);
       message.error("Không thể tải lịch sử linh kiện: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRecordReplacement = (record) => {
+    if (
+      record.status !== "Đã duyệt cấp phát" &&
+      record.status !== "Đã cấp phát"
+    ) {
+      message.warning(
+        "Chỉ có thể ghi nhận thay thế cho linh kiện đã được duyệt cấp phát"
+      );
+      return;
+    }
+    setSelectedRecord(record);
+    setActualQuantity(record.actualQuantityUsed || 0);
+    setRecordModalVisible(true);
+  };
+
+  const handleSubmitActualQuantity = async () => {
+    try {
+      if (actualQuantity < 0) {
+        message.error("Số lượng sử dụng không được âm");
+        return;
+      }
+
+      setLoading(true);
+      const quantityToReturn = selectedRecord.quantity - actualQuantity;
+
+      if (quantityToReturn < 0) {
+        message.error(
+          `Số lượng sử dụng không được vượt quá số lượng yêu cầu (${selectedRecord.quantity})`
+        );
+        return;
+      }
+
+      // Use recordActualUsage endpoint for proper handling
+      const payload = {
+        actualQuantityUsed: actualQuantity,
+        status: quantityToReturn > 0 ? "Chờ trả lại" : "Hoàn thành",
+      };
+
+      await replacementHistoryService.recordActualUsage(
+        selectedRecord.replacementID,
+        payload
+      );
+
+      message.success("Ghi nhận thay thế thành công!");
+      setRecordModalVisible(false);
+      setSelectedRecord(null);
+      setActualQuantity(0);
+
+      // Reload lịch sử linh kiện
+      if (selectedWorkOrder?.workOrderId) {
+        const histories = await replacementHistoryService.getByWorkOrderId(
+          selectedWorkOrder.workOrderId
+        );
+        setReplacementHistories(histories || []);
+      }
+    } catch (error) {
+      console.error("Record replacement error:", error);
+      message.error("Ghi nhận thay thế thất bại: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -1562,10 +1628,10 @@ const MaintenanceTasks = () => {
                         color = "warning";
                       } else if (
                         status === "Đã cấp phát" ||
+                        status === "Đã duyệt cấp phát" ||
                         status === "Được cấp phát"
                       ) {
                         color = "blue";
-                        text = "Đã cấp phát";
                       } else if (status === "Chờ trả lại") {
                         color = "orange";
                       } else if (status === "Hoàn thành") {
@@ -1599,6 +1665,24 @@ const MaintenanceTasks = () => {
                         <span style={{ color: "#ccc" }}>-</span>
                       ),
                   },
+                  {
+                    title: "Thao tác",
+                    key: "action",
+                    width: 120,
+                    render: (_, record) => (
+                      <Button
+                        type="primary"
+                        size="small"
+                        disabled={
+                          record.status !== "Đã duyệt cấp phát" &&
+                          record.status !== "Đã cấp phát"
+                        }
+                        onClick={() => handleRecordReplacement(record)}
+                      >
+                        Ghi nhận
+                      </Button>
+                    ),
+                  },
                 ]}
                 dataSource={replacementHistories.map((item, idx) => ({
                   ...item,
@@ -1620,6 +1704,116 @@ const MaintenanceTasks = () => {
                 showIcon
               />
             )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal ghi nhận thay thế */}
+      <Modal
+        title="Ghi nhận thay thế linh kiện"
+        open={recordModalVisible}
+        onCancel={() => {
+          setRecordModalVisible(false);
+          setSelectedRecord(null);
+          setActualQuantity(0);
+        }}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setRecordModalVisible(false);
+              setSelectedRecord(null);
+              setActualQuantity(0);
+            }}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            loading={loading}
+            onClick={handleSubmitActualQuantity}
+          >
+            Lưu
+          </Button>,
+        ]}
+        width={500}
+      >
+        {selectedRecord && (
+          <div>
+            <Descriptions
+              bordered
+              size="small"
+              column={1}
+              style={{ marginBottom: 16 }}
+            >
+              <Descriptions.Item label="Linh kiện">
+                {selectedRecord.partName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Mã">
+                {selectedRecord.partNumber}
+              </Descriptions.Item>
+              <Descriptions.Item label="Số lượng yêu cầu">
+                <strong>{selectedRecord.quantity}</strong>
+              </Descriptions.Item>
+            </Descriptions>
+
+            <div style={{ marginBottom: 16 }}>
+              <label
+                style={{ fontWeight: 500, marginBottom: 8, display: "block" }}
+              >
+                Số lượng sử dụng thực tế (0-{selectedRecord.quantity})
+              </label>
+              <InputNumber
+                min={0}
+                max={selectedRecord.quantity}
+                value={actualQuantity}
+                onChange={(value) => setActualQuantity(value || 0)}
+                style={{ width: "100%" }}
+                placeholder="Nhập số lượng sử dụng"
+              />
+              {actualQuantity !== null && actualQuantity !== undefined && (
+                <div
+                  style={{
+                    marginTop: 12,
+                    padding: 8,
+                    backgroundColor: "#f0f2f5",
+                    borderRadius: 4,
+                  }}
+                >
+                  <div>
+                    Số lượng sử dụng:{" "}
+                    <strong style={{ color: "#52c41a" }}>
+                      {actualQuantity}
+                    </strong>
+                  </div>
+                  <div>
+                    Số lượng trả lại:{" "}
+                    <strong style={{ color: "#faad14" }}>
+                      {selectedRecord.quantity - actualQuantity}
+                    </strong>
+                  </div>
+                  {selectedRecord.quantity - actualQuantity > 0 && (
+                    <div
+                      style={{ fontSize: "12px", color: "#666", marginTop: 4 }}
+                    >
+                      Trạng thái sẽ chuyển sang "Chờ trả lại"
+                    </div>
+                  )}
+                  {selectedRecord.quantity - actualQuantity === 0 && (
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "#52c41a",
+                        marginTop: 4,
+                      }}
+                    >
+                      Trạng thái sẽ chuyển sang "Hoàn thành"
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </Modal>
