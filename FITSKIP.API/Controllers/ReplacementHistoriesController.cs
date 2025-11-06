@@ -2,8 +2,10 @@ using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Infrastructure.DbContexts;
+using FITSKIP.API.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
@@ -21,15 +23,18 @@ namespace FITSKIP.API.Controllers
         private readonly IReplacementHistoryService _service;
         private readonly FitskipDbContext _context;
         private readonly IIncidentService _incidentService;
+        private readonly IHubContext<NotificationHub> _notificationHubContext;
 
         public ReplacementHistoriesController(
             IReplacementHistoryService service,
             FitskipDbContext context,
-            IIncidentService incidentService)
+            IIncidentService incidentService,
+            IHubContext<NotificationHub> notificationHubContext)
         {
             _service = service;
             _context = context;
             _incidentService = incidentService;
+            _notificationHubContext = notificationHubContext;
         }
 
         [HttpGet]
@@ -839,6 +844,26 @@ namespace FITSKIP.API.Controllers
                     };
 
                     createdReplacements.Add(dto);
+                }
+
+                // Gửi SignalR notification cho QLKT về yêu cầu linh kiện
+                try
+                {
+                    await _notificationHubContext.Clients.All.SendAsync(
+                        "SparePartRequest",
+                        new
+                        {
+                            workOrderId = request.WorkOrderId,
+                            count = createdReplacements.Count,
+                            requestedBy = requestedUser.UserName,
+                            requestedDate = request.RequestDate,
+                            timestamp = DateTime.Now
+                        }
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error sending SignalR notification: {ex.Message}");
                 }
 
                 return Ok(new
