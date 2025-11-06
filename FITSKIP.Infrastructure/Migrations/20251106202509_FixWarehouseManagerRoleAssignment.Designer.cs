@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251106024255_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251106202509_FixWarehouseManagerRoleAssignment")]
+    partial class FixWarehouseManagerRoleAssignment
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -914,6 +914,9 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Pending");
 
+                    b.Property<int?>("WorkOrderId")
+                        .HasColumnType("int");
+
                     b.HasKey("ReplacementId")
                         .HasName("PK__Replacem__55AB07E93456789A");
 
@@ -924,6 +927,8 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.HasIndex("PartId");
 
                     b.HasIndex("ReplacedBy");
+
+                    b.HasIndex("WorkOrderId");
 
                     b.ToTable("ReplacementHistories");
                 });
@@ -1628,6 +1633,10 @@ namespace FITSKIP.Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__Replaceme__Repla__6789012C");
 
+                    b.HasOne("FITSKIP.Domain.Entities.MaintenanceWorkOrder", "WorkOrder")
+                        .WithMany("ReplacementHistories")
+                        .HasForeignKey("WorkOrderId");
+
                     b.Navigation("Equipment");
 
                     b.Navigation("Incident");
@@ -1635,6 +1644,8 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("Part");
 
                     b.Navigation("ReplacedByNavigation");
+
+                    b.Navigation("WorkOrder");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Stage", b =>
@@ -1736,6 +1747,8 @@ namespace FITSKIP.Infrastructure.Migrations
             modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceWorkOrder", b =>
                 {
                     b.Navigation("ChecklistItems");
+
+                    b.Navigation("ReplacementHistories");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Shift", b =>
