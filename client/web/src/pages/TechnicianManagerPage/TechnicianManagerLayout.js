@@ -115,7 +115,10 @@ const TechnicianManagerLayout = () => {
 
         // Define notification handler
         notificationHandler = (notificationData) => {
-          console.log("📩 [TechnicianManagerLayout] Received notification:", notificationData);
+          console.log(
+            "📩 [TechnicianManagerLayout] Received notification:",
+            notificationData
+          );
 
           // Tăng số lượng notification badge NGAY LẬP TỨC
           setNotificationCount((prev) => {
@@ -152,7 +155,9 @@ const TechnicianManagerLayout = () => {
 
     // Cleanup function - pass the specific handler to remove
     return () => {
-      console.log("🧹 Cleaning up SignalR listeners in TechnicianManagerLayout");
+      console.log(
+        "🧹 Cleaning up SignalR listeners in TechnicianManagerLayout"
+      );
       if (notificationHandler) {
         signalRService.offReceiveNotification(notificationHandler);
       }
