@@ -441,45 +441,6 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "ReplacementHistories",
-                columns: table => new
-                {
-                    ReplacementID = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    EquipmentID = table.Column<int>(type: "int", nullable: true),
-                    PartID = table.Column<int>(type: "int", nullable: false),
-                    Quantity = table.Column<int>(type: "int", nullable: false),
-                    ReplacedDate = table.Column<DateTime>(type: "datetime", nullable: false),
-                    ReplacedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
-                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
-                    Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    ActualQuantityUsed = table.Column<int>(type: "int", nullable: true),
-                    QuantityToReturn = table.Column<int>(type: "int", nullable: true),
-                    ReturnedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ReturnConfirmedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ReturnRemarks = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK__Replacem__55AB07E93456789A", x => x.ReplacementID);
-                    table.ForeignKey(
-                        name: "FK__Replaceme__Equip__4567890A",
-                        column: x => x.EquipmentID,
-                        principalTable: "Equipment",
-                        principalColumn: "EquipmentID");
-                    table.ForeignKey(
-                        name: "FK__Replaceme__PartI__5678901B",
-                        column: x => x.PartID,
-                        principalTable: "SpareParts",
-                        principalColumn: "PartID");
-                    table.ForeignKey(
-                        name: "FK__Replaceme__Repla__6789012C",
-                        column: x => x.ReplacedBy,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
-                });
-
-            migrationBuilder.CreateTable(
                 name: "MaintenancePlans",
                 columns: table => new
                 {
@@ -610,6 +571,51 @@ namespace FITSKIP.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "ReplacementHistories",
+                columns: table => new
+                {
+                    ReplacementID = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    EquipmentID = table.Column<int>(type: "int", nullable: true),
+                    IncidentId = table.Column<int>(type: "int", nullable: true),
+                    PartID = table.Column<int>(type: "int", nullable: false),
+                    Quantity = table.Column<int>(type: "int", nullable: false),
+                    ReplacedDate = table.Column<DateTime>(type: "datetime", nullable: false),
+                    ReplacedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
+                    Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
+                    Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ActualQuantityUsed = table.Column<int>(type: "int", nullable: true),
+                    QuantityToReturn = table.Column<int>(type: "int", nullable: true),
+                    ReturnedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ReturnConfirmedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    ReturnRemarks = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK__Replacem__55AB07E93456789A", x => x.ReplacementID);
+                    table.ForeignKey(
+                        name: "FK_ReplacementHistories_IncidentHistory_IncidentId",
+                        column: x => x.IncidentId,
+                        principalTable: "IncidentHistory",
+                        principalColumn: "IncidentID");
+                    table.ForeignKey(
+                        name: "FK__Replaceme__Equip__4567890A",
+                        column: x => x.EquipmentID,
+                        principalTable: "Equipment",
+                        principalColumn: "EquipmentID");
+                    table.ForeignKey(
+                        name: "FK__Replaceme__PartI__5678901B",
+                        column: x => x.PartID,
+                        principalTable: "SpareParts",
+                        principalColumn: "PartID");
+                    table.ForeignKey(
+                        name: "FK__Replaceme__Repla__6789012C",
+                        column: x => x.ReplacedBy,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
                 name: "MaintenancePlanAssignments",
                 columns: table => new
                 {
@@ -653,6 +659,7 @@ namespace FITSKIP.Infrastructure.Migrations
                     PlanID = table.Column<int>(type: "int", nullable: false),
                     EquipmentID = table.Column<int>(type: "int", nullable: false),
                     AssignedDate = table.Column<DateTime>(type: "datetime", nullable: false),
+                    ScheduledDate = table.Column<DateTime>(type: "datetime2", nullable: false),
                     DueDate = table.Column<DateTime>(type: "datetime", nullable: false),
                     AssignedToElectrical = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
                     AssignedToMechanical = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
@@ -967,6 +974,11 @@ namespace FITSKIP.Infrastructure.Migrations
                 column: "EquipmentID");
 
             migrationBuilder.CreateIndex(
+                name: "IX_ReplacementHistories_IncidentId",
+                table: "ReplacementHistories",
+                column: "IncidentId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_ReplacementHistories_PartID",
                 table: "ReplacementHistories",
                 column: "PartID");
@@ -1045,22 +1057,22 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "UserLines");
 
             migrationBuilder.DropTable(
-                name: "IncidentHistory");
-
-            migrationBuilder.DropTable(
                 name: "MaintenanceWorkOrders");
 
             migrationBuilder.DropTable(
                 name: "Shifts");
 
             migrationBuilder.DropTable(
+                name: "IncidentHistory");
+
+            migrationBuilder.DropTable(
                 name: "SpareParts");
 
             migrationBuilder.DropTable(
-                name: "StopType");
+                name: "MaintenancePlans");
 
             migrationBuilder.DropTable(
-                name: "MaintenancePlans");
+                name: "StopType");
 
             migrationBuilder.DropTable(
                 name: "Equipment");

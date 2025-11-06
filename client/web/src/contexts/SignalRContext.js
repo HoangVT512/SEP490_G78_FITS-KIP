@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import * as signalR from "@microsoft/signalr";
 import { message } from "antd";
 import { useAuth } from "./AuthContext";
@@ -20,7 +27,8 @@ export const SignalRProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const listenersRef = useRef(new Map());
   const reconnectTimeoutRef = useRef(null);
-  const SIGNALR_BASE_URL = process.env.REACT_APP_SIGNALR_BASE_URL || "http://localhost:7003";
+  const API_BASE_URL =
+    process.env.REACT_APP_API_BASE_URL || "https://localhost:7003";
 
   // Kết nối SignalR khi user đăng nhập
   useEffect(() => {
@@ -46,15 +54,21 @@ export const SignalRProvider = ({ children }) => {
       console.log("🔌 Connecting to SignalR Hub...");
 
       const newConnection = new signalR.HubConnectionBuilder()
-        .withUrl(`${SIGNALR_BASE_URL}/hubs/notifications`, {
+        .withUrl(`${API_BASE_URL}/hubs/notifications`, {
           accessTokenFactory: () => token,
-          transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.ServerSentEvents | signalR.HttpTransportType.LongPolling,
+          transport:
+            signalR.HttpTransportType.WebSockets |
+            signalR.HttpTransportType.ServerSentEvents |
+            signalR.HttpTransportType.LongPolling,
         })
         .withAutomaticReconnect({
           nextRetryDelayInMilliseconds: (retryContext) => {
             // Tăng dần thời gian reconnect: 0s, 2s, 10s, 30s, max 60s
             if (retryContext.elapsedMilliseconds < 60000) {
-              return Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 60000);
+              return Math.min(
+                1000 * Math.pow(2, retryContext.previousRetryCount),
+                60000
+              );
             }
             return null; // Stop reconnecting after 1 minute
           },
@@ -114,7 +128,7 @@ export const SignalRProvider = ({ children }) => {
         // Trigger callbacks cho listeners đã đăng ký
         const listeners = listenersRef.current.get(data.type);
         if (listeners) {
-          listeners.forEach(callback => callback(data.data));
+          listeners.forEach((callback) => callback(data.data));
         }
       });
 
@@ -124,7 +138,7 @@ export const SignalRProvider = ({ children }) => {
 
         const listeners = listenersRef.current.get("WorkOrderAssigned");
         if (listeners) {
-          listeners.forEach(callback => callback(workOrder));
+          listeners.forEach((callback) => callback(workOrder));
         }
 
         message.info({
@@ -139,7 +153,7 @@ export const SignalRProvider = ({ children }) => {
 
         const listeners = listenersRef.current.get("WorkOrderStarted");
         if (listeners) {
-          listeners.forEach(callback => callback(workOrder));
+          listeners.forEach((callback) => callback(workOrder));
         }
 
         message.info({
@@ -154,7 +168,7 @@ export const SignalRProvider = ({ children }) => {
 
         const listeners = listenersRef.current.get("WorkOrderCompleted");
         if (listeners) {
-          listeners.forEach(callback => callback(workOrder));
+          listeners.forEach((callback) => callback(workOrder));
         }
 
         message.success({
@@ -169,7 +183,7 @@ export const SignalRProvider = ({ children }) => {
 
         const listeners = listenersRef.current.get("ChecklistItemUpdated");
         if (listeners) {
-          listeners.forEach(callback => callback(data));
+          listeners.forEach((callback) => callback(data));
         }
       });
 
@@ -179,7 +193,7 @@ export const SignalRProvider = ({ children }) => {
 
         const listeners = listenersRef.current.get("NewWorkOrderCreated");
         if (listeners) {
-          listeners.forEach(callback => callback(workOrder));
+          listeners.forEach((callback) => callback(workOrder));
         }
       });
 
@@ -189,7 +203,7 @@ export const SignalRProvider = ({ children }) => {
 
         const listeners = listenersRef.current.get("WorkOrderCancelled");
         if (listeners) {
-          listeners.forEach(callback => callback(workOrder));
+          listeners.forEach((callback) => callback(workOrder));
         }
 
         message.warning({
@@ -204,7 +218,7 @@ export const SignalRProvider = ({ children }) => {
 
         const listeners = listenersRef.current.get("MaintenancePostponed");
         if (listeners) {
-          listeners.forEach(callback => callback(plan));
+          listeners.forEach((callback) => callback(plan));
         }
 
         message.info({
@@ -219,7 +233,7 @@ export const SignalRProvider = ({ children }) => {
 
         const listeners = listenersRef.current.get("TechnicianRequestHelp");
         if (listeners) {
-          listeners.forEach(callback => callback(request));
+          listeners.forEach((callback) => callback(request));
         }
 
         message.warning({
@@ -234,7 +248,7 @@ export const SignalRProvider = ({ children }) => {
 
         const listeners = listenersRef.current.get("ReplacementApproved");
         if (listeners) {
-          listeners.forEach(callback => callback(data));
+          listeners.forEach((callback) => callback(data));
         }
 
         message.success({
@@ -248,9 +262,6 @@ export const SignalRProvider = ({ children }) => {
       console.log("✅ SignalR connected successfully!");
       setConnection(newConnection);
       setIsConnected(true);
-
-      message.success("Kết nối real-time thành công!", 2);
-
     } catch (error) {
       console.error("❌ SignalR connection error:", error);
       setIsConnected(false);
@@ -309,20 +320,23 @@ export const SignalRProvider = ({ children }) => {
   }, []);
 
   // Send message to hub
-  const sendMessage = useCallback(async (method, ...args) => {
-    if (!connection || !isConnected) {
-      console.warn("⚠️ SignalR not connected, cannot send message");
-      return;
-    }
+  const sendMessage = useCallback(
+    async (method, ...args) => {
+      if (!connection || !isConnected) {
+        console.warn("⚠️ SignalR not connected, cannot send message");
+        return;
+      }
 
-    try {
-      await connection.invoke(method, ...args);
-      console.log(`✅ Sent message: ${method}`, args);
-    } catch (error) {
-      console.error(`❌ Error sending message: ${method}`, error);
-      throw error;
-    }
-  }, [connection, isConnected]);
+      try {
+        await connection.invoke(method, ...args);
+        console.log(`✅ Sent message: ${method}`, args);
+      } catch (error) {
+        console.error(`❌ Error sending message: ${method}`, error);
+        throw error;
+      }
+    },
+    [connection, isConnected]
+  );
 
   const value = {
     connection,
@@ -335,8 +349,6 @@ export const SignalRProvider = ({ children }) => {
   };
 
   return (
-    <SignalRContext.Provider value={value}>
-      {children}
-    </SignalRContext.Provider>
+    <SignalRContext.Provider value={value}>{children}</SignalRContext.Provider>
   );
 };

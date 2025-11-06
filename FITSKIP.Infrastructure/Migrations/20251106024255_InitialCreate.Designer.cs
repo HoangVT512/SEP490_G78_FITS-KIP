@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251031184418_InitialCreate")]
+    [Migration("20251106024255_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -649,6 +649,9 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("PlanID");
 
+                    b.Property<DateTime>("ScheduledDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("StartedDate")
                         .HasColumnType("datetime");
 
@@ -870,6 +873,9 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("EquipmentID");
 
+                    b.Property<int?>("IncidentId")
+                        .HasColumnType("int");
+
                     b.Property<int>("PartId")
                         .HasColumnType("int")
                         .HasColumnName("PartID");
@@ -912,6 +918,8 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasName("PK__Replacem__55AB07E93456789A");
 
                     b.HasIndex("EquipmentId");
+
+                    b.HasIndex("IncidentId");
 
                     b.HasIndex("PartId");
 
@@ -1604,6 +1612,10 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasForeignKey("EquipmentId")
                         .HasConstraintName("FK__Replaceme__Equip__4567890A");
 
+                    b.HasOne("FITSKIP.Domain.Entities.IncidentHistory", "Incident")
+                        .WithMany("ReplacementHistories")
+                        .HasForeignKey("IncidentId");
+
                     b.HasOne("FITSKIP.Domain.Entities.SparePart", "Part")
                         .WithMany("ReplacementHistories")
                         .HasForeignKey("PartId")
@@ -1617,6 +1629,8 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasConstraintName("FK__Replaceme__Repla__6789012C");
 
                     b.Navigation("Equipment");
+
+                    b.Navigation("Incident");
 
                     b.Navigation("Part");
 
@@ -1692,6 +1706,8 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("IncidentImages");
 
                     b.Navigation("IncidentShifts");
+
+                    b.Navigation("ReplacementHistories");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Line", b =>

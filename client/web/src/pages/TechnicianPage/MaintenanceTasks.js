@@ -22,6 +22,7 @@ import {
   List,
   Checkbox,
   Typography,
+  Dropdown,
 } from "antd";
 import {
   ToolOutlined,
@@ -34,9 +35,15 @@ import {
   ThunderboltOutlined,
   PlayCircleOutlined,
   StopOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
-import { getMyWorkOrders, startWorkOrder, completeWorkOrder, updateChecklistItem } from "../../services/maintenanceService";
+import {
+  getMyWorkOrders,
+  startWorkOrder,
+  completeWorkOrder,
+  updateChecklistItem,
+} from "../../services/maintenanceService";
 import { authService } from "../../services/authService";
 import styles from "../../styles/pages/MaintenanceTasks.module.css";
 
@@ -54,7 +61,7 @@ const MaintenanceTasks = () => {
   const [filterStatus, setFilterStatus] = useState("all");
   const [checklistNotes, setChecklistNotes] = useState({}); // Lưu notes cho từng item
   const [form] = Form.useForm();
-  
+
   const currentUser = authService.getStoredUser();
   const currentUserId = currentUser?.id || currentUser?.userId;
 
@@ -67,9 +74,11 @@ const MaintenanceTasks = () => {
     try {
       const response = await getMyWorkOrders();
       const orders = response?.data || [];
-      const myOrders = orders.filter(order => {
-        const assignedElectrical = order.assignedToElectrical || order.AssignedToElectrical;
-        const assignedMechanical = order.assignedToMechanical || order.AssignedToMechanical;
+      const myOrders = orders.filter((order) => {
+        const assignedElectrical =
+          order.assignedToElectrical || order.AssignedToElectrical;
+        const assignedMechanical =
+          order.assignedToMechanical || order.AssignedToMechanical;
         const isElectrical = assignedElectrical === currentUserId;
         const isMechanical = assignedMechanical === currentUserId;
         return isElectrical || isMechanical;
@@ -106,7 +115,9 @@ const MaintenanceTasks = () => {
     if (taskType === "Both") {
       return workOrder.checklistItems;
     }
-    return workOrder.checklistItems.filter(item => item.category === taskType);
+    return workOrder.checklistItems.filter(
+      (item) => item.category === taskType
+    );
   };
 
   const columns = [
@@ -116,7 +127,11 @@ const MaintenanceTasks = () => {
       key: "workOrderCode",
       width: 110,
       fixed: "left",
-      render: (text, record) => <strong>{text || `WO${String(record?.workOrderId || 0).padStart(3, "0")}`}</strong>,
+      render: (text, record) => (
+        <strong>
+          {text || `WO${String(record?.workOrderId || 0).padStart(3, "0")}`}
+        </strong>
+      ),
     },
     {
       title: "Thiết bị",
@@ -168,11 +183,7 @@ const MaintenanceTasks = () => {
           );
         }
         if (taskType === "Both") {
-          return (
-            <Tag color="purple">
-              Cả Điện & Cơ khí
-            </Tag>
-          );
+          return <Tag color="purple">Cả Điện & Cơ khí</Tag>;
         }
         return <Tag>Không xác định</Tag>;
       },
@@ -186,7 +197,8 @@ const MaintenanceTasks = () => {
         if (!text) return "-";
         const dueDate = dayjs(text);
         const today = dayjs();
-        const isOverdue = dueDate.isBefore(today, 'day') && record?.status !== "Completed";
+        const isOverdue =
+          dueDate.isBefore(today, "day") && record?.status !== "Completed";
         const isToday = dueDate.isSame(today, "day");
         return (
           <div
@@ -211,17 +223,14 @@ const MaintenanceTasks = () => {
         if (!record) return "-";
         const myItems = getMyChecklistItems(record);
         const total = myItems.length;
-        const completed = myItems.filter(item => item.isChecked).length;
-        const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+        const completed = myItems.filter((item) => item.isChecked).length;
         return (
           <div>
-            <Progress 
-              percent={percent} 
-              size="small" 
-              status={percent === 100 ? "success" : "active"}
-            />
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              {completed}/{total} công việc
+            <Text style={{ fontSize: 12 }}>
+              <strong>
+                {completed}/{total}
+              </strong>{" "}
+              công việc
             </Text>
           </div>
         );
@@ -263,31 +272,38 @@ const MaintenanceTasks = () => {
     {
       title: "Thao tác",
       key: "action",
-      width: 200,
+      width: 100,
       fixed: "right",
       render: (_, record) => {
         if (!record) return null;
+
+        const items = [
+          {
+            key: "view",
+            icon: <EyeOutlined />,
+            label: "Chi tiết",
+            onClick: () => handleViewDetail(record),
+          },
+          (record.status === "Pending" || record.status === "InProgress") && {
+            key: "execute",
+            icon: <CheckCircleOutlined />,
+            label: "Thực hiện",
+            onClick: () => handleOpenChecklist(record),
+          },
+        ].filter(Boolean);
+
         return (
-          <Space size="small">
+          <Dropdown
+            menu={{ items }}
+            placement="bottomRight"
+            trigger={["click"]}
+          >
             <Button
-              type="link"
-              icon={<EyeOutlined />}
+              type="text"
+              icon={<DownOutlined style={{ fontSize: 14 }} />}
               size="small"
-              onClick={() => handleViewDetail(record)}
-            >
-              Chi tiết
-            </Button>
-            {(record.status === "Pending" || record.status === "InProgress") && (
-              <Button
-                type="primary"
-                icon={<CheckCircleOutlined />}
-                size="small"
-                onClick={() => handleOpenChecklist(record)}
-              >
-                Thực hiện
-              </Button>
-            )}
-          </Space>
+            />
+          </Dropdown>
         );
       },
     },
@@ -301,27 +317,27 @@ const MaintenanceTasks = () => {
   const handleOpenChecklist = (workOrder) => {
     setSelectedWorkOrder(workOrder);
     setChecklistModalVisible(true);
-    
+
     // Khởi tạo notes từ checklist items hiện có
     const notes = {};
     const items = getMyChecklistItems(workOrder);
-    items.forEach(item => {
+    items.forEach((item) => {
       notes[item.checklistId] = item.notes || "";
     });
     setChecklistNotes(notes);
   };
 
   const handleNoteChange = (checklistId, value) => {
-    setChecklistNotes(prev => ({
+    setChecklistNotes((prev) => ({
       ...prev,
-      [checklistId]: value
+      [checklistId]: value,
     }));
   };
 
   const handleCheckItem = async (item, checked) => {
     try {
       setUpdatingChecklist(true);
-      
+
       // Nếu đang tick item và work order đang Pending → Tự động chuyển sang InProgress
       if (checked && selectedWorkOrder.status === "Pending") {
         await startWorkOrder(selectedWorkOrder.workOrderId);
@@ -337,15 +353,19 @@ const MaintenanceTasks = () => {
         notes: notes,
       });
 
-      message.success(checked ? "Đã hoàn thành bước này!" : "Đã bỏ tick bước này!");
+      message.success(
+        checked ? "Đã hoàn thành bước này!" : "Đã bỏ tick bước này!"
+      );
 
       // Reload work orders để cập nhật UI
       await fetchWorkOrders();
-      
+
       // Reload selected work order để cập nhật modal
       const response = await getMyWorkOrders();
       const orders = response?.data || [];
-      const updatedWorkOrder = orders.find(wo => wo.workOrderId === selectedWorkOrder.workOrderId);
+      const updatedWorkOrder = orders.find(
+        (wo) => wo.workOrderId === selectedWorkOrder.workOrderId
+      );
       if (updatedWorkOrder) {
         setSelectedWorkOrder(updatedWorkOrder);
       }
@@ -358,28 +378,30 @@ const MaintenanceTasks = () => {
 
   const handleCompleteFromChecklist = async () => {
     const myItems = getMyChecklistItems(selectedWorkOrder);
-    const allCompleted = myItems.every(item => item.isChecked);
+    const allCompleted = myItems.every((item) => item.isChecked);
     if (!allCompleted) {
-      message.warning("Vui lòng hoàn thành tất cả các bước trước khi kết thúc!");
+      message.warning(
+        "Vui lòng hoàn thành tất cả các bước trước khi kết thúc!"
+      );
       return;
     }
 
     // Gọi API hoàn thành luôn, không cần modal nhập ghi chú tổng thể nữa
     try {
       setLoading(true);
-      const checklistItems = myItems.map(item => ({
+      const checklistItems = myItems.map((item) => ({
         checklistId: item.checklistId,
         isChecked: true,
-        notes: item.notes || "" // Đã lưu notes ở từng bước rồi
+        notes: item.notes || "", // Đã lưu notes ở từng bước rồi
       }));
-      
+
       const completionData = {
         checklistItems: checklistItems,
-        overallNotes: "" // Không cần ghi chú tổng thể
+        overallNotes: "", // Không cần ghi chú tổng thể
       };
-      
+
       await completeWorkOrder(selectedWorkOrder.workOrderId, completionData);
-      
+
       message.success("Hoàn thành phần công việc của bạn thành công!");
       setChecklistModalVisible(false);
       setChecklistNotes({});
@@ -395,12 +417,12 @@ const MaintenanceTasks = () => {
     if (filterStatus === "all") {
       return workOrders;
     }
-    return workOrders.filter(wo => wo.status === filterStatus);
+    return workOrders.filter((wo) => wo.status === filterStatus);
   };
 
   const getStatusCount = (status) => {
     if (status === "all") return workOrders.length;
-    return workOrders.filter(wo => wo.status === status).length;
+    return workOrders.filter((wo) => wo.status === status).length;
   };
 
   const getTaskProgress = () => {
@@ -563,10 +585,13 @@ const MaintenanceTasks = () => {
           setChecklistNotes({});
         }}
         footer={[
-          <Button key="close" onClick={() => {
-            setChecklistModalVisible(false);
-            setChecklistNotes({});
-          }}>
+          <Button
+            key="close"
+            onClick={() => {
+              setChecklistModalVisible(false);
+              setChecklistNotes({});
+            }}
+          >
             Đóng
           </Button>,
           <Button
@@ -576,7 +601,9 @@ const MaintenanceTasks = () => {
             onClick={handleCompleteFromChecklist}
             disabled={
               !selectedWorkOrder ||
-              !getMyChecklistItems(selectedWorkOrder).every(item => item.isChecked)
+              !getMyChecklistItems(selectedWorkOrder).every(
+                (item) => item.isChecked
+              )
             }
           >
             Hoàn thành công việc
@@ -592,25 +619,34 @@ const MaintenanceTasks = () => {
                   <Row gutter={16}>
                     <Col span={12}>
                       <div>
-                        <strong>Thiết bị:</strong> {selectedWorkOrder.equipmentCode} - {selectedWorkOrder.equipmentName}
+                        <strong>Thiết bị:</strong>{" "}
+                        {selectedWorkOrder.equipmentCode} -{" "}
+                        {selectedWorkOrder.equipmentName}
                       </div>
                       <div>
-                        <strong>Vị trí:</strong> {selectedWorkOrder.lineName} / {selectedWorkOrder.stageName}
+                        <strong>Vị trí:</strong> {selectedWorkOrder.lineName} /{" "}
+                        {selectedWorkOrder.stageName}
                       </div>
                     </Col>
                     <Col span={12}>
                       <div>
                         <strong>Loại công việc:</strong>{" "}
                         {getMyTaskType(selectedWorkOrder) === "Electrical" ? (
-                          <Tag icon={<ThunderboltOutlined />} color="blue">Điện</Tag>
-                        ) : getMyTaskType(selectedWorkOrder) === "Mechanical" ? (
-                          <Tag icon={<ToolOutlined />} color="green">Cơ khí</Tag>
+                          <Tag icon={<ThunderboltOutlined />} color="blue">
+                            Điện
+                          </Tag>
+                        ) : getMyTaskType(selectedWorkOrder) ===
+                          "Mechanical" ? (
+                          <Tag icon={<ToolOutlined />} color="green">
+                            Cơ khí
+                          </Tag>
                         ) : (
                           <Tag color="purple">Cả Điện & Cơ khí</Tag>
                         )}
                       </div>
                       <div>
-                        <strong>Ngày đến hạn:</strong> {dayjs(selectedWorkOrder.dueDate).format("DD/MM/YYYY")}
+                        <strong>Ngày đến hạn:</strong>{" "}
+                        {dayjs(selectedWorkOrder.dueDate).format("DD/MM/YYYY")}
                       </div>
                     </Col>
                   </Row>
@@ -623,15 +659,29 @@ const MaintenanceTasks = () => {
             {(() => {
               const myItems = getMyChecklistItems(selectedWorkOrder);
               const total = myItems.length;
-              const completed = myItems.filter(item => item.isChecked).length;
-              const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+              const completed = myItems.filter((item) => item.isChecked).length;
+              const percent =
+                total > 0 ? Math.round((completed / total) * 100) : 0;
               return (
                 <div style={{ marginBottom: 16 }}>
                   <Progress
                     percent={percent}
-                    status={percent === 100 ? "success" : completed > 0 ? "active" : "normal"}
+                    status={
+                      percent === 100
+                        ? "success"
+                        : completed > 0
+                        ? "active"
+                        : "normal"
+                    }
                   />
-                  <div style={{ textAlign: "center", fontSize: "12px", color: "#888", marginTop: 4 }}>
+                  <div
+                    style={{
+                      textAlign: "center",
+                      fontSize: "12px",
+                      color: "#888",
+                      marginTop: 4,
+                    }}
+                  >
                     {completed} / {total} bước đã hoàn thành
                   </div>
                 </div>
@@ -644,35 +694,56 @@ const MaintenanceTasks = () => {
             {getMyTaskType(selectedWorkOrder) === "Both" ? (
               <Row gutter={16}>
                 <Col span={12}>
-                  <Card 
-                    title={<><ThunderboltOutlined style={{ color: '#1890ff' }} /> Công việc Điện</>} 
+                  <Card
+                    title={
+                      <>
+                        <ThunderboltOutlined style={{ color: "#1890ff" }} />{" "}
+                        Công việc Điện
+                      </>
+                    }
                     size="small"
-                    style={{ maxHeight: 500, overflow: 'auto' }}
+                    style={{ maxHeight: 500, overflow: "auto" }}
                   >
                     <List
-                      dataSource={getMyChecklistItems(selectedWorkOrder).filter(item => item.category === 'Electrical')}
+                      dataSource={getMyChecklistItems(selectedWorkOrder).filter(
+                        (item) => item.category === "Electrical"
+                      )}
                       renderItem={(item, index) => (
-                        <List.Item style={{ display: 'block', paddingBottom: 16 }}>
+                        <List.Item
+                          style={{ display: "block", paddingBottom: 16 }}
+                        >
                           <Row gutter={8} align="top">
                             <Col flex="none">
-                              <Badge count={index + 1} style={{ backgroundColor: '#1890ff' }} />
+                              <Badge
+                                count={index + 1}
+                                style={{ backgroundColor: "#1890ff" }}
+                              />
                             </Col>
                             <Col flex="auto">
                               <Checkbox
                                 checked={item.isChecked}
-                                onChange={(e) => handleCheckItem(item, e.target.checked)}
+                                onChange={(e) =>
+                                  handleCheckItem(item, e.target.checked)
+                                }
                                 disabled={updatingChecklist || item.isChecked}
-                                style={{ 
-                                  textDecoration: item.isChecked ? 'line-through' : 'none',
+                                style={{
+                                  textDecoration: item.isChecked
+                                    ? "line-through"
+                                    : "none",
                                   fontWeight: 500,
-                                  marginBottom: 8
+                                  marginBottom: 8,
                                 }}
                               >
                                 {item.stepName}
                               </Checkbox>
                               {item.stepDescription && (
                                 <div style={{ marginBottom: 8 }}>
-                                  <Text type="secondary" style={{ fontSize: 12 }}>{item.stepDescription}</Text>
+                                  <Text
+                                    type="secondary"
+                                    style={{ fontSize: 12 }}
+                                  >
+                                    {item.stepDescription}
+                                  </Text>
                                 </div>
                               )}
                               {!item.isChecked ? (
@@ -680,7 +751,12 @@ const MaintenanceTasks = () => {
                                   placeholder="Nhập ghi chú cho bước này (tùy chọn)..."
                                   rows={2}
                                   value={checklistNotes[item.checklistId] || ""}
-                                  onChange={(e) => handleNoteChange(item.checklistId, e.target.value)}
+                                  onChange={(e) =>
+                                    handleNoteChange(
+                                      item.checklistId,
+                                      e.target.value
+                                    )
+                                  }
                                   disabled={updatingChecklist}
                                   style={{ fontSize: 12 }}
                                 />
@@ -688,14 +764,30 @@ const MaintenanceTasks = () => {
                                 <>
                                   {item.completedDate && (
                                     <div style={{ marginTop: 4 }}>
-                                      <Text type="success" style={{ fontSize: 11 }}>
-                                        ✓ Hoàn thành: {dayjs(item.completedDate).format("DD/MM/YYYY HH:mm")}
+                                      <Text
+                                        type="success"
+                                        style={{ fontSize: 11 }}
+                                      >
+                                        ✓ Hoàn thành:{" "}
+                                        {dayjs(item.completedDate).format(
+                                          "DD/MM/YYYY HH:mm"
+                                        )}
                                       </Text>
                                     </div>
                                   )}
                                   {item.notes && (
-                                    <div style={{ marginTop: 4, padding: 8, background: '#f5f5f5', borderRadius: 4 }}>
-                                      <Text type="secondary" style={{ fontSize: 11 }}>
+                                    <div
+                                      style={{
+                                        marginTop: 4,
+                                        padding: 8,
+                                        background: "#f5f5f5",
+                                        borderRadius: 4,
+                                      }}
+                                    >
+                                      <Text
+                                        type="secondary"
+                                        style={{ fontSize: 11 }}
+                                      >
                                         📝 Ghi chú: {item.notes}
                                       </Text>
                                     </div>
@@ -710,35 +802,56 @@ const MaintenanceTasks = () => {
                   </Card>
                 </Col>
                 <Col span={12}>
-                  <Card 
-                    title={<><ToolOutlined style={{ color: '#52c41a' }} /> Công việc Cơ khí</>} 
+                  <Card
+                    title={
+                      <>
+                        <ToolOutlined style={{ color: "#52c41a" }} /> Công việc
+                        Cơ khí
+                      </>
+                    }
                     size="small"
-                    style={{ maxHeight: 500, overflow: 'auto' }}
+                    style={{ maxHeight: 500, overflow: "auto" }}
                   >
                     <List
-                      dataSource={getMyChecklistItems(selectedWorkOrder).filter(item => item.category === 'Mechanical')}
+                      dataSource={getMyChecklistItems(selectedWorkOrder).filter(
+                        (item) => item.category === "Mechanical"
+                      )}
                       renderItem={(item, index) => (
-                        <List.Item style={{ display: 'block', paddingBottom: 16 }}>
+                        <List.Item
+                          style={{ display: "block", paddingBottom: 16 }}
+                        >
                           <Row gutter={8} align="top">
                             <Col flex="none">
-                              <Badge count={index + 1} style={{ backgroundColor: '#52c41a' }} />
+                              <Badge
+                                count={index + 1}
+                                style={{ backgroundColor: "#52c41a" }}
+                              />
                             </Col>
                             <Col flex="auto">
                               <Checkbox
                                 checked={item.isChecked}
-                                onChange={(e) => handleCheckItem(item, e.target.checked)}
+                                onChange={(e) =>
+                                  handleCheckItem(item, e.target.checked)
+                                }
                                 disabled={updatingChecklist || item.isChecked}
-                                style={{ 
-                                  textDecoration: item.isChecked ? 'line-through' : 'none',
+                                style={{
+                                  textDecoration: item.isChecked
+                                    ? "line-through"
+                                    : "none",
                                   fontWeight: 500,
-                                  marginBottom: 8
+                                  marginBottom: 8,
                                 }}
                               >
                                 {item.stepName}
                               </Checkbox>
                               {item.stepDescription && (
                                 <div style={{ marginBottom: 8 }}>
-                                  <Text type="secondary" style={{ fontSize: 12 }}>{item.stepDescription}</Text>
+                                  <Text
+                                    type="secondary"
+                                    style={{ fontSize: 12 }}
+                                  >
+                                    {item.stepDescription}
+                                  </Text>
                                 </div>
                               )}
                               {!item.isChecked ? (
@@ -746,7 +859,12 @@ const MaintenanceTasks = () => {
                                   placeholder="Nhập ghi chú cho bước này (tùy chọn)..."
                                   rows={2}
                                   value={checklistNotes[item.checklistId] || ""}
-                                  onChange={(e) => handleNoteChange(item.checklistId, e.target.value)}
+                                  onChange={(e) =>
+                                    handleNoteChange(
+                                      item.checklistId,
+                                      e.target.value
+                                    )
+                                  }
                                   disabled={updatingChecklist}
                                   style={{ fontSize: 12 }}
                                 />
@@ -754,14 +872,30 @@ const MaintenanceTasks = () => {
                                 <>
                                   {item.completedDate && (
                                     <div style={{ marginTop: 4 }}>
-                                      <Text type="success" style={{ fontSize: 11 }}>
-                                        ✓ Hoàn thành: {dayjs(item.completedDate).format("DD/MM/YYYY HH:mm")}
+                                      <Text
+                                        type="success"
+                                        style={{ fontSize: 11 }}
+                                      >
+                                        ✓ Hoàn thành:{" "}
+                                        {dayjs(item.completedDate).format(
+                                          "DD/MM/YYYY HH:mm"
+                                        )}
                                       </Text>
                                     </div>
                                   )}
                                   {item.notes && (
-                                    <div style={{ marginTop: 4, padding: 8, background: '#f5f5f5', borderRadius: 4 }}>
-                                      <Text type="secondary" style={{ fontSize: 11 }}>
+                                    <div
+                                      style={{
+                                        marginTop: 4,
+                                        padding: 8,
+                                        background: "#f5f5f5",
+                                        borderRadius: 4,
+                                      }}
+                                    >
+                                      <Text
+                                        type="secondary"
+                                        style={{ fontSize: 11 }}
+                                      >
                                         📝 Ghi chú: {item.notes}
                                       </Text>
                                     </div>
@@ -777,12 +911,18 @@ const MaintenanceTasks = () => {
                 </Col>
               </Row>
             ) : (
-              <Card 
+              <Card
                 title={
                   getMyTaskType(selectedWorkOrder) === "Electrical" ? (
-                    <><ThunderboltOutlined style={{ color: '#1890ff' }} /> Công việc Điện</>
+                    <>
+                      <ThunderboltOutlined style={{ color: "#1890ff" }} /> Công
+                      việc Điện
+                    </>
                   ) : (
-                    <><ToolOutlined style={{ color: '#52c41a' }} /> Công việc Cơ khí</>
+                    <>
+                      <ToolOutlined style={{ color: "#52c41a" }} /> Công việc Cơ
+                      khí
+                    </>
                   )
                 }
                 size="small"
@@ -790,32 +930,42 @@ const MaintenanceTasks = () => {
                 <List
                   dataSource={getMyChecklistItems(selectedWorkOrder)}
                   renderItem={(item, index) => (
-                    <List.Item style={{ display: 'block', paddingBottom: 16 }}>
+                    <List.Item style={{ display: "block", paddingBottom: 16 }}>
                       <Row gutter={8} align="top">
                         <Col flex="none">
-                          <Badge 
-                            count={index + 1} 
-                            style={{ 
-                              backgroundColor: getMyTaskType(selectedWorkOrder) === "Electrical" ? '#1890ff' : '#52c41a' 
-                            }} 
+                          <Badge
+                            count={index + 1}
+                            style={{
+                              backgroundColor:
+                                getMyTaskType(selectedWorkOrder) ===
+                                "Electrical"
+                                  ? "#1890ff"
+                                  : "#52c41a",
+                            }}
                           />
                         </Col>
                         <Col flex="auto">
                           <Checkbox
                             checked={item.isChecked}
-                            onChange={(e) => handleCheckItem(item, e.target.checked)}
+                            onChange={(e) =>
+                              handleCheckItem(item, e.target.checked)
+                            }
                             disabled={updatingChecklist || item.isChecked}
-                            style={{ 
-                              textDecoration: item.isChecked ? 'line-through' : 'none',
+                            style={{
+                              textDecoration: item.isChecked
+                                ? "line-through"
+                                : "none",
                               fontWeight: 500,
-                              marginBottom: 8
+                              marginBottom: 8,
                             }}
                           >
                             {item.stepName}
                           </Checkbox>
                           {item.stepDescription && (
                             <div style={{ marginBottom: 8 }}>
-                              <Text type="secondary" style={{ fontSize: 12 }}>{item.stepDescription}</Text>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {item.stepDescription}
+                              </Text>
                             </div>
                           )}
                           {!item.isChecked ? (
@@ -823,7 +973,12 @@ const MaintenanceTasks = () => {
                               placeholder="Nhập ghi chú cho bước này (tùy chọn)..."
                               rows={2}
                               value={checklistNotes[item.checklistId] || ""}
-                              onChange={(e) => handleNoteChange(item.checklistId, e.target.value)}
+                              onChange={(e) =>
+                                handleNoteChange(
+                                  item.checklistId,
+                                  e.target.value
+                                )
+                              }
                               disabled={updatingChecklist}
                               style={{ fontSize: 12 }}
                             />
@@ -832,13 +987,26 @@ const MaintenanceTasks = () => {
                               {item.completedDate && (
                                 <div style={{ marginTop: 4 }}>
                                   <Text type="success" style={{ fontSize: 11 }}>
-                                    ✓ Hoàn thành: {dayjs(item.completedDate).format("DD/MM/YYYY HH:mm")}
+                                    ✓ Hoàn thành:{" "}
+                                    {dayjs(item.completedDate).format(
+                                      "DD/MM/YYYY HH:mm"
+                                    )}
                                   </Text>
                                 </div>
                               )}
                               {item.notes && (
-                                <div style={{ marginTop: 4, padding: 8, background: '#f5f5f5', borderRadius: 4 }}>
-                                  <Text type="secondary" style={{ fontSize: 11 }}>
+                                <div
+                                  style={{
+                                    marginTop: 4,
+                                    padding: 8,
+                                    background: "#f5f5f5",
+                                    borderRadius: 4,
+                                  }}
+                                >
+                                  <Text
+                                    type="secondary"
+                                    style={{ fontSize: 11 }}
+                                  >
                                     📝 Ghi chú: {item.notes}
                                   </Text>
                                 </div>
@@ -884,48 +1052,71 @@ const MaintenanceTasks = () => {
           <div>
             <Descriptions bordered column={2} size="small">
               <Descriptions.Item label="Mã phiếu" span={1}>
-                <strong>{selectedWorkOrder.workOrderCode || `WO${String(selectedWorkOrder.workOrderId).padStart(3, "0")}`}</strong>
+                <strong>
+                  {selectedWorkOrder.workOrderCode ||
+                    `WO${String(selectedWorkOrder.workOrderId).padStart(
+                      3,
+                      "0"
+                    )}`}
+                </strong>
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái" span={1}>
                 {selectedWorkOrder.status === "InProgress" ? (
-                  <Tag icon={<PlayCircleOutlined />} color="processing">Đang thực hiện</Tag>
+                  <Tag icon={<PlayCircleOutlined />} color="processing">
+                    Đang thực hiện
+                  </Tag>
                 ) : selectedWorkOrder.status === "Pending" ? (
-                  <Tag icon={<ClockCircleOutlined />} color="warning">Chờ xử lý</Tag>
+                  <Tag icon={<ClockCircleOutlined />} color="warning">
+                    Chờ xử lý
+                  </Tag>
                 ) : selectedWorkOrder.status === "Completed" ? (
-                  <Tag icon={<CheckCircleOutlined />} color="success">Hoàn thành</Tag>
+                  <Tag icon={<CheckCircleOutlined />} color="success">
+                    Hoàn thành
+                  </Tag>
                 ) : (
                   <Tag>{selectedWorkOrder.status}</Tag>
                 )}
               </Descriptions.Item>
               <Descriptions.Item label="Thiết bị" span={2}>
-                <strong>{selectedWorkOrder.equipmentCode}</strong> - {selectedWorkOrder.equipmentName}
+                <strong>{selectedWorkOrder.equipmentCode}</strong> -{" "}
+                {selectedWorkOrder.equipmentName}
               </Descriptions.Item>
               <Descriptions.Item label="Vị trí" span={2}>
                 {selectedWorkOrder.lineName} / {selectedWorkOrder.stageName}
               </Descriptions.Item>
               <Descriptions.Item label="Loại công việc" span={1}>
                 {getMyTaskType(selectedWorkOrder) === "Electrical" ? (
-                  <Tag icon={<ThunderboltOutlined />} color="blue">Điện</Tag>
+                  <Tag icon={<ThunderboltOutlined />} color="blue">
+                    Điện
+                  </Tag>
                 ) : getMyTaskType(selectedWorkOrder) === "Mechanical" ? (
-                  <Tag icon={<ToolOutlined />} color="green">Cơ khí</Tag>
+                  <Tag icon={<ToolOutlined />} color="green">
+                    Cơ khí
+                  </Tag>
                 ) : (
                   <Tag color="purple">Cả Điện & Cơ khí</Tag>
                 )}
               </Descriptions.Item>
               <Descriptions.Item label="Ngày phân công" span={1}>
-                {selectedWorkOrder.assignedDate ? dayjs(selectedWorkOrder.assignedDate).format("DD/MM/YYYY") : "-"}
+                {selectedWorkOrder.assignedDate
+                  ? dayjs(selectedWorkOrder.assignedDate).format("DD/MM/YYYY")
+                  : "-"}
               </Descriptions.Item>
               <Descriptions.Item label="Ngày đến hạn" span={1}>
                 {dayjs(selectedWorkOrder.dueDate).format("DD/MM/YYYY")}
               </Descriptions.Item>
               {selectedWorkOrder.startedDate && (
                 <Descriptions.Item label="Bắt đầu lúc" span={1}>
-                  {dayjs(selectedWorkOrder.startedDate).format("DD/MM/YYYY HH:mm")}
+                  {dayjs(selectedWorkOrder.startedDate).format(
+                    "DD/MM/YYYY HH:mm"
+                  )}
                 </Descriptions.Item>
               )}
               {selectedWorkOrder.completedDate && (
                 <Descriptions.Item label="Hoàn thành lúc" span={2}>
-                  {dayjs(selectedWorkOrder.completedDate).format("DD/MM/YYYY HH:mm")}
+                  {dayjs(selectedWorkOrder.completedDate).format(
+                    "DD/MM/YYYY HH:mm"
+                  )}
                 </Descriptions.Item>
               )}
               {selectedWorkOrder.notes && (
@@ -938,14 +1129,22 @@ const MaintenanceTasks = () => {
             {getMyChecklistItems(selectedWorkOrder).length > 0 && (
               <div style={{ marginTop: 24 }}>
                 <Divider>Danh sách công việc của bạn</Divider>
-                <Card 
+                <Card
                   title={
                     getMyTaskType(selectedWorkOrder) === "Electrical" ? (
-                      <span><ThunderboltOutlined style={{ color: '#1890ff' }} /> Công việc Điện</span>
+                      <span>
+                        <ThunderboltOutlined style={{ color: "#1890ff" }} />{" "}
+                        Công việc Điện
+                      </span>
                     ) : getMyTaskType(selectedWorkOrder) === "Mechanical" ? (
-                      <span><ToolOutlined style={{ color: '#52c41a' }} /> Công việc Cơ khí</span>
+                      <span>
+                        <ToolOutlined style={{ color: "#52c41a" }} /> Công việc
+                        Cơ khí
+                      </span>
                     ) : (
-                      <span><Tag color="purple">Cả Điện & Cơ khí</Tag></span>
+                      <span>
+                        <Tag color="purple">Cả Điện & Cơ khí</Tag>
+                      </span>
                     )
                   }
                   size="small"
@@ -956,11 +1155,18 @@ const MaintenanceTasks = () => {
                       <List.Item>
                         <List.Item.Meta
                           avatar={
-                            <Badge 
-                              count={index + 1} 
-                              style={{ 
-                                backgroundColor: getMyTaskType(selectedWorkOrder) === "Electrical" ? '#1890ff' : getMyTaskType(selectedWorkOrder) === "Mechanical" ? '#52c41a' : '#722ed1' 
-                              }} 
+                            <Badge
+                              count={index + 1}
+                              style={{
+                                backgroundColor:
+                                  getMyTaskType(selectedWorkOrder) ===
+                                  "Electrical"
+                                    ? "#1890ff"
+                                    : getMyTaskType(selectedWorkOrder) ===
+                                      "Mechanical"
+                                    ? "#52c41a"
+                                    : "#722ed1",
+                              }}
                             />
                           }
                           title={
@@ -971,11 +1177,18 @@ const MaintenanceTasks = () => {
                           description={
                             <div>
                               {item.stepDescription && (
-                                <Text type="secondary" style={{ fontSize: 12 }}>{item.stepDescription}</Text>
+                                <Text type="secondary" style={{ fontSize: 12 }}>
+                                  {item.stepDescription}
+                                </Text>
                               )}
                               {item.notes && (
                                 <div style={{ marginTop: 4 }}>
-                                  <Text type="secondary" style={{ fontSize: 11 }}>Ghi chú: {item.notes}</Text>
+                                  <Text
+                                    type="secondary"
+                                    style={{ fontSize: 11 }}
+                                  >
+                                    Ghi chú: {item.notes}
+                                  </Text>
                                 </div>
                               )}
                             </div>
