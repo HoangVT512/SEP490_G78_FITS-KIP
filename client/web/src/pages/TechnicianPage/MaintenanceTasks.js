@@ -23,6 +23,8 @@ import {
   Checkbox,
   Typography,
   Dropdown,
+  InputNumber,
+  Table as AntTable,
 } from "antd";
 import {
   ToolOutlined,
@@ -36,6 +38,8 @@ import {
   PlayCircleOutlined,
   StopOutlined,
   DownOutlined,
+  DeleteOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
@@ -45,6 +49,7 @@ import {
   updateChecklistItem,
 } from "../../services/maintenanceService";
 import { authService } from "../../services/authService";
+import { sparePartService } from "../../services/sparePartService";
 import styles from "../../styles/pages/MaintenanceTasks.module.css";
 
 const { TextArea } = Input;
@@ -60,6 +65,8 @@ const MaintenanceTasks = () => {
   const [updatingChecklist, setUpdatingChecklist] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
   const [checklistNotes, setChecklistNotes] = useState({}); // Lưu notes cho từng item
+  const [spareParts, setSpareParts] = useState([]); // Lưu danh sách linh kiện yêu cầu
+  const [sparePartsList, setSparePartsList] = useState([]); // Danh sách linh kiện từ DB
   const [form] = Form.useForm();
 
   const currentUser = authService.getStoredUser();
@@ -67,6 +74,7 @@ const MaintenanceTasks = () => {
 
   useEffect(() => {
     fetchWorkOrders();
+    fetchSpareParts();
   }, []);
 
   const fetchWorkOrders = async () => {
@@ -89,6 +97,15 @@ const MaintenanceTasks = () => {
       message.error("Không thể tải danh sách nhiệm vụ: " + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchSpareParts = async () => {
+    try {
+      const parts = await sparePartService.getAll();
+      setSparePartsList(parts || []);
+    } catch (error) {
+      console.error("Fetch spare parts error:", error);
     }
   };
 
@@ -325,6 +342,7 @@ const MaintenanceTasks = () => {
       notes[item.checklistId] = item.notes || "";
     });
     setChecklistNotes(notes);
+    setSpareParts([]); // Reset danh sách linh kiện
   };
 
   const handleNoteChange = (checklistId, value) => {
@@ -332,6 +350,76 @@ const MaintenanceTasks = () => {
       ...prev,
       [checklistId]: value,
     }));
+  };
+
+  const addSparePart = () => {
+    setSpareParts([
+      ...spareParts,
+      { key: Date.now(), partName: "", quantity: 1, notes: "" },
+    ]);
+  };
+
+  const removeSparePart = (key) => {
+    setSpareParts(spareParts.filter((item) => item.key !== key));
+  };
+
+  const updateSparePart = (key, field, value) => {
+    setSpareParts(
+      spareParts.map((item) =>
+        item.key === key ? { ...item, [field]: value } : item
+      )
+    );
+  };
+
+  const handleSendSparePartsRequest = async () => {
+    // Kiểm tra danh sách linh kiện không trống
+    if (spareParts.length === 0) {
+      message.warning("Vui lòng thêm ít nhất một linh kiện trước khi gửi!");
+      return;
+    }
+
+    // Kiểm tra tất cả linh kiện đều đã được chọn
+    const incompleteItems = spareParts.filter((item) => !item.partName);
+    if (incompleteItems.length > 0) {
+      message.warning("Vui lòng chọn tên linh kiện cho tất cả các dòng!");
+      return;
+    }
+
+    // Kiểm tra số lượng hợp lệ
+    const invalidItems = spareParts.filter(
+      (item) => !item.quantity || item.quantity <= 0
+    );
+    if (invalidItems.length > 0) {
+      message.warning(
+        "Vui lòng nhập số lượng hợp lệ (> 0) cho tất cả linh kiện!"
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // Chuẩn bị dữ liệu gửi
+      const requestData = {
+        workOrderId: selectedWorkOrder.workOrderId,
+        requestedBy: currentUserId,
+        items: spareParts.map((item) => ({
+          partName: item.partName,
+          quantity: item.quantity,
+        })),
+        requestDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+      };
+
+      // TODO: Gửi request đến API (cần tạo API endpoint mới)
+      console.log("Gửi yêu cầu linh kiện:", requestData);
+
+      message.success("Gửi yêu cầu linh kiện thành công!");
+      setSpareParts([]); // Reset danh sách
+    } catch (error) {
+      message.error("Gửi yêu cầu thất bại: " + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCheckItem = async (item, checked) => {
@@ -1020,6 +1108,133 @@ const MaintenanceTasks = () => {
                 />
               </Card>
             )}
+
+            <Divider />
+
+            <Card
+              title={
+                <>
+                  <FileTextOutlined style={{ color: "#faad14" }} /> Yêu cầu linh
+                  kiện vật tư
+                </>
+              }
+              size="small"
+              style={{ marginBottom: 16 }}
+            >
+              <div style={{ marginBottom: 12 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  Nhấn nút "+ Thêm" để yêu cầu linh kiện cần thiết cho công việc
+                  này
+                </Text>
+              </div>
+              {spareParts.length > 0 ? (
+                <AntTable
+                  columns={[
+                    {
+                      title: "Tên linh kiện",
+                      dataIndex: "partName",
+                      key: "partName",
+                      render: (_, record) => (
+                        <Select
+                          placeholder="Chọn linh kiện..."
+                          value={record.partName || undefined}
+                          onChange={(value) =>
+                            updateSparePart(record.key, "partName", value)
+                          }
+                          style={{ width: "100%" }}
+                          size="small"
+                          allowClear
+                        >
+                          {sparePartsList.map((part) => (
+                            <Select.Option
+                              key={part.partID}
+                              value={part.partName}
+                            >
+                              {part.partName} (Mã: {part.partNumber})
+                            </Select.Option>
+                          ))}
+                        </Select>
+                      ),
+                    },
+                    {
+                      title: "Số lượng cần",
+                      dataIndex: "quantity",
+                      key: "quantity",
+                      width: 100,
+                      render: (_, record) => (
+                        <InputNumber
+                          min={1}
+                          value={record.quantity}
+                          onChange={(value) =>
+                            updateSparePart(record.key, "quantity", value)
+                          }
+                          size="small"
+                          style={{ width: "100%" }}
+                        />
+                      ),
+                    },
+                    {
+                      title: "Tồn kho",
+                      key: "stock",
+                      width: 100,
+                      render: (_, record) => {
+                        const sparePart = sparePartsList.find(
+                          (part) => part.partID === record.partID
+                        );
+                        return sparePart ? sparePart.quantity : 0;
+                      },
+                    },
+                    {
+                      title: "Thao tác",
+                      key: "action",
+                      width: 80,
+                      render: (_, record) => (
+                        <Button
+                          type="link"
+                          danger
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          onClick={() => removeSparePart(record.key)}
+                        >
+                          Xóa
+                        </Button>
+                      ),
+                    },
+                  ]}
+                  dataSource={spareParts}
+                  rowKey="key"
+                  pagination={false}
+                  size="small"
+                />
+              ) : (
+                <Alert
+                  message="Chưa có yêu cầu linh kiện"
+                  description="Nhấn nút Thêm phía dưới để yêu cầu linh kiện"
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: 12 }}
+                />
+              )}
+              <Space style={{ width: "100%", marginTop: 12, gap: 8 }}>
+                <Button
+                  type="dashed"
+                  icon={<PlusOutlined />}
+                  flex={1}
+                  onClick={addSparePart}
+                >
+                  Thêm linh kiện
+                </Button>
+                <Button
+                  type="primary"
+                  onClick={handleSendSparePartsRequest}
+                  loading={loading}
+                  disabled={spareParts.length === 0}
+                  flex={1}
+                >
+                  Gửi yêu cầu
+                </Button>
+              </Space>
+            </Card>
 
             <Alert
               message="Lưu ý"
