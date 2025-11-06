@@ -1056,6 +1056,62 @@ const MaintenanceManagement = () => {
     });
   };
 
+  const handleConfirmReturn = (record) => {
+    Modal.confirm({
+      title: "Xác nhận trả lại kho",
+      content: (
+        <div>
+          <p>
+            Xác nhận trả lại <strong>{record.quantityToReturn}</strong> cái{" "}
+            <strong>{record.partName}</strong> vào kho?
+          </p>
+          <p style={{ color: "#666", fontSize: "12px" }}>
+            (Mã: {record.partNumber})
+          </p>
+        </div>
+      ),
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      onOk: async () => {
+        try {
+          setLoading(true);
+          const currentUser = authService.getStoredUser();
+
+          // Payload theo DTO
+          const payload = {
+            actualQuantityUsed: record.actualQuantityUsed || record.quantity,
+            returnedDate: new Date(),
+            returnConfirmedBy:
+              currentUser?.fullName || currentUser?.userName || "Admin",
+            returnRemarks: `Trả lại ${record.quantityToReturn} cái`,
+          };
+
+          await replacementHistoryService.confirmReturn(
+            record.replacementID,
+            payload
+          );
+          message.success("Xác nhận trả lại kho thành công!");
+
+          // Reload danh sách linh kiện
+          if (selectedRecord?.workOrderId) {
+            const histories = await replacementHistoryService.getByWorkOrderId(
+              selectedRecord.workOrderId
+            );
+            setWorkOrderSparePartsList(histories || []);
+          }
+
+          // Reload danh sách phiếu
+          loadWorkOrders();
+        } catch (error) {
+          console.error("Confirm return error:", error);
+          message.error("Xác nhận trả lại thất bại: " + error.message);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+  };
+
   // ===== ASSIGN MULTIPLE TECHNICIANS =====
 
   const handleAssignMultipleTechnicians = (record) => {
@@ -3544,6 +3600,168 @@ const MaintenanceManagement = () => {
       >
         {selectedRecord && (
           <div>
+            <Descriptions bordered column={2}>
+              {selectedRecord.workOrderId ? (
+                <>
+                  {/* WorkOrder Details */}
+                  <Descriptions.Item label="Mã phiếu" span={2}>
+                    {selectedRecord.workOrderCode ||
+                      `WO${String(selectedRecord.workOrderId).padStart(
+                        3,
+                        "0"
+                      )}`}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Thiết bị">
+                    {selectedRecord.equipmentName}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Mã thiết bị">
+                    {selectedRecord.equipmentCode}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Chuyền">
+                    {selectedRecord.lineName}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Công đoạn">
+                    {selectedRecord.stageName}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Ngày phân công">
+                    {selectedRecord.assignedDate
+                      ? dayjs(selectedRecord.assignedDate).format("DD/MM/YYYY")
+                      : "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Ngày đến hạn">
+                    {dayjs(selectedRecord.dueDate).format("DD/MM/YYYY")}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Trạng thái" span={2}>
+                    {getStatusTag(selectedRecord.status)}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="KTV Điện" span={2}>
+                    {selectedRecord.electricalTechnicianName ? (
+                      <Space>
+                        <ThunderboltOutlined style={{ color: "#1890ff" }} />
+                        <Text strong>
+                          {selectedRecord.electricalTechnicianName}
+                        </Text>
+                        <Text type="secondary">
+                          ({selectedRecord.electricalEmployeeCode})
+                        </Text>
+                      </Space>
+                    ) : (
+                      <Text type="secondary">Chưa phân công</Text>
+                    )}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="KTV Cơ khí" span={2}>
+                    {selectedRecord.mechanicalTechnicianName ? (
+                      <Space>
+                        <ToolOutlined style={{ color: "#52c41a" }} />
+                        <Text strong>
+                          {selectedRecord.mechanicalTechnicianName}
+                        </Text>
+                        <Text type="secondary">
+                          ({selectedRecord.mechanicalEmployeeCode})
+                        </Text>
+                      </Space>
+                    ) : (
+                      <Text type="secondary">Chưa phân công</Text>
+                    )}
+                  </Descriptions.Item>
+                  {selectedRecord.notes && (
+                    <Descriptions.Item label="Ghi chú" span={2}>
+                      {selectedRecord.notes}
+                    </Descriptions.Item>
+                  )}
+                </>
+              ) : (
+                <>
+                  {/* Plan Details */}
+                  <Descriptions.Item label="Mã kế hoạch" span={2}>
+                    PLAN{String(selectedRecord.planId).padStart(3, "0")}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Thiết bị">
+                    {selectedRecord.equipmentName}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Mã thiết bị">
+                    {selectedRecord.equipmentCode}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Chuyền">
+                    {selectedRecord.lineName}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Công đoạn">
+                    {selectedRecord.stageName}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Chu kỳ bảo trì">
+                    {selectedRecord.intervalValue}{" "}
+                    {selectedRecord.intervalType === "Days"
+                      ? "ngày"
+                      : selectedRecord.intervalType === "Months"
+                      ? "tháng"
+                      : selectedRecord.intervalType === "Hours"
+                      ? "giờ"
+                      : "chu kỳ"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Ngày bắt đầu">
+                    {dayjs(selectedRecord.startDate).format("DD/MM/YYYY")}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Ngày đến hạn (gốc)">
+                    {dayjs(selectedRecord.nextDueDate).format("DD/MM/YYYY")}
+                  </Descriptions.Item>
+                  {selectedRecord.postponedDueDate && (
+                    <Descriptions.Item label="Ngày đến hạn (sau hoãn)" span={2}>
+                      <Tag color="purple" icon={<ClockCircleOutlined />}>
+                        {dayjs(selectedRecord.postponedDueDate).format(
+                          "DD/MM/YYYY"
+                        )}
+                      </Tag>
+                      <Text type="secondary" style={{ marginLeft: 8 }}>
+                        (Hoãn{" "}
+                        {Math.round(
+                          (new Date(selectedRecord.postponedDueDate) -
+                            new Date(selectedRecord.nextDueDate)) /
+                            (1000 * 60 * 60 * 24)
+                        )}{" "}
+                        ngày)
+                      </Text>
+                    </Descriptions.Item>
+                  )}
+                  <Descriptions.Item label="Trạng thái">
+                    {getPlanStatusTag(selectedRecord)}
+                  </Descriptions.Item>
+                  {selectedRecord.postponedReason && (
+                    <>
+                      <Descriptions.Item label="Lý do hoãn" span={2}>
+                        <Alert
+                          message={
+                            <div>
+                              <Text strong>Đã hoãn bảo trì</Text>
+                              {selectedRecord.postponedDate && (
+                                <Text
+                                  type="secondary"
+                                  style={{
+                                    display: "block",
+                                    marginTop: 4,
+                                    fontSize: 12,
+                                  }}
+                                >
+                                  (
+                                  {dayjs(selectedRecord.postponedDate).format(
+                                    "DD/MM/YYYY HH:mm"
+                                  )}
+                                  )
+                                </Text>
+                              )}
+                            </div>
+                          }
+                          description={selectedRecord.postponedReason}
+                          type="warning"
+                          showIcon
+                          icon={<ClockCircleOutlined />}
+                        />
+                      </Descriptions.Item>
+                    </>
+                  )}
+                </>
+              )}
+            </Descriptions>
+
             {selectedRecord.workOrderId && (
               <div style={{ marginTop: 24 }}>
                 <Divider>Linh kiện chờ duyệt cấp phát</Divider>
@@ -3622,6 +3840,18 @@ const MaintenanceManagement = () => {
                           )}
                           {record.status === "Đã duyệt cấp phát" && (
                             <Tag color="success">Đã duyệt</Tag>
+                          )}
+                          {record.status === "Chờ trả lại" && (
+                            <Button
+                              type="primary"
+                              size="small"
+                              onClick={() => handleConfirmReturn(record)}
+                            >
+                              Xác nhận trả lại
+                            </Button>
+                          )}
+                          {record.status === "Hoàn thành" && (
+                            <Tag color="success">Hoàn thành</Tag>
                           )}
                         </Space>
                       ),
