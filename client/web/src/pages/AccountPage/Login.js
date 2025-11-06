@@ -76,6 +76,13 @@ const Login = () => {
           user.roles.includes("QUANLY") ||
           user.roles.includes("Manager"));
 
+      const isUserWarehouseManager =
+        user.roles &&
+        (user.roles.includes("Quản lý kho") ||
+          user.roles.includes("QUẢN LÝ KHO") ||
+          user.roles.includes("QUANLYKHO") ||
+          user.roles.includes("Warehouse Manager"));
+
       const isUserTechnician =
         user.roles &&
         (user.roles.includes("Kỹ thuật viên") ||
@@ -86,6 +93,7 @@ const Login = () => {
       console.log("Is team leader:", isUserTeamLeader);
       console.log("Is technician manager:", isUserTechnicianManager);
       console.log("Is manager:", isUserManager);
+      console.log("Is warehouse manager:", isUserWarehouseManager);
       console.log("Is technician:", isUserTechnician);
 
       if (isUserAdmin) {
@@ -100,6 +108,9 @@ const Login = () => {
       } else if (isUserManager) {
         console.log("Redirecting to manager page");
         navigate("/manager");
+      } else if (isUserWarehouseManager) {
+        console.log("Redirecting to warehouse manager page");
+        navigate("/warehouse-manager");
       } else if (isUserTechnician) {
         console.log("Redirecting to technician page");
         navigate("/technician");
@@ -154,6 +165,13 @@ const Login = () => {
           response.user.roles.includes("QUANLY") ||
           response.user.roles.includes("Manager"));
 
+      const isUserWarehouseManager =
+        response.user?.roles &&
+        (response.user.roles.includes("Quản lý kho") ||
+          response.user.roles.includes("QUẢN LÝ KHO") ||
+          response.user.roles.includes("QUANLYKHO") ||
+          response.user.roles.includes("Warehouse Manager"));
+
       const isUserTechnician =
         response.user?.roles &&
         (response.user.roles.includes("Kỹ thuật viên") ||
@@ -172,6 +190,9 @@ const Login = () => {
       } else if (isUserManager) {
         console.log("Redirecting to manager page");
         navigate("/manager");
+      } else if (isUserWarehouseManager) {
+        console.log("Redirecting to warehouse manager page");
+        navigate("/warehouse-manager");
       } else if (isUserTechnician) {
         console.log("Redirecting to technician page");
         navigate("/technician");
