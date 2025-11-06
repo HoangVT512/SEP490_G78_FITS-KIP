@@ -35,7 +35,6 @@ import styles from "../../styles/pages/TechnicianManagerLayout.module.css";
 // Import technician manager pages
 import TechnicianManagerDashboard from "./TechnicianManagerDashboard";
 import IncidentManagement from "./IncidentList";
-import PurchaseRequestManagement from "./PurchaseRequestManagement";
 import MaintenancePlanManagement from "./MaintenanceManagement";
 import NotificationsList from "../ManagerPage/NotificationsList";
 import ReplacementReturnPage from "./ReplacementReturnPage";
@@ -178,12 +177,6 @@ const TechnicianManagerLayout = () => {
       onClick: () => navigate("/technician-manager/incidents"),
     },
     {
-      key: "purchase",
-      icon: <FileTextOutlined />,
-      label: "Yêu cầu mua hàng",
-      onClick: () => navigate("/technician-manager/purchase-requests"),
-    },
-    {
       key: "maintenance",
       icon: <SafetyOutlined />,
       label: "Kế hoạch bảo trì",
@@ -226,8 +219,6 @@ const TechnicianManagerLayout = () => {
       return <TechnicianManagerDashboard />;
     } else if (path.includes("incidents")) {
       return <IncidentManagement />;
-    } else if (path.includes("purchase-requests")) {
-      return <PurchaseRequestManagement />;
     } else if (path.includes("maintenance-plans")) {
       return <MaintenancePlanManagement />;
     } else if (path.includes("replacement-returns")) {

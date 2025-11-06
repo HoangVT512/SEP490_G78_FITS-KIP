@@ -185,10 +185,10 @@ public class PurchaseRequestsController : ControllerBase
     /// <response code="201">Tạo yêu cầu mua hàng thành công</response>
     /// <response code="400">Dữ liệu đầu vào không hợp lệ</response>
     /// <response code="401">Không xác thực được người dùng</response>
-    /// <response code="403">Không có quyền (không phải Technician)</response>
+    /// <response code="403">Không có quyền (không phải Quản lý kho)</response>
     /// <response code="500">Lỗi server nội bộ</response>
     [HttpPost]
-    [Authorize(Roles = "Quản lý kỹ thuật")]
+    [Authorize(Roles = "Quản lý kho,Quản lý kỹ thuật")]
     [ProducesResponseType(typeof(ApiResponse<PurchaseRequestDTO>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
@@ -569,10 +569,10 @@ public class PurchaseRequestsController : ControllerBase
     }
 
     /// <summary>
-    /// Mark purchase request as received (Đã nhập kho) - Only for Technical Managers
+    /// Mark purchase request as received (Đã nhập kho) - For Warehouse Manager and Technical Manager
     /// </summary>
     [HttpPost("{id}/received")]
-    [Authorize(Roles = "Quản lý kỹ thuật")]
+    [Authorize(Roles = "Quản lý kho,Quản lý kỹ thuật")]
     [ProducesResponseType(typeof(ApiResponse<PurchaseRequestDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status401Unauthorized)]
