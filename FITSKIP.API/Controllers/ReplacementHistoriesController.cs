@@ -24,17 +24,20 @@ namespace FITSKIP.API.Controllers
         private readonly FitskipDbContext _context;
         private readonly IIncidentService _incidentService;
         private readonly IHubContext<NotificationHub> _notificationHubContext;
+        private readonly INotificationService _notificationService; // ✅ THÊM
 
         public ReplacementHistoriesController(
             IReplacementHistoryService service,
             FitskipDbContext context,
             IIncidentService incidentService,
-            IHubContext<NotificationHub> notificationHubContext)
+            IHubContext<NotificationHub> notificationHubContext,
+            INotificationService notificationService) // ✅ THÊM
         {
             _service = service;
             _context = context;
             _incidentService = incidentService;
             _notificationHubContext = notificationHubContext;
+            _notificationService = notificationService; // ✅ THÊM
         }
 
         [HttpGet]
@@ -146,6 +149,45 @@ namespace FITSKIP.API.Controllers
                 }
 
                 var created = await _service.CreateAsync(replacementHistory, cancellationToken);
+
+                // ✅ GỬI THÔNG BÁO ĐẾN QUẢN LÝ KHO
+                try
+                {
+                    var partInfo = created.Part != null
+                        ? $"{created.Part.PartName} ({created.Part.PartNumber})"
+                        : "Phụ tùng";
+
+                    var equipmentInfo = created.Equipment != null
+                        ? $"{created.Equipment.EquipmentName} ({created.Equipment.EquipmentCode})"
+                        : "Thiết bị";
+
+                    var requestType = created.IncidentId.HasValue ? "sự cố" : "bảo trì";
+                    var referenceId = created.IncidentId.HasValue
+                        ? $"INC-{created.IncidentId}"
+                        : created.WorkOrderId.HasValue
+                            ? $"WO-{created.WorkOrderId}"
+                            : "";
+
+                    var message = $"Yêu cầu phụ tùng mới từ {requestType} {referenceId}: {partInfo} cho {equipmentInfo} - Số lượng: {created.Quantity}";
+
+                    await _notificationService.SendNotificationToRoleAsync(
+                        "Quản lý kho",
+                        message,
+                        "ReplacementRequest"
+                    );
+
+                    // Broadcast SignalR notification
+                    await _notificationHubContext.Clients.All.SendAsync(
+                        "ReceiveDataUpdate",
+                        new { type = "replacementRequest", action = "created", id = created.ReplacementId },
+                        cancellationToken
+                    );
+                }
+                catch (Exception notificationEx)
+                {
+                    // Log notification error but don't fail the request
+                    Console.WriteLine($"Failed to send notification: {notificationEx.Message}");
+                }
 
                 // Mapping Entity to DTO
                 var response = new ReplacementHistoryDTO

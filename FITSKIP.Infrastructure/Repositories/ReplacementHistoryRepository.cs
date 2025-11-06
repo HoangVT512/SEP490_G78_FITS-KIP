@@ -368,6 +368,8 @@ namespace FITSKIP.Infrastructure.Repositories
                     .Include(r => r.Equipment)
                     .Include(r => r.Part)
                     .Include(r => r.ReplacedByNavigation)
+                    .Include(r => r.Incident)
+                    .Include(r => r.WorkOrder)
                     .Where(r => statusList.Contains(r.Status))
                     .ToListAsync(cancellationToken);
             }

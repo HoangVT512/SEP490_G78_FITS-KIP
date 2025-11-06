@@ -52,7 +52,7 @@ const WarehouseManagerDashboard = () => {
 
       // Fetch pending spare parts requests
       const pendingRequestsData = await replacementHistoryService.getByStatus(
-        "Đang chờ duyệt"
+        "Chờ duyệt cấp phát"
       );
       setPendingRequests(pendingRequestsData || []);
 

@@ -54,10 +54,6 @@ const IncidentList = () => {
   const [filteredIncidents, setFilteredIncidents] = useState([]);
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
-  const [approvalModalVisible, setApprovalModalVisible] = useState(false);
-  const [approvalEquipmentId, setApprovalEquipmentId] = useState(null);
-  const [approvalIncidentId, setApprovalIncidentId] = useState(null);
-  const [approvalEquipmentInfo, setApprovalEquipmentInfo] = useState(null); // Equipment name and code
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [activeTab, setActiveTab] = useState("pending");
@@ -161,19 +157,22 @@ const IncidentList = () => {
     console.log("🔌 Setting up SignalR listeners for IncidentList...");
 
     // Lắng nghe thông báo duyệt cấp phát linh kiện
-    const unsubscribeReplacementApproved = subscribe("ReplacementApproved", (data) => {
-      console.log("✅ Replacement approved notification received:", data);
-      
-      // Refresh spare parts status cho incident liên quan
-      if (data.incidentId) {
-        fetchSparePartsStatusForIncident(data.incidentId);
+    const unsubscribeReplacementApproved = subscribe(
+      "ReplacementApproved",
+      (data) => {
+        console.log("✅ Replacement approved notification received:", data);
+
+        // Refresh spare parts status cho incident liên quan
+        if (data.incidentId) {
+          fetchSparePartsStatusForIncident(data.incidentId);
+        }
+
+        // Refresh toàn bộ data sau 2 giây để đảm bảo đồng bộ
+        setTimeout(() => {
+          fetchIncidents();
+        }, 2000);
       }
-      
-      // Refresh toàn bộ data sau 2 giây để đảm bảo đồng bộ
-      setTimeout(() => {
-        fetchIncidents();
-      }, 2000);
-    });
+    );
 
     // Cleanup
     return () => {
@@ -325,7 +324,10 @@ const IncidentList = () => {
             `Error checking spare parts for incident ${incident.id}:`,
             err
           );
-          sparePartsMap[incident.id] = { hasPendingRequests: false, hasReturnRequests: false };
+          sparePartsMap[incident.id] = {
+            hasPendingRequests: false,
+            hasReturnRequests: false,
+          };
         }
       }
       setSparePartsStatusMap(sparePartsMap);
@@ -383,14 +385,22 @@ const IncidentList = () => {
 
   const fetchSparePartsStatusForIncident = async (incidentId) => {
     try {
-      const sparePartsStatus = await incidentService.checkHasSpareParts(incidentId);
-      setSparePartsStatusMap(prev => ({
+      const sparePartsStatus = await incidentService.checkHasSpareParts(
+        incidentId
+      );
+      setSparePartsStatusMap((prev) => ({
         ...prev,
-        [incidentId]: sparePartsStatus
+        [incidentId]: sparePartsStatus,
       }));
-      console.log(`✅ Updated spare parts status for incident ${incidentId}:`, sparePartsStatus);
+      console.log(
+        `✅ Updated spare parts status for incident ${incidentId}:`,
+        sparePartsStatus
+      );
     } catch (err) {
-      console.error(`Error checking spare parts for incident ${incidentId}:`, err);
+      console.error(
+        `Error checking spare parts for incident ${incidentId}:`,
+        err
+      );
     }
   };
 
@@ -550,23 +560,25 @@ const IncidentList = () => {
           <span style={{ fontWeight: 500 }}>{text}</span>
           {sparePartsStatusMap[record.id]?.hasPendingRequests && (
             <Tooltip title="Có yêu cầu linh kiện thay thế đang chờ duyệt">
-              <div style={{
-                backgroundColor: "#ff4d4f",
-                borderRadius: "50%",
-                width: "24px",
-                height: "24px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                animation: "pulse 2s infinite",
-                boxShadow: "0 0 8px rgba(255, 77, 79, 0.5)",
-                border: "2px solid white"
-              }}>
+              <div
+                style={{
+                  backgroundColor: "#ff4d4f",
+                  borderRadius: "50%",
+                  width: "24px",
+                  height: "24px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  animation: "pulse 2s infinite",
+                  boxShadow: "0 0 8px rgba(255, 77, 79, 0.5)",
+                  border: "2px solid white",
+                }}
+              >
                 <PushpinOutlined
                   style={{
                     color: "white",
                     fontSize: "14px",
-                    fontWeight: "bold"
+                    fontWeight: "bold",
                   }}
                 />
               </div>
@@ -574,23 +586,25 @@ const IncidentList = () => {
           )}
           {sparePartsStatusMap[record.id]?.hasReturnRequests && (
             <Tooltip title="Có linh kiện cần trả lại">
-              <div style={{
-                backgroundColor: "#faad14",
-                borderRadius: "50%",
-                width: "24px",
-                height: "24px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                animation: "pulse 2s infinite",
-                boxShadow: "0 0 8px rgba(250, 173, 20, 0.5)",
-                border: "2px solid white"
-              }}>
+              <div
+                style={{
+                  backgroundColor: "#faad14",
+                  borderRadius: "50%",
+                  width: "24px",
+                  height: "24px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  animation: "pulse 2s infinite",
+                  boxShadow: "0 0 8px rgba(250, 173, 20, 0.5)",
+                  border: "2px solid white",
+                }}
+              >
                 <UndoOutlined
                   style={{
                     color: "white",
                     fontSize: "14px",
-                    fontWeight: "bold"
+                    fontWeight: "bold",
                   }}
                 />
               </div>
@@ -610,8 +624,9 @@ const IncidentList = () => {
       ...getColumnSearchProps("equipmentName", "Tìm thiết bị"),
       render: (text, record) => (
         <Tooltip
-          title={`${text}${record.equipmentCode ? ` (${record.equipmentCode})` : ""
-            }`}
+          title={`${text}${
+            record.equipmentCode ? ` (${record.equipmentCode})` : ""
+          }`}
         >
           <div>
             <div style={{ fontWeight: 500 }}>{text}</div>
@@ -634,9 +649,9 @@ const IncidentList = () => {
       },
       filters: Array.isArray(lines)
         ? lines.map((line) => ({
-          text: line.lineName,
-          value: line.lineName,
-        }))
+            text: line.lineName,
+            value: line.lineName,
+          }))
         : [],
       onFilter: (value, record) => record.lineName === value,
       filterIcon: (filtered) => (
@@ -658,9 +673,9 @@ const IncidentList = () => {
       },
       filters: Array.isArray(stages)
         ? stages.map((stage) => ({
-          text: stage.stageName,
-          value: stage.stageName,
-        }))
+            text: stage.stageName,
+            value: stage.stageName,
+          }))
         : [],
       onFilter: (value, record) => record.stageName === value,
       filterIcon: (filtered) => (
@@ -737,24 +752,24 @@ const IncidentList = () => {
     // Hide downtime column for pending/solving incidents
     ...(activeTab === "completed"
       ? [
-        {
-          title: "Thời lượng (phút)",
-          dataIndex: "downtime",
-          key: "downtime",
-          width: 120,
-          align: "center",
-          render: (val) => (
-            <span
-              style={{
-                color: val > 5 ? "#ff4d4f" : "#1890ff",
-                fontWeight: 500,
-              }}
-            >
-              {typeof val === "number" ? val.toFixed(2) : val}
-            </span>
-          ),
-        },
-      ]
+          {
+            title: "Thời lượng (phút)",
+            dataIndex: "downtime",
+            key: "downtime",
+            width: 120,
+            align: "center",
+            render: (val) => (
+              <span
+                style={{
+                  color: val > 5 ? "#ff4d4f" : "#1890ff",
+                  fontWeight: 500,
+                }}
+              >
+                {typeof val === "number" ? val.toFixed(2) : val}
+              </span>
+            ),
+          },
+        ]
       : []),
     {
       title: "Người đảm nhiệm",
@@ -779,22 +794,6 @@ const IncidentList = () => {
             icon: <EyeOutlined />,
             onClick: () => handleViewDetail(record),
           },
-          // Ẩn "Yêu cầu thay thế" khi sự cố đã hoàn thành
-          ...(record.status !== "Hoàn thành" ? [{
-            key: "replacementRequests",
-            label: "Yêu cầu thay thế",
-            icon: <UserAddOutlined />,
-            onClick: () => {
-              setSelectedIncident(record);
-              setApprovalEquipmentId(record.equipmentId || record.equipmentId);
-              setApprovalIncidentId(record.id);
-              setApprovalEquipmentInfo({
-                name: record.equipmentName,
-                code: record.equipmentCode,
-              });
-              setApprovalModalVisible(true);
-            },
-          }] : []),
           {
             key: "replacementHistory",
             label: "Xem lịch sử thay thế",
@@ -1108,21 +1107,6 @@ const IncidentList = () => {
         `}
       </style>
 
-      {/* Replacement approvals modal */}
-      <ReplacementApprovalModal
-        equipmentId={approvalEquipmentId}
-        incidentId={approvalIncidentId}
-        equipmentInfo={approvalEquipmentInfo}
-        open={approvalModalVisible}
-        onClose={() => {
-          setApprovalModalVisible(false);
-          setApprovalEquipmentId(null);
-          setApprovalIncidentId(null);
-          setApprovalEquipmentInfo(null);
-        }}
-        onUpdated={() => fetchIncidents()}
-      />
-
       {/* Replacement History Modal */}
       <ReplacementApprovalModal
         equipmentId={selectedEquipmentId}
@@ -1147,8 +1131,8 @@ const IncidentList = () => {
                 activeTab === "pending"
                   ? "Tổng sự cố chờ xử lý"
                   : activeTab === "completed"
-                    ? "Tổng sự cố hoàn thành"
-                    : "Tổng nhiệm vụ của tôi"
+                  ? "Tổng sự cố hoàn thành"
+                  : "Tổng nhiệm vụ của tôi"
               }
               value={stats.total}
               prefix={<WarningOutlined />}
@@ -1398,8 +1382,8 @@ const IncidentList = () => {
                       <div style={{ fontSize: "14px" }}>
                         {selectedIncident.reportDate
                           ? dayjs(selectedIncident.reportDate).format(
-                            "DD/MM/YYYY"
-                          )
+                              "DD/MM/YYYY"
+                            )
                           : "-"}
                       </div>
                     </Col>
@@ -1429,8 +1413,8 @@ const IncidentList = () => {
                       <div style={{ fontSize: "14px", fontWeight: 500 }}>
                         {selectedIncident.reportDate
                           ? dayjs(selectedIncident.reportDate).format(
-                            "DD/MM/YYYY HH:mm:ss"
-                          )
+                              "DD/MM/YYYY HH:mm:ss"
+                            )
                           : "-"}
                       </div>
                     </Col>
@@ -1448,8 +1432,8 @@ const IncidentList = () => {
                       <div style={{ fontSize: "14px", fontWeight: 500 }}>
                         {selectedIncident.resolveDate
                           ? dayjs(selectedIncident.resolveDate).format(
-                            "DD/MM/YYYY HH:mm:ss"
-                          )
+                              "DD/MM/YYYY HH:mm:ss"
+                            )
                           : "-"}
                       </div>
                     </Col>
@@ -1643,83 +1627,94 @@ const IncidentList = () => {
               </Col>
 
               {/* Incident Images */}
-              {selectedIncident.imageUrls && selectedIncident.imageUrls.length > 0 && (
-                <Col span={24}>
-                  <Card
-                    size="small"
-                    title={
-                      <Space>
-                        <PictureOutlined />
-                        <span>Hình ảnh sự cố ({selectedIncident.imageUrls.length} ảnh)</span>
-                      </Space>
-                    }
-                    variant="outlined"
-                  >
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
-                      {selectedIncident.imageUrls.map((imageUrl, index) => (
-                        <div
-                          key={index}
-                          style={{
-                            position: "relative",
-                            cursor: "pointer",
-                            borderRadius: "8px",
-                            overflow: "hidden",
-                            border: "2px solid #f0f0f0",
-                            transition: "all 0.3s ease",
-                          }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.borderColor = "#1890ff";
-                            e.currentTarget.style.transform = "scale(1.05)";
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.borderColor = "#f0f0f0";
-                            e.currentTarget.style.transform = "scale(1)";
-                          }}
-                          onClick={() => handleImagePreview(index)}
-                        >
-                          <Image
-                            src={imageUrl}
-                            alt={`Hình ảnh sự cố ${index + 1}`}
-                            width={120}
-                            height={120}
-                            style={{
-                              objectFit: "cover",
-                              borderRadius: "6px"
-                            }}
-                            preview={false}
-                            fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1xkE8O+ePLf3AAAAAElFTkSuQmCC"
-                          />
-                          <div
-                            style={{
-                              position: "absolute",
-                              bottom: "4px",
-                              right: "4px",
-                              backgroundColor: "rgba(0, 0, 0, 0.6)",
-                              color: "white",
-                              padding: "2px 6px",
-                              borderRadius: "4px",
-                              fontSize: "12px",
-                              fontWeight: 500,
-                            }}
-                          >
-                            {index + 1}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div
-                      style={{
-                        marginTop: "12px",
-                        fontSize: "12px",
-                        color: "#999",
-                        fontStyle: "italic"
-                      }}
+              {selectedIncident.imageUrls &&
+                selectedIncident.imageUrls.length > 0 && (
+                  <Col span={24}>
+                    <Card
+                      size="small"
+                      title={
+                        <Space>
+                          <PictureOutlined />
+                          <span>
+                            Hình ảnh sự cố ({selectedIncident.imageUrls.length}{" "}
+                            ảnh)
+                          </span>
+                        </Space>
+                      }
+                      variant="outlined"
                     >
-                      * Nhấp vào ảnh để xem chi tiết với chế độ xem toàn màn hình
-                    </div>
-                  </Card>
-                </Col>
-              )}
+                      <div
+                        style={{
+                          display: "flex",
+                          flexWrap: "wrap",
+                          gap: "12px",
+                        }}
+                      >
+                        {selectedIncident.imageUrls.map((imageUrl, index) => (
+                          <div
+                            key={index}
+                            style={{
+                              position: "relative",
+                              cursor: "pointer",
+                              borderRadius: "8px",
+                              overflow: "hidden",
+                              border: "2px solid #f0f0f0",
+                              transition: "all 0.3s ease",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor = "#1890ff";
+                              e.currentTarget.style.transform = "scale(1.05)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor = "#f0f0f0";
+                              e.currentTarget.style.transform = "scale(1)";
+                            }}
+                            onClick={() => handleImagePreview(index)}
+                          >
+                            <Image
+                              src={imageUrl}
+                              alt={`Hình ảnh sự cố ${index + 1}`}
+                              width={120}
+                              height={120}
+                              style={{
+                                objectFit: "cover",
+                                borderRadius: "6px",
+                              }}
+                              preview={false}
+                              fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1xkE8O+ePLf3AAAAAElFTkSuQmCC"
+                            />
+                            <div
+                              style={{
+                                position: "absolute",
+                                bottom: "4px",
+                                right: "4px",
+                                backgroundColor: "rgba(0, 0, 0, 0.6)",
+                                color: "white",
+                                padding: "2px 6px",
+                                borderRadius: "4px",
+                                fontSize: "12px",
+                                fontWeight: 500,
+                              }}
+                            >
+                              {index + 1}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div
+                        style={{
+                          marginTop: "12px",
+                          fontSize: "12px",
+                          color: "#999",
+                          fontStyle: "italic",
+                        }}
+                      >
+                        * Nhấp vào ảnh để xem chi tiết với chế độ xem toàn màn
+                        hình
+                      </div>
+                    </Card>
+                  </Col>
+                )}
             </Row>
           </div>
         )}
@@ -1731,7 +1726,8 @@ const IncidentList = () => {
           <Space>
             <PictureOutlined />
             <span>
-              Hình ảnh sự cố - {currentImageIndex + 1}/{selectedIncident?.imageUrls?.length || 0}
+              Hình ảnh sự cố - {currentImageIndex + 1}/
+              {selectedIncident?.imageUrls?.length || 0}
             </span>
           </Space>
         }
@@ -1740,18 +1736,18 @@ const IncidentList = () => {
         width="90vw"
         style={{ top: 20 }}
         footer={[
-          // <Button 
-          //   key="prev" 
-          //   icon={<LeftOutlined />} 
+          // <Button
+          //   key="prev"
+          //   icon={<LeftOutlined />}
           //   onClick={() => handleImageNavigation("prev")}
           //   disabled={!selectedIncident?.imageUrls?.length || selectedIncident.imageUrls.length <= 1}
           // >
           //   Ảnh trước
           // </Button>,
-          // <Button 
-          //   key="next" 
-          //   type="primary" 
-          //   icon={<RightOutlined />} 
+          // <Button
+          //   key="next"
+          //   type="primary"
+          //   icon={<RightOutlined />}
           //   onClick={() => handleImageNavigation("next")}
           //   disabled={!selectedIncident?.imageUrls?.length || selectedIncident.imageUrls.length <= 1}
           //   style={{ backgroundColor: "#334766", borderColor: "#334766" }}
@@ -1779,26 +1775,31 @@ const IncidentList = () => {
               style={{
                 maxWidth: "100%",
                 maxHeight: "70vh",
-                objectFit: "contain"
+                objectFit: "contain",
               }}
               fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1xkE8O+ePLf3AAAAAElFTkSuQmCC"
             />
 
             {/* Image thumbnails navigation */}
             {selectedIncident.imageUrls.length > 1 && (
-              <div style={{
-                marginTop: "20px",
-                display: "flex",
-                justifyContent: "center",
-                gap: "8px",
-                flexWrap: "wrap"
-              }}>
+              <div
+                style={{
+                  marginTop: "20px",
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: "8px",
+                  flexWrap: "wrap",
+                }}
+              >
                 {selectedIncident.imageUrls.map((imageUrl, index) => (
                   <div
                     key={index}
                     style={{
                       cursor: "pointer",
-                      border: index === currentImageIndex ? "3px solid #1890ff" : "2px solid #f0f0f0",
+                      border:
+                        index === currentImageIndex
+                          ? "3px solid #1890ff"
+                          : "2px solid #f0f0f0",
                       borderRadius: "6px",
                       overflow: "hidden",
                       transition: "all 0.3s ease",
@@ -1811,7 +1812,7 @@ const IncidentList = () => {
                       width={60}
                       height={60}
                       style={{
-                        objectFit: "cover"
+                        objectFit: "cover",
                       }}
                       preview={false}
                       fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMIAAADDCAYAAADQvc6UAAABRWlDQ1BJQ0MgUHJvZmlsZQAAKJFjYGASSSwoyGFhYGDIzSspCnJ3UoiIjFJgf8LAwSDCIMogwMCcmFxc4BgQ4ANUwgCjUcG3awyMIPqyLsis7PPOq3QdDFcvjV3jOD1boQVTPQrgSkktTgbSf4A4LbmgqISBgTEFyFYuLykAsTuAbJEioKOA7DkgdjqEvQHEToKwj4DVhAQ5A9k3gGyB5IxEoBmML4BsnSQk8XQkNtReEOBxcfXxUQg1Mjc0dyHgXNJBSWpFCYh2zi+oLMpMzyhRcASGUqqCZ16yno6CkYGRAQMDKMwhqj/fAIcloxgHQqxAjIHBEugw5sUIsSQpBobtQPdLciLEVJYzMPBHMDBsayhILEqEO4DxG0txmrERhM29nYGBddr//5/DGRjYNRkY/l7////39v///y4Dmn+LgeHANwDrkl1AuO+pmgAAADhlWElmTU0AKgAAAAgAAYdpAAQAAAABAAAAGgAAAAAAAqACAAQAAAABAAAAwqADAAQAAAABAAAAwwAAAAD9b/HnAAAHlklEQVR4Ae3dP3Ik1xkE8O+ePLf3AAAAAElFTkSuQmCC"
@@ -1821,13 +1822,16 @@ const IncidentList = () => {
               </div>
             )}
 
-            <div style={{
-              marginTop: "16px",
-              fontSize: "14px",
-              color: "#666",
-              fontStyle: "italic"
-            }}>
-              Sử dụng nút "Ảnh trước" và "Ảnh tiếp theo" hoặc nhấp vào ảnh nhỏ bên dưới để điều hướng
+            <div
+              style={{
+                marginTop: "16px",
+                fontSize: "14px",
+                color: "#666",
+                fontStyle: "italic",
+              }}
+            >
+              Sử dụng nút "Ảnh trước" và "Ảnh tiếp theo" hoặc nhấp vào ảnh nhỏ
+              bên dưới để điều hướng
             </div>
           </div>
         )}
