@@ -10,6 +10,8 @@ import {
   message,
   Alert,
   Tooltip,
+  Tabs,
+  Badge,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -22,20 +24,41 @@ import { useAuth } from "../../contexts/AuthContext";
 
 const ReturnConfirmation = () => {
   const [loading, setLoading] = useState(false);
-  const [pendingReturns, setPendingReturns] = useState([]);
+  const [incidentReturns, setIncidentReturns] = useState([]);
+  const [workOrderReturns, setWorkOrderReturns] = useState([]);
   const [selectedReturn, setSelectedReturn] = useState(null);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState("incident");
   const { user } = useAuth();
 
   useEffect(() => {
     fetchPendingReturns();
   }, []);
 
+  const mapDtoToModel = (dto) => {
+    return {
+      ...dto,
+      historyId: dto.replacementID,
+      replacedByName: dto.replacedByUserName,
+      replacementDate: dto.replacedDate,
+      notes: dto.remarks,
+    };
+  };
+
   const fetchPendingReturns = async () => {
     setLoading(true);
     try {
-      const data = await replacementHistoryService.getByStatus("Đã thay thế");
-      setPendingReturns(data || []);
+      const data = await replacementHistoryService.getByStatus("Chờ trả lại");
+      console.log("Raw data from backend:", data);
+      const returns = (data || []).map(mapDtoToModel);
+      console.log("Mapped returns:", returns);
+
+      // Separate by incident and workorder
+      const incidents = returns.filter((r) => r.incidentId);
+      const workOrders = returns.filter((r) => r.workOrderId);
+
+      setIncidentReturns(incidents);
+      setWorkOrderReturns(workOrders);
     } catch (error) {
       console.error("Error fetching pending returns:", error);
       message.error("Không thể tải danh sách phụ tùng chờ xác nhận");
@@ -58,7 +81,7 @@ const ReturnConfirmation = () => {
             <strong>Phụ tùng:</strong> {record.partName}
           </p>
           <p>
-            <strong>Số lượng xuất:</strong> {record.quantityUsed} cái
+            <strong>Số lượng xuất:</strong> {record.quantity} cái
           </p>
           <p>
             <strong>Số lượng thực tế sử dụng:</strong>{" "}
@@ -66,7 +89,7 @@ const ReturnConfirmation = () => {
           </p>
           <p>
             <strong>Số lượng trả lại:</strong>{" "}
-            {(record.quantityUsed || 0) - (record.actualQuantityUsed || 0)} cái
+            {(record.quantity || 0) - (record.actualQuantityUsed || 0)} cái
           </p>
           <Alert
             message="Xác nhận trả lại sẽ cập nhật tồn kho và đánh dấu giao dịch hoàn thành"
@@ -116,8 +139,8 @@ const ReturnConfirmation = () => {
     },
     {
       title: "SL xuất",
-      dataIndex: "quantityUsed",
-      key: "quantityUsed",
+      dataIndex: "quantity",
+      key: "quantity",
       width: 80,
       render: (qty) => <strong>{qty || 0}</strong>,
     },
@@ -134,7 +157,7 @@ const ReturnConfirmation = () => {
       width: 100,
       render: (_, record) => {
         const returnQty =
-          (record.quantityUsed || 0) - (record.actualQuantityUsed || 0);
+          (record.quantity || 0) - (record.actualQuantityUsed || 0);
         return (
           <Tag color={returnQty > 0 ? "blue" : "default"}>{returnQty} cái</Tag>
         );
@@ -205,18 +228,65 @@ const ReturnConfirmation = () => {
           style={{ marginBottom: 16 }}
         />
 
-        <Table
-          dataSource={pendingReturns}
-          columns={columns}
-          rowKey="historyId"
-          loading={loading}
-          pagination={{
-            total: pendingReturns.length,
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `Tổng ${total} phụ tùng chờ xác nhận`,
-          }}
-          scroll={{ x: 1200 }}
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              key: "incident",
+              label: (
+                <span>
+                  Trả lại từ sự cố{" "}
+                  <Badge
+                    count={incidentReturns.length}
+                    style={{ backgroundColor: "#1890ff" }}
+                  />
+                </span>
+              ),
+              children: (
+                <Table
+                  dataSource={incidentReturns}
+                  columns={columns}
+                  rowKey="historyId"
+                  loading={loading}
+                  pagination={{
+                    total: incidentReturns.length,
+                    pageSize: 10,
+                    showSizeChanger: true,
+                    showTotal: (total) => `Tổng ${total} phụ tùng chờ xác nhận`,
+                  }}
+                  scroll={{ x: 1200 }}
+                />
+              ),
+            },
+            {
+              key: "workorder",
+              label: (
+                <span>
+                  Trả lại từ bảo trì{" "}
+                  <Badge
+                    count={workOrderReturns.length}
+                    style={{ backgroundColor: "#1890ff" }}
+                  />
+                </span>
+              ),
+              children: (
+                <Table
+                  dataSource={workOrderReturns}
+                  columns={columns}
+                  rowKey="historyId"
+                  loading={loading}
+                  pagination={{
+                    total: workOrderReturns.length,
+                    pageSize: 10,
+                    showSizeChanger: true,
+                    showTotal: (total) => `Tổng ${total} phụ tùng chờ xác nhận`,
+                  }}
+                  scroll={{ x: 1200 }}
+                />
+              ),
+            },
+          ]}
         />
       </Card>
 
@@ -256,14 +326,14 @@ const ReturnConfirmation = () => {
                 {selectedReturn.partName}
               </Descriptions.Item>
               <Descriptions.Item label="Số lượng xuất kho">
-                <strong>{selectedReturn.quantityUsed || 0} cái</strong>
+                <strong>{selectedReturn.quantity || 0} cái</strong>
               </Descriptions.Item>
               <Descriptions.Item label="Số lượng thực tế sử dụng">
                 <strong>{selectedReturn.actualQuantityUsed || 0} cái</strong>
               </Descriptions.Item>
               <Descriptions.Item label="Số lượng trả lại" span={2}>
                 <Tag color="blue" style={{ fontSize: "16px" }}>
-                  {(selectedReturn.quantityUsed || 0) -
+                  {(selectedReturn.quantity || 0) -
                     (selectedReturn.actualQuantityUsed || 0)}{" "}
                   cái
                 </Tag>
@@ -289,7 +359,7 @@ const ReturnConfirmation = () => {
             <Alert
               message="Thông tin"
               description={`Sau khi xác nhận, ${
-                (selectedReturn.quantityUsed || 0) -
+                (selectedReturn.quantity || 0) -
                 (selectedReturn.actualQuantityUsed || 0)
               } cái ${
                 selectedReturn.partName
