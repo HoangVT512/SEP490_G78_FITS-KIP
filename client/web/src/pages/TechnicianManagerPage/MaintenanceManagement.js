@@ -139,6 +139,9 @@ const MaintenanceManagement = () => {
   const [technicianFilter, setTechnicianFilter] = useState("all");
   const [sortOrder, setSortOrder] = useState("newest");
 
+  // ✅ NEW: Filter cho tab gộp "Lịch bảo trì & Công việc"
+  const [workStatusFilter, setWorkStatusFilter] = useState("all"); // all, pending, assigned, inProgress, completed
+
   // Data states
   const [maintenancePlans, setMaintenancePlans] = useState([]);
   const [templates, setTemplates] = useState([]);
@@ -186,7 +189,11 @@ const MaintenanceManagement = () => {
   }, []);
 
   useEffect(() => {
-    if (activeTab === "workOrders") {
+    if (activeTab === "workSchedule") {
+      // ✅ NEW: Load cả Plans sắp đến hạn và WorkOrders cho tab gộp
+      loadUpcomingMaintenance();
+      loadWorkOrders();
+    } else if (activeTab === "workOrders") {
       loadWorkOrders();
     } else if (activeTab === "pending") {
       loadPendingWorkOrders();
@@ -1736,6 +1743,330 @@ const MaintenanceManagement = () => {
     },
   ];
 
+  // ✅ NEW: Hàm gộp Plans và WorkOrders thành 1 danh sách
+  const getMergedWorkSchedule = () => {
+    const merged = [];
+
+    // 1. Thêm Plans chưa có WorkOrder (Chờ giao việc)
+    upcomingMaintenance.forEach((plan) => {
+      if (!plan.hasActiveWorkOrder) {
+        merged.push({
+          ...plan,
+          type: "plan",
+          workStatus: "pending", // Chờ giao việc
+          displayStatus: "Chờ giao việc",
+          sortDate: new Date(plan.postponedDueDate || plan.nextDueDate),
+        });
+      }
+    });
+
+    // 2. Thêm WorkOrders (đã giao việc)
+    workOrders.forEach((wo) => {
+      let workStatus = "assigned"; // Đã giao việc
+      let displayStatus = "Đã giao việc";
+
+      if (wo.status === "InProgress") {
+        workStatus = "inProgress";
+        displayStatus = "Đang thực hiện";
+      } else if (wo.status === "Completed") {
+        workStatus = "completed";
+        displayStatus = "Hoàn thành";
+      } else if (wo.status === "Cancelled") {
+        workStatus = "cancelled";
+        displayStatus = "Đã hủy";
+      }
+
+      merged.push({
+        ...wo,
+        type: "workOrder",
+        workStatus,
+        displayStatus,
+        sortDate: new Date(wo.dueDate),
+      });
+    });
+
+    // 3. Filter theo workStatusFilter
+    let filtered = merged;
+    if (workStatusFilter !== "all") {
+      filtered = merged.filter((item) => item.workStatus === workStatusFilter);
+    }
+
+    // 4. Filter theo searchText
+    if (searchText) {
+      filtered = filtered.filter(
+        (item) =>
+          item.equipmentName?.toLowerCase().includes(searchText.toLowerCase()) ||
+          item.equipmentCode?.toLowerCase().includes(searchText.toLowerCase()) ||
+          item.electricalTechnicianName?.toLowerCase().includes(searchText.toLowerCase()) ||
+          item.mechanicalTechnicianName?.toLowerCase().includes(searchText.toLowerCase())
+      );
+    }
+
+    // 5. Sort theo ngày đến hạn (gần nhất trước)
+    filtered.sort((a, b) => a.sortDate - b.sortDate);
+
+    return filtered;
+  };
+
+  // ✅ NEW: Columns cho tab "Lịch bảo trì & Công việc"
+  const workScheduleColumns = [
+    {
+      title: "Mã",
+      key: "code",
+      width: 120,
+      render: (_, record) => {
+        if (record.type === "plan") {
+          return <Text strong>PLAN{String(record.planId).padStart(3, "0")}</Text>;
+        } else {
+          const sparePartCount = workOrderSparePartRequests[record.workOrderId] || 0;
+          return (
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Text strong>WO{String(record.workOrderId).padStart(3, "0")}</Text>
+              {sparePartCount > 0 && (
+                <Tooltip title={`${sparePartCount} yêu cầu linh kiện chờ duyệt`}>
+                  <Badge count={sparePartCount} style={{ backgroundColor: "#ff4d4f" }} />
+                </Tooltip>
+              )}
+            </div>
+          );
+        }
+      },
+    },
+    {
+      title: "Thiết bị",
+      dataIndex: "equipmentName",
+      key: "equipmentName",
+      width: 180,
+      render: (name, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{name}</div>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {record.equipmentCode}
+          </Text>
+        </div>
+      ),
+    },
+    {
+      title: "Vị trí",
+      key: "location",
+      width: 130,
+      render: (_, record) => (
+        <div>
+          <div>{record.lineName}</div>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {record.stageName}
+          </Text>
+        </div>
+      ),
+    },
+    {
+      title: "Ngày đến hạn",
+      key: "dueDate",
+      width: 120,
+      render: (_, record) => {
+        const dueDate = record.type === "plan" 
+          ? (record.postponedDueDate ? dayjs(record.postponedDueDate) : dayjs(record.nextDueDate))
+          : dayjs(record.dueDate);
+        
+        const today = dayjs();
+        const daysUntilDue = dueDate.diff(today, "day");
+        const isOverdue = daysUntilDue < 0;
+        const isUpcomingSoon = daysUntilDue <= 3 && daysUntilDue >= 0;
+
+        return (
+          <div>
+            <div
+              style={{
+                color: isOverdue ? "#ff4d4f" : isUpcomingSoon ? "#faad14" : "inherit",
+                fontWeight: isOverdue || isUpcomingSoon ? "bold" : "normal",
+              }}
+            >
+              {dueDate.format("DD/MM/YYYY")}
+            </div>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {daysUntilDue > 0
+                ? `Còn ${daysUntilDue} ngày`
+                : daysUntilDue === 0
+                ? "Hôm nay"
+                : `Quá ${Math.abs(daysUntilDue)} ngày`}
+            </Text>
+          </div>
+        );
+      },
+    },
+    {
+      title: "Người phụ trách",
+      key: "assignedTechnicians",
+      width: 180,
+      render: (_, record) => {
+        if (record.type === "plan" || (!record.electricalTechnicianName && !record.mechanicalTechnicianName)) {
+          return <Text type="secondary" style={{ fontSize: 12 }}>Chưa giao việc</Text>;
+        }
+
+        return (
+          <div>
+            {record.electricalTechnicianName && (
+              <div style={{ marginBottom: 2 }}>
+                <ThunderboltOutlined style={{ color: "#1890ff", marginRight: 4, fontSize: 12 }} />
+                <Text style={{ fontSize: 12 }}>{record.electricalTechnicianName}</Text>
+              </div>
+            )}
+            {record.mechanicalTechnicianName && (
+              <div>
+                <ToolOutlined style={{ color: "#52c41a", marginRight: 4, fontSize: 12 }} />
+                <Text style={{ fontSize: 12 }}>{record.mechanicalTechnicianName}</Text>
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      title: "Trạng thái",
+      key: "status",
+      width: 140,
+      render: (_, record) => {
+        const statusConfig = {
+          pending: { color: "gold", icon: <ClockCircleOutlined />, text: "Chờ giao việc" },
+          assigned: { color: "cyan", icon: <UserAddOutlined />, text: "Đã giao việc" },
+          inProgress: { color: "blue", icon: <PlayCircleOutlined />, text: "Đang thực hiện" },
+          completed: { color: "green", icon: <CheckCircleOutlined />, text: "Hoàn thành" },
+          cancelled: { color: "red", icon: <StopOutlined />, text: "Đã hủy" },
+        };
+        const config = statusConfig[record.workStatus] || statusConfig.pending;
+        return (
+          <Tag icon={config.icon} color={config.color}>
+            {config.text}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      fixed: "right",
+      width: 100,
+      render: (_, record) => {
+        const sparePartCount = record.type === "workOrder" 
+          ? (workOrderSparePartRequests[record.workOrderId] || 0)
+          : 0;
+
+        const menuItems = [
+          {
+            key: "view",
+            icon: <EyeOutlined />,
+            label: "Chi tiết",
+            onClick: () => handleViewDetail(record),
+          },
+          // Chờ giao việc: Cho phép Giao việc hoặc Hoãn
+          record.workStatus === "pending" && {
+            key: "assign",
+            icon: <UserAddOutlined />,
+            label: "Giao việc",
+            onClick: () => handleCreateWorkOrder(record),
+          },
+          record.workStatus === "pending" && {
+            key: "postpone",
+            icon: <ClockCircleOutlined />,
+            label: "Hoãn",
+            onClick: () => handlePostponeMaintenance(record),
+          },
+          // Đã giao việc: Cho phép Cập nhật KTV hoặc Hoãn
+          record.workStatus === "assigned" && {
+            key: "update",
+            icon: <EditOutlined />,
+            label: "Cập nhật KTV",
+            onClick: () => handleAssignTechnicians(record),
+          },
+          record.workStatus === "assigned" && {
+            key: "postpone-wo",
+            icon: <ClockCircleOutlined />,
+            label: "Hoãn lịch",
+            onClick: () => handlePostponeWorkOrder(record),
+          },
+          // Yêu cầu linh kiện chờ duyệt
+          sparePartCount > 0 && {
+            key: "spare-parts",
+            icon: <PushpinOutlined style={{ color: "#ff4d4f" }} />,
+            label: `Linh kiện (${sparePartCount})`,
+            onClick: () => handleViewDetail(record),
+          },
+          // Hủy phiếu (chỉ khi chưa hoàn thành)
+          record.type === "workOrder" && record.workStatus !== "completed" && record.workStatus !== "cancelled" && {
+            key: "cancel",
+            icon: <StopOutlined />,
+            label: "Hủy",
+            danger: true,
+            onClick: () => handleCancelWorkOrder(record),
+          },
+        ].filter(Boolean);
+
+        return (
+          <Dropdown menu={{ items: menuItems }} placement="bottomRight" trigger={["click"]}>
+            <Button type="text" icon={<DownOutlined />} size="small" />
+          </Dropdown>
+        );
+      },
+    },
+  ];
+
+  // ✅ NEW: Hàm hoãn WorkOrder (sau khi đã giao việc)
+  const handlePostponeWorkOrder = (record) => {
+    Modal.confirm({
+      title: "Hoãn lịch bảo trì",
+      content: (
+        <div>
+          <p>Bạn muốn hoãn lịch bảo trì này?</p>
+          <p style={{ marginTop: 16 }}>
+            <strong>Số ngày hoãn:</strong>
+          </p>
+          <InputNumber id="postponeDaysInput" min={1} defaultValue={7} style={{ width: "100%" }} />
+          <p style={{ marginTop: 16 }}>
+            <strong>Lý do hoãn:</strong>
+          </p>
+          <TextArea id="postponeReasonInput" rows={3} placeholder="Nhập lý do hoãn..." />
+        </div>
+      ),
+      okText: "Hoãn",
+      cancelText: "Hủy",
+      width: 500,
+      onOk: async () => {
+        const postponeDays = document.getElementById("postponeDaysInput")?.value;
+        const reason = document.getElementById("postponeReasonInput")?.value;
+
+        if (!postponeDays || !reason) {
+          message.error("Vui lòng nhập đầy đủ thông tin");
+          return Promise.reject();
+        }
+
+        try {
+          // Hoãn Plan gốc (cập nhật PostponedDueDate)
+          await postponeMaintenancePlan(record.planId, {
+            postponeDays: parseInt(postponeDays),
+            reason,
+          });
+
+          // Cập nhật ScheduledDate của WorkOrder
+          await updateWorkOrder(record.workOrderId, {
+            scheduledDate: dayjs(record.dueDate).add(parseInt(postponeDays), "day").toISOString(),
+            assignedToElectrical: record.assignedToElectrical,
+            assignedToMechanical: record.assignedToMechanical,
+            notes: `Đã hoãn ${postponeDays} ngày. Lý do: ${reason}`,
+          });
+
+          message.success(`Hoãn lịch bảo trì thành công ${postponeDays} ngày!`);
+          loadUpcomingMaintenance();
+          loadWorkOrders();
+          loadMaintenancePlans();
+          loadStats();
+        } catch (error) {
+          message.error("Hoãn thất bại: " + error.message);
+          return Promise.reject();
+        }
+      },
+    });
+  };
+
   const filteredPlans = maintenancePlans.filter(
     (plan) =>
       plan.equipmentName?.toLowerCase().includes(searchText.toLowerCase()) ||
@@ -1752,50 +2083,115 @@ const MaintenanceManagement = () => {
 
   // Apply filters and sorting for Work Orders
   const getFilteredAndSortedWorkOrders = () => {
-    let filtered = workOrders.filter(
-      (order) =>
-        order.equipmentName?.toLowerCase().includes(searchText.toLowerCase()) ||
-        order.electricalTechnicianName
-          ?.toLowerCase()
-          .includes(searchText.toLowerCase()) ||
-        order.mechanicalTechnicianName
-          ?.toLowerCase()
-          .includes(searchText.toLowerCase()) ||
-        order.equipmentCode?.toLowerCase().includes(searchText.toLowerCase())
-    );
-
-    // Filter by status
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((order) => order.status === statusFilter);
-    }
-
-    // Filter by technician
-    if (technicianFilter !== "all") {
-      filtered = filtered.filter(
-        (order) =>
-          order.assignedToElectrical === technicianFilter ||
-          order.assignedToMechanical === technicianFilter
-      );
-    }
-
-    // Sort
-    const sorted = [...filtered].sort((a, b) => {
-      switch (sortOrder) {
-        case "newest":
-          return new Date(b.assignedDate) - new Date(a.assignedDate);
-        case "oldest":
-          return new Date(a.assignedDate) - new Date(b.assignedDate);
-        case "dueSoon":
-          return new Date(a.dueDate) - new Date(b.dueDate);
-        case "dueDate":
-          return new Date(b.dueDate) - new Date(a.dueDate);
-        default:
-          return 0;
-      }
-    });
-
-    return sorted;
+    // ...existing code...
   };
+
+  // ✅ NEW: Tab "Lịch bảo trì & Công việc" (GỘP 2 TAB)
+  const WorkScheduleTab = (
+    <Card title="Lịch bảo trì & Công việc" bordered={false}>
+      {/* Statistics */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} style={{ backgroundColor: "#fff7e6", borderLeft: "4px solid #faad14" }}>
+            <Statistic
+              title="Chờ giao việc"
+              value={upcomingMaintenance.filter((p) => !p.hasActiveWorkOrder).length}
+              prefix={<ClockCircleOutlined />}
+              valueStyle={{ color: "#faad14" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} style={{ backgroundColor: "#e6f7ff", borderLeft: "4px solid #1890ff" }}>
+            <Statistic
+              title="Đã giao việc"
+              value={workOrders.filter((wo) => wo.status === "Pending").length}
+              prefix={<UserAddOutlined />}
+              valueStyle={{ color: "#1890ff" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} style={{ backgroundColor: "#f0f5ff", borderLeft: "4px solid #597ef7" }}>
+            <Statistic
+              title="Đang thực hiện"
+              value={stats.inProgressWorkOrders}
+              prefix={<PlayCircleOutlined />}
+              valueStyle={{ color: "#597ef7" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card bordered={false} style={{ backgroundColor: "#f6ffed", borderLeft: "4px solid #52c41a" }}>
+            <Statistic
+              title="Hoàn thành"
+              value={stats.completedWorkOrders}
+              prefix={<CheckCircleOutlined />}
+              valueStyle={{ color: "#52c41a" }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
+      <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+        <Row gutter={16}>
+          <Col xs={24} md={8}>
+            <Search
+              placeholder="Tìm theo thiết bị, mã thiết bị, KTV"
+              prefix={<SearchOutlined />}
+              onChange={(e) => setSearchText(e.target.value)}
+              allowClear
+            />
+          </Col>
+          <Col xs={24} md={8}>
+            <Select
+              placeholder="Trạng thái"
+              value={workStatusFilter}
+              onChange={setWorkStatusFilter}
+              style={{ width: "100%" }}
+            >
+              <Option value="all">Tất cả trạng thái</Option>
+              <Option value="pending">
+                <ClockCircleOutlined /> Chờ giao việc
+              </Option>
+              <Option value="assigned">
+                <UserAddOutlined /> Đã giao việc
+              </Option>
+              <Option value="inProgress">
+                <PlayCircleOutlined /> Đang thực hiện
+              </Option>
+              <Option value="completed">
+                <CheckCircleOutlined /> Hoàn thành
+              </Option>
+              <Option value="cancelled">
+                <StopOutlined /> Đã hủy
+              </Option>
+            </Select>
+          </Col>
+          <Col xs={24} md={8} style={{ textAlign: "right" }}>
+            <Button type="primary" icon={<ReloadOutlined />} onClick={loadAllData}>
+              Làm mới
+            </Button>
+          </Col>
+        </Row>
+
+        <Table
+          columns={workScheduleColumns}
+          dataSource={getMergedWorkSchedule()}
+          rowKey={(record) => 
+            record.type === "plan" ? `plan-${record.planId}` : `wo-${record.workOrderId}`
+          }
+          loading={loading}
+          scroll={{ x: 1300 }}
+          pagination={{
+            pageSize: 15,
+            showSizeChanger: true,
+            showTotal: (total) => `Tổng ${total} mục`,
+          }}
+        />
+      </Space>
+    </Card>
+  );
 
   // Tab: Maintenance Plans
   const MaintenancePlansTab = (
@@ -2041,140 +2437,6 @@ const MaintenanceManagement = () => {
     </Card>
   );
 
-  // Tab: Work Orders
-  const WorkOrdersTab = (
-    <Card title="Phiếu bảo trì" bordered={false}>
-      <Space direction="vertical" size="middle" style={{ width: "100%" }}>
-        <Row gutter={16}>
-          <Col xs={24} md={6}>
-            <Search
-              placeholder="Tìm theo thiết bị, mã thiết bị hoặc người phụ trách"
-              prefix={<SearchOutlined />}
-              onChange={(e) => setSearchText(e.target.value)}
-              allowClear
-            />
-          </Col>
-          <Col xs={24} md={5}>
-            <Select
-              placeholder="Trạng thái"
-              value={statusFilter}
-              onChange={setStatusFilter}
-              style={{ width: "100%" }}
-            >
-              <Option value="all">Tất cả trạng thái</Option>
-              <Option value="Pending">Chờ xử lý</Option>
-              <Option value="InProgress">Đang thực hiện</Option>
-              <Option value="Completed">Hoàn thành</Option>
-              <Option value="Cancelled">Đã hủy</Option>
-              <Option value="Overdue">Quá hạn</Option>
-            </Select>
-          </Col>
-          <Col xs={24} md={8}>
-            <Select
-              placeholder="Người phụ trách"
-              value={technicianFilter}
-              onChange={setTechnicianFilter}
-              style={{ width: "100%" }}
-              showSearch
-              filterOption={(input, option) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
-            >
-              <Option value="all">Tất cả KTV</Option>
-              {[...mechanicalTechs, ...electricalTechs].map((tech) => (
-                <Option key={tech.userId} value={tech.userId}>
-                  {tech.fullName} ({tech.employeeCode})
-                </Option>
-              ))}
-            </Select>
-          </Col>
-          <Col xs={24} md={5}>
-            <Select
-              placeholder="Sắp xếp"
-              value={sortOrder}
-              onChange={setSortOrder}
-              style={{ width: "100%" }}
-            >
-              <Option value="newest">Mới nhất</Option>
-              <Option value="oldest">Cũ nhất</Option>
-              <Option value="dueSoon">Gần đến hạn nhất</Option>
-              <Option value="dueDate">Hạn xa nhất</Option>
-            </Select>
-          </Col>
-        </Row>
-
-        <Table
-          columns={workOrderColumns}
-          dataSource={getFilteredAndSortedWorkOrders()}
-          rowKey="workOrderId"
-          loading={loading}
-          scroll={{ x: 1400 }}
-          pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `Tổng ${total} phiếu`,
-          }}
-        />
-      </Space>
-    </Card>
-  );
-
-  // Tab: Upcoming Maintenance
-  const UpcomingMaintenanceTab = (
-    <Card title="Bảo trì sắp đến hạn" bordered={false}>
-      <Table
-        columns={[
-          ...planColumns.filter((col) => col.key !== "action"), // Loại bỏ cột action cũ
-          {
-            title: "Thao tác",
-            key: "action",
-            fixed: "right",
-            width: 200,
-            render: (_, record) => (
-              <Space size="small">
-                <Tooltip title="Chi tiết">
-                  <Button
-                    type="link"
-                    size="small"
-                    icon={<EyeOutlined />}
-                    onClick={() => handleViewDetail(record)}
-                  />
-                </Tooltip>
-                <Tooltip title="Tạo phiếu bảo trì">
-                  <Button
-                    type="primary"
-                    size="small"
-                    icon={<FileTextOutlined />}
-                    onClick={() => handleCreateWorkOrder(record)}
-                  >
-                    Tạo phiếu
-                  </Button>
-                </Tooltip>
-                <Tooltip title="Hoãn">
-                  <Button
-                    type="link"
-                    size="small"
-                    icon={<ClockCircleOutlined />}
-                    onClick={() => handlePostponeMaintenance(record)}
-                  />
-                </Tooltip>
-              </Space>
-            ),
-          },
-        ]}
-        dataSource={upcomingMaintenance}
-        rowKey="planId"
-        loading={loading}
-        scroll={{ x: 1400 }}
-        pagination={{
-          pageSize: 10,
-          showSizeChanger: true,
-          showTotal: (total) => `Tổng ${total} kế hoạch`,
-        }}
-      />
-    </Card>
-  );
-
   const items = [
     {
       key: "plans",
@@ -2182,14 +2444,18 @@ const MaintenanceManagement = () => {
       children: MaintenancePlansTab,
     },
     {
-      key: "upcoming",
-      label: "Lịch bảo trì sắp tới",
-      children: UpcomingMaintenanceTab,
-    },
-    {
-      key: "workOrders",
-      label: "Phiếu bảo trì",
-      children: WorkOrdersTab,
+      key: "workSchedule", // ✅ NEW: Thay thế 2 tab cũ
+      label: (
+        <span>
+          <CalendarOutlined /> Lịch bảo trì & Công việc
+          <Badge
+            count={upcomingMaintenance.filter((p) => !p.hasActiveWorkOrder).length}
+            style={{ marginLeft: 8, backgroundColor: "#faad14" }}
+            showZero={false}
+          />
+        </span>
+      ),
+      children: WorkScheduleTab,
     },
     {
       key: "templates",
