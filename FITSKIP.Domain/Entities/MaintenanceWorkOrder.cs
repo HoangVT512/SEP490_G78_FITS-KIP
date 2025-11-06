@@ -55,4 +55,5 @@ public partial class MaintenanceWorkOrder
     public virtual User? CreatedByUser { get; set; }
     public virtual User? UpdatedByUser { get; set; }
     public virtual ICollection<MaintenanceChecklistItem> ChecklistItems { get; set; } = new List<MaintenanceChecklistItem>();
+    public virtual ICollection<ReplacementHistory> ReplacementHistories { get; set; } = new List<ReplacementHistory>();
 }

@@ -407,15 +407,40 @@ const MaintenanceTasks = () => {
           partName: item.partName,
           quantity: item.quantity,
         })),
-        requestDate: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        requestDate: dayjs().toISOString(), // Sử dụng ISO format
+        notes: "", // Ghi chú bổ sung (tùy chọn)
       };
 
-      // TODO: Gửi request đến API (cần tạo API endpoint mới)
-      console.log("Gửi yêu cầu linh kiện:", requestData);
+      console.log("📤 Gửi yêu cầu linh kiện:", requestData);
 
+      // Gửi request đến API
+      const response = await fetch(
+        "https://localhost:7003/api/ReplacementHistories/request-from-maintenance",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(requestData),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("❌ Lỗi API:", errorData);
+        throw new Error(
+          errorData.message ||
+            `API Error: ${response.status} ${response.statusText}`
+        );
+      }
+
+      const result = await response.json();
+      console.log("✅ Yêu cầu thành công:", result);
       message.success("Gửi yêu cầu linh kiện thành công!");
       setSpareParts([]); // Reset danh sách
     } catch (error) {
+      console.error("❌ Chi tiết lỗi:", error);
       message.error("Gửi yêu cầu thất bại: " + error.message);
     } finally {
       setLoading(false);
@@ -1147,7 +1172,7 @@ const MaintenanceTasks = () => {
                         >
                           {sparePartsList.map((part) => (
                             <Select.Option
-                              key={part.partID}
+                              key={part.partId}
                               value={part.partName}
                             >
                               {part.partName} (Mã: {part.partNumber})

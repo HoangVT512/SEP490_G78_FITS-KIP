@@ -11,6 +11,8 @@ public partial class ReplacementHistory
 
     public int? IncidentId { get; set; }
 
+    public int? WorkOrderId { get; set; }
+
     public int PartId { get; set; }
 
     public int Quantity { get; set; }
@@ -51,6 +53,8 @@ public partial class ReplacementHistory
     public virtual Equipment? Equipment { get; set; }
 
     public virtual IncidentHistory? Incident { get; set; }
+
+    public virtual MaintenanceWorkOrder? WorkOrder { get; set; }
 
     public virtual SparePart Part { get; set; } = null!;
 
