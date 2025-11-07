@@ -1543,11 +1543,9 @@ namespace FITSKIP.Application.Services
             throw new NotImplementedException("Use IExcelImportService.GenerateTemplateExcelTemplate instead");
         }
 
-        // Lines 1284-1321 (bạn đang mở file này)
 
         public async Task<IEnumerable<TechnicianWorkloadDTO>> GetTechniciansWorkloadByDateAsync(DateTime date)
         {
-            // ✅ ĐÂY MỚI LÀ CODE THỰC SỰ CHẠY
             var allTechs = await _userRepository.GetUsersByRoleAsync("Kỹ thuật viên");
 
             var allWorkOrders = await _workOrderRepository.GetAllAsync();

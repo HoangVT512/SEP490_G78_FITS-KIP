@@ -457,7 +457,7 @@ const MaintenanceManagement = () => {
           templateId: values.templateId,
           intervalType: values.intervalType,
           intervalValue: values.intervalValue,
-          startDate: values.startDate.toISOString(),
+          startDate: values.startDate.format('YYYY-MM-DD'), // ✅ Dùng format thay vì toISOString() để tránh lùi giờ
         };
         await createMaintenancePlan(planData);
         message.success("Tạo chu kỳ bảo trì thành công!");

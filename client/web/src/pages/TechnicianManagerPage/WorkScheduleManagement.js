@@ -297,15 +297,16 @@ const WorkScheduleManagement = () => {
     if (record.type === "workOrder") {
       setTemplateChecklistItems(record.checklistItems || []);
       
+      const dueDate = dayjs(record.dueDate);
       detailForm.setFieldsValue({
-        scheduledDate: dayjs(record.dueDate),
+        scheduledDate: dueDate,
         assignedToElectrical: record.assignedToElectrical,
         assignedToMechanical: record.assignedToMechanical,
         notes: record.notes,
       });
       
-      // ✅ Load workload cho ngày dueDate
-      await loadTechWorkloadForDate(record.dueDate);
+      // ✅ Load workload cho ngày dueDate (gửi Date object)
+      await loadTechWorkloadForDate(dueDate.toDate());
     } else {
       if (record.templateId) {
         try {
@@ -340,11 +341,16 @@ const WorkScheduleManagement = () => {
     setIsDetailModalVisible(true);
   };
 
-  // ✅ Hàm load workload của KTV theo ngày
+  // ✅ Hàm load workload của KTV theo ngày - SỬA FORMAT NGÀY
   const loadTechWorkloadForDate = async (date) => {
     try {
       const { getTechniciansWorkloadByDate } = require("../../services/maintenanceService");
-      const response = await getTechniciansWorkloadByDate(date);
+      
+      // ✅ Format ngày theo định dạng YYYY-MM-DD để gửi lên API
+      const formattedDate = dayjs(date).format('YYYY-MM-DD');
+      console.log("🔄 Loading workload for date:", formattedDate);
+      
+      const response = await getTechniciansWorkloadByDate(formattedDate);
       
       if (response?.data) {
         // Convert array to object map: { userId: workOrderCount }
@@ -353,7 +359,10 @@ const WorkScheduleManagement = () => {
           workloadMap[item.userId] = item.workOrderCount;
         });
         setTechWorkload(workloadMap);
-        console.log("✅ Loaded workload for date:", date, workloadMap);
+        console.log("✅ Loaded workload:", workloadMap);
+      } else {
+        console.log("⚠️ No workload data returned");
+        setTechWorkload({});
       }
     } catch (error) {
       console.error("❌ Load tech workload error:", error);
@@ -383,7 +392,7 @@ const WorkScheduleManagement = () => {
       if (selectedRecord.type === "workOrder") {
         // Cập nhật WorkOrder hiện tại
         await updateWorkOrder(selectedRecord.workOrderId, {
-          scheduledDate: values.scheduledDate.toISOString(),
+          scheduledDate: values.scheduledDate.format('YYYY-MM-DD'), // ✅ Format theo YYYY-MM-DD
           assignedToElectrical: values.assignedToElectrical,
           assignedToMechanical: values.assignedToMechanical,
           notes: values.notes,
@@ -393,7 +402,7 @@ const WorkScheduleManagement = () => {
         // Tạo WorkOrder mới từ Plan
         await createWorkOrder({
           planId: selectedRecord.planId,
-          scheduledDate: values.scheduledDate.toISOString(),
+          scheduledDate: values.scheduledDate.format('YYYY-MM-DD'), // ✅ Format theo YYYY-MM-DD
           assignedToElectrical: values.assignedToElectrical,
           assignedToMechanical: values.assignedToMechanical,
           notes: values.notes,
