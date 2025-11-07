@@ -220,7 +220,7 @@ const ManagerLayout = () => {
     {
       key: "downtime-chart",
       icon: <FundOutlined />,
-      label: "Biểu đồ thời gian ngừng",
+      label: "Biểu đồ quản lý dừng máy",
     },
     {
       key: "purchase-approval",

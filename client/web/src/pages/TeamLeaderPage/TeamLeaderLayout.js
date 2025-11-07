@@ -128,7 +128,7 @@ const TeamLeaderLayout = () => {
     {
       key: "downtime-chart",
       icon: <BarChartOutlined />,
-      label: "Biểu đồ thời gian ngừng",
+      label: "Biểu đồ quản lý dừng máy",
     },
     {
       key: "EFormProductionInput",

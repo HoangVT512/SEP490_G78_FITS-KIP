@@ -544,6 +544,11 @@ const IncidentAssignList = () => {
           }}
           style={{ borderRadius: "6px" }}
         />
+        {incidents.length === 0 && !loading && (
+          <div style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}>
+            Không có sự cố nào được giao
+          </div>
+        )}
       </Card>
 
       {/* Spare parts modal (request spare parts) */}

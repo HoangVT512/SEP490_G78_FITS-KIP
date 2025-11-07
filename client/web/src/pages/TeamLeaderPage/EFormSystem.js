@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Form, Input, Select, DatePicker, Button, Table, Modal, Card, Row, Col, Typography, Tabs } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
 import '../../styles/pages/EFormSystem.css';
 import lineService from '../../services/lineService';
@@ -43,6 +44,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
 }; const EFormSystem = () => {
   const [searchForm] = Form.useForm();
   const [productionForm] = Form.useForm();
+  const navigate = useNavigate();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedFormData, setSelectedFormData] = useState(null);
@@ -53,6 +55,12 @@ const calculateAndUpdateOEE = async (record, shift) => {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [activeTab, setActiveTab] = useState('1');
+  const [incidentDetails, setIncidentDetails] = useState([]);
+  
+  // State for incident detail modal
+  const [incidentDetailModalVisible, setIncidentDetailModalVisible] = useState(false);
+  const [selectedIncidentForDetail, setSelectedIncidentForDetail] = useState(null);
 
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [confirmAction, setConfirmAction] = useState(null);
@@ -62,7 +70,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
   // State for selected criteria
   const [selectedLine, setSelectedLine] = useState(null);
   const [selectedFormType, setSelectedFormType] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState(dayjs());
 
   // State for lines and loading
   const [lines, setLines] = useState([]);
@@ -96,7 +104,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
     { key: '1-2', time: '08:00 - 09:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
     { key: '1-3', time: '09:00 - 10:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
     { key: '1-4', time: '10:00 - 11:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '1-5', time: '11:00 - 12:00', loadingTime: '30', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '1-5', time: '11:00 - 12:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
     { key: '1-6', time: '12:00 - 13:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
     { key: '1-7', time: '13:00 - 14:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
     { key: '1-8', time: '14:00 - 15:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
@@ -107,7 +115,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
     { key: '2-2', time: '16:00 - 17:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
     { key: '2-3', time: '17:00 - 18:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
     { key: '2-4', time: '18:00 - 19:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
-    { key: '2-5', time: '19:00 - 20:00', loadingTime: '30', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
+    { key: '2-5', time: '19:00 - 20:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
     { key: '2-6', time: '20:00 - 21:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
     { key: '2-7', time: '21:00 - 22:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
     { key: '2-8', time: '22:00 - 23:00', loadingTime: '60', targetAmount: '', resultAmount: '', oee: '', downDetails: '' },
@@ -526,6 +534,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
         const downDetails = overlappingIncidents.map(incident => {
           const overlapResult = doesIncidentOverlapSlot(incident, slot.time, dayjs(selectedDate).format('DD/MM/YYYY'));
           return {
+            incidentId: incident.incidentId, // Add incidentId for linking to full incident data
             type: incident.type?.typeName || 'Unknown',
             minutes: Math.round(overlapResult.downtime * 100) / 100, // Round to 2 decimal places
             issue: incident.issue || '',
@@ -553,6 +562,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
         const downDetails = overlappingIncidents.map(incident => {
           const overlapResult = doesIncidentOverlapSlot(incident, slot.time, dayjs(selectedDate).format('DD/MM/YYYY'));
           return {
+            incidentId: incident.incidentId, // Add incidentId for linking to full incident data
             type: incident.type?.typeName || 'Unknown',
             minutes: Math.round(overlapResult.downtime * 100) / 100, // Round to 2 decimal places
             issue: incident.issue || '',
@@ -747,6 +757,58 @@ const calculateAndUpdateOEE = async (record, shift) => {
       }));
     }
   }, [shift1Data, shift2Data, currentEditingFormId]);
+
+  // Fetch incident details when modal opens with downDetails
+  useEffect(() => {
+    if (editModalVisible && editingCell?.dataIndex === 'downDetails' && Array.isArray(editValue) && editValue.length > 0) {
+      // Extract incidentIds from downDetails
+      const incidentIds = editValue
+        .map(detail => detail?.incidentId)
+        .filter(id => id !== null && id !== undefined);
+      
+      if (incidentIds.length > 0 && incidents.length > 0) {
+        console.log('Looking for incidents with IDs:', incidentIds);
+        console.log('Available incidents:', incidents);
+        
+        // Find matching incidents from already loaded incidents state
+        // AND attach the slot-specific duration from downDetails
+        const matchingIncidents = incidentIds
+          .map((id) => {
+            const incident = incidents.find(inc => inc.incidentId === id);
+            const downDetail = editValue.find(detail => detail.incidentId === id);
+            
+            if (incident && downDetail) {
+              return {
+                ...incident,
+                slotDuration: downDetail.minutes, // Duration specific to this slot
+                slotIssue: downDetail.issue, // Issue specific to this slot
+              };
+            }
+            return incident;
+          })
+          .filter(inc => inc !== null && inc !== undefined);
+        
+        // Sort incidents by startTime - latest first (muộn nhất lên đầu)
+        // Assign display numbers (newest = highest No., oldest = No.01)
+        const sortedIncidents = matchingIncidents.sort((a, b) => {
+          return dayjs(b.startTime).valueOf() - dayjs(a.startTime).valueOf();
+        });
+
+        // Assign display numbers in reverse chronological order (newest gets highest number)
+        const incidentsWithDisplayNumbers = sortedIncidents.map((incident, displayIndex) => ({
+          ...incident,
+          displayNumber: sortedIncidents.length - displayIndex // Newest = highest number
+        }));
+
+        console.log('Matched and sorted incident details:', incidentsWithDisplayNumbers);
+        setIncidentDetails(incidentsWithDisplayNumbers);
+      } else {
+        setIncidentDetails([]);
+      }
+    } else {
+      setIncidentDetails([]);
+    }
+  }, [editModalVisible, editingCell, editValue, incidents]);
 
   const getCurrentShiftData = () => {
     switch (activeShift) {
@@ -988,6 +1050,10 @@ const calculateAndUpdateOEE = async (record, shift) => {
         if (slot.loadingTime && parseInt(slot.loadingTime) > maxLoadingTime) {
           errors.push(`Slot ${slot.time} (Ca 1): Thời gian tải không được vượt quá ${maxLoadingTime} phút.`);
         }
+        // ✅ VALIDATION: Kiểm tra loadingTime phải là số dương (>0)
+        if (slot.loadingTime && (isNaN(slot.loadingTime) || parseInt(slot.loadingTime) <= 0)) {
+          errors.push(`Slot ${slot.time} (Ca 1): Thời lượng phải là số dương (>0).`);
+        }
         // ✅ VALIDATION: Kiểm tra loadingTime không giống resultAmount khi target > 0
         // if (slot.loadingTime && slot.resultAmount && slot.targetAmount && parseInt(slot.loadingTime) === parseInt(slot.resultAmount) && parseInt(slot.targetAmount) > 0) {
         //   errors.push(`Slot ${slot.time} (Ca 1): Thời gian tải (${slot.loadingTime} phút) giống với số lượng sản xuất thực tế (${slot.resultAmount}). Vui lòng kiểm tra lại.`);
@@ -1049,6 +1115,10 @@ const calculateAndUpdateOEE = async (record, shift) => {
         const maxLoadingTime = 60;
         if (slot.loadingTime && parseInt(slot.loadingTime) > maxLoadingTime) {
           errors.push(`Slot ${slot.time} (Ca 2): Thời gian tải không được vượt quá ${maxLoadingTime} phút.`);
+        }
+        // ✅ VALIDATION: Kiểm tra loadingTime phải là số dương (>0)
+        if (slot.loadingTime && (isNaN(slot.loadingTime) || parseInt(slot.loadingTime) <= 0)) {
+          errors.push(`Slot ${slot.time} (Ca 2): Thời gian tải phải là số dương (>0).`);
         }
         // ✅ VALIDATION: Kiểm tra loadingTime không giống resultAmount khi target > 0
         // if (slot.loadingTime && slot.resultAmount && slot.targetAmount && parseInt(slot.loadingTime) === parseInt(slot.resultAmount) && parseInt(slot.targetAmount) > 0) {
@@ -1291,6 +1361,33 @@ const calculateAndUpdateOEE = async (record, shift) => {
     setShowSuccessPage(false);
   };
 
+  // Handler to view incident detail
+  const handleViewIncidentDetail = (incident) => {
+    setSelectedIncidentForDetail(incident);
+    setIncidentDetailModalVisible(true);
+  };
+
+  // Handler to navigate to Incident Management and open edit modal
+  const handleOpenInIncidentManagement = () => {
+    if (selectedIncidentForDetail) {
+      // Close current modal
+      setIncidentDetailModalVisible(false);
+      // Navigate to Incident Management with state
+      navigate('/team-leader/incidents', {
+        state: {
+          openEditModal: true,
+          incidentToEdit: selectedIncidentForDetail
+        }
+      });
+    }
+  };
+
+  // Handler to close incident detail modal
+  const handleCloseIncidentDetail = () => {
+    setIncidentDetailModalVisible(false);
+    setSelectedIncidentForDetail(null);
+  };
+
   const handleModalOk = () => {
     if (!editingCell) return;
 
@@ -1324,7 +1421,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
     if (!Array.isArray(downDetails) || downDetails.length === 0) {
       return '';
     }
-    return downDetails.map(detail => detail.type).join('\n');
+    return downDetails.map(detail => detail?.type || 'Unknown').join('\n');
   };
 
   const columns = [
@@ -1400,18 +1497,21 @@ const calculateAndUpdateOEE = async (record, shift) => {
       ),
     },
     {
-      title: 'Running Time (phút)',
+      title: 'Thời gian chạy (phút)',
       dataIndex: 'runningTime',
       key: 'runningTime',
       width: 180,
       align: 'center',
       render: (text, record) => {
-        // Tính running time = loadingTime - tổng downtime từ downDetails
+        // Tính running time = loadingTime - tổng downtime từ downDetails - break time
         const loadingTime = parseFloat(record.loadingTime) || 0;
         const totalDowntime = Array.isArray(record.downDetails)
           ? record.downDetails.reduce((sum, detail) => sum + (parseFloat(detail.minutes) || 0), 0)
           : 0;
-        const runningTime = Math.max(0, loadingTime - totalDowntime);
+
+        // Subtract break time for specific slots
+        const breakTime = (record.time === '11:00 - 12:00' || record.time === '19:00 - 20:00') ? 30 : 0;
+        const runningTime = Math.max(0, loadingTime - totalDowntime - breakTime);
 
         return (
           <div
@@ -1679,6 +1779,8 @@ const calculateAndUpdateOEE = async (record, shift) => {
                       }
                     }}
                     value={selectedDate}
+                    defaultValue={dayjs()}
+                    disabledDate={(current) => current && current > dayjs().endOf('day')}
                     placeholder="09/09/2025"
                   />
                 </Form.Item>
@@ -2367,6 +2469,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
           setEditModalVisible(false);
           setEditingCell(null);
           setEditValue('');
+          setActiveTab('1'); // Reset to default tab
         }}
         okText={editingCell?.dataIndex === 'downDetails' ? "Đóng" : "Lưu"}
         footer={editingCell?.dataIndex === 'downDetails' ? [
@@ -2378,6 +2481,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
               setEditModalVisible(false);
               setEditingCell(null);
               setEditValue('');
+              setActiveTab('1'); // Reset to default tab
             }}
             style={{
               background: 'linear-gradient(135deg, #283652 0%, #334766 100%)',
@@ -2416,92 +2520,468 @@ const calculateAndUpdateOEE = async (record, shift) => {
             Lưu
           </Button>
         ]}
-        width={500}
+        width={activeTab === '2' ? 1050 : 500}
       >
         <Form layout="vertical" style={{ marginTop: '16px' }}>
           <Form.Item
             label={<span style={{ fontWeight: 500, color: '#374151' }}>{getFieldLabel(editingCell?.dataIndex)}</span>}
           >
             {editingCell?.dataIndex === 'downDetails' ? (
-              <div style={{
-                padding: '12px',
-                backgroundColor: '#f9fafb',
-                border: '1px solid #e5e7eb',
-                borderRadius: '6px',
-                minHeight: '200px',
-                maxHeight: '400px',
-                overflowY: 'auto'
-              }}>
-                {Array.isArray(editValue) && editValue.length > 0 ? (
-                  <div>
-                    <div style={{
-                      fontSize: '16px',
-                      fontWeight: 600,
-                      color: '#1f2937',
-                      marginBottom: '16px',
-                      textAlign: 'center'
-                    }}>
-                      Chi Tiết Thời Gian Dừng Máy - {editingCell?.record?.time}
-                    </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      {editValue.map((detail, index) => (
-                        <div key={index} style={{
-                          padding: '12px',
-                          backgroundColor: 'white',
-                          border: '1px solid #e5e7eb',
-                          borderRadius: '6px',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-                        }}>
-                          <div style={{
-                            fontSize: '14px',
-                            fontWeight: 600,
-                            color: '#374151',
-                            marginBottom: '8px'
-                          }}>
-                            {detail.type}
+              <Tabs
+                activeKey={activeTab}
+                onChange={setActiveTab}
+                size="small"
+                tabBarStyle={{
+                  marginBottom: '16px',
+                  borderBottom: '1px solid #e5e7eb'
+                }}
+                items={[
+                  {
+                    key: '1',
+                    label: 'Tổng Quan',
+                    children: (
+                      <div style={{
+                        padding: '12px',
+                        backgroundColor: '#f9fafb',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '6px',
+                        minHeight: '200px',
+                        maxHeight: '400px',
+                        overflowY: 'auto'
+                      }}>
+                        {Array.isArray(editValue) && editValue.length > 0 ? (
+                          <div>
+                            <div style={{
+                              fontSize: '16px',
+                              fontWeight: 600,
+                              color: '#1f2937',
+                              marginBottom: '16px',
+                              textAlign: 'center'
+                            }}>
+                              Tổng Quan Thời Gian Dừng Máy - {editingCell?.record?.time}
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                              {editValue.map((detail, index) => (
+                                <div key={index} style={{
+                                  padding: '12px',
+                                  backgroundColor: 'white',
+                                  border: '1px solid #e5e7eb',
+                                  borderRadius: '6px',
+                                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+                                }}>
+                                  <div style={{
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    color: '#374151',
+                                    marginBottom: '8px'
+                                  }}>
+                                    {detail?.type || 'N/A'}
+                                  </div>
+                                  <div style={{
+                                    display: 'flex',
+                                    gap: '16px',
+                                    fontSize: '13px',
+                                    color: '#6b7280',
+                                    flexDirection: 'column'
+                                  }}>
+                                    <span>Thời gian: {detail?.minutes?.toFixed(2) || 0} phút</span>
+                                    {detail?.issue && (
+                                      <span>Vấn đề: {detail.issue}</span>
+                                    )}
+                                    {detail?.type === 'Phế phẩm' && detail?.count && (
+                                      <span>Số lượng: {detail.count}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            <div style={{
+                              marginTop: '16px',
+                              padding: '12px',
+                              backgroundColor: '#e0f2fe',
+                              border: '1px solid #bae6fd',
+                              borderRadius: '6px',
+                              fontSize: '13px',
+                              color: '#0369a1',
+                              fontStyle: 'italic'
+                            }}>
+                              <strong>Lưu ý:</strong> Hệ thống tự động phân chia thời gian dừng máy cho các slot bị ảnh hưởng bởi sự cố lan ra nhiều slot. Thời gian hiển thị ở đây là phần thời gian dừng thực tế trong slot này.
+                            </div>
                           </div>
+                        ) : (
                           <div style={{
-                            display: 'flex',
-                            gap: '16px',
-                            fontSize: '13px',
+                            textAlign: 'center',
                             color: '#6b7280',
-                            flexDirection: 'column'  // ✅ THAY ĐỔI: Dùng column để dễ thêm issue
+                            fontSize: '14px',
+                            padding: '40px 0'
                           }}>
-                            <span>Thời gian: {detail.minutes.toFixed(2)} phút</span>
-                            {detail.issue && (  // ✅ THÊM: Chỉ hiển thị nếu có issue
-                              <span>Vấn đề: {detail.issue}</span>
-                            )}
-                            {detail.type === 'Phế phẩm' && detail.count && (
-                              <span>Số lượng: {detail.count}</span>
-                            )}
+                            Không có chi tiết thời gian dừng máy được ghi lại
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{
-                      marginTop: '16px',
-                      padding: '12px',
-                      backgroundColor: '#e0f2fe',
-                      border: '1px solid #bae6fd',
-                      borderRadius: '6px',
-                      fontSize: '13px',
-                      color: '#0369a1',
-                      fontStyle: 'italic'
-                    }}>
-                      <strong>Lưu ý:</strong> Hệ thống tự động phân chia thời gian dừng máy cho các slot bị ảnh hưởng bởi sự cố lan ra nhiều slot. Thời gian hiển thị ở đây là phần thời gian dừng thực tế trong slot này.
-                    </div>
-                  </div>
-                ) : (
-                  <div style={{
-                    textAlign: 'center',
-                    color: '#6b7280',
-                    fontSize: '14px',
-                    padding: '40px 0'
-                  }}>
-                    Không có chi tiết thời gian dừng máy được ghi lại
-                  </div>
-                )}
-              </div>
+                        )}
+                      </div>
+                    )
+                  },
+                  {
+                    key: '2',
+                    label: 'Chi Tiết Sự Cố',
+                    children: (
+                      <div style={{
+                        padding: '0',
+                        backgroundColor: '#fafafa',
+                        maxHeight: '540px',
+                        overflowY: 'auto'
+                      }}>
+                        {incidentDetails.length > 0 ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                            {/* Slot Time Header - Display once at the top */}
+                            {/* <div style={{ backgroundColor: 'white', padding: '16px 24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)', marginBottom: '-8px' }}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 1fr', gap: '16px', alignItems: 'end' }}>
+                                <div>
+                                  <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '8px' }}>Thời gian (Slot)</label>
+                                  <input
+                                    type="text"
+                                    value={editingCell?.record?.time?.split(' - ')[0] || ''}
+                                    disabled
+                                    style={{ fontSize: '14px', padding: '10px 12px', height: '40px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#e0f2fe', fontWeight: '600' }}
+                                  />
+                                </div>
+                                <div style={{ textAlign: 'center', paddingBottom: '8px' }}>
+                                  <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#0369a1' }}>-</span>
+                                </div>
+                                <div>
+                                  <label style={{ fontSize: '14px', fontWeight: '600', color: 'transparent', display: 'block', marginBottom: '8px' }}>.</label>
+                                  <input
+                                    type="text"
+                                    value={editingCell?.record?.time?.split(' - ')[1] || ''}
+                                    disabled
+                                    style={{ fontSize: '14px', padding: '10px 12px', height: '40px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#e0f2fe', fontWeight: '600' }}
+                                  />
+                                </div>
+                              </div>
+                            </div> */}
+
+                            {incidentDetails.map((incident, incidentIndex) => (
+                              <div key={incident?.incidentId || incidentIndex} style={{ backgroundColor: 'white', padding: '24px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                                {/* Record Number Box */}
+                                <div style={{ backgroundColor: '#9B9B9B', color: 'white', padding: '14px 18px', fontWeight: '700', marginBottom: '22px', borderRadius: '6px', fontSize: '15px', border: '2px solid #7A7A7A', textAlign: 'center', letterSpacing: '1px' }}>
+                                  No.{String(incident?.displayNumber ?? incidentIndex + 1).padStart(2, '0')}
+                                </div>
+
+                                {/* Incident Time Section */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 1fr', gap: '16px', alignItems: 'end', marginBottom: '18px' }}>
+                                  <div>
+                                    <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '8px' }}>Thời gian</label>
+                                    <input
+                                      type="text"
+                                      value={editingCell?.record?.time?.split(' - ')[0] || ''}
+                                      disabled
+                                      style={{ fontSize: '14px', padding: '10px 12px', height: '40px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                    />
+                                  </div>
+                                  <div style={{ textAlign: 'center', paddingBottom: '8px' }}>
+                                    <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#888' }}>-</span>
+                                  </div>
+                                  <div>
+                                    <input
+                                      type="text"
+                                      value={editingCell?.record?.time?.split(' - ')[1] || ''}
+                                      disabled
+                                      style={{ fontSize: '14px', padding: '10px 12px', height: '40px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Type */}
+                                <div style={{ marginBottom: '16px' }}>
+                                  <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '8px' }}>Loại <span style={{ color: 'red' }}>*</span></label>
+                                  <input
+                                    type="text"
+                                    value={incident?.type?.typeName || incident?.type || 'N/A'}
+                                    disabled
+                                    style={{ fontSize: '14px', padding: '10px 12px', height: '40px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                  />
+                                </div>
+
+                                {/* Equipment Code and Name */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                                  <div>
+                                    <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '8px' }}>Mã thiết bị <span style={{ color: 'red' }}>*</span></label>
+                                    <input
+                                      type="text"
+                                      value={incident?.equipment?.equipmentCode || 'N/A'}
+                                      disabled
+                                      style={{ fontSize: '14px', padding: '10px 12px', height: '40px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '8px' }}>Tên thiết bị</label>
+                                    <input
+                                      type="text"
+                                      value={incident?.equipment?.equipmentName || 'N/A'}
+                                      disabled
+                                      style={{ fontSize: '14px', padding: '10px 12px', height: '40px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Stage and Line */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                                  <div>
+                                    <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '8px' }}>Công đoạn</label>
+                                    <input
+                                      type="text"
+                                      value={incident?.stage?.stageName || incident?.equipment?.stage?.stageName || 'N/A'}
+                                      disabled
+                                      style={{ fontSize: '14px', padding: '10px 12px', height: '40px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '8px' }}>Line</label>
+                                    <input
+                                      type="text"
+                                      value={incident?.line?.lineName || 'N/A'}
+                                      disabled
+                                      style={{ fontSize: '14px', padding: '10px 12px', height: '40px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Occurred time (Start) */}
+                                <div style={{ marginBottom: '16px' }}>
+                                  <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '10px' }}>Thời gian xảy ra (Bắt đầu)</label>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                                    <div>
+                                      <input
+                                        type="text"
+                                        value={incident?.startTime ? dayjs(incident.startTime).format('MM/DD') : 'N/A'}
+                                        disabled
+                                        style={{ fontSize: '13px', padding: '8px 10px', height: '36px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                      />
+                                      <div style={{ fontSize: '12px', color: '#888', marginTop: '4px', textAlign: 'center', fontWeight: '500' }}>Ngày</div>
+                                    </div>
+                                    <div>
+                                      <input
+                                        type="text"
+                                        value={incident?.startTime ? dayjs(incident.startTime).format('HH') : 'N/A'}
+                                        disabled
+                                        style={{ fontSize: '13px', padding: '8px 10px', height: '36px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                      />
+                                      <div style={{ fontSize: '12px', color: '#888', marginTop: '4px', textAlign: 'center', fontWeight: '500' }}>Giờ</div>
+                                    </div>
+                                    <div>
+                                      <input
+                                        type="text"
+                                        value={incident?.startTime ? dayjs(incident.startTime).format('mm') : 'N/A'}
+                                        disabled
+                                        style={{ fontSize: '13px', padding: '8px 10px', height: '36px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                      />
+                                      <div style={{ fontSize: '12px', color: '#888', marginTop: '4px', textAlign: 'center', fontWeight: '500' }}>Phút</div>
+                                    </div>
+                                    <div>
+                                      <input
+                                        type="text"
+                                        value={incident?.startTime ? dayjs(incident.startTime).format('ss') : 'N/A'}
+                                        disabled
+                                        style={{ fontSize: '13px', padding: '8px 10px', height: '36px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                      />
+                                      <div style={{ fontSize: '12px', color: '#888', marginTop: '4px', textAlign: 'center', fontWeight: '500' }}>Giây</div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Occurred time (End) */}
+                                <div style={{ marginBottom: '16px' }}>
+                                  <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '10px' }}>Thời gian xảy ra (Kết thúc)</label>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                                    <div>
+                                      <input
+                                        type="text"
+                                        value={incident?.endTime ? dayjs(incident.endTime).format('MM/DD') : 'N/A'}
+                                        disabled
+                                        style={{ fontSize: '13px', padding: '8px 10px', height: '36px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                      />
+                                      <div style={{ fontSize: '12px', color: '#888', marginTop: '4px', textAlign: 'center', fontWeight: '500' }}>Ngày</div>
+                                    </div>
+                                    <div>
+                                      <input
+                                        type="text"
+                                        value={incident?.endTime ? dayjs(incident.endTime).format('HH') : 'N/A'}
+                                        disabled
+                                        style={{ fontSize: '13px', padding: '8px 10px', height: '36px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                      />
+                                      <div style={{ fontSize: '12px', color: '#888', marginTop: '4px', textAlign: 'center', fontWeight: '500' }}>Giờ</div>
+                                    </div>
+                                    <div>
+                                      <input
+                                        type="text"
+                                        value={incident?.endTime ? dayjs(incident.endTime).format('mm') : 'N/A'}
+                                        disabled
+                                        style={{ fontSize: '13px', padding: '8px 10px', height: '36px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                      />
+                                      <div style={{ fontSize: '12px', color: '#888', marginTop: '4px', textAlign: 'center', fontWeight: '500' }}>Phút</div>
+                                    </div>
+                                    <div>
+                                      <input
+                                        type="text"
+                                        value={incident?.endTime ? dayjs(incident.endTime).format('ss') : 'N/A'}
+                                        disabled
+                                        style={{ fontSize: '13px', padding: '8px 10px', height: '36px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                      />
+                                      <div style={{ fontSize: '12px', color: '#888', marginTop: '4px', textAlign: 'center', fontWeight: '500' }}>Giây</div>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* Duration - Show slot-specific duration with total duration info */}
+                                <div style={{ marginBottom: '16px' }}>
+                                  <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '8px' }}>
+                                    Thời lượng trong slot này (phút)
+                                    {incident?.slotDuration !== undefined && incident?.duration !== undefined && incident.slotDuration !== incident.duration && (
+                                      <span style={{ fontSize: '12px', fontWeight: '400', color: '#6b7280', marginLeft: '8px' }}>
+                                        (Tổng thời gian sự cố: {incident.duration.toFixed(2)} phút)
+                                      </span>
+                                    )}
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={incident?.slotDuration !== undefined && incident?.slotDuration !== null ? incident.slotDuration.toFixed(2) : (incident?.duration !== undefined && incident?.duration !== null ? incident.duration.toFixed(2) : '0')}
+                                    disabled
+                                    style={{ fontSize: '14px', padding: '10px 12px', height: '40px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: incident?.slotDuration !== incident?.duration ? '#fef3c7' : '#f9fafb', fontWeight: incident?.slotDuration !== incident?.duration ? '600' : '400' }}
+                                  />
+                                  {incident?.slotDuration !== undefined && incident?.duration !== undefined && incident.slotDuration !== incident.duration && (
+                                    <div style={{ fontSize: '12px', color: '#d97706', marginTop: '6px', fontStyle: 'italic', backgroundColor: '#fef9e7', padding: '8px 10px', borderRadius: '4px', border: '1px solid #fde68a' }}>
+                                      <strong>⚠️ Lưu ý:</strong> Sự cố này kéo dài qua nhiều slot. Thời gian hiển thị là phần thời gian dừng máy trong slot này ({editingCell?.record?.time}). Tổng thời gian sự cố: {incident.duration.toFixed(2)} phút.
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Issue */}
+                                <div style={{ marginBottom: '16px' }}>
+                                  <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '8px' }}>Mô tả vấn đề</label>
+                                  <textarea
+                                    value={incident?.issue || ''}
+                                    disabled
+                                    style={{ fontSize: '14px', padding: '10px 12px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', fontFamily: 'Arial, sans-serif', resize: 'vertical', backgroundColor: '#f9fafb' }}
+                                    rows="3"
+                                  />
+                                </div>
+
+                                {/* Memo */}
+                                <div style={{ marginBottom: '16px' }}>
+                                  <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '8px' }}>Nguyên nhân</label>
+                                  <textarea
+                                    value={incident?.reason || ''}
+                                    disabled
+                                    style={{ fontSize: '14px', padding: '10px 12px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', fontFamily: 'Arial, sans-serif', resize: 'vertical', backgroundColor: '#f9fafb' }}
+                                    rows="3"
+                                  />
+                                </div>
+
+                                {/* Solution */}
+                                <div style={{ marginBottom: '16px' }}>
+                                  <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '8px' }}>Giải pháp</label>
+                                  <textarea
+                                    value={incident?.solution || ''}
+                                    disabled
+                                    style={{ fontSize: '14px', padding: '10px 12px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', fontFamily: 'Arial, sans-serif', resize: 'vertical', backgroundColor: '#f9fafb' }}
+                                    rows="3"
+                                  />
+                                </div>
+
+                                {/* Reporter and Technical Support */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                                  <div>
+                                    <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '8px' }}>Người báo cáo</label>
+                                    <input
+                                      type="text"
+                                      value={incident?.reportedByUser?.fullName || incident?.reporter || 'N/A'}
+                                      disabled
+                                      style={{ fontSize: '14px', padding: '10px 12px', height: '40px', width: '100%', border: '1px solid #D0D0D0', borderRadius: '6px', boxSizing: 'border-box', backgroundColor: '#f9fafb' }}
+                                    />
+                                  </div>
+                                  <div style={{ paddingTop: '34px' }}>
+                                    <label style={{ fontSize: '14px', fontWeight: '500', color: '#333', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={incident?.isTechSupport || incident?.technicalSupport || false}
+                                        disabled
+                                        style={{ width: '16px', height: '16px' }}
+                                      />
+                                      Cần hỗ trợ kỹ thuật
+                                    </label>
+                                  </div>
+                                </div>
+
+                                {/* Incident Images */}
+                                {/* {incident?.incidentImages && incident.incidentImages.length > 0 && (
+                                  <div style={{ marginBottom: '20px' }}>
+                                    <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '10px' }}>Hình ảnh sự cố</label>
+                                    <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+                                      {incident.incidentImages.map((imgObj, imgIndex) => (
+                                        <img
+                                          key={imgIndex}
+                                          src={imgObj?.imageUrl || imgObj}
+                                          alt={`Incident ${imgIndex + 1}`}
+                                          style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #D0D0D0' }}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                                {incident?.images && incident.images.length > 0 && (
+                                  <div style={{ marginBottom: '20px' }}>
+                                    <label style={{ fontSize: '14px', fontWeight: '600', color: '#333', display: 'block', marginBottom: '10px' }}>Hình ảnh sự cố</label>
+                                    <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap' }}>
+                                      {incident.images.map((img, imgIndex) => (
+                                        <img
+                                          key={imgIndex}
+                                          src={img}
+                                          alt={`Incident ${imgIndex + 1}`}
+                                          style={{ width: '90px', height: '90px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #D0D0D0' }}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                )} */}
+
+                                {/* Action Button */}
+                                <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '2px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                                  <Button
+                                    type="primary"
+                                    onClick={() => handleViewIncidentDetail(incident)}
+                                    style={{
+                                      backgroundColor: '#283652',
+                                      borderColor: '#283652',
+                                      borderRadius: '6px',
+                                      height: '40px',
+                                      padding: '0 24px',
+                                      fontWeight: 500,
+                                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                    }}
+                                  >
+                                    📋 Xem chi tiết & Chỉnh sửa
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div style={{
+                            textAlign: 'center',
+                            color: '#6b7280',
+                            fontSize: '14px',
+                            padding: '40px 0',
+                            backgroundColor: 'white',
+                            borderRadius: '8px'
+                          }}>
+                            Không có chi tiết sự cố được ghi lại
+                          </div>
+                        )}
+                      </div>
+                    )
+                  }
+                ]}
+              />
             ) : (
               <Input
                 size="large"
@@ -2536,6 +3016,253 @@ const calculateAndUpdateOEE = async (record, shift) => {
             : "Lưu tạm thời sẽ lưu dữ liệu cục bộ chỉ (không chèn cơ sở dữ liệu). Bạn vẫn muốn quay lại màn hình kết quả số lượng sản xuất không?"
           }
         </p>
+      </Modal>
+
+      {/* Incident Detail Modal */}
+      <Modal
+        title={
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '12px',
+            padding: '8px 0'
+          }}>
+            <span style={{ fontSize: '18px' }}>📋</span>
+            <span style={{ fontSize: '17px', fontWeight: 600, color: '#283652' }}>
+              Chi Tiết Sự Cố #{selectedIncidentForDetail?.incidentId || ''}
+            </span>
+          </div>
+        }
+        visible={incidentDetailModalVisible}
+        onCancel={handleCloseIncidentDetail}
+        width={900}
+        footer={[
+          <Button 
+            key="close" 
+            onClick={handleCloseIncidentDetail}
+            style={{
+              borderRadius: '6px',
+              height: '40px',
+              padding: '0 24px'
+            }}
+          >
+            Đóng
+          </Button>,
+          <Button 
+            key="viewInManagement" 
+            type="primary"
+            onClick={handleOpenInIncidentManagement}
+            style={{
+              backgroundColor: '#283652',
+              borderColor: '#283652',
+              borderRadius: '6px',
+              height: '40px',
+              padding: '0 24px',
+              fontWeight: 500
+            }}
+          >
+            🔗 Mở trong Quản Lý Sự Cố
+          </Button>
+        ]}
+        bodyStyle={{ 
+          maxHeight: '70vh', 
+          overflowY: 'auto',
+          padding: '24px'
+        }}
+      >
+        {selectedIncidentForDetail && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* Status Badge */}
+            <div style={{ 
+              backgroundColor: selectedIncidentForDetail.status === 'Hoàn thành' ? '#f0f9ff' : 
+                              selectedIncidentForDetail.status === 'Đang xử lý' ? '#fef3c7' : '#fef2f2',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              borderLeft: `4px solid ${selectedIncidentForDetail.status === 'Hoàn thành' ? '#0369a1' :
+                                                        selectedIncidentForDetail.status === 'Đang xử lý' ? '#d97706' : '#dc2626'}`
+            }}>
+              <Text strong style={{ 
+                color: selectedIncidentForDetail.status === 'Hoàn thành' ? '#0369a1' :
+                       selectedIncidentForDetail.status === 'Đang xử lý' ? '#d97706' : '#dc2626'
+              }}>
+                Trạng thái: {selectedIncidentForDetail.status}
+              </Text>
+            </div>
+
+            {/* Equipment & Line Info */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: '1fr 1fr', 
+              gap: '16px',
+              padding: '16px',
+              backgroundColor: '#f9fafb',
+              borderRadius: '8px'
+            }}>
+              <div>
+                <Text type="secondary" style={{ fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                  Thiết bị
+                </Text>
+                <Text strong style={{ fontSize: '15px' }}>
+                  {selectedIncidentForDetail.equipment?.equipmentName || 'N/A'}
+                </Text>
+                <br />
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  Mã: {selectedIncidentForDetail.equipment?.equipmentCode || 'N/A'}
+                </Text>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                  Dây chuyền
+                </Text>
+                <Text strong style={{ fontSize: '15px' }}>
+                  {selectedIncidentForDetail.line?.lineName || 'N/A'}
+                </Text>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                  Công đoạn
+                </Text>
+                <Text strong style={{ fontSize: '15px' }}>
+                  {selectedIncidentForDetail.stage?.stageName || selectedIncidentForDetail.equipment?.stage?.stageName || 'N/A'}
+                </Text>
+              </div>
+              <div>
+                <Text type="secondary" style={{ fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                  Loại dừng
+                </Text>
+                <Text strong style={{ fontSize: '15px' }}>
+                  {selectedIncidentForDetail.type?.typeName || selectedIncidentForDetail.type || 'N/A'}
+                </Text>
+              </div>
+            </div>
+
+            {/* Time Information */}
+            <div style={{ 
+              padding: '16px',
+              backgroundColor: '#f0f9ff',
+              borderRadius: '8px'
+            }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px' }}>
+                <div>
+                  <Text type="secondary" style={{ fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                    Thời gian bắt đầu
+                  </Text>
+                  <Text strong style={{ fontSize: '15px', color: '#0369a1' }}>
+                    {selectedIncidentForDetail.startTime ? dayjs(selectedIncidentForDetail.startTime).format('DD/MM/YYYY HH:mm:ss') : 'N/A'}
+                  </Text>
+                </div>
+                <div>
+                  <Text type="secondary" style={{ fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                    Thời gian kết thúc
+                  </Text>
+                  <Text strong style={{ fontSize: '15px', color: '#0369a1' }}>
+                    {selectedIncidentForDetail.endTime ? dayjs(selectedIncidentForDetail.endTime).format('DD/MM/YYYY HH:mm:ss') : 'N/A'}
+                  </Text>
+                </div>
+                <div>
+                  <Text type="secondary" style={{ fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                    Thời lượng (phút)
+                  </Text>
+                  <Text strong style={{ fontSize: '16px', color: '#dc2626' }}>
+                    {selectedIncidentForDetail.duration !== undefined && selectedIncidentForDetail.duration !== null 
+                      ? selectedIncidentForDetail.duration.toFixed(2) 
+                      : (selectedIncidentForDetail.slotDuration !== undefined && selectedIncidentForDetail.slotDuration !== null
+                          ? selectedIncidentForDetail.slotDuration.toFixed(2)
+                          : 'N/A')}
+                  </Text>
+                </div>
+              </div>
+            </div>
+
+            {/* Issue Description */}
+            <div>
+              <Text strong style={{ fontSize: '14px', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                Mô tả vấn đề
+              </Text>
+              <div style={{ 
+                padding: '12px', 
+                backgroundColor: '#f9fafb', 
+                borderRadius: '6px',
+                border: '1px solid #e5e7eb',
+                minHeight: '60px'
+              }}>
+                <Text>{selectedIncidentForDetail.issue || 'N/A'}</Text>
+              </div>
+            </div>
+
+            {/* Reason */}
+            <div>
+              <Text strong style={{ fontSize: '14px', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                Nguyên nhân
+              </Text>
+              <div style={{ 
+                padding: '12px', 
+                backgroundColor: '#f9fafb', 
+                borderRadius: '6px',
+                border: '1px solid #e5e7eb',
+                minHeight: '60px'
+              }}>
+                <Text>{selectedIncidentForDetail.reason || selectedIncidentForDetail.memo || 'N/A'}</Text>
+              </div>
+            </div>
+
+            {/* Solution */}
+            <div>
+              <Text strong style={{ fontSize: '14px', display: 'block', marginBottom: '8px', color: '#374151' }}>
+                Giải pháp
+              </Text>
+              <div style={{ 
+                padding: '12px', 
+                backgroundColor: '#f9fafb', 
+                borderRadius: '6px',
+                border: '1px solid #e5e7eb',
+                minHeight: '60px'
+              }}>
+                <Text>{selectedIncidentForDetail.solution || ''}</Text>
+              </div>
+            </div>
+
+            {/* Reporter and Tech Support */}
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: '1fr auto', 
+              gap: '16px',
+              padding: '16px',
+              backgroundColor: '#f9fafb',
+              borderRadius: '8px'
+            }}>
+              <div>
+                <Text type="secondary" style={{ fontSize: '13px', display: 'block', marginBottom: '4px' }}>
+                  Người báo cáo
+                </Text>
+                <Text strong style={{ fontSize: '15px' }}>
+                  {selectedIncidentForDetail.reportedByUser?.fullName || selectedIncidentForDetail.reporter || 'N/A'}
+                </Text>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="checkbox"
+                  checked={selectedIncidentForDetail.isTechSupport || selectedIncidentForDetail.technicalSupport || false}
+                  disabled
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <Text style={{ fontSize: '14px' }}>Cần hỗ trợ kỹ thuật</Text>
+              </div>
+            </div>
+
+            {/* Note */}
+            <div style={{
+              padding: '12px 16px',
+              backgroundColor: '#fef3c7',
+              borderRadius: '6px',
+              border: '1px solid #fde68a'
+            }}>
+              <Text style={{ fontSize: '13px', color: '#92400e' }}>
+                💡 <strong>Lưu ý:</strong> Để chỉnh sửa chi tiết sự cố này, vui lòng click nút "Mở trong Quản Lý Sự Cố" ở phía dưới.
+              </Text>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );
