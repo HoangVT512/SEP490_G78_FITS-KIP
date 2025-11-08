@@ -259,6 +259,13 @@ export const getElectricalTechnicians = async () => {
   return apiRequest("/maintenance/technicians/electrical", { method: "GET" });
 };
 
+// Get technicians workload by date
+export const getTechniciansWorkloadByDate = async (date) => {
+  // Format date to YYYY-MM-DD
+  const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : date;
+  return apiRequest(`/maintenance/technicians/workload?date=${dateStr}`, { method: "GET" });
+};
+
 // ===== STATISTICS & REPORTS =====
 
 // Get maintenance statistics

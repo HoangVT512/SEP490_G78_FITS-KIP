@@ -45,6 +45,14 @@ export const replacementHistoryService = {
     return res?.data || res;
   },
 
+  async getByWorkOrderId(workOrderId) {
+    const res = await apiRequest(
+      `/ReplacementHistories/workorder/${encodeURIComponent(workOrderId)}`,
+      { method: "GET" }
+    );
+    return res?.data || res;
+  },
+
   async update(id, payload) {
     const res = await apiRequest(
       `/ReplacementHistories/${encodeURIComponent(id)}`,
@@ -68,13 +76,10 @@ export const replacementHistoryService = {
   },
 
   async batchRecordActualUsage(payload) {
-    const res = await apiRequest(
-      `/ReplacementHistories/batch-record-usage`,
-      {
-        method: "PUT",
-        body: JSON.stringify(payload),
-      }
-    );
+    const res = await apiRequest(`/ReplacementHistories/batch-record-usage`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
     return res?.data || res;
   },
 

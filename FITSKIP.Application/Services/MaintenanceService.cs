@@ -70,6 +70,49 @@ namespace FITSKIP.Application.Services
             if (stage == null)
                 throw new InvalidOperationException($"Stage not found: {request.StageId}");
 
+            // ✅ CHECK TRÙNG TEMPLATE: Kiểm tra tên template đã tồn tại trong cùng Stage chưa
+            var existingTemplates = await _templateRepository.GetByStageIdAsync(request.StageId);
+            var isDuplicateTemplate = existingTemplates.Any(t => 
+                t.TemplateName.Trim().Equals(request.TemplateName.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                t.IsActive
+            );
+            
+            if (isDuplicateTemplate)
+            {
+                throw new InvalidOperationException(
+                    $"Template với tên '{request.TemplateName}' đã tồn tại trong công đoạn '{stage.StageName}'. " +
+                    $"Vui lòng sử dụng tên khác hoặc cập nhật template hiện có."
+                );
+            }
+
+            // ✅ CHECK TRÙNG ITEM: Kiểm tra trùng lặp trong danh sách TemplateItems
+            if (request.TemplateItems != null && request.TemplateItems.Any())
+            {
+                var duplicateItems = request.TemplateItems
+                    .GroupBy(item => new { 
+                        StepName = item.StepName.Trim().ToLower(), 
+                        Category = item.Category 
+                    })
+                    .Where(g => g.Count() > 1)
+                    .Select(g => new { 
+                        StepName = g.First().StepName, 
+                        Category = g.First().Category, 
+                        Count = g.Count() 
+                    })
+                    .ToList();
+
+                if (duplicateItems.Any())
+                {
+                    var duplicateList = string.Join(", ", duplicateItems.Select(d => 
+                        $"'{d.StepName}' ({d.Category}) x{d.Count}"
+                    ));
+                    throw new InvalidOperationException(
+                        $"Phát hiện các bước kiểm tra bị trùng lặp: {duplicateList}. " +
+                        $"Mỗi bước kiểm tra phải có tên duy nhất trong cùng loại công việc (Electrical/Mechanical)."
+                    );
+                }
+            }
+
             var template = new MaintenanceTemplate
             {
                 StageId = request.StageId,
@@ -202,6 +245,19 @@ namespace FITSKIP.Application.Services
             if (equipment == null)
                 throw new InvalidOperationException($"Equipment not found: {request.EquipmentId}");
 
+            var existingPlans = await _planRepository.GetByEquipmentIdAsync(request.EquipmentId);
+            var hasActivePlan = existingPlans.Any(p => p.IsActive);
+            
+            if (hasActivePlan)
+            {
+                var activePlan = existingPlans.First(p => p.IsActive);
+                throw new InvalidOperationException(
+                    $"Thiết bị '{equipment.EquipmentName}' ({equipment.EquipmentCode}) đã có kế hoạch bảo trì định kỳ. " +
+                    $"Chu kỳ hiện tại: {activePlan.IntervalValue} {activePlan.IntervalType}. " +
+                    $"Vui lòng vô hiệu hóa kế hoạch cũ trước khi tạo kế hoạch mới."
+                );
+            }
+
             // Validate template if provided
             if (request.TemplateId.HasValue)
             {
@@ -320,8 +376,20 @@ namespace FITSKIP.Application.Services
             if (plan == null)
                 throw new InvalidOperationException($"Plan not found: {planId}");
 
-            // Delete all work orders
+            // ✅ VALIDATION 2: Kiểm tra có WorkOrder đang In-Progress không
             var workOrders = await _workOrderRepository.GetByPlanIdAsync(planId);
+            var hasInProgressWorkOrder = workOrders.Any(wo => wo.Status == "InProgress");
+            
+            if (hasInProgressWorkOrder)
+            {
+                var inProgressWO = workOrders.First(wo => wo.Status == "InProgress");
+                throw new InvalidOperationException(
+                    $"Không thể xóa kế hoạch bảo trì này vì đang có phiếu bảo trì #{inProgressWO.WorkOrderCode} đang thực hiện. " +
+                    $"Vui lòng hoàn thành hoặc hủy phiếu bảo trì trước khi xóa kế hoạch."
+                );
+            }
+
+            // Delete all work orders (only Pending, Completed, or Cancelled ones remain)
             foreach (var wo in workOrders)
             {
                 await _checklistRepository.DeleteByWorkOrderIdAsync(wo.WorkOrderId);
@@ -479,6 +547,18 @@ namespace FITSKIP.Application.Services
             if (equipment == null)
                 throw new InvalidOperationException($"Equipment not found: {plan.EquipmentId}");
 
+            // ✅ Validate ScheduledDate phải >= hôm nay
+            if (request.ScheduledDate.Date < DateTime.Today)
+                throw new InvalidOperationException("Ngày dự định bảo trì không được là ngày quá khứ");
+
+            // ✅ Validate ScheduledDate phải <= NextDueDate của Plan
+            var planDueDate = plan.PostponedDueDate ?? plan.NextDueDate;
+            if (request.ScheduledDate.Date > planDueDate.Date)
+                throw new InvalidOperationException("Không được tạo bảo trì sau ngày đến hạn. Phải hoãn bảo trì.");
+
+            // ✅ Nếu không có DueDate, tự động set = ScheduledDate (hoàn thành trong ngày)
+            var dueDate = request.DueDate ?? request.ScheduledDate;
+
             // Validate assigned technicians
             if (!string.IsNullOrEmpty(request.AssignedToElectrical))
             {
@@ -507,11 +587,11 @@ namespace FITSKIP.Application.Services
                 PlanId = request.PlanId,
                 EquipmentId = plan.EquipmentId.Value,
                 AssignedDate = DateTime.Now,
-                DueDate = request.DueDate,
+                ScheduledDate = request.ScheduledDate, // ✅ Ngày dự định bảo trì
+                DueDate = dueDate,
                 AssignedToElectrical = request.AssignedToElectrical,
                 AssignedToMechanical = request.AssignedToMechanical,
                 Status = "Pending",
-                // ❌ REMOVED: UsageUnit, InspectionCode, RepairTime - không sử dụng
                 Notes = request.Notes,
                 CreatedBy = userId,
                 CreatedDate = DateTime.Now
@@ -685,6 +765,15 @@ namespace FITSKIP.Application.Services
             if (workOrder.AssignedToElectrical != technicianId && workOrder.AssignedToMechanical != technicianId)
                 throw new InvalidOperationException("You are not assigned to this work order");
 
+            // ✅ Validate chỉ được start từ ngày ScheduledDate trở đi
+            if (DateTime.Today < workOrder.ScheduledDate.Date)
+            {
+                throw new InvalidOperationException(
+                    $"Chưa thể bắt đầu bảo trì. Ngày dự định bảo trì là {workOrder.ScheduledDate:dd/MM/yyyy}. " +
+                    $"Vui lòng chờ đến đúng ngày để máy được dừng hoạt động."
+                );
+            }
+
             workOrder.Status = "InProgress";
             workOrder.StartedDate = DateTime.Now;
 
@@ -716,6 +805,40 @@ namespace FITSKIP.Application.Services
             Console.WriteLine($"[DEBUG] isElectrical: {isElectrical}, isMechanical: {isMechanical}");
             Console.WriteLine($"[DEBUG] hasBothTechnicians: {hasBothTechnicians}");
             
+            // ✅ VALIDATION 3: Kiểm tra required items TRƯỚC KHI update
+            // Lấy tất cả checklist items hiện tại
+            var allChecklistItems = await _checklistRepository.GetByWorkOrderIdAsync(workOrderId);
+            
+            // Lọc required items thuộc category của technician hiện tại
+            var myRequiredItems = allChecklistItems.Where(item => {
+                if (isElectrical && item.Category == "Electrical" && item.RequiredRole == "Electrical")
+                    return true;
+                if (isMechanical && item.Category == "Mechanical" && item.RequiredRole == "Mechanical")
+                    return true;
+                return false;
+            }).ToList();
+            
+            // Kiểm tra xem tất cả required items có được check trong request không
+            var uncheckedRequiredItems = new List<string>();
+            foreach (var requiredItem in myRequiredItems)
+            {
+                var requestItem = request.ChecklistItems.FirstOrDefault(r => r.ChecklistId == requiredItem.ChecklistId);
+                if (requestItem == null || !requestItem.IsChecked)
+                {
+                    uncheckedRequiredItems.Add(requiredItem.StepName);
+                }
+            }
+            
+            if (uncheckedRequiredItems.Any())
+            {
+                var categoryName = isElectrical ? "điện" : "cơ khí";
+                throw new InvalidOperationException(
+                    $"Không thể hoàn thành phiếu bảo trì. Các bước kiểm tra bắt buộc ({categoryName}) chưa được thực hiện:\n" +
+                    $"- {string.Join("\n- ", uncheckedRequiredItems)}\n\n" +
+                    $"Vui lòng hoàn thành tất cả các bước bắt buộc trước khi hoàn tất công việc."
+                );
+            }
+            
             // CHỈ update những checklist items thuộc loại công việc của KTV này
             foreach (var itemCompletion in request.ChecklistItems)
             {
@@ -746,7 +869,7 @@ namespace FITSKIP.Application.Services
             }
 
             // Lấy lại tất cả checklist items sau khi update
-            var allChecklistItems = await _checklistRepository.GetByWorkOrderIdAsync(workOrderId);
+             allChecklistItems = await _checklistRepository.GetByWorkOrderIdAsync(workOrderId);
             
             Console.WriteLine($"[DEBUG] Total checklist items: {allChecklistItems.Count()}");
             
@@ -1067,9 +1190,7 @@ namespace FITSKIP.Application.Services
         
         public async Task<IEnumerable<TechnicianDTO>> GetAllTechniciansAsync()
         {
-            // Lấy TẤT CẢ users có RoleId = bc5072df-86be-4b90-b259-32dce53aba81 (Kỹ thuật viên)
-            const string TECHNICIAN_ROLE_ID = "9c724ef4-e855-4063-9e2c-628dcb08c2d6";
-            var users = await _userRepository.GetUsersByRoleIdAsync(TECHNICIAN_ROLE_ID);
+            var users = await _userRepository.GetUsersByRoleAsync("Kỹ thuật viên");
             return users.Select(MapUserToTechnicianDTO);
         }
         
@@ -1099,10 +1220,16 @@ namespace FITSKIP.Application.Services
                 
                 if (!hasActiveWorkOrder)
                 {
+                    // ✅ Xác định ngày dự định bảo trì cho background job
+                    // - Nếu Plan có PostponedDueDate → dùng ngày đó
+                    // - Ngược lại → dùng NextDueDate
+                    var scheduledDate = plan.PostponedDueDate ?? plan.NextDueDate;
+                    
                     var request = new CreateMaintenanceWorkOrderRequest
                     {
                         PlanId = plan.PlanId,
-                        DueDate = plan.NextDueDate,
+                        ScheduledDate = scheduledDate, // ✅ Ngày dự định bảo trì
+                        DueDate = scheduledDate.AddDays(1), // Hạn chót hoàn thành = ScheduledDate + 1 ngày
                         AssignedToElectrical = plan.AssignedToElectrical,
                         AssignedToMechanical = plan.AssignedToMechanical
                     };
@@ -1291,6 +1418,7 @@ namespace FITSKIP.Application.Services
                 LineName = workOrder.Equipment?.Stage?.Line?.LineName,
                 AssignedDate = workOrder.AssignedDate,
                 DueDate = workOrder.DueDate,
+                ScheduledDate = workOrder.ScheduledDate, // Ngày dự định bảo trì
                 StartedDate = workOrder.StartedDate,
                 CompletedDate = workOrder.CompletedDate,
                 AssignedToElectrical = workOrder.AssignedToElectrical,
@@ -1399,6 +1527,54 @@ namespace FITSKIP.Application.Services
                     Message = $"Bạn có phiếu bảo trì cơ mới #{workOrder.WorkOrderCode} cho {workOrder.Equipment?.EquipmentName}. Hạn: {workOrder.DueDate:dd/MM/yyyy}"
                 });
             }
+        }
+
+        // ===== EXCEL IMPORT/EXPORT =====
+        
+        public async Task<List<CreateMaintenanceTemplateRequest>> ImportTemplatesFromExcelAsync(Stream fileStream)
+        {
+            // Delegate to ExcelImportService
+            throw new NotImplementedException("Use IExcelImportService.ImportTemplatesFromExcelAsync instead");
+        }
+
+        public byte[] GenerateTemplateExcelTemplate()
+        {
+            // Delegate to ExcelImportService
+            throw new NotImplementedException("Use IExcelImportService.GenerateTemplateExcelTemplate instead");
+        }
+
+        // Lines 1284-1321 (bạn đang mở file này)
+
+        public async Task<IEnumerable<TechnicianWorkloadDTO>> GetTechniciansWorkloadByDateAsync(DateTime date)
+        {
+            // ✅ ĐÂY MỚI LÀ CODE THỰC SỰ CHẠY
+            var allTechs = await _userRepository.GetUsersByRoleAsync("Kỹ thuật viên");
+
+            var allWorkOrders = await _workOrderRepository.GetAllAsync();
+            var workOrdersOnDate = allWorkOrders.Where(wo =>
+                wo.ScheduledDate.Date == date.Date
+            ).ToList();
+
+            var workloadList = new List<TechnicianWorkloadDTO>();
+
+            foreach (var tech in allTechs)
+            {
+                var workOrderCount = workOrdersOnDate.Count(wo =>
+                    wo.AssignedToElectrical == tech.Id ||
+                    wo.AssignedToMechanical == tech.Id
+                );
+
+                workloadList.Add(new TechnicianWorkloadDTO
+                {
+                    UserId = tech.Id,
+                    FullName = tech.FullName ?? "",
+                    EmployeeCode = tech.EmployeeCode ?? "",
+                    RoleName = tech.Role?.Name ?? "",
+                    WorkOrderCount = workOrderCount
+                });
+            }
+
+            return workloadList;
         }
     }
 }

@@ -46,7 +46,9 @@ function App() {
 
                 if (route.requiredPermissions === 0) {
                   // Public routes
-                  return <Route key={idx} path={route.path} element={element} />;
+                  return (
+                    <Route key={idx} path={route.path} element={element} />
+                  );
                 } else if (route.requiredPermissions === 1) {
                   // Authenticated user routes
                   return (
@@ -129,6 +131,19 @@ function App() {
                       path={route.path}
                       element={
                         <ProtectedRoute requireManager={true}>
+                          {element}
+                        </ProtectedRoute>
+                      }
+                    />
+                  );
+                } else if (route.requiredPermissions === 7) {
+                  // WarehouseManager-only routes
+                  return (
+                    <Route
+                      key={idx}
+                      path={route.path}
+                      element={
+                        <ProtectedRoute requireWarehouseManager={true}>
                           {element}
                         </ProtectedRoute>
                       }

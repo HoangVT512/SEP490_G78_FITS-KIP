@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251031184418_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20251106202509_FixWarehouseManagerRoleAssignment")]
+    partial class FixWarehouseManagerRoleAssignment
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -649,6 +649,9 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("PlanID");
 
+                    b.Property<DateTime>("ScheduledDate")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime?>("StartedDate")
                         .HasColumnType("datetime");
 
@@ -870,6 +873,9 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("int")
                         .HasColumnName("EquipmentID");
 
+                    b.Property<int?>("IncidentId")
+                        .HasColumnType("int");
+
                     b.Property<int>("PartId")
                         .HasColumnType("int")
                         .HasColumnName("PartID");
@@ -908,14 +914,21 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("nvarchar(20)")
                         .HasDefaultValue("Pending");
 
+                    b.Property<int?>("WorkOrderId")
+                        .HasColumnType("int");
+
                     b.HasKey("ReplacementId")
                         .HasName("PK__Replacem__55AB07E93456789A");
 
                     b.HasIndex("EquipmentId");
 
+                    b.HasIndex("IncidentId");
+
                     b.HasIndex("PartId");
 
                     b.HasIndex("ReplacedBy");
+
+                    b.HasIndex("WorkOrderId");
 
                     b.ToTable("ReplacementHistories");
                 });
@@ -1604,6 +1617,10 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasForeignKey("EquipmentId")
                         .HasConstraintName("FK__Replaceme__Equip__4567890A");
 
+                    b.HasOne("FITSKIP.Domain.Entities.IncidentHistory", "Incident")
+                        .WithMany("ReplacementHistories")
+                        .HasForeignKey("IncidentId");
+
                     b.HasOne("FITSKIP.Domain.Entities.SparePart", "Part")
                         .WithMany("ReplacementHistories")
                         .HasForeignKey("PartId")
@@ -1616,11 +1633,19 @@ namespace FITSKIP.Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("FK__Replaceme__Repla__6789012C");
 
+                    b.HasOne("FITSKIP.Domain.Entities.MaintenanceWorkOrder", "WorkOrder")
+                        .WithMany("ReplacementHistories")
+                        .HasForeignKey("WorkOrderId");
+
                     b.Navigation("Equipment");
+
+                    b.Navigation("Incident");
 
                     b.Navigation("Part");
 
                     b.Navigation("ReplacedByNavigation");
+
+                    b.Navigation("WorkOrder");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Stage", b =>
@@ -1692,6 +1717,8 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Navigation("IncidentImages");
 
                     b.Navigation("IncidentShifts");
+
+                    b.Navigation("ReplacementHistories");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Line", b =>
@@ -1720,6 +1747,8 @@ namespace FITSKIP.Infrastructure.Migrations
             modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenanceWorkOrder", b =>
                 {
                     b.Navigation("ChecklistItems");
+
+                    b.Navigation("ReplacementHistories");
                 });
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.Shift", b =>

@@ -42,6 +42,11 @@ namespace FITSKIP.Domain.DTO
     {
         [Required(ErrorMessage = "Stage ID là bắt buộc")]
         public int StageId { get; set; }
+        
+        /// <summary>
+        /// Tên công đoạn - dùng cho import Excel (sẽ resolve sang StageId)
+        /// </summary>
+        public string? StageName { get; set; }
 
         [Required(ErrorMessage = "Tên template là bắt buộc")]
         [MaxLength(200, ErrorMessage = "Tên template không vượt quá 200 ký tự")]
@@ -185,6 +190,27 @@ namespace FITSKIP.Domain.DTO
 
         public string? AssignedToElectrical { get; set; }
         public string? AssignedToMechanical { get; set; }
+        
+        // ✅ THÊM: Properties để lưu tạm các code khi import Excel (sẽ resolve sang ID sau)
+        /// <summary>
+        /// Mã thiết bị - dùng cho import Excel (sẽ resolve sang EquipmentId)
+        /// </summary>
+        public string? EquipmentCode { get; set; }
+        
+        /// <summary>
+        /// Mã template - dùng cho import Excel (sẽ resolve sang TemplateId)
+        /// </summary>
+        public string? TemplateCode { get; set; }
+        
+        /// <summary>
+        /// Mã nhân viên KTV Điện - dùng cho import Excel (sẽ resolve sang AssignedToElectrical)
+        /// </summary>
+        public string? ElectricalTechCode { get; set; }
+        
+        /// <summary>
+        /// Mã nhân viên KTV Cơ - dùng cho import Excel (sẽ resolve sang AssignedToMechanical)
+        /// </summary>
+        public string? MechanicalTechCode { get; set; }
     }
 
     public class UpdateMaintenancePlanRequest
@@ -218,6 +244,10 @@ namespace FITSKIP.Domain.DTO
         public string WorkOrderCode { get; set; } = string.Empty;
         public int PlanId { get; set; }
         
+        // ✅ THÊM: TemplateId để frontend có thể load checklist
+        public int? TemplateId { get; set; }
+        public string? TemplateName { get; set; }
+        
         // Equipment info
         public int EquipmentId { get; set; }
         public string EquipmentName { get; set; } = string.Empty;
@@ -227,6 +257,7 @@ namespace FITSKIP.Domain.DTO
         
         // Dates
         public DateTime AssignedDate { get; set; }
+        public DateTime ScheduledDate { get; set; } // Ngày dự định bảo trì (ngày máy dừng)
         public DateTime DueDate { get; set; }
         public DateTime? StartedDate { get; set; }
         public DateTime? CompletedDate { get; set; }
@@ -262,8 +293,11 @@ namespace FITSKIP.Domain.DTO
         [Required(ErrorMessage = "Plan ID là bắt buộc")]
         public int PlanId { get; set; }
 
-        [Required(ErrorMessage = "Ngày hết hạn là bắt buộc")]
-        public DateTime DueDate { get; set; }
+        [Required(ErrorMessage = "Ngày dự định bảo trì là bắt buộc")]
+        public DateTime ScheduledDate { get; set; }
+
+        // ✅ Bỏ Required - nếu không có, backend sẽ tự set = ScheduledDate
+        public DateTime? DueDate { get; set; }
 
         public string? AssignedToElectrical { get; set; }
         public string? AssignedToMechanical { get; set; }
@@ -405,6 +439,18 @@ namespace FITSKIP.Domain.DTO
         public string? PhoneNumber { get; set; }
         public string RoleName { get; set; } = string.Empty; // "Mechanical Technician" or "Electrical Technician"
         public bool IsActive { get; set; }
+    }
+
+    /// <summary>
+    /// DTO cho workload của technician theo ngày
+    /// </summary>
+    public class TechnicianWorkloadDTO
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string EmployeeCode { get; set; } = string.Empty;
+        public string RoleName { get; set; } = string.Empty;
+        public int WorkOrderCount { get; set; } // Số công việc đã giao trong ngày
     }
 
     // ===== ADDITIONAL REQUEST DTOs =====

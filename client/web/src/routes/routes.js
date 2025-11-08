@@ -28,6 +28,8 @@ import MaintenanceChecklist from "../pages/TechnicianPage/MaintenanceChecklist";
 import TechnicianManagerLayout from "../pages/TechnicianManagerPage/TechnicianManagerLayout";
 // Manager imports
 import ManagerLayout from "../pages/ManagerPage/ManagerLayout";
+// WarehouseManager imports
+import WarehouseManagerLayout from "../pages/WarehouseManagerPage/WarehouseManagerLayout";
 
 export const routes = [
   {
@@ -167,5 +169,13 @@ export const routes = [
     page: ManagerLayout,
     isShowHeader: false, // ManagerLayout has its own header
     requiredPermissions: 6, // Manager only
+  },
+  // WarehouseManager routes - All routes render through WarehouseManagerLayout
+  {
+    path: "/warehouse-manager/*",
+    name: "Warehouse Manager Panel",
+    page: WarehouseManagerLayout,
+    isShowHeader: false, // WarehouseManagerLayout has its own header
+    requiredPermissions: 7, // WarehouseManager only
   },
 ];
