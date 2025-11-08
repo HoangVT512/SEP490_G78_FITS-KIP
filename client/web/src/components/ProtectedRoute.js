@@ -10,6 +10,7 @@ const ProtectedRoute = ({
   requireTechnician = false,
   requireTechnicianManager = false,
   requireManager = false,
+  requireWarehouseManager = false,
   redirectTo = "/login",
 }) => {
   const {
@@ -20,6 +21,7 @@ const ProtectedRoute = ({
     isTechnician,
     isTechnicianManager,
     isManager,
+    isWarehouseManager,
     user,
   } = useAuth();
 
@@ -64,6 +66,10 @@ const ProtectedRoute = ({
   }
 
   if (requireManager && !isManager()) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (requireWarehouseManager && !isWarehouseManager()) {
     return <Navigate to="/login" replace />;
   }
 

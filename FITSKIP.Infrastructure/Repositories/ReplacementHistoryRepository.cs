@@ -363,11 +363,17 @@ namespace FITSKIP.Infrastructure.Repositories
                     statusList.Add("Chờ duyệt cấp phát");
                 else if (status == "Chờ duyệt cấp phát")
                     statusList.Add("Pending");
+                else if (status == "AwaitingReturn")
+                    statusList.Add("Chờ trả lại");
+                else if (status == "Chờ trả lại")
+                    statusList.Add("AwaitingReturn");
 
                 return await _context.ReplacementHistories
                     .Include(r => r.Equipment)
                     .Include(r => r.Part)
                     .Include(r => r.ReplacedByNavigation)
+                    .Include(r => r.Incident)
+                    .Include(r => r.WorkOrder)
                     .Where(r => statusList.Contains(r.Status))
                     .ToListAsync(cancellationToken);
             }

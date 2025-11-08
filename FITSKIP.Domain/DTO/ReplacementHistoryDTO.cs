@@ -50,5 +50,7 @@ namespace FITSKIP.Domain.DTO
         public string PartNumber { get; set; }
         public string ReplacedByUserName { get; set; } = null!;
         public string? ReplacedByEmail { get; set; }
+        public string? ReplacedByFullName { get; set; }
+        public string? ReplacedByEmployeeCode { get; set; }
     }
 }

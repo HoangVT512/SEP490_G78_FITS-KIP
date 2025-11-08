@@ -125,9 +125,19 @@ const ReplacementReturnModal = ({
     },
     {
       title: "Kỹ thuật viên",
-      dataIndex: "replacedByUserName",
-      key: "replacedByUserName",
-      render: (text) => text || "---",
+      key: "technician",
+      render: (_, record) => (
+        <div>
+          <div style={{ fontSize: "13px", fontWeight: 500 }}>
+            {record.replacedByFullName || record.replacedByUserName || "Chưa xác định"}
+          </div>
+          {record.replacedByEmployeeCode && (
+            <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+              {record.replacedByEmployeeCode}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       title: "Trạng thái",
@@ -159,7 +169,15 @@ const ReplacementReturnModal = ({
         onCancel={onClose}
         width={1000}
         footer={[
-          <Button key="close" onClick={onClose}>
+          <Button
+            key="close"
+            onClick={onClose}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
             Đóng
           </Button>,
         ]}

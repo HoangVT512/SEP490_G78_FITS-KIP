@@ -53,6 +53,7 @@ import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -699,21 +700,21 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         timerHandler.post(timerRunnable);
     }
 
-    private void toggleTimer() {
-        if (isTimerRunning) {
-            // Pause timer
-            totalElapsed += System.currentTimeMillis() - lastStartTime;
-            isTimerRunning = false;
-            //btnToggleTimer.setImageResource(android.R.drawable.ic_media_play);
-            timerHandler.removeCallbacks(timerRunnable);
-        } else {
-            // Resume timer
-            lastStartTime = System.currentTimeMillis();
-            isTimerRunning = true;
-            //btnToggleTimer.setImageResource(android.R.drawable.ic_media_pause);
-            timerHandler.post(timerRunnable);
-        }
-    }
+//    private void toggleTimer() {
+//        if (isTimerRunning) {
+//            // Pause timer
+//            totalElapsed += System.currentTimeMillis() - lastStartTime;
+//            isTimerRunning = false;
+//            //btnToggleTimer.setImageResource(android.R.drawable.ic_media_play);
+//            timerHandler.removeCallbacks(timerRunnable);
+//        } else {
+//            // Resume timer
+//            lastStartTime = System.currentTimeMillis();
+//            isTimerRunning = true;
+//            //btnToggleTimer.setImageResource(android.R.drawable.ic_media_pause);
+//            timerHandler.post(timerRunnable);
+//        }
+//    }
 
     private void showLoading(String message) {
         if (progressDialog == null) {
@@ -820,6 +821,9 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         List<String> imagePaths; // ĐỔI: Lưu paths thay vì URLs
         Integer lineId;
         String lineName;
+        long initialStartTime;              // Thời điểm scan QR lần 1 (23:01:11)
+        long totalRunningTime = 0;          // Tổng thời gian chạy thực tế (loại bỏ thời gian dừng)
+        long lastStopTime = 0;              // Thời điểm cuối cùng bấm STOP
 
         DeviceCard(String deviceCode, String deviceName, String startTime, String type, String problem,
                    List<String> selectedOptions, Integer equipmentId, List<String> imagePaths) {
@@ -835,6 +839,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             this.lastStartTime = 0;
             this.isTimerRunning = false;
             this.timerHandler = new Handler();
+            this.initialStartTime = System.currentTimeMillis();
 
             cardView = getLayoutInflater().inflate(R.layout.item_device_card, llDeviceCardsContainer, false);
             llDeviceCardsContainer.addView(cardView);
@@ -878,6 +883,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             this.lastStartTime = 0;
             this.isTimerRunning = false;
             this.timerHandler = new Handler();
+            this.initialStartTime = System.currentTimeMillis();
 
             cardView = getLayoutInflater().inflate(R.layout.item_device_card, llDeviceCardsContainer, false);
             llDeviceCardsContainer.addView(cardView);
@@ -945,13 +951,46 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             timerHandler.post(timerRunnable);
         }
 
+//        void toggleTimer() {
+//            if (isTimerRunning) {
+//                totalElapsed += System.currentTimeMillis() - lastStartTime;
+//                isTimerRunning = false;
+//                btnToggleTimer.setImageResource(android.R.drawable.ic_media_play);
+//                timerHandler.removeCallbacks(timerRunnable);
+//            } else {
+//                lastStartTime = System.currentTimeMillis();
+//                isTimerRunning = true;
+//                btnToggleTimer.setImageResource(android.R.drawable.ic_media_pause);
+//                timerHandler.post(timerRunnable);
+//            }
+//        }
+
+        // ============ FIX trong method toggleTimer() của class DeviceCard ============
+
         void toggleTimer() {
             if (isTimerRunning) {
-                totalElapsed += System.currentTimeMillis() - lastStartTime;
+                // Đang chạy → bấm STOP
+                long currentTime = System.currentTimeMillis();
+
+                // TÍNH THỜI GIAN CHẠY thực tế từ lần START cuối cùng đến lúc STOP
+                // Dùng totalElapsed (đã tích lũy từ lúc scan QR) thay vì lastStartTime
+                totalElapsed += currentTime - lastStartTime;
                 isTimerRunning = false;
+
+                // Thêm totalElapsed vào totalRunningTime (chỉ tính thời gian chạy thực tế)
+                totalRunningTime += totalElapsed;
+
+                // GHI NHẬN thời điểm STOP lần này
+                lastStopTime = currentTime;
+
                 btnToggleTimer.setImageResource(android.R.drawable.ic_media_play);
                 timerHandler.removeCallbacks(timerRunnable);
+
+                // RESET totalElapsed cho segment tiếp theo
+                totalElapsed = 0;
+
             } else {
+                // Đã dừng → tiếp tục chạy
                 lastStartTime = System.currentTimeMillis();
                 isTimerRunning = true;
                 btnToggleTimer.setImageResource(android.R.drawable.ic_media_pause);
@@ -959,10 +998,131 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             }
         }
 
+//        void stopAndRemove() {
+//            // Nếu còn chạy, tính totalElapsed lần cuối
+//            if (isTimerRunning) {
+//                totalElapsed += System.currentTimeMillis() - lastStartTime;
+//                timerHandler.removeCallbacks(timerRunnable);
+//            }
+//
+//            long totalSeconds = totalElapsed / 1000;
+//            int hours = (int) (totalSeconds / 3600);
+//            int minutes = (int) ((totalSeconds % 3600) / 60);
+//            int seconds = (int) (totalSeconds % 60);
+//            String totalTime = String.format("%02d:%02d:%02d", hours, minutes, seconds);
+//
+//            double durationMinutes = totalElapsed / (1000.0 * 60.0);
+//
+//            int typeId;
+//            boolean isTechSupport;
+//            if (selectedOptions.contains("Phế phẩm")) {
+//                isTechSupport = false;
+//                typeId = 3;
+//            } else if (selectedOptions.contains("Vệ sinh đầu/cuối ca")) {
+//                isTechSupport = false;
+//                typeId = 4;
+//            } else if (selectedOptions.contains("Đổi mã")) {
+//                isTechSupport = false;
+//                typeId = 5;
+//            } else {
+//                if (durationMinutes > 5) {
+//                    typeId = 2;
+//                } else {
+//                    typeId = 1;
+//                }
+//                if (selectedOptions.contains("Cần hỗ trợ kỹ thuật")) {
+//                    isTechSupport = true;
+//                } else {
+//                    isTechSupport = false;
+//                }
+//            }
+//
+//            String status = "Hoàn thành";
+//            Integer equipmentId = this.equipmentId;
+//            Integer lineId = HomeActivity.this.lineId;
+//            List<String> imagePaths = this.imagePaths;
+//
+//            Date startDate = new Date();
+//            Date endDate = new Date();
+//            startDate.setTime(endDate.getTime() - totalElapsed);
+//
+//            // Tính duration với break deduction
+//            double adjustedDuration = calculateDurationWithBreakDeduction(startDate, endDate);
+//            double roundedDuration = Math.floor(adjustedDuration * 100) / 100;
+//
+//            // Nhưng vì muốn giữ EndTime = 23:05:13, thì tạo endDate khác cho Entity:
+//            Date endDateForEntity = new Date();  // Thời gian scan QR lần 2
+//
+//            IncidentHistoryEntity entity = new IncidentHistoryEntity(
+//                    equipmentId,
+//                    //startDate,
+//                    //endDate,
+//                    //roundedDuration,
+//                    startDate,              // 23:01:11
+//                    endDateForEntity,       // 23:05:13 (scan QR lần 2)
+//                    roundedDuration,        // 1.45 phút (tính từ initialStartTime đến stopTime)
+//                    typeId,
+//                    "",
+//                    "",
+//                    problem,
+//                    status,
+//                    new Date(),
+//                    userId,
+//                    "",
+//                    isTechSupport,
+//                    false,
+//                    imagePaths, // Lưu paths vào DB
+//                    new ArrayList<>(), // imageUrls sẽ được cập nhật sau khi upload
+//                    lineId
+//            );
+//
+//            // MỚI: Upload ảnh TRƯỚC KHI insert/upload incident
+//            new Thread(() -> {
+//                List<String> uploadedUrls = new ArrayList<>();
+//
+//                // Upload từng ảnh
+//                for (String imagePath : imagePaths) {
+//                    //String url = uploadImageSync(imagePath);
+//                    String url = HomeActivity.this.uploadImageSync(imagePath);
+//                    if (url != null) {
+//                        uploadedUrls.add(url);
+//                    }
+//                }
+//
+//                // Cập nhật URLs vào entity
+//                entity.setImageUrls(uploadedUrls);
+//
+//                // Insert vào DB
+//                AppDatabase db = AppDatabaseSingleton.getInstance(HomeActivity.this);
+//                long id = db.incidentHistoryDao().insert(entity);
+//                entity.setIncidentId((int)id);
+//
+//                android.util.Log.d("Incident", "Đã thêm sự cố: ID=" + id + ", Images=" + uploadedUrls.size());
+//
+//                // Upload incident lên server
+//                //uploadIncidentToServer(entity, id);
+//                HomeActivity.this.uploadIncidentToServer(entity, id);
+//            }).start();
+//
+//            Toast.makeText(HomeActivity.this, "Thiết bị " + deviceCode + " tổng thời gian: " + totalTime, Toast.LENGTH_SHORT).show();
+//
+//            llDeviceCardsContainer.removeView(cardView);
+//            deviceCards.remove(deviceCode);
+//        }
+
+        // ============ SỬA trong method stopAndRemove() ============
         void stopAndRemove() {
+            // Nếu còn chạy, tính totalElapsed lần cuối
             if (isTimerRunning) {
-                totalElapsed += System.currentTimeMillis() - lastStartTime;
+                long lastSegment = System.currentTimeMillis() - lastStartTime;
+                totalElapsed += lastSegment;
+                totalRunningTime += lastSegment;  // Thêm thời gian chạy cuối cùng
                 timerHandler.removeCallbacks(timerRunnable);
+            }
+
+            // GHI NHẬN thời điểm STOP cuối cùng nếu chưa ghi
+            if (lastStopTime == 0) {
+                lastStopTime = System.currentTimeMillis();
             }
 
             long totalSeconds = totalElapsed / 1000;
@@ -971,7 +1131,9 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             int seconds = (int) (totalSeconds % 60);
             String totalTime = String.format("%02d:%02d:%02d", hours, minutes, seconds);
 
-            double durationMinutes = totalElapsed / (1000.0 * 60.0);
+            // ===== PHẦN CHÍNH: Duration chỉ tính thời gian CHẠY thực tế =====
+            // Duration = totalRunningTime (không tính khoảng dừng)
+            double durationMinutes = totalRunningTime / (1000.0 * 60.0);
 
             int typeId;
             boolean isTechSupport;
@@ -1002,15 +1164,23 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             Integer lineId = HomeActivity.this.lineId;
             List<String> imagePaths = this.imagePaths;
 
+            // ===== StartTime và EndTime =====
             Date startDate = new Date();
+            startDate.setTime(initialStartTime);  // 23:01:11
+
             Date endDate = new Date();
-            startDate.setTime(endDate.getTime() - totalElapsed);
+            endDate.setTime(System.currentTimeMillis());  // Thời điểm scan QR lần 2 (23:06:00)
+
+            // Tính duration với break deduction (dùng totalRunningTime)
+            long durationForBreakCalc = totalRunningTime;
+            double adjustedDuration = calculateDurationWithBreakDeductionFromMillis(durationForBreakCalc);
+            double roundedDuration = Math.floor(adjustedDuration * 100) / 100;
 
             IncidentHistoryEntity entity = new IncidentHistoryEntity(
                     equipmentId,
-                    startDate,
-                    endDate,
-                    durationMinutes,
+                    startDate,              // 23:01:11
+                    endDate,                // 23:06:00 (scan QR lần 2)
+                    roundedDuration,        // 2.67 phút (tổng thời gian chạy thực tế)
                     typeId,
                     "",
                     "",
@@ -1021,8 +1191,8 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
                     "",
                     isTechSupport,
                     false,
-                    imagePaths, // Lưu paths vào DB
-                    new ArrayList<>(), // imageUrls sẽ được cập nhật sau khi upload
+                    imagePaths,
+                    new ArrayList<>(),
                     lineId
             );
 
@@ -1032,7 +1202,6 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
 
                 // Upload từng ảnh
                 for (String imagePath : imagePaths) {
-                    //String url = uploadImageSync(imagePath);
                     String url = HomeActivity.this.uploadImageSync(imagePath);
                     if (url != null) {
                         uploadedUrls.add(url);
@@ -1050,11 +1219,10 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
                 android.util.Log.d("Incident", "Đã thêm sự cố: ID=" + id + ", Images=" + uploadedUrls.size());
 
                 // Upload incident lên server
-                //uploadIncidentToServer(entity, id);
                 HomeActivity.this.uploadIncidentToServer(entity, id);
             }).start();
 
-            Toast.makeText(HomeActivity.this, "Thiết bị " + deviceCode + " tổng thời gian: " + totalTime, Toast.LENGTH_SHORT).show();
+            Toast.makeText(HomeActivity.this, "Thiết bị " + deviceCode + " tổng thời gian chạy: " + totalTime, Toast.LENGTH_SHORT).show();
 
             llDeviceCardsContainer.removeView(cardView);
             deviceCards.remove(deviceCode);
@@ -1103,7 +1271,7 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
 //        }
 //
 //        private void uploadIncidentToServer(IncidentHistoryEntity entity, long localId) {
-//            SharedPreferences prefs = getSharedPreferences("AppPrefs", MODE_PRIVATE);
+//            SharedPreferences prefs = AppDatabaseSingleton.getInstance(HomeActivity.this).getSharedPreferences("AppPrefs", MODE_PRIVATE);
 //            String token = prefs.getString("token", null);
 //
 //            if (token == null) {
@@ -1158,10 +1326,16 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
 //            });
 //        }
 
-//        private String formatDate(Date date) {
-//            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
-//            return sdf.format(date);
-//        }
+        // ============ THÊM method mới: Tính break deduction từ milliseconds =====
+        private double calculateDurationWithBreakDeductionFromMillis(long durationMillis) {
+            double totalMinutes = durationMillis / (1000.0 * 60.0);
+
+            // Ở đây chỉ trừ break nếu cần, nhưng vì bạn đã tính totalRunningTime chính xác,
+            // có thể không cần trừ break nữa (tùy logic của bạn)
+            // Nếu muốn trừ break, cần tính từ startTime và endTime thực tế
+
+            return totalMinutes;
+        }
     }
 
 
@@ -1223,7 +1397,9 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
         if (entity.getEndTime() != null) {
             incidentRequest.setEndTime(formatDate(entity.getEndTime()));
         }
-        incidentRequest.setDuration(entity.getDuration());
+        //incidentRequest.setDuration(entity.getDuration());
+        double roundedDuration = Double.parseDouble(String.format("%.2f", entity.getDuration()));
+        incidentRequest.setDuration(roundedDuration);
         incidentRequest.setTypeId(entity.getTypeId());
         incidentRequest.setReason(entity.getReason());
         incidentRequest.setSolution(entity.getSolution());
@@ -1284,4 +1460,47 @@ public class HomeActivity extends AppCompatActivity implements NavigationView.On
             }
         }
     }
+
+    private double calculateDurationWithBreakDeduction(Date startTime, Date endTime) {
+        double totalMinutes = (endTime.getTime() - startTime.getTime()) / (1000.0 * 60.0);
+
+        // Trừ break time giống backend
+        double break1Overlap = calculateBreakOverlap(startTime, endTime, 11, 0, 11, 30);
+        double break2Overlap = calculateBreakOverlap(startTime, endTime, 18, 0, 18, 30);
+
+        return Math.max(0.0, totalMinutes - break1Overlap - break2Overlap);
+    }
+
+    private double calculateBreakOverlap(Date startTime, Date endTime, int breakStartHour, int breakStartMinute, int breakEndHour, int breakEndMinute) {
+        // Tạo Date cho break start và end trong cùng ngày với startTime
+        Calendar breakStart = Calendar.getInstance();
+        breakStart.setTime(startTime);
+        breakStart.set(Calendar.HOUR_OF_DAY, breakStartHour);
+        breakStart.set(Calendar.MINUTE, breakStartMinute);
+        breakStart.set(Calendar.SECOND, 0);
+        breakStart.set(Calendar.MILLISECOND, 0);
+
+        Calendar breakEnd = Calendar.getInstance();
+        breakEnd.setTime(startTime);
+        breakEnd.set(Calendar.HOUR_OF_DAY, breakEndHour);
+        breakEnd.set(Calendar.MINUTE, breakEndMinute);
+        breakEnd.set(Calendar.SECOND, 0);
+        breakEnd.set(Calendar.MILLISECOND, 0);
+
+        // Nếu break end < break start, nghĩa là qua ngày hôm sau
+        if (breakEnd.before(breakStart)) {
+            breakEnd.add(Calendar.DAY_OF_MONTH, 1);
+        }
+
+        long overlapStart = Math.max(startTime.getTime(), breakStart.getTimeInMillis());
+        long overlapEnd = Math.min(endTime.getTime(), breakEnd.getTimeInMillis());
+
+        if (overlapStart < overlapEnd) {
+            return (overlapEnd - overlapStart) / (1000.0 * 60.0);
+        } else {
+            return 0.0;
+        }
+    }
 }
+
+

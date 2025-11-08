@@ -24,17 +24,20 @@ namespace FITSKIP.API.Controllers
         private readonly FitskipDbContext _context;
         private readonly IIncidentService _incidentService;
         private readonly IHubContext<NotificationHub> _notificationHubContext;
+        private readonly INotificationService _notificationService; // ✅ THÊM
 
         public ReplacementHistoriesController(
             IReplacementHistoryService service,
             FitskipDbContext context,
             IIncidentService incidentService,
-            IHubContext<NotificationHub> notificationHubContext)
+            IHubContext<NotificationHub> notificationHubContext,
+            INotificationService notificationService) // ✅ THÊM
         {
             _service = service;
             _context = context;
             _incidentService = incidentService;
             _notificationHubContext = notificationHubContext;
+            _notificationService = notificationService; // ✅ THÊM
         }
 
         [HttpGet]
@@ -55,6 +58,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
                     ReplacedBy = s.ReplacedBy,
                     ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     ReplacementID = s.ReplacementId,
                     Quantity = s.Quantity,
@@ -89,6 +94,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = result.Equipment != null ? result.Equipment.EquipmentCode : null,
                     ReplacedBy = result.ReplacedBy,
                     ReplacedByUserName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.Email : null,
                     ReplacementID = result.ReplacementId,
                     Quantity = result.Quantity,
@@ -147,6 +154,45 @@ namespace FITSKIP.API.Controllers
 
                 var created = await _service.CreateAsync(replacementHistory, cancellationToken);
 
+                // ✅ GỬI THÔNG BÁO ĐẾN QUẢN LÝ KHO
+                try
+                {
+                    var partInfo = created.Part != null
+                        ? $"{created.Part.PartName} ({created.Part.PartNumber})"
+                        : "Phụ tùng";
+
+                    var equipmentInfo = created.Equipment != null
+                        ? $"{created.Equipment.EquipmentName} ({created.Equipment.EquipmentCode})"
+                        : "Thiết bị";
+
+                    var requestType = created.IncidentId.HasValue ? "sự cố" : "bảo trì";
+                    var referenceId = created.IncidentId.HasValue
+                        ? $"INC-{created.IncidentId}"
+                        : created.WorkOrderId.HasValue
+                            ? $"WO-{created.WorkOrderId}"
+                            : "";
+
+                    var message = $"Yêu cầu phụ tùng mới từ {requestType} {referenceId}: {partInfo} cho {equipmentInfo} - Số lượng: {created.Quantity}";
+
+                    await _notificationService.SendNotificationToRoleAsync(
+                        "Quản lý kho",
+                        message,
+                        "ReplacementRequest"
+                    );
+
+                    // Broadcast SignalR notification
+                    await _notificationHubContext.Clients.All.SendAsync(
+                        "ReceiveDataUpdate",
+                        new { type = "replacementRequest", action = "created", id = created.ReplacementId },
+                        cancellationToken
+                    );
+                }
+                catch (Exception notificationEx)
+                {
+                    // Log notification error but don't fail the request
+                    Console.WriteLine($"Failed to send notification: {notificationEx.Message}");
+                }
+
                 // Mapping Entity to DTO
                 var response = new ReplacementHistoryDTO
                 {
@@ -159,6 +205,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = created.Equipment != null ? created.Equipment.EquipmentCode : null,
                     ReplacedBy = created.ReplacedBy,
                     ReplacedByUserName = created.ReplacedByNavigation != null ? created.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = created.ReplacedByNavigation != null ? created.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = created.ReplacedByNavigation != null ? created.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = created.ReplacedByNavigation != null ? created.ReplacedByNavigation.Email : null,
                     ReplacementID = created.ReplacementId,
                     Quantity = created.Quantity,
@@ -298,6 +346,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = result.Equipment != null ? result.Equipment.EquipmentCode : null,
                     ReplacedBy = result.ReplacedBy,
                     ReplacedByUserName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.Email : null,
                     ReplacementID = result.ReplacementId,
                     Quantity = result.Quantity,
@@ -396,6 +446,8 @@ namespace FITSKIP.API.Controllers
                         EquipmentCode = result.Equipment != null ? result.Equipment.EquipmentCode : null,
                         ReplacedBy = result.ReplacedBy,
                         ReplacedByUserName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.UserName : null,
+                        ReplacedByFullName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.FullName : null,
+                        ReplacedByEmployeeCode = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.EmployeeCode : null,
                         ReplacedByEmail = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.Email : null,
                         ReplacementID = result.ReplacementId,
                         Quantity = result.Quantity,
@@ -435,6 +487,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
                     ReplacedBy = s.ReplacedBy,
                     ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     ReplacementID = s.ReplacementId,
                     Quantity = s.Quantity,
@@ -472,6 +526,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
                     ReplacedBy = s.ReplacedBy,
                     ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     ReplacementID = s.ReplacementId,
                     Quantity = s.Quantity,
@@ -577,6 +633,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
                     ReplacedBy = s.ReplacedBy,
                     ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     Quantity = s.Quantity,
                     ActualQuantityUsed = s.ActualQuantityUsed,
@@ -647,6 +705,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
                     ReplacedBy = s.ReplacedBy,
                     ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     ReplacementID = s.ReplacementId,
                     Quantity = s.Quantity,
@@ -709,6 +769,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentName = result.Equipment != null ? result.Equipment.EquipmentName : null,
                     EquipmentCode = result.Equipment != null ? result.Equipment.EquipmentCode : null,
                     ReplacedByUserName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.Email : null,
                     ReplacementID = result.ReplacementId,
                     Quantity = result.Quantity,
@@ -836,6 +898,8 @@ namespace FITSKIP.API.Controllers
                         EquipmentCode = workOrder.Equipment?.EquipmentCode,
                         ReplacedBy = replacementHistory.ReplacedBy,
                         ReplacedByUserName = requestedUser.UserName,
+                        ReplacedByFullName = requestedUser.FullName,
+                        ReplacedByEmployeeCode = requestedUser.EmployeeCode,
                         ReplacedByEmail = requestedUser.Email,
                         Quantity = replacementHistory.Quantity,
                         ReplacedDate = replacementHistory.ReplacedDate,

@@ -45,6 +45,7 @@ import {
   ToolOutlined,
   CalendarOutlined,
 } from "@ant-design/icons";
+import { useLocation } from "react-router-dom";
 import dayjs from "dayjs";
 import * as utcPlugin from "dayjs/plugin/utc";
 import * as minMaxPlugin from "dayjs/plugin/minMax";
@@ -130,6 +131,7 @@ const { RangePicker } = DatePicker;
 
 const IncidentManagement = () => {
   const { user: currentUser } = useAuth();
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [incidents, setIncidents] = useState([]);
   const [filteredIncidents, setFilteredIncidents] = useState([]);
@@ -241,6 +243,21 @@ const IncidentManagement = () => {
     fetchAllUsers();
     fetchIncidents();
   }, []);
+
+  // Handle navigation state from EFormSystem
+  useEffect(() => {
+    if (location.state?.openEditModal && location.state?.incidentToEdit) {
+      const incidentToEdit = location.state.incidentToEdit;
+      
+      // Wait a bit for data to load
+      setTimeout(() => {
+        handleEditIncident(incidentToEdit);
+      }, 500);
+      
+      // Clear the state to prevent reopening on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     handleFilter();
@@ -763,46 +780,69 @@ const IncidentManagement = () => {
       edit: existingFileList,
     });
 
-    // Find the equipment to pre-select it
+    // Find the equipment to pre-select it - handle both equipmentId and equipment object
+    const equipmentId = record.equipmentId || record.equipment?.equipmentId;
     const equipment = equipments.find(
-      (e) => e.equipmentId === record.equipmentId
+      (e) => e.equipmentId === equipmentId
     );
     if (equipment) {
       setSelectedEquipment(equipment);
     }
 
+    // Handle date fields - support both reportDate/resolveDate and startTime/endTime
+    const startTimeValue = record.startTime ? dayjs(record.startTime) : 
+                           record.reportDate ? dayjs(record.reportDate) : null;
+    const endTimeValue = record.endTime ? dayjs(record.endTime) : 
+                         record.resolveDate ? dayjs(record.resolveDate) : null;
+
+    // Calculate duration or use existing
+    let durationValue = null;
+    if (record.duration !== undefined && record.duration !== null) {
+      durationValue = record.duration.toFixed(2);
+    } else if (record.downtime !== undefined && record.downtime !== null) {
+      durationValue = record.downtime.toFixed(2);
+    } else if (startTimeValue && endTimeValue) {
+      const durationInMinutes = endTimeValue.diff(startTimeValue, 'minute', true);
+      durationValue = durationInMinutes.toFixed(2);
+    }
+
+    // Get reporter ID - handle both direct userId and nested user object
+    const reporterId = record.reportedByUserId || 
+                       record.reporterId || 
+                       record.reportedByUser?.userId || 
+                       null;
+
     // Set form values with proper equipment selection
     form.setFieldsValue({
-      equipmentCode: record.equipmentId, // This is the value for the Select, which uses equipmentId
-      equipmentId: record.equipmentId,
-      lineId: equipment?.lineId || record.lineId,
-      stageId: equipment?.stageId || record.stageId,
+      equipmentCode: equipmentId, // This is the value for the Select, which uses equipmentId
+      equipmentId: equipmentId,
+      lineId: equipment?.lineId || record.lineId || record.line?.lineId,
+      stageId: equipment?.stageId || record.stageId || record.stage?.stageId || record.equipment?.stage?.stageId,
       typeId:
         record.typeId ||
+        record.type?.stopTypeId ||
         (record.category
           ? stopTypes.find((st) => st.typeName === record.category)?.stopTypeId
           : null),
-      issue: record.issue,
-      reason: record.reason,
-      solution: record.solution,
-      status: record.status, // Will be overridden below
-      startTime: record.reportDate ? dayjs(record.reportDate) : null,
-      endTime: record.resolveDate ? dayjs(record.resolveDate) : null,
-      duration:
-        record.downtime.toFixed(2) || record.duration.toFixed(2) || null, // Display exact duration from database
-      reporter: record.reportedByUserId || record.reporterId || null, // Use user ID for editing
-      isTechSupport: record.isTechSupport || false,
+      issue: record.issue || '',
+      reason: record.reason || record.memo || '',
+      solution: record.solution || '',
+      status: record.status || 'Chờ xử lý', // Will be overridden below
+      startTime: startTimeValue,
+      endTime: endTimeValue,
+      duration: durationValue,
+      reporter: reporterId, // Use user ID for editing
+      isTechSupport: record.isTechSupport || record.technicalSupport || false,
     });
 
     // Set status based on presence of endTime
-    const hasEndTime =
-      record.resolveDate && dayjs(record.resolveDate).isValid();
+    const hasEndTime = endTimeValue && endTimeValue.isValid();
     form.setFieldsValue({
       status: hasEndTime ? "Hoàn thành" : "Chờ xử lý",
     });
 
     // store previous endTime so we can restore if user cancels clearing it
-    setPreviousEndTime(hasEndTime ? dayjs(record.resolveDate) : null);
+    setPreviousEndTime(hasEndTime ? endTimeValue : null);
 
     setFormModalVisible(true);
   };

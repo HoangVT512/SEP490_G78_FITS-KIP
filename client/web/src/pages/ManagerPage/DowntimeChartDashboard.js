@@ -1333,7 +1333,7 @@ const DowntimeChartDashboard = () => {
                                     textShadow: '2px 2px 8px rgba(0,0,0,0.3)',
                                     letterSpacing: '-0.5px'
                                 }}>
-                                    Biểu Đồ Thời Gian Dừng Máy
+                                    Biểu Đồ Quản Lý Dừng Máy
                                 </h1>
                                 <p style={{
                                     fontSize: '16px',
