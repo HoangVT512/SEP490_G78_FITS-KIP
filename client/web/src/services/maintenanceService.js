@@ -210,6 +210,14 @@ export const cancelWorkOrder = async (workOrderId, reason) => {
   });
 };
 
+// Postpone work order (Hoãn phiếu bảo trì)
+export const postponeWorkOrder = async (workOrderId, postponeData) => {
+  return apiRequest(`/maintenance/work-orders/${workOrderId}/postpone`, {
+    method: "POST",
+    body: JSON.stringify(postponeData),
+  });
+};
+
 // Delete work order
 export const deleteWorkOrder = async (workOrderId) => {
   return apiRequest(`/maintenance/work-orders/${workOrderId}`, {

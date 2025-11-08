@@ -98,7 +98,6 @@ const MaintenanceManagement = () => {
   const [isPlanModalVisible, setIsPlanModalVisible] = useState(false);
   const [isTemplateModalVisible, setIsTemplateModalVisible] = useState(false);
   const [isWorkOrderModalVisible, setIsWorkOrderModalVisible] = useState(false);
-    useState(false);
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
 
   const [editingPlan, setEditingPlan] = useState(null);

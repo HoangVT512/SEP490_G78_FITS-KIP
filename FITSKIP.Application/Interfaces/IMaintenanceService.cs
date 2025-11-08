@@ -161,6 +161,11 @@ namespace FITSKIP.Application.Interfaces
         Task<MaintenanceWorkOrderDTO> CancelWorkOrderAsync(int workOrderId, string reason);
         
         /// <summary>
+        /// Hoãn work order (TechManager) - chỉ cho phép khi Pending hoặc đã giao việc nhưng chưa ai làm
+        /// </summary>
+        Task<MaintenanceWorkOrderDTO> PostponeWorkOrderAsync(int workOrderId, PostponeWorkOrderRequest request, string userId);
+        
+        /// <summary>
         /// Xóa work order
         /// </summary>
         Task DeleteWorkOrderAsync(int workOrderId);

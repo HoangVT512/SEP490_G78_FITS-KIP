@@ -47,6 +47,7 @@ import {
   createWorkOrder,
   updateWorkOrder,
   postponeMaintenancePlan,
+  postponeWorkOrder,
   getAllTechnicians,
 } from "../../services/maintenanceService";
 import { replacementHistoryService } from "../../services/replacementHistoryService";
@@ -429,32 +430,28 @@ const WorkScheduleManagement = () => {
   const handlePostponeSubmit = async (values) => {
     setLoading(true);
     try {
-      // Hoãn Plan
-      await postponeMaintenancePlan(selectedRecord.planId, {
-        postponeDays: values.postponeDays,
-        reason: values.reason,
-      });
-
-      // Nếu đã có WorkOrder → Cập nhật scheduledDate
       if (selectedRecord.type === "workOrder") {
-        const newDate = dayjs(selectedRecord.dueDate)
-          .add(values.postponeDays, "day")
-          .toISOString();
-
-        await updateWorkOrder(selectedRecord.workOrderId, {
-          scheduledDate: newDate,
-          assignedToElectrical: selectedRecord.assignedToElectrical,
-          assignedToMechanical: selectedRecord.assignedToMechanical,
-          notes: `Đã hoãn ${values.postponeDays} ngày. Lý do: ${values.reason}`,
+        // Hoãn WorkOrder (backend sẽ validate đầy đủ)
+        await postponeWorkOrder(selectedRecord.workOrderId, {
+          postponeDays: values.postponeDays,
+          reason: values.reason,
         });
+        message.success(`✅ Hoãn phiếu bảo trì thành công ${values.postponeDays} ngày!`);
+      } else {
+        // Hoãn Plan (chưa có WorkOrder)
+        await postponeMaintenancePlan(selectedRecord.planId, {
+          postponeDays: values.postponeDays,
+          reason: values.reason,
+        });
+        message.success(`✅ Hoãn kế hoạch bảo trì thành công ${values.postponeDays} ngày!`);
       }
 
-      message.success(`Hoãn bảo trì thành công ${values.postponeDays} ngày!`);
       setIsPostponeModalVisible(false);
       postponeForm.resetFields();
       loadAllData();
     } catch (error) {
-      message.error("Hoãn thất bại: " + error.message);
+      const errorMessage = error.response?.data?.message || error.message || "Có lỗi xảy ra";
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -999,16 +996,21 @@ const WorkScheduleManagement = () => {
                   >
                     Đóng
                   </Button>,
-                  <Button
-                    key="postpone"
-                    icon={<ClockCircleOutlined />}
-                    onClick={() => {
-                      setIsDetailModalVisible(false);
-                      handlePostpone(selectedRecord);
-                    }}
-                  >
-                    Hoãn
-                  </Button>,
+                  // ✅ CHỈ HIỂN THỊ NÚT HOÃN KHI:
+                  // - Chưa giao việc (Pending/plan)
+                  // - Đã giao việc nhưng chưa InProgress
+                  (selectedRecord.status !== "InProgress") && (
+                    <Button
+                      key="postpone"
+                      icon={<ClockCircleOutlined />}
+                      onClick={() => {
+                        setIsDetailModalVisible(false);
+                        handlePostpone(selectedRecord);
+                      }}
+                    >
+                      Hoãn
+                    </Button>
+                  ),
                   <Button
                     key="assign"
                     type="primary"
@@ -1017,7 +1019,7 @@ const WorkScheduleManagement = () => {
                   >
                     {selectedRecord.type === "plan" ? "Giao việc" : "Cập nhật KTV"}
                   </Button>,
-                ]
+                ].filter(Boolean) // Lọc bỏ các false values
             : [
                 <Button
                   key="close"

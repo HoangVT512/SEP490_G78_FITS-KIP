@@ -131,6 +131,29 @@ const MaintenanceTasks = () => {
     return null;
   };
 
+  // ✅ THÊM: Lấy trạng thái riêng của KTV hiện tại
+  const getMyStatus = (workOrder) => {
+    if (!workOrder) return "Pending";
+    const taskType = getMyTaskType(workOrder);
+    
+    // Nếu là Electrical, lấy electricalStatus
+    if (taskType === "Electrical") {
+      return workOrder.electricalStatus || "Pending";
+    }
+    
+    // Nếu là Mechanical, lấy mechanicalStatus
+    if (taskType === "Mechanical") {
+      return workOrder.mechanicalStatus || "Pending";
+    }
+    
+    // Nếu làm cả 2, lấy status chung
+    if (taskType === "Both") {
+      return workOrder.status || "Pending";
+    }
+    
+    return "Pending";
+  };
+
   const getMyChecklistItems = (workOrder) => {
     if (!workOrder) return [];
     const taskType = getMyTaskType(workOrder);
@@ -264,27 +287,35 @@ const MaintenanceTasks = () => {
       dataIndex: "status",
       key: "status",
       width: 130,
-      render: (status) => {
+      render: (status, record) => {
+        // ✅ Lấy trạng thái riêng của KTV hiện tại
+        const myStatus = getMyStatus(record);
+        
         let color = "default";
         let icon = null;
-        let text = status || "-";
-        if (status === "InProgress") {
+        let text = myStatus || "-";
+        
+        if (myStatus === "InProgress") {
           color = "processing";
           icon = <PlayCircleOutlined />;
           text = "Đang thực hiện";
-        } else if (status === "Pending") {
+        } else if (myStatus === "Pending") {
           color = "warning";
           icon = <ClockCircleOutlined />;
           text = "Chờ xử lý";
-        } else if (status === "Completed") {
+        } else if (myStatus === "Completed") {
           color = "success";
           icon = <CheckCircleOutlined />;
-          text = "Hoàn thành";
-        } else if (status === "Cancelled") {
+          text = "Đã hoàn thành";
+        } else if (myStatus === "Cancelled") {
           color = "error";
           icon = <StopOutlined />;
           text = "Đã hủy";
+        } else if (myStatus === "N/A") {
+          color = "default";
+          text = "Không giao";
         }
+        
         return (
           <Tag icon={icon} color={color}>
             {text}
@@ -622,16 +653,19 @@ const MaintenanceTasks = () => {
     if (filterStatus === "all") {
       return workOrders;
     }
-    return workOrders.filter((wo) => wo.status === filterStatus);
+    // ✅ Filter theo trạng thái riêng của KTV hiện tại
+    return workOrders.filter((wo) => getMyStatus(wo) === filterStatus);
   };
 
   const getStatusCount = (status) => {
     if (status === "all") return workOrders.length;
-    return workOrders.filter((wo) => wo.status === status).length;
+    // ✅ Đếm theo trạng thái riêng của KTV hiện tại
+    return workOrders.filter((wo) => getMyStatus(wo) === status).length;
   };
 
   const getTaskProgress = () => {
-    const completed = workOrders.filter((t) => t.status === "Completed").length;
+    // ✅ Tính tiến độ theo trạng thái riêng của KTV hiện tại
+    const completed = workOrders.filter((t) => getMyStatus(t) === "Completed").length;
     const total = workOrders.length;
     return total > 0 ? Math.round((completed / total) * 100) : 0;
   };

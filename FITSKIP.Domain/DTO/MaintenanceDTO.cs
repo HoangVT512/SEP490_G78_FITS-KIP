@@ -278,10 +278,21 @@ namespace FITSKIP.Domain.DTO
         // Checklist
         public List<MaintenanceChecklistItemDTO> ChecklistItems { get; set; } = new();
         
-        // Progress
+        // Progress - Overall (cho TechManager)
         public int TotalChecklistItems { get; set; }
         public int CompletedChecklistItems { get; set; }
         public decimal CompletionPercentage { get; set; }
+        
+        // ✅ THÊM: Progress riêng cho từng KTV
+        public int ElectricalTotalItems { get; set; }
+        public int ElectricalCompletedItems { get; set; }
+        public decimal ElectricalCompletionPercentage { get; set; }
+        public string ElectricalStatus { get; set; } = string.Empty; // Trạng thái riêng của KTV Điện
+        
+        public int MechanicalTotalItems { get; set; }
+        public int MechanicalCompletedItems { get; set; }
+        public decimal MechanicalCompletionPercentage { get; set; }
+        public string MechanicalStatus { get; set; } = string.Empty; // Trạng thái riêng của KTV Cơ
         
         // Calculated
         public int DaysUntilDue { get; set; }
@@ -500,6 +511,20 @@ namespace FITSKIP.Domain.DTO
     /// Request để hoãn bảo trì (postpone maintenance)
     /// </summary>
     public class PostponeMaintenancePlanRequest
+    {
+        [Required(ErrorMessage = "Số ngày hoãn là bắt buộc")]
+        [Range(1, 365, ErrorMessage = "Số ngày hoãn phải từ 1 đến 365 ngày")]
+        public int PostponeDays { get; set; }
+
+        [Required(ErrorMessage = "Lý do hoãn là bắt buộc")]
+        [MaxLength(500, ErrorMessage = "Lý do hoãn không vượt quá 500 ký tự")]
+        public string Reason { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Request để hoãn WorkOrder (postpone work order)
+    /// </summary>
+    public class PostponeWorkOrderRequest
     {
         [Required(ErrorMessage = "Số ngày hoãn là bắt buộc")]
         [Range(1, 365, ErrorMessage = "Số ngày hoãn phải từ 1 đến 365 ngày")]

@@ -197,6 +197,27 @@ namespace FITSKIP.Application.Services
             if (template == null)
                 throw new InvalidOperationException($"Template not found: {templateId}");
 
+            // ✅ VALIDATION 1: Kiểm tra template có đang được sử dụng bởi maintenance plan đang hoạt động không
+            var plansUsingTemplate = await _planRepository.GetAllAsync();
+            var activePlansWithTemplate = plansUsingTemplate.Where(p => 
+                p.TemplateId == templateId && 
+                p.IsActive && 
+                (p.Status == "Pending" || p.Status == "InProgress" || p.Status == "Postponed")
+            ).ToList();
+            
+            if (activePlansWithTemplate.Any())
+            {
+                var planList = string.Join(", ", activePlansWithTemplate.Select(p => 
+                    $"#{p.PlanId} - {p.Equipment?.EquipmentName ?? "N/A"} (Chu kỳ: {p.IntervalValue} {p.IntervalType})"
+                ));
+                
+                throw new InvalidOperationException(
+                    $"❌ Không thể xóa mẫu bảo trì '{template.TemplateName}' vì đang được sử dụng bởi {activePlansWithTemplate.Count} chu kỳ bảo trì đang hoạt động:\n" +
+                    $"{planList}\n\n" +
+                    $"Vui lòng ngưng hoạt động các chu kỳ bảo trì này trước khi xóa mẫu."
+                );
+            }
+
             await _templateItemRepository.DeleteByTemplateIdAsync(templateId);
             await _templateRepository.DeleteAsync(templateId);
         }
@@ -318,6 +339,71 @@ namespace FITSKIP.Application.Services
             if (plan == null)
                 throw new InvalidOperationException($"Plan not found: {planId}");
 
+            // ✅ VALIDATION 2: Nếu chuyển sang IsActive = false (Ngưng hoạt động)
+            var isBeingDeactivated = (request.IsActive == false && plan.IsActive);
+            
+            if (isBeingDeactivated)
+            {
+                // 1. Hủy tất cả work orders đang chờ xử lý (Pending)
+                var pendingWorkOrders = await _workOrderRepository.GetByPlanIdAsync(planId);
+                var workOrdersToCancel = pendingWorkOrders.Where(wo => wo.Status == "Pending").ToList();
+                
+                foreach (var workOrder in workOrdersToCancel)
+                {
+                    workOrder.Status = "Cancelled";
+                    workOrder.UpdatedDate = DateTime.Now;
+                    workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Hủy do kế hoạch bảo trì đã ngưng hoạt động.";
+                    await _workOrderRepository.UpdateAsync(workOrder);
+                }
+
+                // 2. Dừng việc tạo work order tự động trong tương lai
+                plan.IsActive = false;
+                plan.Status = "Ngưng hoạt động";
+                
+                // 3. Gửi thông báo cho các kỹ thuật viên được assign
+                var notificationMessage = $"Chu kỳ bảo trì cho thiết bị {plan.Equipment?.EquipmentName ?? "N/A"} đã ngưng hoạt động. " +
+                                        $"Tất cả {workOrdersToCancel.Count} phiếu bảo trì đang chờ đã được hủy.";
+                
+                if (!string.IsNullOrEmpty(plan.AssignedToElectrical))
+                {
+                    await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+                    {
+                        UserId = plan.AssignedToElectrical,
+                        Title = "⚠️ Chu kỳ bảo trì đã ngưng hoạt động",
+                        Message = notificationMessage
+                    });
+                }
+
+                if (!string.IsNullOrEmpty(plan.AssignedToMechanical))
+                {
+                    await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+                    {
+                        UserId = plan.AssignedToMechanical,
+                        Title = "⚠️ Chu kỳ bảo trì đã ngưng hoạt động",
+                        Message = notificationMessage
+                    });
+                }
+
+                Console.WriteLine($"[INFO] Plan {planId} deactivated. Cancelled {workOrdersToCancel.Count} pending work orders.");
+            }
+
+            // ✅ VALIDATION: Không cho phép kích hoạt lại nếu đã quá hạn mà chưa cập nhật NextDueDate
+            var isBeingActivated = (request.IsActive == true && !plan.IsActive);
+            if (isBeingActivated)
+            {
+                var planDueDate = plan.PostponedDueDate ?? plan.NextDueDate;
+                if (planDueDate < DateTime.Today && !request.NextDueDate.HasValue)
+                {
+                    throw new InvalidOperationException(
+                        $"❌ Không thể kích hoạt lại chu kỳ bảo trì vì đã quá hạn (Hạn: {planDueDate:dd/MM/yyyy}). " +
+                        $"Vui lòng cập nhật ngày bảo trì tiếp theo trước khi kích hoạt."
+                    );
+                }
+                
+                plan.IsActive = true;
+                plan.Status = "Pending";
+            }
+
             if (request.TemplateId.HasValue)
             {
                 var template = await _templateRepository.GetByIdAsync(request.TemplateId.Value);
@@ -356,7 +442,12 @@ namespace FITSKIP.Application.Services
 
             plan.AssignedToElectrical = request.AssignedToElectrical;
             plan.AssignedToMechanical = request.AssignedToMechanical;
-            plan.IsActive = request.IsActive;
+            
+            // Chỉ update IsActive nếu chưa được xử lý ở trên
+            if (!isBeingDeactivated && !isBeingActivated)
+            {
+                plan.IsActive = request.IsActive;
+            }
 
             await _planRepository.UpdateAsync(plan);
 
@@ -376,20 +467,41 @@ namespace FITSKIP.Application.Services
             if (plan == null)
                 throw new InvalidOperationException($"Plan not found: {planId}");
 
-            // ✅ VALIDATION 2: Kiểm tra có WorkOrder đang In-Progress không
-            var workOrders = await _workOrderRepository.GetByPlanIdAsync(planId);
-            var hasInProgressWorkOrder = workOrders.Any(wo => wo.Status == "InProgress");
-            
-            if (hasInProgressWorkOrder)
+            // ✅ VALIDATION 3A: Không được xóa kế hoạch đang hoạt động
+            if (plan.IsActive)
             {
-                var inProgressWO = workOrders.First(wo => wo.Status == "InProgress");
                 throw new InvalidOperationException(
-                    $"Không thể xóa kế hoạch bảo trì này vì đang có phiếu bảo trì #{inProgressWO.WorkOrderCode} đang thực hiện. " +
-                    $"Vui lòng hoàn thành hoặc hủy phiếu bảo trì trước khi xóa kế hoạch."
+                    $"❌ Không thể xóa kế hoạch bảo trì đang hoạt động cho thiết bị '{plan.Equipment?.EquipmentName ?? "N/A"}'. " +
+                    $"Vui lòng ngưng hoạt động (IsActive = false) trước khi xóa."
                 );
             }
 
-            // Delete all work orders (only Pending, Completed, or Cancelled ones remain)
+            // ✅ VALIDATION 3B: Kiểm tra có work order đang chờ xử lý (Pending)
+            var workOrders = await _workOrderRepository.GetByPlanIdAsync(planId);
+            var pendingWorkOrders = workOrders.Where(wo => wo.Status == "Pending").ToList();
+            
+            if (pendingWorkOrders.Any())
+            {
+                var woList = string.Join(", ", pendingWorkOrders.Select(wo => $"#{wo.WorkOrderCode}"));
+                throw new InvalidOperationException(
+                    $"❌ Không thể xóa kế hoạch bảo trì vì có {pendingWorkOrders.Count} phiếu bảo trì đang chờ xử lý: {woList}. " +
+                    $"Vui lòng hoàn thành hoặc hủy các phiếu này trước khi xóa kế hoạch."
+                );
+            }
+
+            // ✅ VALIDATION 3C: Kiểm tra có work order đang được thực hiện (InProgress - KTV đã checklist)
+            var inProgressWorkOrders = workOrders.Where(wo => wo.Status == "InProgress").ToList();
+            
+            if (inProgressWorkOrders.Any())
+            {
+                var woList = string.Join(", ", inProgressWorkOrders.Select(wo => $"#{wo.WorkOrderCode}"));
+                throw new InvalidOperationException(
+                    $"❌ Không thể xóa kế hoạch bảo trì vì có {inProgressWorkOrders.Count} phiếu bảo trì đang được thực hiện: {woList}. " +
+                    $"Vui lòng hoàn thành các phiếu bảo trì này trước khi xóa kế hoạch."
+                );
+            }
+
+            // Delete all work orders (only Completed or Cancelled ones remain at this point)
             foreach (var wo in workOrders)
             {
                 await _checklistRepository.DeleteByWorkOrderIdAsync(wo.WorkOrderId);
@@ -1041,6 +1153,72 @@ namespace FITSKIP.Application.Services
             return MapWorkOrderToDTO(result!);
         }
 
+        /// <summary>
+        /// ✅ HOÃN WORK ORDER - Chỉ cho phép khi:
+        /// 1. Chưa giao việc (Pending)
+        /// 2. Đã giao việc nhưng chưa ai làm (cả 2 technician đều chưa check item nào)
+        /// </summary>
+        public async Task<MaintenanceWorkOrderDTO> PostponeWorkOrderAsync(int workOrderId, PostponeWorkOrderRequest request, string userId)
+        {
+            var workOrder = await _workOrderRepository.GetByIdAsync(workOrderId);
+            if (workOrder == null)
+                throw new InvalidOperationException($"❌ Không tìm thấy phiếu bảo trì #{workOrderId}");
+
+            // ✅ Kiểm tra validation toàn diện
+            bool hasAssignedElectrical = !string.IsNullOrEmpty(workOrder.AssignedToElectrical);
+            bool hasAssignedMechanical = !string.IsNullOrEmpty(workOrder.AssignedToMechanical);
+            bool hasAssignedTechnician = hasAssignedElectrical || hasAssignedMechanical;
+
+            // Nếu đã giao việc, kiểm tra xem có ai đã bắt đầu làm chưa
+            if (hasAssignedTechnician)
+            {
+                var checklistItems = await _checklistRepository.GetByWorkOrderIdAsync(workOrderId);
+                bool hasAnyCheckedItem = checklistItems.Any(item => item.IsChecked);
+
+                if (hasAnyCheckedItem || workOrder.Status == "InProgress")
+                {
+                    throw new InvalidOperationException(
+                        $"❌ Không thể hoãn phiếu bảo trì #{workOrder.WorkOrderCode} vì đã có kỹ thuật viên bắt đầu thực hiện. " +
+                        $"Chỉ có thể hoãn khi chưa giao việc hoặc đã giao việc nhưng chưa ai làm."
+                    );
+                }
+            }
+
+            // ✅ CẬP NHẬT NGÀY ĐẾN HẠN (DueDate)
+            var currentDueDate = workOrder.DueDate;
+            workOrder.DueDate = currentDueDate.AddDays(request.PostponeDays);
+            workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Hoãn {request.PostponeDays} ngày. Lý do: {request.Reason}";
+            workOrder.UpdatedDate = DateTime.Now;
+
+            await _workOrderRepository.UpdateAsync(workOrder);
+
+            // ✅ GỬI THÔNG BÁO CHO KỸ THUẬT VIÊN
+            if (hasAssignedElectrical)
+            {
+                await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+                {
+                    UserId = workOrder.AssignedToElectrical!,
+                    Title = "Phiếu bảo trì bị hoãn",
+                    Message = $"Phiếu bảo trì #{workOrder.WorkOrderCode} cho thiết bị {workOrder.Equipment?.EquipmentName} đã được hoãn {request.PostponeDays} ngày. " +
+                             $"Hạn cũ: {currentDueDate:dd/MM/yyyy}, Hạn mới: {workOrder.DueDate:dd/MM/yyyy}. Lý do: {request.Reason}"
+                });
+            }
+
+            if (hasAssignedMechanical)
+            {
+                await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+                {
+                    UserId = workOrder.AssignedToMechanical!,
+                    Title = "Phiếu bảo trì bị hoãn",
+                    Message = $"Phiếu bảo trì #{workOrder.WorkOrderCode} cho thiết bị {workOrder.Equipment?.EquipmentName} đã được hoãn {request.PostponeDays} ngày. " +
+                             $"Hạn cũ: {currentDueDate:dd/MM/yyyy}, Hạn mới: {workOrder.DueDate:dd/MM/yyyy}. Lý do: {request.Reason}"
+                });
+            }
+
+            var result = await _workOrderRepository.GetByIdAsync(workOrderId);
+            return MapWorkOrderToDTO(result!);
+        }
+
         public async Task DeleteWorkOrderAsync(int workOrderId)
         {
             var workOrder = await _workOrderRepository.GetByIdAsync(workOrderId);
@@ -1406,11 +1584,83 @@ namespace FITSKIP.Application.Services
             var totalItems = checklistItems.Count;
             var completedItems = checklistItems.Count(ci => ci.IsChecked);
 
+            // ✅ TÁCH RIÊNG ELECTRICAL VÀ MECHANICAL ITEMS
+            var electricalItems = checklistItems.Where(i => i.Category == "Electrical").ToList();
+            var mechanicalItems = checklistItems.Where(i => i.Category == "Mechanical").ToList();
+            
+            int electricalTotal = electricalItems.Count;
+            int electricalCompleted = electricalItems.Count(i => i.IsChecked);
+            decimal electricalPercentage = electricalTotal > 0 ? (decimal)electricalCompleted / electricalTotal * 100 : 0;
+            
+            int mechanicalTotal = mechanicalItems.Count;
+            int mechanicalCompleted = mechanicalItems.Count(i => i.IsChecked);
+            decimal mechanicalPercentage = mechanicalTotal > 0 ? (decimal)mechanicalCompleted / mechanicalTotal * 100 : 0;
+
+            // ✅ TÍNH TRẠNG THÁI RIÊNG CHO TỪNG KTV (DỰA VÀO CHECKLIST CỦA HỌ)
+            string electricalStatus = CalculateTechnicianStatus(electricalTotal, electricalCompleted);
+            string mechanicalStatus = CalculateTechnicianStatus(mechanicalTotal, mechanicalCompleted);
+
+            // ✅ TÍNH TOÁN TRẠNG THÁI CHUNG (CHO TECHMANAGER)
+            string displayStatus = workOrder.Status;
+            
+            // Nếu status DB là "Completed" hoặc "Cancelled" thì giữ nguyên
+            if (workOrder.Status == "Completed" || workOrder.Status == "Cancelled")
+            {
+                displayStatus = workOrder.Status;
+            }
+            // Nếu status DB là "Pending" hoặc "InProgress", tính toán lại dựa vào checklist
+            else if (workOrder.Status == "Pending" || workOrder.Status == "InProgress")
+            {
+                // Kiểm tra có 2 KTV hay 1 KTV
+                bool hasBothTechnicians = !string.IsNullOrEmpty(workOrder.AssignedToElectrical) && 
+                                         !string.IsNullOrEmpty(workOrder.AssignedToMechanical);
+                
+                if (hasBothTechnicians)
+                {
+                    bool electricalDone = electricalTotal > 0 && electricalCompleted == electricalTotal;
+                    bool mechanicalDone = mechanicalTotal > 0 && mechanicalCompleted == mechanicalTotal;
+                    
+                    // Cả 2 hoàn thành → "Completed"
+                    if (electricalDone && mechanicalDone)
+                    {
+                        displayStatus = "Completed";
+                    }
+                    // Ít nhất 1 bên đã bắt đầu checklist → "InProgress"
+                    else if (completedItems > 0)
+                    {
+                        displayStatus = "InProgress";
+                    }
+                    // Chưa ai checklist → "Pending"
+                    else
+                    {
+                        displayStatus = "Pending";
+                    }
+                }
+                else
+                {
+                    // Chỉ có 1 KTV
+                    if (totalItems > 0 && completedItems == totalItems)
+                    {
+                        displayStatus = "Completed";
+                    }
+                    else if (completedItems > 0)
+                    {
+                        displayStatus = "InProgress";
+                    }
+                    else
+                    {
+                        displayStatus = "Pending";
+                    }
+                }
+            }
+
             return new MaintenanceWorkOrderDTO
             {
                 WorkOrderId = workOrder.WorkOrderId,
                 WorkOrderCode = workOrder.WorkOrderCode,
                 PlanId = workOrder.PlanId,
+                TemplateId = workOrder.Plan?.TemplateId,
+                TemplateName = workOrder.Plan?.Template?.TemplateName,
                 EquipmentId = workOrder.EquipmentId,
                 EquipmentName = workOrder.Equipment?.EquipmentName ?? "",
                 EquipmentCode = workOrder.Equipment?.EquipmentCode ?? "",
@@ -1418,7 +1668,7 @@ namespace FITSKIP.Application.Services
                 LineName = workOrder.Equipment?.Stage?.Line?.LineName,
                 AssignedDate = workOrder.AssignedDate,
                 DueDate = workOrder.DueDate,
-                ScheduledDate = workOrder.ScheduledDate, // Ngày dự định bảo trì
+                ScheduledDate = workOrder.ScheduledDate,
                 StartedDate = workOrder.StartedDate,
                 CompletedDate = workOrder.CompletedDate,
                 AssignedToElectrical = workOrder.AssignedToElectrical,
@@ -1427,15 +1677,56 @@ namespace FITSKIP.Application.Services
                 AssignedToMechanical = workOrder.AssignedToMechanical,
                 MechanicalTechnicianName = workOrder.MechanicalTechnician?.FullName,
                 MechanicalEmployeeCode = workOrder.MechanicalTechnician?.EmployeeCode,
-                Status = workOrder.Status,
+                Status = displayStatus, // Trạng thái chung (cho TechManager)
                 Notes = workOrder.Notes,
                 ChecklistItems = checklistItems.Select(MapChecklistItemToDTO).OrderBy(ci => ci.OrderIndex).ToList(),
+                
+                // Overall progress
                 TotalChecklistItems = totalItems,
                 CompletedChecklistItems = completedItems,
                 CompletionPercentage = totalItems > 0 ? (decimal)completedItems / totalItems * 100 : 0,
+                
+                // ✅ Progress riêng cho từng KTV
+                ElectricalTotalItems = electricalTotal,
+                ElectricalCompletedItems = electricalCompleted,
+                ElectricalCompletionPercentage = electricalPercentage,
+                ElectricalStatus = electricalStatus, // ✅ Trạng thái riêng của KTV Điện
+                
+                MechanicalTotalItems = mechanicalTotal,
+                MechanicalCompletedItems = mechanicalCompleted,
+                MechanicalCompletionPercentage = mechanicalPercentage,
+                MechanicalStatus = mechanicalStatus, // ✅ Trạng thái riêng của KTV Cơ
+                
                 DaysUntilDue = daysUntilDue,
-                IsOverdue = workOrder.DueDate < today && workOrder.Status != "Completed"
+                IsOverdue = workOrder.DueDate < today && displayStatus != "Completed"
             };
+        }
+
+        /// <summary>
+        /// Tính trạng thái riêng cho từng KTV dựa vào checklist items của họ
+        /// </summary>
+        private static string CalculateTechnicianStatus(int totalItems, int completedItems)
+        {
+            // Không có items → không giao việc cho KTV này
+            if (totalItems == 0)
+            {
+                return "N/A";
+            }
+            
+            // Chưa checklist gì → Pending (Chờ xử lý)
+            if (completedItems == 0)
+            {
+                return "Pending";
+            }
+            
+            // Đã checklist hết → Completed (Đã hoàn thành)
+            if (completedItems == totalItems)
+            {
+                return "Completed";
+            }
+            
+            // Đang làm dở → InProgress (Đang thực hiện)
+            return "InProgress";
         }
 
         private static MaintenanceChecklistItemDTO MapChecklistItemToDTO(MaintenanceChecklistItem item)

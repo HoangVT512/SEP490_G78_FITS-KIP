@@ -1139,6 +1139,34 @@ namespace FITSKIP.API.Controllers
         }
 
         /// <summary>
+        /// Hoãn phiếu bảo trì (TechManager) - Chỉ cho phép khi Pending hoặc đã giao việc nhưng chưa ai làm
+        /// </summary>
+        [HttpPost("work-orders/{workOrderId}/postpone")]
+        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
+        public async Task<IActionResult> PostponeWorkOrder(int workOrderId, [FromBody] PostponeWorkOrderRequest request)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(ApiResponse.ErrorResponse("Không xác định được người dùng"));
+                }
+
+                var workOrder = await _maintenanceService.PostponeWorkOrderAsync(workOrderId, request, userId);
+                return Ok(ApiResponse<MaintenanceWorkOrderDTO>.SuccessResponse(workOrder, "Hoãn phiếu bảo trì thành công"));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
         /// Xóa phiếu bảo trì (TechManager)
         /// </summary>
         [HttpDelete("work-orders/{workOrderId}")]
