@@ -131,8 +131,8 @@ const SparePartRequest = ({ incident = null }) => {
         notificationType = "partRequest";
       }
 
-      // Gửi thông báo đến QLKT
-      await notificationService.sendToTechnicalManagers({
+      // Gửi thông báo đến Quản lý kho
+      await notificationService.sendToWarehouseManagers({
         message: notificationMessage,
         type: notificationType,
         data: {
@@ -150,7 +150,7 @@ const SparePartRequest = ({ incident = null }) => {
       });
 
       message.success(
-        "Đã gửi yêu cầu đến Quản lý kỹ thuật thành công! QLKT sẽ xem xét và xử lý yêu cầu của bạn."
+        "Đã gửi yêu cầu đến Quản lý kho thành công! Quản lý kho sẽ xem xét và xử lý yêu cầu của bạn."
       );
 
       setRequestModalVisible(false);
@@ -433,7 +433,7 @@ const SparePartRequest = ({ incident = null }) => {
                   onClick={handleSubmitRequest}
                   loading={loading}
                 >
-                  Gửi yêu cầu đến QLKT
+                  Gửi yêu cầu đến Quản lý kho
                 </Button>,
                 <Button
                   key="record"
@@ -460,7 +460,7 @@ const SparePartRequest = ({ incident = null }) => {
                   onClick={handleSubmitRequest}
                   loading={loading}
                 >
-                  Gửi yêu cầu đến QLKT
+                  Gửi yêu cầu đến Quản lý kho
                 </Button>,
               ]
         }
@@ -496,13 +496,13 @@ const SparePartRequest = ({ incident = null }) => {
                   if (stockInfo.status === "Hết hàng") {
                     return (
                       <Tag color="error" icon={<WarningOutlined />}>
-                        Hết hàng - QLKT sẽ xem xét yêu cầu mua hàng
+                        Hết hàng - Quản lý kho sẽ xem xét yêu cầu mua hàng
                       </Tag>
                     );
                   } else if (stockInfo.status === "Sắp hết") {
                     return (
                       <Tag color="warning" icon={<WarningOutlined />}>
-                        Sắp hết - QLKT sẽ được thông báo
+                        Sắp hết - Quản lý kho sẽ được thông báo
                       </Tag>
                     );
                   } else {
@@ -562,16 +562,16 @@ const SparePartRequest = ({ incident = null }) => {
               <ul style={{ margin: 0, paddingLeft: 20 }}>
                 <li>
                   Yêu cầu sẽ được gửi đến{" "}
-                  <strong>Quản lý kỹ thuật (QLKT)</strong>
+                  <strong>Quản lý kho</strong>
                 </li>
-                <li>QLKT sẽ xem xét và xử lý yêu cầu của bạn</li>
+                <li>Quản lý kho sẽ xem xét và xử lý yêu cầu của bạn</li>
                 <li>
-                  Nếu hết hàng hoặc sắp hết, QLKT có thể tạo yêu cầu mua hàng
+                  Nếu hết hàng hoặc sắp hết, Quản lý kho có thể tạo yêu cầu mua hàng
                   đến Quản lý
                 </li>
                 <li>
                   Nếu còn hàng, bạn có thể liên hệ kho để nhận phụ tùng sau khi
-                  QLKT phê duyệt
+                  Quản lý kho phê duyệt
                 </li>
               </ul>
             </div>

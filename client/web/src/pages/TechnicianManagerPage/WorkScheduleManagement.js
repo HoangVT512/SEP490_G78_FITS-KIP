@@ -925,10 +925,26 @@ const WorkScheduleManagement = () => {
                   setIsPostponeModalVisible(false);
                   postponeForm.resetFields();
                 }}
+                style={{
+                  height: "40px",
+                  fontSize: "16px",
+                  minWidth: "120px",
+                }}
               >
                 Hủy
               </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                loading={loading}
+                style={{
+                  backgroundColor: "#283652",
+                  borderColor: "#283652",
+                  height: "40px",
+                  fontSize: "16px",
+                  minWidth: "120px",
+                }}
+              >
                 Hoãn
               </Button>
             </Space>
@@ -968,6 +984,11 @@ const WorkScheduleManagement = () => {
                       setIsEditMode(false);
                       detailForm.resetFields();
                     }}
+                    style={{
+                      height: "40px",
+                      fontSize: "16px",
+                      minWidth: "120px",
+                    }}
                   >
                     Hủy
                   </Button>,
@@ -976,6 +997,13 @@ const WorkScheduleManagement = () => {
                     type="primary"
                     loading={loading}
                     onClick={() => detailForm.submit()}
+                    style={{
+                      backgroundColor: "#283652",
+                      borderColor: "#283652",
+                      height: "40px",
+                      fontSize: "16px",
+                      minWidth: "120px",
+                    }}
                   >
                     {selectedRecord.type === "plan" ? "Giao việc" : "Cập nhật"}
                   </Button>,
@@ -987,6 +1015,11 @@ const WorkScheduleManagement = () => {
                       setIsDetailModalVisible(false);
                       setIsEditMode(false);
                     }}
+                    style={{
+                      height: "40px",
+                      fontSize: "16px",
+                      minWidth: "120px",
+                    }}
                   >
                     Đóng
                   </Button>,
@@ -997,6 +1030,11 @@ const WorkScheduleManagement = () => {
                       setIsDetailModalVisible(false);
                       handlePostpone(selectedRecord);
                     }}
+                    style={{
+                      height: "40px",
+                      fontSize: "16px",
+                      minWidth: "120px",
+                    }}
                   >
                     Hoãn
                   </Button>,
@@ -1005,6 +1043,13 @@ const WorkScheduleManagement = () => {
                     type="primary"
                     icon={<UserAddOutlined />}
                     onClick={() => handleAssignWork(selectedRecord)}
+                    style={{
+                      backgroundColor: "#283652",
+                      borderColor: "#283652",
+                      height: "40px",
+                      fontSize: "16px",
+                      minWidth: "120px",
+                    }}
                   >
                     {selectedRecord.type === "plan" ? "Giao việc" : "Cập nhật KTV"}
                   </Button>,
@@ -1015,6 +1060,11 @@ const WorkScheduleManagement = () => {
                   onClick={() => {
                     setIsDetailModalVisible(false);
                     setIsEditMode(false);
+                  }}
+                  style={{
+                    height: "40px",
+                    fontSize: "16px",
+                    minWidth: "120px",
                   }}
                 >
                   Đóng

@@ -182,18 +182,18 @@ const TechnicianManagerLayout = () => {
       label: "Kế hoạch bảo trì",
       onClick: () => navigate("/technician-manager/maintenance-plans"),
     },
-    {
-      key: "returns",
-      icon: <EditOutlined />,
-      label: "Xác nhận trả lại",
-      onClick: () => navigate("/technician-manager/replacement-returns"),
-    },
-    {
-      key: "ktv-confirm-return",
-      icon: <CheckCircleOutlined />,
-      label: "Xác nhận đã giao kho",
-      onClick: () => navigate("/technician-manager/ktv-confirm-return"),
-    },
+    // {
+    //   key: "returns",
+    //   icon: <EditOutlined />,
+    //   label: "Xác nhận trả lại",
+    //   onClick: () => navigate("/technician-manager/replacement-returns"),
+    // },
+    // {
+    //   key: "ktv-confirm-return",
+    //   icon: <CheckCircleOutlined />,
+    //   label: "Xác nhận đã giao kho",
+    //   onClick: () => navigate("/technician-manager/ktv-confirm-return"),
+    // },
   ];
 
   // Handle menu click

@@ -296,7 +296,15 @@ const ReturnConfirmation = () => {
         open={isDetailModalVisible}
         onCancel={() => setIsDetailModalVisible(false)}
         footer={[
-          <Button key="close" onClick={() => setIsDetailModalVisible(false)}>
+          <Button
+            key="close"
+            onClick={() => setIsDetailModalVisible(false)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
             Đóng
           </Button>,
           <Button
@@ -306,6 +314,13 @@ const ReturnConfirmation = () => {
             onClick={() => {
               setIsDetailModalVisible(false);
               handleConfirmReturn(selectedReturn);
+            }}
+            style={{
+              backgroundColor: "#283652",
+              borderColor: "#283652",
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
             }}
           >
             Xác nhận trả lại

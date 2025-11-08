@@ -95,7 +95,6 @@ const IncidentAssignList = () => {
         startTime: it.startTime || it.reportDate,
         endTime: it.endTime || null,
         assignedDate: it.assignedDate || it.startTime || it.reportDate,
-        dueDate: it.dueDate || it.expectedEndTime || null,
         reportedBy:
           it.reportedByUser?.fullName || it.reportedByName || it.reporter || "",
         lineName:
@@ -172,23 +171,6 @@ const IncidentAssignList = () => {
       ),
     },
     {
-      title: "Ưu tiên",
-      dataIndex: "priority",
-      key: "priority",
-      width: 100,
-      render: (priority) => {
-        let color = "default";
-        if (priority === "Cao") color = "red";
-        else if (priority === "Trung bình") color = "orange";
-        else if (priority === "Thấp") color = "green";
-        return (
-          <Tag color={color} style={{ fontWeight: 500 }}>
-            {priority}
-          </Tag>
-        );
-      },
-    },
-    {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
@@ -218,29 +200,18 @@ const IncidentAssignList = () => {
       dataIndex: "assignedDate",
       key: "assignedDate",
       width: 150,
-      render: (text) => <div style={{ fontSize: "12px" }}>{text}</div>,
-    },
-    {
-      title: "Hạn xử lý",
-      dataIndex: "dueDate",
-      key: "dueDate",
-      width: 150,
-      render: (text, record) => {
-        const isOverdue =
-          new Date(text) < new Date() && record.status !== "Hoàn thành";
-        return (
-          <div
-            style={{
-              fontSize: "12px",
-              color: isOverdue ? "#ff4d4f" : "inherit",
-              fontWeight: isOverdue ? 500 : "normal",
-            }}
-          >
-            {text}
-            {isOverdue && <Badge status="error" style={{ marginLeft: 8 }} />}
+      render: (text) => (
+        text ? (
+          <div>
+            <div style={{ fontSize: "13px" }}>
+              {dayjs(text).format("DD/MM/YYYY")}
+            </div>
+            <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+              {dayjs(text).format("HH:mm")}
+            </div>
           </div>
-        );
-      },
+        ) : ""
+      ),
     },
     {
       title: "Thao tác",
@@ -294,14 +265,14 @@ const IncidentAssignList = () => {
         }
 
         // Chỉ hiển thị "Cập nhật" khi sự cố chưa hoàn thành
-        if (record.status !== "Hoàn thành") {
-          items.push({
-            key: "update",
-            icon: <EditOutlined />,
-            label: "Cập nhật",
-            onClick: () => handleUpdateIncident(record),
-          });
-        }
+        // if (record.status !== "Hoàn thành") {
+        //   items.push({
+        //     key: "update",
+        //     icon: <EditOutlined />,
+        //     label: "Cập nhật",
+        //     onClick: () => handleUpdateIncident(record),
+        //   });
+        // }
 
         return (
           <Dropdown
@@ -342,22 +313,22 @@ const IncidentAssignList = () => {
     setUpdateModalVisible(true);
   };
 
-  const handleUpdateSubmit = async (values) => {
-    try {
-      setLoading(true);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+  // const handleUpdateSubmit = async (values) => {
+  //   try {
+  //     setLoading(true);
+  //     // Simulate API call
+  //     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      message.success("Cập nhật sự cố thành công!");
-      setUpdateModalVisible(false);
-      form.resetFields();
-      fetchIncidents();
-    } catch (error) {
-      message.error("Cập nhật sự cố thất bại!");
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     message.success("Cập nhật sự cố thành công!");
+  //     setUpdateModalVisible(false);
+  //     form.resetFields();
+  //     fetchIncidents();
+  //   } catch (error) {
+  //     message.error("Cập nhật sự cố thất bại!");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -667,8 +638,8 @@ const IncidentAssignList = () => {
                 handleUpdateIncident(selectedIncident);
               }}
               style={{
-                backgroundColor: "#1890ff",
-                borderColor: "#1890ff",
+                backgroundColor: "#283652",
+                borderColor: "#283652",
                 height: "40px",
                 fontSize: "16px",
                 minWidth: "120px",
@@ -725,33 +696,44 @@ const IncidentAssignList = () => {
               <Descriptions.Item label="Giải pháp" span={2}>
                 {selectedIncident.solution || "Chưa có giải pháp"}
               </Descriptions.Item>
-              <Descriptions.Item label="Ưu tiên" span={1}>
-                <Tag
-                  color={
-                    selectedIncident.priority === "Cao"
-                      ? "red"
-                      : selectedIncident.priority === "Trung bình"
-                        ? "orange"
-                        : "green"
-                  }
-                >
-                  {selectedIncident.priority}
-                </Tag>
-              </Descriptions.Item>
               <Descriptions.Item label="Người báo cáo" span={1}>
                 {selectedIncident.reportedBy}
               </Descriptions.Item>
               <Descriptions.Item label="Thời gian bắt đầu" span={1}>
-                {selectedIncident.startTime}
+                {selectedIncident.startTime ? (
+                  <div>
+                    <div style={{ fontSize: "13px" }}>
+                      {dayjs(selectedIncident.startTime).format("DD/MM/YYYY")}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                      {dayjs(selectedIncident.startTime).format("HH:mm")}
+                    </div>
+                  </div>
+                ) : ""}
               </Descriptions.Item>
               <Descriptions.Item label="Thời gian kết thúc" span={1}>
-                {selectedIncident.endTime || "Chưa hoàn thành"}
+                {selectedIncident.endTime ? (
+                  <div>
+                    <div style={{ fontSize: "13px" }}>
+                      {dayjs(selectedIncident.endTime).format("DD/MM/YYYY")}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                      {dayjs(selectedIncident.endTime).format("HH:mm")}
+                    </div>
+                  </div>
+                ) : "Chưa hoàn thành"}
               </Descriptions.Item>
               <Descriptions.Item label="Ngày giao" span={1}>
-                {selectedIncident.assignedDate}
-              </Descriptions.Item>
-              <Descriptions.Item label="Hạn xử lý" span={1}>
-                {selectedIncident.dueDate}
+                {selectedIncident.assignedDate ? (
+                  <div>
+                    <div style={{ fontSize: "13px" }}>
+                      {dayjs(selectedIncident.assignedDate).format("DD/MM/YYYY")}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                      {dayjs(selectedIncident.assignedDate).format("HH:mm")}
+                    </div>
+                  </div>
+                ) : ""}
               </Descriptions.Item>
             </Descriptions>
           </div>
@@ -793,7 +775,7 @@ const IncidentAssignList = () => {
       </Modal>
 
       {/* Update Modal */}
-      <Modal
+      {/* <Modal
         title={
           <div style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}>
             Cập nhật sự cố
@@ -884,7 +866,7 @@ const IncidentAssignList = () => {
             </Space>
           </Form.Item>
         </Form>
-      </Modal>
+      </Modal> */}
     </div>
   );
 };

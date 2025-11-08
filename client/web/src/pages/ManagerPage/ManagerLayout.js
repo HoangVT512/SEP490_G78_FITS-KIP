@@ -227,11 +227,11 @@ const ManagerLayout = () => {
       icon: <ShoppingOutlined />,
       label: "Duyệt yêu cầu mua hàng",
     },
-    {
-      key: "replacement-approvals",
-      icon: <CheckCircleOutlined />,
-      label: "Duyệt thay thế",
-    },
+    // {
+    //   key: "replacement-approvals",
+    //   icon: <CheckCircleOutlined />,
+    //   label: "Duyệt thay thế",
+    // },
     {
       key: "maintenance-reports",
       icon: <ToolOutlined />,
@@ -242,31 +242,31 @@ const ManagerLayout = () => {
       icon: <SwapOutlined />,
       label: "Thay thế linh kiện",
     },
-    {
-      key: "replacement-history",
-      icon: <SwapOutlined />,
-      label: "Lịch sử thay thế",
-    },
+    // {
+    //   key: "replacement-history",
+    //   icon: <SwapOutlined />,
+    //   label: "Lịch sử thay thế",
+    // },
     {
       key: "inventory-dashboard",
       icon: <InboxOutlined />,
-      label: "Dashboard kho",
+      label: "Báo cáo kho",
     },
-    {
-      key: "production-management",
-      icon: <FundOutlined />,
-      label: "Quản lý sản xuất",
-    },
+    // {
+    //   key: "production-management",
+    //   icon: <FundOutlined />,
+    //   label: "Quản lý sản xuất",
+    // },
     {
       key: "production-report",
       icon: <FileTextOutlined />,
-      label: "Báo cáo sản xuất",
+      label: "Báo cáo sản lượng",
     },
-    {
-      key: "incidents",
-      icon: <WarningOutlined />,
-      label: "Danh sách sự cố",
-    },
+    // {
+    //   key: "incidents",
+    //   icon: <WarningOutlined />,
+    //   label: "Danh sách sự cố",
+    // },
   ];
 
   const handleMenuClick = ({ key }) => {

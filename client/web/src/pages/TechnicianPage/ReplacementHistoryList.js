@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Card, Table, message, Empty, Tag, Tooltip } from "antd";
+import dayjs from "dayjs";
 import { replacementHistoryService } from "../../services/replacementHistoryService";
 
 const ReplacementHistoryList = ({ equipmentId }) => {
@@ -52,13 +53,33 @@ const ReplacementHistoryList = ({ equipmentId }) => {
       dataIndex: "replacedDate",
       key: "replacedDate",
       width: 180,
-      render: (d) => (d ? new Date(d).toLocaleString() : ""),
+      render: (d) => (d ? (
+        <div>
+          <div style={{ fontSize: "13px" }}>
+            {dayjs(d).format("DD/MM/YYYY")}
+          </div>
+          <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+            {dayjs(d).format("HH:mm")}
+          </div>
+        </div>
+      ) : ""),
     },
     {
-      title: "Người thực hiện",
-      dataIndex: "replacedByUserName",
-      key: "replacedByUserName",
+      title: "Người cấp phát",
+      key: "replacedBy",
       width: 160,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontSize: "13px", fontWeight: 500 }}>
+            {record.replacedByFullName || record.replacedByUserName || "Chưa xác định"}
+          </div>
+          {record.replacedByEmployeeCode && (
+            <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+              {record.replacedByEmployeeCode}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       title: "Trạng thái",

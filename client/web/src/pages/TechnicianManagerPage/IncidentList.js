@@ -33,8 +33,6 @@ import {
   LeftOutlined,
   RightOutlined,
   PictureOutlined,
-  PushpinOutlined,
-  UndoOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { incidentService } from "../../services/incidentService";
@@ -60,7 +58,6 @@ const IncidentList = () => {
   const [technicians, setTechnicians] = useState([]);
   const [allUsers, setAllUsers] = useState([]);
   const [selectedTechnicianId, setSelectedTechnicianId] = useState(null);
-  const [sparePartsStatusMap, setSparePartsStatusMap] = useState({}); // Track spare parts status for each incident
   const [historyModalVisible, setHistoryModalVisible] = useState(false); // Xem lịch sử thay thế
   const [selectedEquipmentId, setSelectedEquipmentId] = useState(null); // Equipment ID để xem lịch sử
   const [selectedIncidentId, setSelectedIncidentId] = useState(null); // Incident ID để xem lịch sử
@@ -144,45 +141,18 @@ const IncidentList = () => {
   }, []);
 
   useEffect(() => {
-    // Fetch incidents again when activeTab changes
-    fetchIncidents();
+    // Only filter existing data when tab changes, don't re-fetch
+    handleFilter();
   }, [activeTab]);
 
   useEffect(() => {
     handleFilter();
   }, [searchText, filterStatus, incidents, activeTab]);
 
-  // Thêm useEffect để lắng nghe cập nhật dữ liệu real-time
-  useEffect(() => {
-    console.log("🔌 Setting up SignalR listeners for IncidentList...");
-
-    // Lắng nghe thông báo duyệt cấp phát linh kiện
-    const unsubscribeReplacementApproved = subscribe(
-      "ReplacementApproved",
-      (data) => {
-        console.log("✅ Replacement approved notification received:", data);
-
-        // Refresh spare parts status cho incident liên quan
-        if (data.incidentId) {
-          fetchSparePartsStatusForIncident(data.incidentId);
-        }
-
-        // Refresh toàn bộ data sau 2 giây để đảm bảo đồng bộ
-        setTimeout(() => {
-          fetchIncidents();
-        }, 2000);
-      }
-    );
-
-    // Cleanup
-    return () => {
-      unsubscribeReplacementApproved();
-      console.log("🧹 Cleaned up SignalR listeners for IncidentList");
-    };
-  }, [subscribe]);
-
-  const fetchIncidents = async () => {
-    setLoading(true);
+  const fetchIncidents = async (showLoading = true) => {
+    if (showLoading) {
+      setLoading(true);
+    }
     try {
       let res;
 
@@ -310,27 +280,6 @@ const IncidentList = () => {
 
       setIncidents(displayIncidents);
       setFilteredIncidents(displayIncidents);
-
-      // Check spare parts status for each incident
-      const sparePartsMap = {};
-      for (const incident of mapped) {
-        try {
-          const sparePartsStatus = await incidentService.checkHasSpareParts(
-            incident.id
-          );
-          sparePartsMap[incident.id] = sparePartsStatus;
-        } catch (err) {
-          console.error(
-            `Error checking spare parts for incident ${incident.id}:`,
-            err
-          );
-          sparePartsMap[incident.id] = {
-            hasPendingRequests: false,
-            hasReturnRequests: false,
-          };
-        }
-      }
-      setSparePartsStatusMap(sparePartsMap);
     } catch (err) {
       console.error("Lỗi khi tải danh sách sự cố:", err);
       message.error(err?.message || "Không thể tải danh sách sự cố");
@@ -383,27 +332,6 @@ const IncidentList = () => {
     }
   };
 
-  const fetchSparePartsStatusForIncident = async (incidentId) => {
-    try {
-      const sparePartsStatus = await incidentService.checkHasSpareParts(
-        incidentId
-      );
-      setSparePartsStatusMap((prev) => ({
-        ...prev,
-        [incidentId]: sparePartsStatus,
-      }));
-      console.log(
-        `✅ Updated spare parts status for incident ${incidentId}:`,
-        sparePartsStatus
-      );
-    } catch (err) {
-      console.error(
-        `Error checking spare parts for incident ${incidentId}:`,
-        err
-      );
-    }
-  };
-
   const getTechnicianName = (technicianId) => {
     if (!technicianId) return null;
     const user = allUsers.find((u) => (u.userId || u.id) === technicianId);
@@ -430,7 +358,7 @@ const IncidentList = () => {
           ? "Đã phân công kỹ thuật viên và cập nhật trạng thái thành công"
           : "Đã phân công kỹ thuật viên thành công"
       );
-      fetchIncidents(); // Refresh the list
+      fetchIncidents(false); // Refresh without showing loading
       if (selectedIncident && selectedIncident.id === incidentId) {
         setSelectedTechnicianId(technicianId);
       }
@@ -558,58 +486,6 @@ const IncidentList = () => {
       render: (text, record) => (
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <span style={{ fontWeight: 500 }}>{text}</span>
-          {sparePartsStatusMap[record.id]?.hasPendingRequests && (
-            <Tooltip title="Có yêu cầu linh kiện thay thế đang chờ duyệt">
-              <div
-                style={{
-                  backgroundColor: "#ff4d4f",
-                  borderRadius: "50%",
-                  width: "24px",
-                  height: "24px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  animation: "pulse 2s infinite",
-                  boxShadow: "0 0 8px rgba(255, 77, 79, 0.5)",
-                  border: "2px solid white",
-                }}
-              >
-                <PushpinOutlined
-                  style={{
-                    color: "white",
-                    fontSize: "14px",
-                    fontWeight: "bold",
-                  }}
-                />
-              </div>
-            </Tooltip>
-          )}
-          {sparePartsStatusMap[record.id]?.hasReturnRequests && (
-            <Tooltip title="Có linh kiện cần trả lại">
-              <div
-                style={{
-                  backgroundColor: "#faad14",
-                  borderRadius: "50%",
-                  width: "24px",
-                  height: "24px",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  animation: "pulse 2s infinite",
-                  boxShadow: "0 0 8px rgba(250, 173, 20, 0.5)",
-                  border: "2px solid white",
-                }}
-              >
-                <UndoOutlined
-                  style={{
-                    color: "white",
-                    fontSize: "14px",
-                    fontWeight: "bold",
-                  }}
-                />
-              </div>
-            </Tooltip>
-          )}
         </div>
       ),
     },
@@ -881,7 +757,7 @@ const IncidentList = () => {
             </Space>
           }
           extra={
-            <Button icon={<ReloadOutlined />} onClick={fetchIncidents}>
+            <Button icon={<ReloadOutlined />} onClick={() => fetchIncidents(false)}>
               Làm mới
             </Button>
           }
@@ -955,7 +831,7 @@ const IncidentList = () => {
             </Space>
           }
           extra={
-            <Button icon={<ReloadOutlined />} onClick={fetchIncidents}>
+            <Button icon={<ReloadOutlined />} onClick={() => fetchIncidents(false)}>
               Làm mới
             </Button>
           }

@@ -464,7 +464,15 @@ const MaintenanceSchedule = () => {
         open={modalVisible}
         onCancel={() => setModalVisible(false)}
         footer={[
-          <Button key="close" onClick={() => setModalVisible(false)}>
+          <Button
+            key="close"
+            onClick={() => setModalVisible(false)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
             Đóng
           </Button>,
         ]}

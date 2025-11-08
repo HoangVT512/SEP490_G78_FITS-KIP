@@ -183,20 +183,20 @@ const WarehouseManagerLayout = () => {
       label: "Xác nhận trả lại",
     },
     {
+      key: "history",
+      icon: <HistoryOutlined />,
+      label: "Lịch sử cấp phát linh kiện",
+    },
+    {
       key: "purchase-requests",
       icon: <ShoppingOutlined />,
       label: "Yêu cầu mua hàng",
     },
-    {
-      key: "reports",
-      icon: <BarChartOutlined />,
-      label: "Báo cáo kho",
-    },
-    {
-      key: "history",
-      icon: <HistoryOutlined />,
-      label: "Lịch sử giao dịch",
-    },
+    // {
+    //   key: "reports",
+    //   icon: <BarChartOutlined />,
+    //   label: "Báo cáo kho",
+    // },
   ];
 
   const handleMenuClick = ({ key }) => {

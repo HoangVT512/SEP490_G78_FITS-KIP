@@ -21,6 +21,7 @@ import { sparePartService } from "../../services/sparePartService";
 import { incidentService } from "../../services/incidentService";
 import { replacementHistoryService } from "../../services/replacementHistoryService";
 import { useAuth } from "../../contexts/AuthContext";
+import * as notificationService from "../../services/notificationService";
 import ReturnExcessModal from "./ReturnExcessModal";
 
 const { TextArea } = Input;
@@ -105,20 +106,42 @@ const ReplacementCreate = ({
               if (approvedReplacements.length > 0) {
                 console.log("Found approved replacements:", approvedReplacements);
 
-                // Set form data for all replacements
-                const formData = approvedReplacements.map((replacement, index) => ({
-                  key: replacement.replacementID || replacement.ReplacementID || index,
-                  replacementId: replacement.replacementID || replacement.ReplacementID,
-                  partNumber: replacement.partNumber || replacement.PartNumber,
-                  partName: replacement.partName || replacement.PartName,
-                  quantity: replacement.quantity || replacement.Quantity,
-                  actualQuantityUsed: replacement.actualQuantityUsed || replacement.ActualQuantityUsed || 0,
-                  remarks: replacement.remarks || replacement.Remarks || "",
+                // Group replacements by partNumber to combine same parts
+                const groupedReplacements = {};
+                approvedReplacements.forEach((replacement) => {
+                  const partNumber = replacement.partNumber || replacement.PartNumber;
+                  const partName = replacement.partName || replacement.PartName;
+                  const quantity = replacement.quantity || replacement.Quantity;
+                  const replacementId = replacement.replacementID || replacement.ReplacementID;
+
+                  if (!groupedReplacements[partNumber]) {
+                    groupedReplacements[partNumber] = {
+                      partNumber,
+                      partName,
+                      totalQuantity: 0,
+                      replacementIds: [],
+                      remarks: "",
+                    };
+                  }
+
+                  groupedReplacements[partNumber].totalQuantity += quantity;
+                  groupedReplacements[partNumber].replacementIds.push(replacementId);
+                });
+
+                // Convert grouped data to form data
+                const formData = Object.values(groupedReplacements).map((group, index) => ({
+                  key: index,
+                  partNumber: group.partNumber,
+                  partName: group.partName,
+                  quantity: group.totalQuantity,
+                  replacementIds: group.replacementIds,
+                  actualQuantityUsed: 0,
+                  remarks: "",
                 }));
 
                 setReplacementData(formData);
 
-                console.log("Setting form data:", formData);
+                console.log("Setting grouped form data:", formData);
               } else {
                 console.warn("No approved replacements found for equipment:", equipId);
                 message.warning(
@@ -144,7 +167,7 @@ const ReplacementCreate = ({
 
   const handleActualQuantityChange = (value, record) => {
     const updatedData = replacementData.map(item =>
-      item.replacementId === record.replacementId
+      item.key === record.key
         ? { ...item, actualQuantityUsed: value || 0 }
         : item
     );
@@ -153,7 +176,7 @@ const ReplacementCreate = ({
 
   const handleRemarksChange = (value, record) => {
     const updatedData = replacementData.map(item =>
-      item.replacementId === record.replacementId
+      item.key === record.key
         ? { ...item, remarks: value || "" }
         : item
     );
@@ -173,15 +196,28 @@ const ReplacementCreate = ({
 
     setLoading(true);
     try {
+      // Expand grouped data back to individual replacement records
+      const expandedItems = [];
+      replacementData.forEach(item => {
+        const { replacementIds, actualQuantityUsed, remarks, quantity } = item;
+
+        // Distribute the actual quantity used across all replacement records for this part
+        // For simplicity, we'll assign the full quantity to the first record and 0 to others
+        // This maintains the total quantity while keeping the logic simple
+        replacementIds.forEach((replacementId, index) => {
+          expandedItems.push({
+            ReplacementId: replacementId,
+            ActualQuantityUsed: index === 0 ? actualQuantityUsed : 0,
+            Remarks: remarks || ""
+          });
+        });
+      });
+
       const requestData = {
-        Items: replacementData.map(item => ({
-          ReplacementId: item.replacementId,
-          ActualQuantityUsed: item.actualQuantityUsed,
-          Remarks: item.remarks || ""
-        }))
+        Items: expandedItems
       };
 
-      console.log("Batch recording actual usage with data:", requestData);
+      console.log("Batch recording actual usage with expanded data:", requestData);
 
       const results = await replacementHistoryService.batchRecordActualUsage(requestData);
 
@@ -220,9 +256,31 @@ const ReplacementCreate = ({
     }
   };
 
-  const handleReturnConfirm = () => {
+  const handleReturnConfirm = async () => {
     setReturnModalVisible(false);
     const totalExcess = returnExcessData.reduce((sum, item) => sum + item.excessQuantity, 0);
+
+    // Send notification to warehouse managers about excess parts
+    try {
+      const notificationData = {
+        message: `Kỹ thuật viên ${currentUser?.fullName || currentUser?.userName || 'N/A'} có ${totalExcess} linh kiện thừa cần trả lại cho sự cố ${incidentInfo?.incidentCode || `INC-${String(incidentInfo?.incidentId || 0).padStart(3, "0")}`}`,
+        type: "ExcessPartsReturn",
+        data: {
+          incidentId: incidentInfo?.incidentId,
+          equipmentName: equipmentName,
+          technicianName: currentUser?.fullName || currentUser?.userName,
+          totalExcessQuantity: totalExcess,
+          excessParts: returnExcessData
+        }
+      };
+
+      await notificationService.sendToWarehouseManagers(notificationData);
+      console.log("✅ Notification sent to warehouse managers about excess parts");
+    } catch (notificationError) {
+      console.error("❌ Failed to send notification to warehouse managers:", notificationError);
+      // Don't block the flow if notification fails
+    }
+
     message.success(
       `Bạn có tổng cộng ${totalExcess} linh kiện thừa từ ${returnExcessData.length} loại phụ tùng. Vui lòng trực tiếp đến kho để trả hàng. QLKT sẽ xác nhận sau khi bạn trả.`
     );
@@ -349,7 +407,7 @@ const ReplacementCreate = ({
           <Table
             columns={columns}
             dataSource={replacementData}
-            rowKey="replacementId"
+            rowKey="key"
             pagination={false}
             size="middle"
             bordered

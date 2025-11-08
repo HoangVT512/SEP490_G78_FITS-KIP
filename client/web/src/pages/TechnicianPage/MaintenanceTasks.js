@@ -796,6 +796,11 @@ const MaintenanceTasks = () => {
               setChecklistModalVisible(false);
               setChecklistNotes({});
             }}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
           >
             Đóng
           </Button>,
@@ -810,6 +815,14 @@ const MaintenanceTasks = () => {
                 (item) => item.isChecked
               )
             }
+            style={{
+              backgroundColor: "#283652",
+              borderColor: "#283652",
+              color: "#fff",
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
           >
             Hoàn thành công việc
           </Button>,
@@ -1374,7 +1387,15 @@ const MaintenanceTasks = () => {
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
         footer={[
-          <Button key="close" onClick={() => setDetailModalVisible(false)}>
+          <Button
+            key="close"
+            onClick={() => setDetailModalVisible(false)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
             Đóng
           </Button>,
         ]}
@@ -1555,6 +1576,11 @@ const MaintenanceTasks = () => {
               setHistoryModalVisible(false);
               setReplacementHistories([]);
             }}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
           >
             Đóng
           </Button>,
@@ -1725,6 +1751,11 @@ const MaintenanceTasks = () => {
               setSelectedRecord(null);
               setActualQuantity(0);
             }}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
           >
             Hủy
           </Button>,
@@ -1733,6 +1764,13 @@ const MaintenanceTasks = () => {
             type="primary"
             loading={loading}
             onClick={handleSubmitActualQuantity}
+            style={{
+              backgroundColor: "#283652",
+              borderColor: "#283652",
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
           >
             Lưu
           </Button>,
