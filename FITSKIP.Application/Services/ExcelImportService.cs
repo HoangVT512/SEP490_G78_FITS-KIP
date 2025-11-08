@@ -1,7 +1,6 @@
 ﻿using OfficeOpenXml;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Application.Interfaces;
-using System.Drawing;
 
 namespace FITSKIP.Application.Services
 {
@@ -192,7 +191,7 @@ namespace FITSKIP.Application.Services
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                    range.Style.Fill.BackgroundColor.SetColor(Color.LightBlue);
+                    range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(173, 216, 230)); // LightBlue
                     range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
                 }
 
@@ -236,6 +235,154 @@ namespace FITSKIP.Application.Services
                 worksheet.Cells[instructionRow + 3, 1].Value = "- Loại: nhập 'Electrical' (điện), 'Mechanical' (cơ), hoặc 'General' (chung)"; // ✅ SỬA
                 worksheet.Cells[instructionRow + 4, 1].Value = "- Thứ tự: số nguyên dương (1, 2, 3,...)";
                 worksheet.Cells[instructionRow + 5, 1].Value = "- Mô tả chi tiết bước: Hướng dẫn cụ thể cách thực hiện bước kiểm tra"; // ✅ THÊM
+
+                return package.GetAsByteArray();
+            }
+        }
+
+        /// <summary>
+        /// Import Template Items (Các bước kiểm tra) từ Excel
+        /// Format: StepName | StepDescription | Category | OrderIndex
+        /// </summary>
+        public async Task<List<CreateTemplateItemRequest>> ImportTemplateItemsFromExcelAsync(Stream fileStream)
+        {
+            var items = new List<CreateTemplateItemRequest>();
+
+            using (var package = new ExcelPackage(fileStream))
+            {
+                var worksheet = package.Workbook.Worksheets[0];
+                var rowCount = worksheet.Dimension?.Rows ?? 0;
+
+                for (int row = 2; row <= rowCount; row++)
+                {
+                    try
+                    {
+                        var stepName = worksheet.Cells[row, 1].Value?.ToString()?.Trim();
+                        var stepDescription = worksheet.Cells[row, 2].Value?.ToString()?.Trim();
+                        var category = worksheet.Cells[row, 3].Value?.ToString()?.Trim();
+                        var orderIndexStr = worksheet.Cells[row, 4].Value?.ToString()?.Trim();
+
+                        // Validate required fields
+                        if (string.IsNullOrEmpty(stepName))
+                        {
+                            continue; // Bỏ qua dòng không hợp lệ
+                        }
+
+                        // Parse OrderIndex
+                        if (!int.TryParse(orderIndexStr, out int orderIndex))
+                        {
+                            orderIndex = items.Count + 1; // Auto increment
+                        }
+
+                        // Validate & normalize Category
+                        if (string.IsNullOrEmpty(category))
+                        {
+                            category = "General";
+                        }
+                        else
+                        {
+                            category = category.Trim();
+                            if (category.Equals("Electrical", StringComparison.OrdinalIgnoreCase) || 
+                                category.Equals("Điện", StringComparison.OrdinalIgnoreCase))
+                                category = "Electrical";
+                            else if (category.Equals("Mechanical", StringComparison.OrdinalIgnoreCase) || 
+                                     category.Equals("Cơ", StringComparison.OrdinalIgnoreCase) ||
+                                     category.Equals("Co", StringComparison.OrdinalIgnoreCase))
+                                category = "Mechanical";
+                            else
+                                category = "General";
+                        }
+
+                        // Determine RequiredRole based on Category
+                        string? requiredRole = category switch
+                        {
+                            "Electrical" => "Electrical",
+                            "Mechanical" => "Mechanical",
+                            _ => null
+                        };
+
+                        items.Add(new CreateTemplateItemRequest
+                        {
+                            StepName = stepName,
+                            StepDescription = stepDescription,
+                            Category = category,
+                            OrderIndex = orderIndex,
+                            RequiredRole = requiredRole,
+                            IsRequired = true
+                        });
+                    }
+                    catch (Exception)
+                    {
+                        continue; // Bỏ qua dòng lỗi
+                    }
+                }
+            }
+
+            return await Task.FromResult(items);
+        }
+
+        /// <summary>
+        /// Tạo file Excel mẫu cho Template Items (Các bước kiểm tra)
+        /// </summary>
+        public byte[] GenerateTemplateItemsExcelTemplate()
+        {
+            using (var package = new ExcelPackage())
+            {
+                var worksheet = package.Workbook.Worksheets.Add("Checklist Items");
+
+                // Header row
+                worksheet.Cells[1, 1].Value = "Tên bước kiểm tra";
+                worksheet.Cells[1, 2].Value = "Mô tả chi tiết";
+                worksheet.Cells[1, 3].Value = "Loại công việc";
+                worksheet.Cells[1, 4].Value = "Thứ tự";
+
+                // Style header
+                using (var range = worksheet.Cells[1, 1, 1, 4])
+                {
+                    range.Style.Font.Bold = true;
+                    range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(144, 238, 144)); // LightGreen
+                    range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                }
+
+                // Sample data - Ví dụ checklist cho máy hàn
+                worksheet.Cells[2, 1].Value = "Kiểm tra nguồn điện";
+                worksheet.Cells[2, 2].Value = "Đo điện áp đầu vào, đảm bảo ổn định 220V ±10%";
+                worksheet.Cells[2, 3].Value = "Electrical";
+                worksheet.Cells[2, 4].Value = 1;
+
+                worksheet.Cells[3, 1].Value = "Kiểm tra nhiệt độ mỏ hàn";
+                worksheet.Cells[3, 2].Value = "Đo nhiệt độ mỏ hàn, nhiệt độ chuẩn từ 300-350°C";
+                worksheet.Cells[3, 3].Value = "Electrical";
+                worksheet.Cells[3, 4].Value = 2;
+
+                worksheet.Cells[4, 1].Value = "Kiểm tra hệ thống làm mát";
+                worksheet.Cells[4, 2].Value = "Kiểm tra quạt làm mát, đảm bảo hoạt động bình thường, không có tiếng ồn bất thường";
+                worksheet.Cells[4, 3].Value = "Mechanical";
+                worksheet.Cells[4, 4].Value = 3;
+
+                worksheet.Cells[5, 1].Value = "Kiểm tra vít kẹp";
+                worksheet.Cells[5, 2].Value = "Kiểm tra và siết chặt các vít kẹp, đảm bảo không bị lỏng";
+                worksheet.Cells[5, 3].Value = "Mechanical";
+                worksheet.Cells[5, 4].Value = 4;
+
+                worksheet.Cells[6, 1].Value = "Vệ sinh bề mặt";
+                worksheet.Cells[6, 2].Value = "Lau sạch bề mặt máy, kiểm tra không có bụi bẩn hoặc dầu mỡ";
+                worksheet.Cells[6, 3].Value = "General";
+                worksheet.Cells[6, 4].Value = 5;
+
+                // Auto-fit columns
+                worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
+
+                // Add instructions
+                var instructionRow = worksheet.Dimension.Rows + 2;
+                worksheet.Cells[instructionRow, 1].Value = "HƯỚNG DẪN:";
+                worksheet.Cells[instructionRow, 1].Style.Font.Bold = true;
+                worksheet.Cells[instructionRow + 1, 1].Value = "- Mỗi dòng là 1 bước kiểm tra (checklist item)";
+                worksheet.Cells[instructionRow + 2, 1].Value = "- Loại công việc: nhập 'Electrical' (điện), 'Mechanical' (cơ), hoặc 'General' (chung)";
+                worksheet.Cells[instructionRow + 3, 1].Value = "- Thứ tự: số nguyên dương (1, 2, 3,...), quyết định thứ tự hiển thị";
+                worksheet.Cells[instructionRow + 4, 1].Value = "- Mô tả chi tiết: Hướng dẫn cụ thể cách thực hiện, tiêu chuẩn đạt/không đạt";
+                worksheet.Cells[instructionRow + 5, 1].Value = "- File này dùng để thêm các bước kiểm tra vào mẫu bảo trì đã tồn tại";
 
                 return package.GetAsByteArray();
             }
@@ -358,7 +505,7 @@ namespace FITSKIP.Application.Services
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                    range.Style.Fill.BackgroundColor.SetColor(Color.LightGreen);
+                    range.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.FromArgb(144, 238, 144)); // LightGreen
                     range.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
                 }
 

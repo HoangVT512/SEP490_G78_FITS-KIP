@@ -40,6 +40,14 @@ export const deleteTemplate = async (templateId) => {
   });
 };
 
+// Add checklist item to template (for import Excel)
+export const addChecklistItemToTemplate = async (templateId, itemData) => {
+  return apiRequest(`/maintenance/templates/${templateId}/checklist`, {
+    method: "POST",
+    body: JSON.stringify(itemData),
+  });
+};
+
 // ===== MAINTENANCE PLAN MANAGEMENT =====
 
 // Get all maintenance plans

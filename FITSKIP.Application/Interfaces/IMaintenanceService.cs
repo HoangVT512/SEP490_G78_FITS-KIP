@@ -36,6 +36,11 @@ namespace FITSKIP.Application.Interfaces
         /// </summary>
         Task DeleteTemplateAsync(int templateId);
 
+        /// <summary>
+        /// Thêm checklist item vào template (dùng cho import Excel)
+        /// </summary>
+        Task<MaintenanceTemplateItemDTO> AddChecklistItemToTemplateAsync(int templateId, CreateTemplateItemRequest request);
+
         // ===== MAINTENANCE PLAN MANAGEMENT =====
         
         /// <summary>

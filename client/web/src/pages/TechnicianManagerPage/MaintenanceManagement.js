@@ -75,6 +75,7 @@ import {
   getAllTechnicians,
   getMaintenanceStats,
   getUpcomingMaintenance,
+  addChecklistItemToTemplate,
 } from "../../services/maintenanceService";
 import { equipmentService } from "../../services/equipmentService";
 import { getAllStages, stageService } from "../../services/stageService";
@@ -145,6 +146,12 @@ const MaintenanceManagement = () => {
   const [filteredStages, setFilteredStages] = useState([]);
   const [filteredEquipments, setFilteredEquipments] = useState([]);
   const [filteredTemplates, setFilteredTemplates] = useState([]);
+
+  // ===== STATES CHO IMPORT TEMPLATE ITEMS (BƯỚC KIỂM TRA) =====
+  const [isItemsImportModalVisible, setIsItemsImportModalVisible] = useState(false);
+  const [selectedTemplateForImport, setSelectedTemplateForImport] = useState(null);
+  const [uploadedItemsFile, setUploadedItemsFile] = useState(null);
+  const [importItemsLoading, setImportItemsLoading] = useState(false);
 
   // Load initial data
   useEffect(() => {
@@ -574,13 +581,35 @@ const MaintenanceManagement = () => {
 
   const handleDownloadTemplateExcel = async () => {
     try {
-      // ✅ Sửa biến môi trường đúng + URL đúng format
       const apiBaseUrl =
         process.env.REACT_APP_API_BASE_URL || "http://localhost:7003/api";
-      window.location.href = `${apiBaseUrl}/maintenance/templates/download-template`;
+      const token = localStorage.getItem("token");
 
-      message.success("Đang tải Excel mẫu...");
+      const response = await fetch(
+        `${apiBaseUrl}/maintenance/templates/download-template`,
+        {
+          method: "GET",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Không thể tải file Excel");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `MauBaoTri_Template_${new Date().getTime()}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      message.success("Tải Excel mẫu thành công!");
     } catch (error) {
+      console.error("Download error:", error);
       message.error("Tải Excel mẫu thất bại: " + error.message);
     }
   };
@@ -664,16 +693,343 @@ const MaintenanceManagement = () => {
     }
   };
 
+  // ===== EXCEL IMPORT FOR TEMPLATE ITEMS (Các bước kiểm tra) =====
+
+  const handleDownloadTemplateItemsExcel = async () => {
+    try {
+      const apiBaseUrl =
+        process.env.REACT_APP_API_BASE_URL || "http://localhost:7003/api";
+      const token = localStorage.getItem("token");
+
+      const response = await fetch(
+        `${apiBaseUrl}/maintenance/templates/download-items-template`,
+        {
+          method: "GET",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Không thể tải file Excel");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `MauBaoTri_CacBuocKiemTra_${new Date().getTime()}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      message.success("Tải Excel mẫu bước kiểm tra thành công!");
+    } catch (error) {
+      console.error("Download error:", error);
+      message.error("Tải Excel mẫu thất bại: " + error.message);
+    }
+  };
+
+  const handleItemsFileChange = (info) => {
+    const file = info.file.originFileObj || info.file;
+    setUploadedItemsFile(file);
+    console.log("✅ File đã chọn:", file.name);
+  };
+
+  const handleOpenItemsImport = (template) => {
+    setSelectedTemplateForImport(template);
+    setIsItemsImportModalVisible(true);
+  };
+
+  const handleImportItemsExcel = async () => {
+    if (!uploadedItemsFile) {
+      message.error("Vui lòng chọn file Excel để import");
+      return;
+    }
+
+    if (!selectedTemplateForImport) {
+      message.error("Vui lòng chọn mẫu bảo trì để import vào");
+      return;
+    }
+
+    setImportItemsLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", uploadedItemsFile);
+
+      const token = localStorage.getItem("token");
+      const apiBaseUrl =
+        process.env.REACT_APP_API_BASE_URL || "http://localhost:7003/api";
+
+      const response = await fetch(
+        `${apiBaseUrl}/maintenance/templates/${selectedTemplateForImport.templateId}/import-items`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        message.success(
+          `Import thành công ${result.data.successCount} bước kiểm tra vào mẫu '${selectedTemplateForImport.templateName}'!`
+        );
+
+        if (result.data.errors && result.data.errors.length > 0) {
+          Modal.warning({
+            title: "Một số lỗi khi import",
+            content: (
+              <div>
+                <p>Đã import thành công {result.data.successCount} bước.</p>
+                <p>Có {result.data.errorCount} lỗi:</p>
+                <ul>
+                  {result.data.errors.slice(0, 5).map((err, idx) => (
+                    <li key={idx}>{err}</li>
+                  ))}
+                </ul>
+                {result.data.errors.length > 5 && (
+                  <p>...và {result.data.errors.length - 5} lỗi khác</p>
+                )}
+              </div>
+            ),
+          });
+        }
+
+        setIsItemsImportModalVisible(false);
+        setUploadedItemsFile(null);
+        setSelectedTemplateForImport(null);
+        loadTemplates();
+      } else {
+        // Hiển thị lỗi validation chi tiết
+        if (result.errors && result.errors.length > 0) {
+          Modal.error({
+            title: "⛔ Lỗi validation",
+            content: (
+              <div>
+                <p>
+                  <strong>{result.message}</strong>
+                </p>
+                <ul style={{ maxHeight: 400, overflow: "auto" }}>
+                  {result.errors.map((err, idx) => (
+                    <li key={idx}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            ),
+            width: 700,
+          });
+        } else {
+          message.error(result.message || "Import thất bại");
+        }
+      }
+    } catch (error) {
+      message.error("Import thất bại: " + error.message);
+    } finally {
+      setImportItemsLoading(false);
+    }
+  };
+
+  // Import items to Form (không lưu DB, chỉ parse Excel và thêm vào checklistItems)
+  const handleImportItemsToForm = async () => {
+    if (!uploadedItemsFile) {
+      message.error("Vui lòng chọn file Excel để import");
+      return;
+    }
+
+    setImportLoading(true);
+    try {
+      // Đọc file Excel bằng XLSX library
+      const XLSX = await import("xlsx");
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        try {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+          console.log("📊 Parsed Excel data:", jsonData);
+
+          if (jsonData.length === 0) {
+            message.warning("File Excel không có dữ liệu");
+            setImportLoading(false);
+            return;
+          }
+
+          // Parse và validate data
+          const newItems = [];
+          const errors = [];
+
+          jsonData.forEach((row, index) => {
+            const rowNum = index + 2; // Excel row (header = 1)
+
+            // Validate required fields
+            if (!row["Tên bước kiểm tra"] || row["Tên bước kiểm tra"].toString().trim() === "") {
+              errors.push(`Dòng ${rowNum}: Thiếu tên bước`);
+              return;
+            }
+
+            if (!row["Loại công việc"] || row["Loại công việc"].toString().trim() === "") {
+              errors.push(`Dòng ${rowNum}: Thiếu loại công việc`);
+              return;
+            }
+
+            const stepName = row["Tên bước kiểm tra"].toString().trim();
+            const categoryRaw = row["Loại công việc"].toString().trim();
+
+            // Map category
+            let category;
+            if (categoryRaw === "Điện" || categoryRaw === "Electrical") {
+              category = "Electrical";
+            } else if (categoryRaw === "Cơ khí" || categoryRaw === "Mechanical") {
+              category = "Mechanical";
+            } else if (categoryRaw === "Chung" || categoryRaw === "General") {
+              category = "General";
+            } else {
+              errors.push(`Dòng ${rowNum}: Loại công việc không hợp lệ (chỉ chấp nhận: Điện/Electrical, Cơ khí/Mechanical, Chung/General)`);
+              return;
+            }
+
+            // Check duplicate trong checklistItems hiện tại
+            const isDuplicate = checklistItems.some(
+              (item) =>
+                item.stepName.toLowerCase() === stepName.toLowerCase() &&
+                item.category === category
+            );
+
+            if (isDuplicate) {
+              errors.push(
+                `Dòng ${rowNum}: Bước "${stepName}" (${category === "Electrical" ? "Điện" : "Cơ khí"}) đã tồn tại`
+              );
+              return;
+            }
+
+            // Check duplicate trong newItems
+            const isDuplicateInNew = newItems.some(
+              (item) =>
+                item.stepName.toLowerCase() === stepName.toLowerCase() &&
+                item.category === category
+            );
+
+            if (isDuplicateInNew) {
+              errors.push(
+                `Dòng ${rowNum}: Bước "${stepName}" (${category === "Electrical" ? "Điện" : "Cơ khí"}) bị trùng trong file Excel`
+              );
+              return;
+            }
+
+            // Tự động set RequiredRole dựa vào Category
+            const requiredRole =
+              category === "Electrical" ? "Electrical" : "Mechanical";
+
+            newItems.push({
+              stepName,
+              category,
+              stepDescription: row["Mô tả chi tiết"] ? row["Mô tả chi tiết"].toString().trim() : "",
+              requiredRole: requiredRole, // ✅ Thêm trường này cho API
+              orderIndex: checklistItems.length + newItems.length + 1,
+            });
+          });
+
+          if (errors.length > 0) {
+            Modal.error({
+              title: "⛔ Lỗi validation",
+              content: (
+                <div>
+                  <p>
+                    <strong>Tìm thấy {errors.length} lỗi trong file Excel:</strong>
+                  </p>
+                  <ul style={{ maxHeight: 400, overflow: "auto" }}>
+                    {errors.map((err, idx) => (
+                      <li key={idx}>{err}</li>
+                    ))}
+                  </ul>
+                </div>
+              ),
+              width: 700,
+            });
+            setImportLoading(false);
+            return;
+          }
+
+          if (newItems.length === 0) {
+            message.warning("Không có bước kiểm tra hợp lệ để import");
+            setImportLoading(false);
+            return;
+          }
+
+          // Thêm vào checklistItems
+          setChecklistItems([...checklistItems, ...newItems]);
+          message.success(
+            `✅ Import thành công ${newItems.length} bước kiểm tra (${
+              newItems.filter((i) => i.category === "Electrical").length
+            } điện + ${
+              newItems.filter((i) => i.category === "Mechanical").length
+            } cơ khí)`
+          );
+
+          // Reset file
+          setUploadedItemsFile(null);
+        } catch (parseError) {
+          console.error("Parse error:", parseError);
+          message.error("Lỗi khi đọc file Excel: " + parseError.message);
+        } finally {
+          setImportLoading(false);
+        }
+      };
+
+      reader.onerror = () => {
+        message.error("Lỗi khi đọc file");
+        setImportLoading(false);
+      };
+
+      reader.readAsArrayBuffer(uploadedItemsFile);
+    } catch (error) {
+      console.error("Import error:", error);
+      message.error("Import thất bại: " + error.message);
+      setImportLoading(false);
+    }
+  };
+
   // ===== EXCEL IMPORT FOR MAINTENANCE PLANS =====
 
   const handleDownloadPlanExcel = async () => {
     try {
       const apiBaseUrl =
         process.env.REACT_APP_API_BASE_URL || "http://localhost:7003/api";
-      window.location.href = `${apiBaseUrl}/maintenance/plans/download-template`;
+      const token = localStorage.getItem("token");
 
-      message.success("Đang tải Excel mẫu Chu kỳ bảo trì...");
+      const response = await fetch(
+        `${apiBaseUrl}/maintenance/plans/download-template`,
+        {
+          method: "GET",
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Không thể tải file Excel");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `MauBaoTri_ChuKy_${new Date().getTime()}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      message.success("Tải Excel mẫu chu kỳ bảo trì thành công!");
     } catch (error) {
+      console.error("Download error:", error);
       message.error("Tải Excel mẫu thất bại: " + error.message);
     }
   };
@@ -1061,9 +1417,17 @@ const MaintenanceManagement = () => {
       title: "Thao tác",
       key: "action",
       fixed: "right",
-      width: 200,
+      width: 250,
       render: (_, record) => (
         <Space size="small">
+          <Tooltip title="Import bước kiểm tra">
+            <Button
+              type="link"
+              size="small"
+              icon={<UploadOutlined />}
+              onClick={() => handleOpenItemsImport(record)}
+            />
+          </Tooltip>
           <Tooltip title="Sửa">
             <Button
               type="link"
@@ -1590,6 +1954,78 @@ const MaintenanceManagement = () => {
           </Button>
         </div>
       </Modal>
+
+      {/* Import Template Items Modal */}
+      <Modal
+        title={`Import Các Bước Kiểm Tra vào: ${selectedTemplateForImport?.templateName || ''}`}
+        open={isItemsImportModalVisible}
+        onCancel={() => {
+          setIsItemsImportModalVisible(false);
+          setUploadedItemsFile(null);
+          setSelectedTemplateForImport(null);
+        }}
+        footer={null}
+        width={600}
+      >
+        <Alert
+          message="Hướng dẫn"
+          description={
+            <div>
+              <p>1. Tải file Excel mẫu bằng nút bên dưới</p>
+              <p>2. Điền thông tin các bước kiểm tra vào file Excel</p>
+              <p>3. Upload file Excel đã điền để import</p>
+              <p>
+                <Text type="warning">
+                  ⚠️ Các bước trùng tên sẽ bị từ chối
+                </Text>
+              </p>
+            </div>
+          }
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+        <Button
+          icon={<DownloadOutlined />}
+          onClick={handleDownloadTemplateItemsExcel}
+          style={{ marginBottom: 16 }}
+        >
+          Tải file Excel mẫu
+        </Button>
+        <br />
+        <Upload
+          accept=".xlsx"
+          beforeUpload={() => false}
+          onChange={handleItemsFileChange}
+          maxCount={1}
+        >
+          <Button icon={<UploadOutlined />}>Chọn file Excel</Button>
+        </Upload>
+        {uploadedItemsFile && (
+          <div style={{ marginTop: 16 }}>
+            <Text strong>File đã chọn:</Text> {uploadedItemsFile.name}
+          </div>
+        )}
+        <div style={{ marginTop: 24, textAlign: "right" }}>
+          <Button
+            onClick={() => {
+              setIsItemsImportModalVisible(false);
+              setUploadedItemsFile(null);
+              setSelectedTemplateForImport(null);
+            }}
+            style={{ marginRight: 8 }}
+          >
+            Hủy
+          </Button>
+          <Button
+            type="primary"
+            onClick={handleImportItemsExcel}
+            loading={importItemsLoading}
+          >
+            Import
+          </Button>
+        </div>
+      </Modal>
     </Card>
   );
 
@@ -2020,6 +2456,57 @@ const MaintenanceManagement = () => {
                 >
                   Thêm
                 </Button>
+              </Col>
+            </Row>
+          </Card>
+
+          {/* Import Excel cho các bước kiểm tra */}
+          <Card
+            size="small"
+            style={{ marginBottom: 16, backgroundColor: "#e6f7ff", borderColor: "#1890ff" }}
+          >
+            <Row gutter={16} align="middle">
+              <Col span={24}>
+                <Space direction="vertical" style={{ width: "100%" }}>
+                  <Text strong>
+                    <UploadOutlined /> Import từ Excel
+                  </Text>
+                  <Space>
+                    <Button
+                      icon={<DownloadOutlined />}
+                      onClick={handleDownloadTemplateItemsExcel}
+                      size="small"
+                    >
+                      Tải mẫu Excel
+                    </Button>
+                    <Upload
+                      accept=".xlsx"
+                      beforeUpload={() => false}
+                      onChange={handleItemsFileChange}
+                      maxCount={1}
+                      showUploadList={false}
+                    >
+                      <Button icon={<UploadOutlined />} size="small">
+                        Chọn file Excel
+                      </Button>
+                    </Upload>
+                    {uploadedItemsFile && (
+                      <>
+                        <Text type="success">
+                          <CheckOutlined /> {uploadedItemsFile.name}
+                        </Text>
+                        <Button
+                          type="primary"
+                          size="small"
+                          onClick={handleImportItemsToForm}
+                          loading={importLoading}
+                        >
+                          Import ngay
+                        </Button>
+                      </>
+                    )}
+                  </Space>
+                </Space>
               </Col>
             </Row>
           </Card>

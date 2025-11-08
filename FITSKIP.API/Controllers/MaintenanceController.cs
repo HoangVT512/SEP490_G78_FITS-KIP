@@ -178,6 +178,145 @@ namespace FITSKIP.API.Controllers
         }
 
         /// <summary>
+        /// Tải file Excel mẫu cho Template Items (Các bước kiểm tra)
+        /// </summary>
+        [HttpGet("templates/download-items-template")]
+        [AllowAnonymous]
+        public IActionResult DownloadTemplateItemsExcel([FromServices] IExcelImportService excelService)
+        {
+            try
+            {
+                var fileBytes = excelService.GenerateTemplateItemsExcelTemplate();
+                var fileName = $"MauBaoTri_CacBuocKiemTra_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+                
+                return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse.ErrorResponse($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Import Template Items (Các bước kiểm tra) vào mẫu bảo trì có sẵn
+        /// </summary>
+        [HttpPost("templates/{templateId}/import-items")]
+        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
+        public async Task<IActionResult> ImportTemplateItemsFromExcel(
+            int templateId,
+            IFormFile file,
+            [FromServices] IExcelImportService excelService)
+        {
+            try
+            {
+                if (file == null || file.Length == 0)
+                {
+                    return BadRequest(ApiResponse.ErrorResponse("Vui lòng chọn file Excel để import"));
+                }
+
+                if (!file.FileName.EndsWith(".xlsx") && !file.FileName.EndsWith(".xls"))
+                {
+                    return BadRequest(ApiResponse.ErrorResponse("File phải có định dạng Excel (.xlsx hoặc .xls)"));
+                }
+
+                // Kiểm tra template tồn tại
+                var template = await _maintenanceService.GetTemplateByIdAsync(templateId);
+                if (template == null)
+                {
+                    return NotFound(ApiResponse.ErrorResponse($"Không tìm thấy mẫu bảo trì với ID {templateId}"));
+                }
+
+                // Đọc file Excel
+                using var stream = file.OpenReadStream();
+                var itemRequests = await excelService.ImportTemplateItemsFromExcelAsync(stream);
+
+                if (itemRequests == null || !itemRequests.Any())
+                {
+                    return BadRequest(ApiResponse.ErrorResponse("Không có dữ liệu hợp lệ trong file Excel"));
+                }
+
+                // Validation: Check trùng với items hiện có
+                var validationErrors = new List<string>();
+                var rowNumber = 2;
+
+                foreach (var itemRequest in itemRequests)
+                {
+                    // Check trùng tên trong cùng template
+                    var duplicateItem = template.TemplateItems.FirstOrDefault(item =>
+                        item.StepName.Trim().Equals(itemRequest.StepName.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                        item.Category == itemRequest.Category &&
+                        item.IsActive
+                    );
+
+                    if (duplicateItem != null)
+                    {
+                        validationErrors.Add(
+                            $"[Dòng {rowNumber}] ❌ Bước kiểm tra TRÙNG: '{itemRequest.StepName}' ({itemRequest.Category}) " +
+                            $"đã tồn tại trong mẫu này (ItemId: {duplicateItem.ItemId}). Vui lòng đổi tên hoặc xóa bước cũ."
+                        );
+                    }
+
+                    rowNumber++;
+                }
+
+                // Nếu có lỗi validation → Dừng lại
+                if (validationErrors.Any())
+                {
+                    var errorMessage = $"⛔ Phát hiện {validationErrors.Count} lỗi trong file Excel. Vui lòng sửa các lỗi sau và import lại:\n\n" +
+                                      string.Join("\n", validationErrors);
+
+                    return BadRequest(ApiResponse<object>.ErrorResponse(errorMessage, validationErrors));
+                }
+
+                // Thêm items vào template
+                var createdItems = new List<MaintenanceTemplateItemDTO>();
+                var importErrors = new List<string>();
+                rowNumber = 2;
+
+                foreach (var itemRequest in itemRequests)
+                {
+                    try
+                    {
+                        var created = await _maintenanceService.AddChecklistItemToTemplateAsync(templateId, itemRequest);
+                        createdItems.Add(created);
+                    }
+                    catch (Exception ex)
+                    {
+                        importErrors.Add($"[Dòng {rowNumber}] Lỗi khi thêm bước: {ex.Message}");
+                    }
+                    rowNumber++;
+                }
+
+                var result = new
+                {
+                    SuccessCount = createdItems.Count,
+                    ErrorCount = importErrors.Count,
+                    CreatedItems = createdItems,
+                    Errors = importErrors
+                };
+
+                if (createdItems.Any())
+                {
+                    return Ok(ApiResponse<object>.SuccessResponse(
+                        result,
+                        $"✅ Import thành công {createdItems.Count}/{itemRequests.Count} bước kiểm tra vào mẫu '{template.TemplateName}'"
+                    ));
+                }
+                else
+                {
+                    return BadRequest(ApiResponse<object>.ErrorResponse(
+                        "Không thể import bước kiểm tra nào. Vui lòng kiểm tra lại dữ liệu.",
+                        importErrors
+                    ));
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse.ErrorResponse($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
         /// Import Maintenance Templates từ Excel
         /// </summary>
         [HttpPost("templates/import")]

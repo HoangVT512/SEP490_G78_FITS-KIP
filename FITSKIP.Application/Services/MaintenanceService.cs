@@ -222,6 +222,28 @@ namespace FITSKIP.Application.Services
             await _templateRepository.DeleteAsync(templateId);
         }
 
+        public async Task<MaintenanceTemplateItemDTO> AddChecklistItemToTemplateAsync(int templateId, CreateTemplateItemRequest request)
+        {
+            var template = await _templateRepository.GetByIdAsync(templateId);
+            if (template == null)
+                throw new InvalidOperationException($"Không tìm thấy mẫu bảo trì với ID {templateId}");
+
+            var templateItem = new MaintenanceTemplateItem
+            {
+                TemplateId = templateId,
+                Category = request.Category,
+                OrderIndex = request.OrderIndex,
+                StepName = request.StepName,
+                StepDescription = request.StepDescription,
+                IsRequired = request.IsRequired,
+                RequiredRole = request.RequiredRole,
+                IsActive = true
+            };
+
+            var created = await _templateItemRepository.CreateAsync(templateItem);
+            return MapTemplateItemToDTO(created);
+        }
+
         // ===== MAINTENANCE PLAN MANAGEMENT =====
         
         public async Task<IEnumerable<MaintenancePlanDTO>> GetAllPlansAsync()
@@ -1514,6 +1536,22 @@ namespace FITSKIP.Application.Services
                     RequiredRole = ti.RequiredRole,
                     IsActive = ti.IsActive
                 }).OrderBy(ti => ti.OrderIndex).ToList() ?? new List<MaintenanceTemplateItemDTO>()
+            };
+        }
+
+        private static MaintenanceTemplateItemDTO MapTemplateItemToDTO(MaintenanceTemplateItem item)
+        {
+            return new MaintenanceTemplateItemDTO
+            {
+                ItemId = item.ItemId,
+                TemplateId = item.TemplateId,
+                Category = item.Category,
+                OrderIndex = item.OrderIndex,
+                StepName = item.StepName,
+                StepDescription = item.StepDescription,
+                IsRequired = item.IsRequired,
+                RequiredRole = item.RequiredRole,
+                IsActive = item.IsActive
             };
         }
 
