@@ -38,6 +38,21 @@ class Program
                 case "7":
                     await RunUserServiceTests();
                     break;
+                case "8":
+                    await RunStageServiceTests();
+                    break;
+                case "9":
+                    await RunSparePartServiceTests();
+                    break;
+                case "10":
+                    await RunReplacementHistoryServiceTests();
+                    break;
+                case "11":
+                    await RunNotificationServiceTests();
+                    break;
+                case "12":
+                    await RunDashboardServiceTests();
+                    break;
                 case "0":
                     Console.WriteLine("Goodbye!");
                     return;
@@ -63,6 +78,11 @@ class Program
         Console.WriteLine("5. Production Output Service Tests");
         Console.WriteLine("6. Line Service Tests");
         Console.WriteLine("7. User Service Tests");
+        Console.WriteLine("8. Stage Service Tests");
+        Console.WriteLine("9. Spare Part Service Tests");
+        Console.WriteLine("10. Replacement History Service Tests");
+        Console.WriteLine("11. Notification Service Tests");
+        Console.WriteLine("12. Dashboard Service Tests");
         Console.WriteLine("0. Exit");
         Console.WriteLine();
         Console.Write("Enter your choice: ");
@@ -121,6 +141,41 @@ class Program
     {
 
         var testRunner = new UserServiceManualTest();
+        await testRunner.RunTests();
+    }
+
+    static async Task RunStageServiceTests()
+    {
+
+        var testRunner = new StageServiceManualTest();
+        await testRunner.RunTests();
+    }
+
+    static async Task RunSparePartServiceTests()
+    {
+
+        var testRunner = new SparePartServiceManualTest();
+        await testRunner.RunTests();
+    }
+
+    static async Task RunReplacementHistoryServiceTests()
+    {
+
+        var testRunner = new ReplacementHistoryServiceManualTest();
+        await testRunner.RunTests();
+    }
+
+    static async Task RunNotificationServiceTests()
+    {
+
+        var testRunner = new NotificationServiceManualTest();
+        await testRunner.RunTests();
+    }
+
+    static async Task RunDashboardServiceTests()
+    {
+
+        var testRunner = new DashboardServiceManualTest();
         await testRunner.RunTests();
     }
 
