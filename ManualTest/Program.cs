@@ -32,6 +32,12 @@ class Program
                 case "5":
                     await RunProductionOutputServiceTests();
                     break;
+                case "6":
+                    await RunLineServiceTests();
+                    break;
+                case "7":
+                    await RunUserServiceTests();
+                    break;
                 case "0":
                     Console.WriteLine("Goodbye!");
                     return;
@@ -55,6 +61,8 @@ class Program
         Console.WriteLine("3. Purchase Request Service Tests");
         Console.WriteLine("4. Incident Service Tests");
         Console.WriteLine("5. Production Output Service Tests");
+        Console.WriteLine("6. Line Service Tests");
+        Console.WriteLine("7. User Service Tests");
         Console.WriteLine("0. Exit");
         Console.WriteLine();
         Console.Write("Enter your choice: ");
@@ -99,6 +107,20 @@ class Program
     {
 
         var testRunner = new ProductionOutputServiceManualTest();
+        await testRunner.RunTests();
+    }
+
+    static async Task RunLineServiceTests()
+    {
+
+        var testRunner = new LineServiceManualTest();
+        await testRunner.RunTests();
+    }
+
+    static async Task RunUserServiceTests()
+    {
+
+        var testRunner = new UserServiceManualTest();
         await testRunner.RunTests();
     }
 
