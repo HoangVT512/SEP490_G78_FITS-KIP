@@ -32,25 +32,56 @@ public class DepartmentServiceManualTest
             switch (choice)
             {
                 case "1":
-                    await TestGetAllAsync();
+                    var allResult = await TestGetAllAsync();
+                    Console.WriteLine($"Test returned {allResult.Count} departments");
+                    foreach (var dept in allResult)
+                    {
+                        Console.WriteLine(FormatDepartment(dept));
+                    }
                     break;
                 case "2":
-                    await TestGetActiveAsync();
+                    var activeResult = await TestGetActiveAsync();
+                    Console.WriteLine($"Test returned {activeResult.Count} active departments");
+                    foreach (var dept in activeResult)
+                    {
+                        Console.WriteLine(FormatDepartment(dept));
+                    }
                     break;
                 case "3":
-                    await TestGetByIdAsync();
+                    var getResult = await TestGetByIdAsync();
+                    Console.WriteLine($"Test returned: {(getResult != null ? "Department found" : "No department found")}");
+                    if (getResult != null)
+                    {
+                        Console.WriteLine(FormatDepartment(getResult));
+                    }
                     break;
                 case "4":
-                    await TestCreateAsync();
+                    var createResult = await TestCreateAsync();
+                    Console.WriteLine($"Test returned: {(createResult != null ? "Department created" : "Creation failed")}");
+                    if (createResult != null)
+                    {
+                        Console.WriteLine(FormatDepartment(createResult));
+                    }
                     break;
                 case "5":
-                    await TestUpdateAsync();
+                    var updateResult = await TestUpdateAsync();
+                    Console.WriteLine($"Test returned: {(updateResult != null ? "Department updated" : "Update failed")}");
+                    if (updateResult != null)
+                    {
+                        Console.WriteLine(FormatDepartment(updateResult));
+                    }
                     break;
                 case "6":
-                    await TestToggleStatusAsync();
+                    var toggleResult = await TestToggleStatusAsync();
+                    Console.WriteLine($"Test returned: {(toggleResult != null ? "Status toggled" : "Toggle failed")}");
+                    if (toggleResult != null)
+                    {
+                        Console.WriteLine(FormatDepartment(toggleResult));
+                    }
                     break;
                 case "7":
-                    await TestDeleteAsync();
+                    var deleteResult = await TestDeleteAsync();
+                    Console.WriteLine($"Test returned: {(deleteResult ? "Department deleted" : "Deletion failed")}");
                     break;
                 case "8":
                     Console.WriteLine("All tests option removed. Please use individual test options.");
@@ -88,125 +119,91 @@ public class DepartmentServiceManualTest
 
 
 
-    private async Task TestGetAllAsync()
+    private async Task<IReadOnlyList<DepartmentDTO>> TestGetAllAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetAllAsync");
-        Console.WriteLine("=========================================");
 
         // Setup mock
         _mockRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testData);
 
         // Execute
-        Console.WriteLine("[STATUS] Executing GetAllAsync...");
         var result = await _service.GetAllAsync();
 
         // Verify
-        Console.WriteLine($"[SUCCESS] Result: Found {result.Count} departments");
-        Console.WriteLine("\n[DATA] Department List:");
-        Console.WriteLine("----------------------------------------");
-        foreach (var dept in result)
-        {
-            Console.WriteLine(FormatDepartment(dept));
-        }
-
-        // Verify repository call
         _mockRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
-        Console.WriteLine("[VERIFY] Repository method called exactly once");
+
+        Console.WriteLine($"[SUCCESS] Found {result.Count} departments");
+        return result;
     }
 
-    private async Task TestGetActiveAsync()
+    private async Task<IReadOnlyList<DepartmentDTO>> TestGetActiveAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetActiveAsync");
-        Console.WriteLine("=========================================");
 
         // Setup mock
         _mockRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testData);
 
         // Execute
-        Console.WriteLine("[STATUS] Executing GetActiveAsync...");
         var result = await _service.GetActiveAsync();
 
         // Verify
         var activeCount = _testData.Count(d => d.IsActive);
-        Console.WriteLine($"[SUCCESS] Result: Found {result.Count} active departments (Expected: {activeCount})");
-        
-        Console.WriteLine("\n[DATA] Active Department List:");
-        Console.WriteLine("----------------------------------------");
-        foreach (var dept in result)
-        {
-            Console.WriteLine(FormatDepartment(dept));
-        }
+        Console.WriteLine($"[SUCCESS] Found {result.Count} active departments (Expected: {activeCount})");
+
+        return result;
     }
 
-    private async Task TestGetByIdAsync()
+    private async Task<DepartmentDTO?> TestGetByIdAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetByIdAsync");
-        Console.WriteLine("=========================================");
 
-        Console.Write("[INPUT] Enter Department ID to test: ");
+        Console.Write("[INPUT] Enter Department ID: ");
         int.TryParse(Console.ReadLine(), out int id);
-        
+
         var dept = _testData.FirstOrDefault(d => d.DepartmentId == id);
-        
-        if (dept == null)
-        {
-            Console.WriteLine($"[WARNING] Test data not found for ID: {id}");
-        }
-        
+
         _mockRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(dept);
 
-        Console.WriteLine($"[STATUS] Executing GetByIdAsync with ID: {id}...");
-        
         try
         {
             var result = await _service.GetByIdAsync(id);
-            
+
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Department found:");
-                Console.WriteLine(FormatDepartment(result));
+                Console.WriteLine($"[SUCCESS] Department found with ID: {id}");
             }
             else
             {
                 Console.WriteLine($"[NOT FOUND] No department found with ID: {id}");
             }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            throw;
         }
     }
 
 
-    private async Task TestCreateAsync()
+    private async Task<DepartmentDTO> TestCreateAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: CreateAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Department Name: ");
         var name = Console.ReadLine();
-        
-        Console.Write("[INPUT] Enter Manager ID (or press Enter for null): ");
-        var managerId = Console.ReadLine();
-        if (string.IsNullOrWhiteSpace(managerId)) managerId = null;
-        
+
         Console.Write("[INPUT] Enter Description: ");
         var description = Console.ReadLine();
 
-        Console.WriteLine("\n[INPUT] Creating request object...");
         var request = new CreateDepartmentRequest
         {
             DepartmentName = name ?? "",
             Description = description
         };
-        Console.WriteLine($"[INPUT DATA] Name: {request.DepartmentName}, Description: {request.Description}");
 
         // Setup mock
         _mockRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
@@ -216,7 +213,6 @@ public class DepartmentServiceManualTest
         {
             DepartmentId = _testData.Max(d => d.DepartmentId) + 1,
             DepartmentName = request.DepartmentName,
-            ManagerId = managerId,
             Description = request.Description,
             IsActive = true
         };
@@ -226,66 +222,53 @@ public class DepartmentServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing CreateAsync...");
             var result = await _service.CreateAsync(request);
-            
-            Console.WriteLine("[SUCCESS] Department created successfully:");
-            Console.WriteLine(FormatDepartment(result));
+            Console.WriteLine("[SUCCESS] Department created successfully");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            throw;
         }
     }
 
 
-    private async Task TestUpdateAsync()
+    private async Task<DepartmentDTO?> TestUpdateAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: UpdateAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Department ID to update: ");
         int.TryParse(Console.ReadLine(), out int id);
 
         var existingDept = _testData.FirstOrDefault(d => d.DepartmentId == id);
-        
+
         if (existingDept == null)
         {
-            Console.WriteLine($"[NOT FOUND] Department with ID {id} not found in test data");
+            Console.WriteLine($"[NOT FOUND] Department with ID {id} not found");
+            return null;
         }
-        else
-        {
-            Console.WriteLine($"[CURRENT DATA] Existing department:");
-            Console.WriteLine(FormatDepartmentEntity(existingDept));
-        }
-        
-        Console.Write("\n[INPUT] Enter new Department Name: ");
+
+        Console.Write("[INPUT] Enter new Department Name: ");
         var name = Console.ReadLine();
-        
-        Console.Write("[INPUT] Enter new Manager ID (or press Enter to keep current): ");
-        var managerId = Console.ReadLine();
-        if (string.IsNullOrWhiteSpace(managerId)) managerId = existingDept?.ManagerId;
-        
+
         Console.Write("[INPUT] Enter new Description: ");
         var description = Console.ReadLine();
 
-        Console.Write("[INPUT] Enter new Active status (true/false, or press Enter to keep current): ");
+        Console.Write("[INPUT] Enter new Active status (true/false): ");
         var activeInput = Console.ReadLine();
-        bool isActive = existingDept?.IsActive ?? true;
+        bool isActive = existingDept.IsActive;
         if (!string.IsNullOrWhiteSpace(activeInput) && bool.TryParse(activeInput, out bool parsedActive))
         {
             isActive = parsedActive;
         }
 
-        Console.WriteLine("\n[INPUT] Creating update request...");
         var request = new UpdateDepartmentRequest
         {
-            DepartmentName = name ?? existingDept?.DepartmentName ?? "",
-            Description = description ?? existingDept?.Description ?? "",
+            DepartmentName = name ?? existingDept.DepartmentName,
+            Description = description ?? existingDept.Description,
             IsActive = isActive
         };
-        Console.WriteLine($"[INPUT DATA] Name: {request.DepartmentName}, Description: {request.Description}, IsActive: {request.IsActive}");
 
         // Setup mock
         _mockRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
@@ -306,48 +289,42 @@ public class DepartmentServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing UpdateAsync...");
             var result = await _service.UpdateAsync(id, request);
-            
+
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Department updated successfully:");
-                Console.WriteLine(FormatDepartment(result));
+                Console.WriteLine("[SUCCESS] Department updated successfully");
             }
             else
             {
                 Console.WriteLine("[WARNING] Update returned null");
             }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            throw;
         }
     }
 
 
-    private async Task TestToggleStatusAsync()
+    private async Task<DepartmentDTO?> TestToggleStatusAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: ToggleStatusAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Department ID to toggle status: ");
         int.TryParse(Console.ReadLine(), out int id);
 
         var existingDept = _testData.FirstOrDefault(d => d.DepartmentId == id);
-        
+
         if (existingDept == null)
         {
-            Console.WriteLine($"[NOT FOUND] Department with ID {id} not found in test data");
+            Console.WriteLine($"[NOT FOUND] Department with ID {id} not found");
+            return null;
         }
-        else
-        {
-            Console.WriteLine($"[CURRENT DATA] Department:");
-            Console.WriteLine(FormatDepartmentEntity(existingDept));
-            Console.WriteLine($"[CURRENT STATUS] IsActive: {existingDept.IsActive}");
-            Console.WriteLine($"[EXPECTED STATUS] Will toggle to: {!existingDept.IsActive}");
-        }
+
+        Console.WriteLine($"[STATUS] Will toggle from {existingDept.IsActive} to {!existingDept.IsActive}");
 
         // Setup mock
         _mockRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
@@ -356,10 +333,10 @@ public class DepartmentServiceManualTest
         var toggledDept = new Department
         {
             DepartmentId = id,
-            DepartmentName = existingDept?.DepartmentName ?? "",
-            ManagerId = existingDept?.ManagerId,
-            Description = existingDept?.Description ?? "",
-            IsActive = !(existingDept?.IsActive ?? false)
+            DepartmentName = existingDept.DepartmentName,
+            ManagerId = existingDept.ManagerId,
+            Description = existingDept.Description,
+            IsActive = !existingDept.IsActive
         };
 
         _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Department>(), It.IsAny<CancellationToken>()))
@@ -367,52 +344,47 @@ public class DepartmentServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing ToggleStatusAsync...");
             var result = await _service.ToggleStatusAsync(id);
-            
+
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Status toggled successfully:");
-                Console.WriteLine(FormatDepartment(result));
+                Console.WriteLine("[SUCCESS] Status toggled successfully");
             }
             else
             {
                 Console.WriteLine("[WARNING] Toggle returned null");
             }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            throw;
         }
     }
 
 
-    private async Task TestDeleteAsync()
+    private async Task<bool> TestDeleteAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: DeleteAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Department ID to delete: ");
         int.TryParse(Console.ReadLine(), out int id);
 
         var existingDept = _testData.FirstOrDefault(d => d.DepartmentId == id);
-        if (existingDept != null)
+        if (existingDept == null)
         {
-            Console.WriteLine($"[WARNING] Will delete: {existingDept.DepartmentName} (ID: {id})");
-        }
-        else
-        {
-            Console.WriteLine($"[NOT FOUND] Department with ID {id} not found in test data");
+            Console.WriteLine($"[NOT FOUND] Department with ID {id} not found");
+            return false;
         }
 
-        Console.Write($"[CONFIRM] Are you sure you want to delete department with ID {id}? (y/n): ");
+        Console.Write($"[CONFIRM] Delete department '{existingDept.DepartmentName}'? (y/n): ");
         var confirm = Console.ReadLine();
-        
+
         if (confirm?.ToLower() != "y")
         {
             Console.WriteLine("[CANCELLED] Delete operation cancelled");
-            return;
+            return false;
         }
 
         // Setup mock
@@ -421,15 +393,22 @@ public class DepartmentServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing DeleteAsync...");
             var result = await _service.DeleteAsync(id);
-            
-            Console.WriteLine($"[SUCCESS] Delete result: {result}");
-            Console.WriteLine($"[RESULT] {(result ? "Department deleted successfully" : "Failed to delete department")}");
+
+            if (result)
+            {
+                Console.WriteLine("[SUCCESS] Department deleted successfully");
+            }
+            else
+            {
+                Console.WriteLine("[FAILED] Failed to delete department");
+            }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return false;
         }
     }
 

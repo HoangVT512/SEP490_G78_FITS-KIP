@@ -34,28 +34,60 @@ public class LineServiceManualTest
             switch (choice)
             {
                 case "1":
-                    await TestGetLinesAsync();
+                    var linesResult = await TestGetLinesAsync();
+                    foreach (var line in linesResult)
+                    {
+                        Console.WriteLine(FormatLine(line));
+                    }
                     break;
                 case "2":
-                    await TestGetActiveLinesAsync();
+                    var activeLinesResult = await TestGetActiveLinesAsync();
+                    foreach (var line in activeLinesResult)
+                    {
+                        Console.WriteLine(FormatLine(line));
+                    }
                     break;
                 case "3":
-                    await TestGetLineByIdAsync();
+                    var lineResult = await TestGetLineByIdAsync();
+                    if (lineResult != null)
+                    {
+                        Console.WriteLine(FormatLine(lineResult));
+                    }
                     break;
                 case "4":
-                    await TestCreateLineAsync();
+                    var createResult = await TestCreateLineAsync();
+                    if (createResult != null)
+                    {
+                        Console.WriteLine(FormatLine(createResult));
+                    }
                     break;
                 case "5":
-                    await TestUpdateLineAsync();
+                    var updateResult = await TestUpdateLineAsync();
+                    if (updateResult != null)
+                    {
+                        Console.WriteLine(FormatLine(updateResult));
+                    }
                     break;
                 case "6":
-                    await TestGetLinesByDepartmentAsync();
+                    var departmentLinesResult = await TestGetLinesByDepartmentAsync();
+                    foreach (var line in departmentLinesResult)
+                    {
+                        Console.WriteLine(FormatLine(line));
+                    }
                     break;
                 case "7":
-                    await TestToggleLineStatusAsync();
+                    var toggleResult = await TestToggleLineStatusAsync();
+                    if (toggleResult != null)
+                    {
+                        Console.WriteLine(FormatLine(toggleResult));
+                    }
                     break;
                 case "8":
-                    await TestGetLinesByUserAsync();
+                    var userLinesResult = await TestGetLinesByUserAsync();
+                    foreach (var line in userLinesResult)
+                    {
+                        Console.WriteLine(FormatLine(line));
+                    }
                     break;
                 case "0":
                     Console.WriteLine("Goodbye!");
@@ -88,11 +120,9 @@ public class LineServiceManualTest
         Console.Write("Enter your choice: ");
     }
 
-    private async Task TestGetLinesAsync()
+    private async Task<IReadOnlyList<Line>> TestGetLinesAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetLinesAsync");
-        Console.WriteLine("=========================================");
 
         try
         {
@@ -101,34 +131,24 @@ public class LineServiceManualTest
                 .ReturnsAsync(_testLines);
 
             // Execute
-            Console.WriteLine("[STATUS] Executing GetLinesAsync...");
             var result = await _service.GetLinesAsync();
 
             // Verify
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count} lines");
-            Console.WriteLine("\n[DATA] Line List:");
-            Console.WriteLine("----------------------------------------");
-            foreach (var line in result)
-            {
-                Console.WriteLine(FormatLine(line));
-            }
-
-            // Verify repository call
             _mockLineRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
-            Console.WriteLine("[VERIFY] Repository method called exactly once");
+
+            Console.WriteLine($"[SUCCESS] Found {result.Count} lines");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-            Console.WriteLine($"[ERROR] StackTrace: {ex.StackTrace}");
+            return new List<Line>();
         }
     }
 
-    private async Task TestGetActiveLinesAsync()
+    private async Task<IReadOnlyList<Line>> TestGetActiveLinesAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetActiveLinesAsync");
-        Console.WriteLine("=========================================");
 
         try
         {
@@ -137,46 +157,32 @@ public class LineServiceManualTest
                 .ReturnsAsync(_testLines);
 
             // Execute
-            Console.WriteLine("[STATUS] Executing GetActiveLinesAsync...");
             var result = await _service.GetActiveLinesAsync();
 
             // Verify
             var activeCount = _testLines.Count(l => l.IsActive);
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count} active lines (Expected: {activeCount})");
-            
-            Console.WriteLine("\n[DATA] Active Line List:");
-            Console.WriteLine("----------------------------------------");
-            foreach (var line in result)
-            {
-                Console.WriteLine(FormatLine(line));
-            }
+            Console.WriteLine($"[SUCCESS] Found {result.Count} active lines (Expected: {activeCount})");
+
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return new List<Line>();
         }
     }
 
-    private async Task TestGetLineByIdAsync()
+    private async Task<Line> TestGetLineByIdAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetLineByIdAsync");
-        Console.WriteLine("=========================================");
 
-        Console.Write("[INPUT] Enter Line ID to test: ");
+        Console.Write("[INPUT] Enter Line ID: ");
         int.TryParse(Console.ReadLine(), out int id);
 
         var line = _testLines.FirstOrDefault(l => l.LineId == id);
-        
-        if (line == null)
-        {
-            Console.WriteLine($"[WARNING] Test data not found for ID: {id}");
-        }
 
         _mockLineRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(line);
-
-        Console.WriteLine($"[STATUS] Executing GetLineByIdAsync with ID: {id}...");
 
         try
         {
@@ -184,25 +190,24 @@ public class LineServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Line found:");
-                Console.WriteLine(FormatLine(result));
+                Console.WriteLine($"[SUCCESS] Line found with ID: {id}");
             }
             else
             {
                 Console.WriteLine($"[NOT FOUND] No line found with ID: {id}");
             }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
         }
     }
 
-    private async Task TestCreateLineAsync()
+    private async Task<Line> TestCreateLineAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: CreateLineAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Line Name: ");
         var lineName = Console.ReadLine();
@@ -213,14 +218,12 @@ public class LineServiceManualTest
         Console.Write("[INPUT] Enter Department ID: ");
         int.TryParse(Console.ReadLine(), out int deptId);
 
-        Console.WriteLine("\n[INPUT] Creating request object...");
         var request = new CreateLineRequest
         {
             LineName = lineName ?? "",
             LineCode = lineCode ?? "",
             DepartmentId = deptId
         };
-        Console.WriteLine($"[INPUT DATA] LineName: {request.LineName}, LineCode: {request.LineCode}, DepartmentId: {request.DepartmentId}");
 
         // Setup mock
         var department = _testDepartments.FirstOrDefault(d => d.DepartmentId == deptId);
@@ -250,40 +253,33 @@ public class LineServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing CreateLineAsync...");
             var result = await _service.CreateLineAsync(request);
-
-            Console.WriteLine("[SUCCESS] Line created successfully:");
-            Console.WriteLine(FormatLine(result));
+            Console.WriteLine("[SUCCESS] Line created successfully");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
         }
     }
 
-    private async Task TestUpdateLineAsync()
+    private async Task<Line> TestUpdateLineAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: UpdateLineAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Line ID to update: ");
         int.TryParse(Console.ReadLine(), out int id);
 
         var existingLine = _testLines.FirstOrDefault(l => l.LineId == id);
-        
+
         if (existingLine == null)
         {
-            Console.WriteLine($"[NOT FOUND] Line with ID {id} not found in test data");
-        }
-        else
-        {
-            Console.WriteLine($"[CURRENT DATA] Existing line:");
-            Console.WriteLine(FormatLine(existingLine));
+            Console.WriteLine($"[NOT FOUND] Line with ID {id} not found");
+            return null;
         }
 
-        Console.Write("\n[INPUT] Enter new Line Name: ");
+        Console.Write("[INPUT] Enter new Line Name: ");
         var lineName = Console.ReadLine();
 
         Console.Write("[INPUT] Enter new Line Code: ");
@@ -292,23 +288,13 @@ public class LineServiceManualTest
         Console.Write("[INPUT] Enter Department ID: ");
         int.TryParse(Console.ReadLine(), out int deptId);
 
-        Console.Write("[INPUT] Enter Active status (true/false, or press Enter to keep current): ");
-        var activeInput = Console.ReadLine();
-        bool isActive = existingLine?.IsActive ?? true;
-        if (!string.IsNullOrWhiteSpace(activeInput) && bool.TryParse(activeInput, out bool parsedActive))
-        {
-            isActive = parsedActive;
-        }
-
-        Console.WriteLine("\n[INPUT] Creating update request...");
         var request = new UpdateLineRequest
         {
-            LineName = lineName ?? existingLine?.LineName ?? "",
-            LineCode = lineCode ?? existingLine?.LineCode ?? "",
+            LineName = lineName ?? existingLine.LineName,
+            LineCode = lineCode ?? existingLine.LineCode,
             DepartmentId = deptId,
-            IsActive = isActive
+            IsActive = existingLine.IsActive
         };
-        Console.WriteLine($"[INPUT DATA] LineName: {request.LineName}, LineCode: {request.LineCode}, DepartmentId: {request.DepartmentId}, IsActive: {request.IsActive}");
 
         // Setup mock
         var department = _testDepartments.FirstOrDefault(d => d.DepartmentId == deptId);
@@ -323,7 +309,7 @@ public class LineServiceManualTest
             .ReturnsAsync(existingLinesInDept);
 
         var normalizedCode = lineCode?.Trim().ToUpper();
-        var existingLineByCode = _testLines.FirstOrDefault(l => 
+        var existingLineByCode = _testLines.FirstOrDefault(l =>
             l.LineCode?.ToUpper() == normalizedCode && l.LineId != id);
         _mockLineRepository.Setup(x => x.GetByLineCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingLineByCode);
@@ -342,30 +328,28 @@ public class LineServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing UpdateLineAsync...");
             var result = await _service.UpdateLineAsync(id, request);
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Line updated successfully:");
-                Console.WriteLine(FormatLine(result));
+                Console.WriteLine("[SUCCESS] Line updated successfully");
             }
             else
             {
                 Console.WriteLine("[WARNING] Update returned null");
             }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
         }
     }
 
-    private async Task TestGetLinesByDepartmentAsync()
+    private async Task<IReadOnlyList<Line>> TestGetLinesByDepartmentAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetLinesByDepartmentAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Department ID: ");
         int.TryParse(Console.ReadLine(), out int deptId);
@@ -376,99 +360,76 @@ public class LineServiceManualTest
         _mockLineRepository.Setup(x => x.GetByDepartmentIdAsync(deptId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(linesInDept);
 
-        Console.WriteLine($"[STATUS] Executing GetLinesByDepartmentAsync with Department ID: {deptId}...");
-
         try
         {
             var result = await _service.GetLinesByDepartmentAsync(deptId);
 
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count} lines for department {deptId}");
-            
-            if (result.Count > 0)
-            {
-                Console.WriteLine("\n[DATA] Line List:");
-                Console.WriteLine("----------------------------------------");
-                foreach (var line in result)
-                {
-                    Console.WriteLine(FormatLine(line));
-                }
-            }
-            else
-            {
-                Console.WriteLine("[INFO] No lines found for this department");
-            }
-
             _mockLineRepository.Verify(x => x.GetByDepartmentIdAsync(deptId, It.IsAny<CancellationToken>()), Times.Once);
-            Console.WriteLine("[VERIFY] Repository method called exactly once");
+
+            Console.WriteLine($"[SUCCESS] Found {result.Count} lines for department {deptId}");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return new List<Line>();
         }
     }
 
-    private async Task TestToggleLineStatusAsync()
+    private async Task<Line> TestToggleLineStatusAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: ToggleLineStatusAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Line ID to toggle status: ");
         int.TryParse(Console.ReadLine(), out int id);
 
         var existingLine = _testLines.FirstOrDefault(l => l.LineId == id);
-        
+
         if (existingLine == null)
         {
-            Console.WriteLine($"[NOT FOUND] Line with ID {id} not found in test data");
-        }
-        else
-        {
-            Console.WriteLine($"[CURRENT DATA] Line:");
-            Console.WriteLine(FormatLine(existingLine));
-            Console.WriteLine($"[CURRENT STATUS] IsActive: {existingLine.IsActive}");
-            Console.WriteLine($"[EXPECTED STATUS] Will toggle to: {!existingLine.IsActive}");
+            Console.WriteLine($"[NOT FOUND] Line with ID {id} not found");
+            return null;
         }
 
+        Console.WriteLine($"[STATUS] Will toggle from {existingLine.IsActive} to {!existingLine.IsActive}");
+
         // Setup mock
-        var toggledLine = existingLine != null ? new Line
+        var toggledLine = new Line
         {
             LineId = existingLine.LineId,
             LineName = existingLine.LineName,
             LineCode = existingLine.LineCode,
             DepartmentId = existingLine.DepartmentId,
             IsActive = !existingLine.IsActive
-        } : null;
+        };
 
         _mockLineRepository.Setup(x => x.ToggleLineStatusAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(toggledLine);
 
         try
         {
-            Console.WriteLine("[STATUS] Executing ToggleLineStatusAsync...");
             var result = await _service.ToggleLineStatusAsync(id);
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Status toggled successfully:");
-                Console.WriteLine(FormatLine(result));
+                Console.WriteLine("[SUCCESS] Status toggled successfully");
             }
             else
             {
                 Console.WriteLine("[WARNING] Toggle returned null");
             }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
         }
     }
 
-    private async Task TestGetLinesByUserAsync()
+    private async Task<IReadOnlyList<Line>> TestGetLinesByUserAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetLinesByUserAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter User ID: ");
         var userId = Console.ReadLine();
@@ -476,7 +437,7 @@ public class LineServiceManualTest
         if (string.IsNullOrWhiteSpace(userId))
         {
             Console.WriteLine("[ERROR] User ID cannot be empty.");
-            return;
+            return new List<Line>();
         }
 
         // For testing, simulate some lines assigned to the user
@@ -486,34 +447,19 @@ public class LineServiceManualTest
         _mockLineRepository.Setup(x => x.GetLinesByUserAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(userLines);
 
-        Console.WriteLine($"[STATUS] Executing GetLinesByUserAsync with User ID: {userId}...");
-
         try
         {
             var result = await _service.GetLinesByUserAsync(userId);
 
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count} lines for user '{userId}'");
-            
-            if (result.Count > 0)
-            {
-                Console.WriteLine("\n[DATA] Line List:");
-                Console.WriteLine("----------------------------------------");
-                foreach (var line in result)
-                {
-                    Console.WriteLine(FormatLine(line));
-                }
-            }
-            else
-            {
-                Console.WriteLine("[INFO] No lines assigned to this user");
-            }
-
             _mockLineRepository.Verify(x => x.GetLinesByUserAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
-            Console.WriteLine("[VERIFY] Repository method called exactly once");
+
+            Console.WriteLine($"[SUCCESS] Found {result.Count} lines for user '{userId}'");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return new List<Line>();
         }
     }
 

@@ -34,28 +34,60 @@ public class StageServiceManualTest
             switch (choice)
             {
                 case "1":
-                    await TestGetStagesAsync();
+                    var stagesResult = await TestGetStagesAsync();
+                    foreach (var stage in stagesResult)
+                    {
+                        Console.WriteLine(FormatStage(stage));
+                    }
                     break;
                 case "2":
-                    await TestGetActiveStagesAsync();
+                    var activeStagesResult = await TestGetActiveStagesAsync();
+                    foreach (var stage in activeStagesResult)
+                    {
+                        Console.WriteLine(FormatStage(stage));
+                    }
                     break;
                 case "3":
-                    await TestGetStageByIdAsync();
+                    var stageResult = await TestGetStageByIdAsync();
+                    if (stageResult != null)
+                    {
+                        Console.WriteLine(FormatStage(stageResult));
+                    }
                     break;
                 case "4":
-                    await TestCreateStageAsync();
+                    var createResult = await TestCreateStageAsync();
+                    if (createResult != null)
+                    {
+                        Console.WriteLine(FormatStage(createResult));
+                    }
                     break;
                 case "5":
-                    await TestUpdateStageAsync();
+                    var updateResult = await TestUpdateStageAsync();
+                    if (updateResult != null)
+                    {
+                        Console.WriteLine(FormatStage(updateResult));
+                    }
                     break;
                 case "6":
-                    await TestToggleStageStatusAsync();
+                    var toggleResult = await TestToggleStageStatusAsync();
+                    if (toggleResult != null)
+                    {
+                        Console.WriteLine(FormatStage(toggleResult));
+                    }
                     break;
                 case "7":
-                    await TestGetStagesByLineAsync();
+                    var lineStagesResult = await TestGetStagesByLineAsync();
+                    foreach (var stage in lineStagesResult)
+                    {
+                        Console.WriteLine(FormatStage(stage));
+                    }
                     break;
                 case "8":
-                    await TestGetStagesByUserLinesAsync();
+                    var userStagesResult = await TestGetStagesByUserLinesAsync();
+                    foreach (var stage in userStagesResult)
+                    {
+                        Console.WriteLine(FormatStage(stage));
+                    }
                     break;
                 case "0":
                     Console.WriteLine("Goodbye!");
@@ -88,11 +120,9 @@ public class StageServiceManualTest
         Console.Write("Enter your choice: ");
     }
 
-    private async Task TestGetStagesAsync()
+    private async Task<IReadOnlyList<Stage>> TestGetStagesAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetStagesAsync");
-        Console.WriteLine("=========================================");
 
         try
         {
@@ -101,30 +131,21 @@ public class StageServiceManualTest
                 .ReturnsAsync(_testStages);
 
             // Execute
-            Console.WriteLine("[STATUS] Executing GetStagesAsync...");
             var result = await _service.GetStagesAsync();
 
-            // Verify
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count} stages");
-            Console.WriteLine("\n[DATA] Stage List:");
-            Console.WriteLine("----------------------------------------");
-            foreach (var stage in result)
-            {
-                Console.WriteLine(FormatStage(stage));
-            }
+            Console.WriteLine($"[SUCCESS] Found {result.Count} stages");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-            Console.WriteLine($"[ERROR] StackTrace: {ex.StackTrace}");
+            return new List<Stage>();
         }
     }
 
-    private async Task TestGetActiveStagesAsync()
+    private async Task<IReadOnlyList<Stage>> TestGetActiveStagesAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetActiveStagesAsync");
-        Console.WriteLine("=========================================");
 
         try
         {
@@ -134,46 +155,32 @@ public class StageServiceManualTest
                 .ReturnsAsync(activeStages);
 
             // Execute
-            Console.WriteLine("[STATUS] Executing GetActiveStagesAsync...");
             var result = await _service.GetActiveStagesAsync();
 
             // Verify
             var activeCount = _testStages.Count(s => s.IsActive);
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count} active stages (Expected: {activeCount})");
+            Console.WriteLine($"[SUCCESS] Found {result.Count} active stages (Expected: {activeCount})");
 
-            Console.WriteLine("\n[DATA] Active Stage List:");
-            Console.WriteLine("----------------------------------------");
-            foreach (var stage in result)
-            {
-                Console.WriteLine(FormatStage(stage));
-            }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return new List<Stage>();
         }
     }
 
-    private async Task TestGetStageByIdAsync()
+    private async Task<Stage> TestGetStageByIdAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetStageByIdAsync");
-        Console.WriteLine("=========================================");
 
-        Console.Write("[INPUT] Enter Stage ID to test: ");
+        Console.Write("[INPUT] Enter Stage ID: ");
         int.TryParse(Console.ReadLine(), out int id);
 
         var stage = _testStages.FirstOrDefault(s => s.StageId == id);
 
-        if (stage == null)
-        {
-            Console.WriteLine($"[WARNING] Test data not found for ID: {id}");
-        }
-
         _mockStageRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(stage);
-
-        Console.WriteLine($"[STATUS] Executing GetStageByIdAsync with ID: {id}...");
 
         try
         {
@@ -181,25 +188,24 @@ public class StageServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Stage found:");
-                Console.WriteLine(FormatStage(result));
+                Console.WriteLine($"[SUCCESS] Stage found with ID: {id}");
             }
             else
             {
                 Console.WriteLine($"[NOT FOUND] No stage found with ID: {id}");
             }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
         }
     }
 
-    private async Task TestCreateStageAsync()
+    private async Task<Stage> TestCreateStageAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: CreateStageAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Stage Name: ");
         var stageName = Console.ReadLine();
@@ -207,17 +213,11 @@ public class StageServiceManualTest
         Console.Write("[INPUT] Enter Line ID: ");
         int.TryParse(Console.ReadLine(), out int lineId);
 
-        Console.Write("[INPUT] Enter Description (or press Enter to skip): ");
-        var description = Console.ReadLine();
-
-        Console.WriteLine("\n[INPUT] Creating request object...");
         var request = new CreateStageRequest
         {
             StageName = stageName ?? "",
-            LineId = lineId,
-            Description = description
+            LineId = lineId
         };
-        Console.WriteLine($"[INPUT DATA] StageName: {request.StageName}, LineId: {request.LineId}, Description: {request.Description}");
 
         // Setup mock
         var line = _testLines.FirstOrDefault(l => l.LineId == lineId);
@@ -241,23 +241,20 @@ public class StageServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing CreateStageAsync...");
             var result = await _service.CreateStageAsync(request);
-
-            Console.WriteLine("[SUCCESS] Stage created successfully:");
-            Console.WriteLine(FormatStage(result));
+            Console.WriteLine("[SUCCESS] Stage created successfully");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
         }
     }
 
-    private async Task TestUpdateStageAsync()
+    private async Task<Stage> TestUpdateStageAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: UpdateStageAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Stage ID to update: ");
         int.TryParse(Console.ReadLine(), out int id);
@@ -266,40 +263,22 @@ public class StageServiceManualTest
 
         if (existingStage == null)
         {
-            Console.WriteLine($"[NOT FOUND] Stage with ID {id} not found in test data");
-        }
-        else
-        {
-            Console.WriteLine($"[CURRENT DATA] Existing stage:");
-            Console.WriteLine(FormatStage(existingStage));
+            Console.WriteLine($"[NOT FOUND] Stage with ID {id} not found");
+            return null;
         }
 
-        Console.Write("\n[INPUT] Enter new Stage Name: ");
+        Console.Write("[INPUT] Enter new Stage Name: ");
         var stageName = Console.ReadLine();
 
         Console.Write("[INPUT] Enter Line ID: ");
         int.TryParse(Console.ReadLine(), out int lineId);
 
-        Console.Write("[INPUT] Enter Description (or press Enter to skip): ");
-        var description = Console.ReadLine();
-
-        Console.Write("[INPUT] Enter Active status (true/false, or press Enter to keep current): ");
-        var activeInput = Console.ReadLine();
-        bool isActive = existingStage?.IsActive ?? true;
-        if (!string.IsNullOrWhiteSpace(activeInput) && bool.TryParse(activeInput, out bool parsedActive))
-        {
-            isActive = parsedActive;
-        }
-
-        Console.WriteLine("\n[INPUT] Creating update request...");
         var request = new UpdateStageRequest
         {
-            StageName = stageName ?? existingStage?.StageName ?? "",
+            StageName = stageName ?? existingStage.StageName,
             LineId = lineId,
-            Description = description,
-            IsActive = isActive
+            IsActive = existingStage.IsActive
         };
-        Console.WriteLine($"[INPUT DATA] StageName: {request.StageName}, LineId: {request.LineId}, IsActive: {request.IsActive}");
 
         // Setup mock
         var line = _testLines.FirstOrDefault(l => l.LineId == lineId);
@@ -326,30 +305,28 @@ public class StageServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing UpdateStageAsync...");
             var result = await _service.UpdateStageAsync(id, request);
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Stage updated successfully:");
-                Console.WriteLine(FormatStage(result));
+                Console.WriteLine("[SUCCESS] Stage updated successfully");
             }
             else
             {
                 Console.WriteLine("[WARNING] Update returned null");
             }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
         }
     }
 
-    private async Task TestToggleStageStatusAsync()
+    private async Task<Stage> TestToggleStageStatusAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: ToggleStageStatusAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Stage ID to toggle status: ");
         int.TryParse(Console.ReadLine(), out int id);
@@ -358,57 +335,51 @@ public class StageServiceManualTest
 
         if (existingStage == null)
         {
-            Console.WriteLine($"[NOT FOUND] Stage with ID {id} not found in test data");
+            Console.WriteLine($"[NOT FOUND] Stage with ID {id} not found");
+            return null;
         }
-        else
-        {
-            Console.WriteLine($"[CURRENT DATA] Stage:");
-            Console.WriteLine(FormatStage(existingStage));
-            Console.WriteLine($"[CURRENT STATUS] IsActive: {existingStage.IsActive}");
-            Console.WriteLine($"[EXPECTED STATUS] Will toggle to: {!existingStage.IsActive}");
-        }
+
+        Console.WriteLine($"[STATUS] Will toggle from {existingStage.IsActive} to {!existingStage.IsActive}");
 
         // Setup mock
         _mockStageRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingStage);
 
-        var toggledStage = existingStage != null ? new Stage
+        var toggledStage = new Stage
         {
             StageId = existingStage.StageId,
             StageName = existingStage.StageName,
             LineId = existingStage.LineId,
             IsActive = !existingStage.IsActive
-        } : null;
+        };
 
         _mockStageRepository.Setup(x => x.UpdateAsync(It.IsAny<Stage>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(toggledStage);
 
         try
         {
-            Console.WriteLine("[STATUS] Executing ToggleStageStatusAsync...");
             var result = await _service.ToggleStageStatusAsync(id);
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Status toggled successfully:");
-                Console.WriteLine(FormatStage(result));
+                Console.WriteLine("[SUCCESS] Status toggled successfully");
             }
             else
             {
                 Console.WriteLine("[WARNING] Toggle returned null");
             }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
         }
     }
 
-    private async Task TestGetStagesByLineAsync()
+    private async Task<IReadOnlyList<Stage>> TestGetStagesByLineAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetStagesByLineAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Line ID: ");
         int.TryParse(Console.ReadLine(), out int lineId);
@@ -419,42 +390,25 @@ public class StageServiceManualTest
         _mockStageRepository.Setup(x => x.GetByLineIdAsync(lineId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(stagesInLine);
 
-        Console.WriteLine($"[STATUS] Executing GetStagesByLineAsync with Line ID: {lineId}...");
-
         try
         {
             var result = await _service.GetStagesByLineAsync(lineId);
 
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count} stages for line {lineId}");
-
-            if (result.Count > 0)
-            {
-                Console.WriteLine("\n[DATA] Stage List:");
-                Console.WriteLine("----------------------------------------");
-                foreach (var stage in result)
-                {
-                    Console.WriteLine(FormatStage(stage));
-                }
-            }
-            else
-            {
-                Console.WriteLine("[INFO] No stages found for this line");
-            }
-
             _mockStageRepository.Verify(x => x.GetByLineIdAsync(lineId, It.IsAny<CancellationToken>()), Times.Once);
-            Console.WriteLine("[VERIFY] Repository method called exactly once");
+
+            Console.WriteLine($"[SUCCESS] Found {result.Count} stages for line {lineId}");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return new List<Stage>();
         }
     }
 
-    private async Task TestGetStagesByUserLinesAsync()
+    private async Task<IReadOnlyList<Stage>> TestGetStagesByUserLinesAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetStagesByUserLinesAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter User ID: ");
         var userId = Console.ReadLine();
@@ -462,7 +416,7 @@ public class StageServiceManualTest
         if (string.IsNullOrWhiteSpace(userId))
         {
             Console.WriteLine("[ERROR] User ID cannot be empty.");
-            return;
+            return new List<Stage>();
         }
 
         try
@@ -474,33 +428,17 @@ public class StageServiceManualTest
             _mockStageRepository.Setup(x => x.GetStagesByUserLinesAsync(userId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(userStages);
 
-            // Execute
-            Console.WriteLine($"[STATUS] Executing GetStagesByUserLinesAsync for user: {userId}...");
             var result = await _service.GetStagesByUserLinesAsync(userId);
 
-            // Verify
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count} stages for user's lines");
-
-            if (result.Count > 0)
-            {
-                Console.WriteLine("\n[DATA] Stage List:");
-                Console.WriteLine("----------------------------------------");
-                foreach (var stage in result)
-                {
-                    Console.WriteLine(FormatStage(stage));
-                }
-            }
-            else
-            {
-                Console.WriteLine("[INFO] No stages found for this user's lines");
-            }
-
             _mockStageRepository.Verify(x => x.GetStagesByUserLinesAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
-            Console.WriteLine("[VERIFY] Repository method called exactly once");
+
+            Console.WriteLine($"[SUCCESS] Found {result.Count} stages for user's lines");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return new List<Stage>();
         }
     }
 

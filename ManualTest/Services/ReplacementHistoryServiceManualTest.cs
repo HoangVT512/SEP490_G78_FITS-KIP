@@ -27,53 +27,152 @@ public class ReplacementHistoryServiceManualTest
             ShowMenu();
             var choice = Console.ReadLine();
 
-            switch (choice)
+            try
             {
-                case "1":
-                    await TestGetAllAsync();
-                    break;
-                case "2":
-                    await TestGetByIdAsync();
-                    break;
-                case "3":
-                    await TestCreateAsync();
-                    break;
-                case "4":
-                    await TestUpdateAsync();
-                    break;
-                case "5":
-                    await TestDeleteAsync();
-                    break;
-                case "6":
-                    await TestGetByEquipmentIdAsync();
-                    break;
-                case "7":
-                    await TestGetByIncidentIdAsync();
-                    break;
-                case "8":
-                    await TestGetByPartIdAsync();
-                    break;
-                case "9":
-                    await TestGetByUserIdAsync();
-                    break;
-                case "10":
-                    await TestGetByDateRangeAsync();
-                    break;
-                case "11":
-                    await TestGetByStatusAsync();
-                    break;
-                case "12":
-                    await TestConfirmReturnAsync();
-                    break;
-                case "13":
-                    await TestGetPendingReturnAsync();
-                    break;
-                case "0":
-                    Console.WriteLine("Goodbye!");
-                    return;
-                default:
-                    Console.WriteLine("Invalid choice. Please try again.");
-                    break;
+                switch (choice)
+                {
+                    case "1":
+                        var result1 = await TestGetAllAsync();
+                        Console.WriteLine($"Found {result1.Count()} replacement histories");
+                        foreach (var replacement in result1)
+                        {
+                            Console.WriteLine(FormatReplacement(replacement));
+                        }
+                        break;
+                    case "2":
+                        Console.Write("[INPUT] Enter Replacement ID: ");
+                        int.TryParse(Console.ReadLine(), out int id2);
+                        var result2 = await TestGetByIdAsync(id2);
+                        if (result2 != null)
+                            Console.WriteLine(FormatReplacement(result2));
+                        else
+                            Console.WriteLine("Replacement history not found");
+                        break;
+                    case "3":
+                        var replacement3 = new ReplacementHistory
+                        {
+                            EquipmentId = GetNullableIntInput("Equipment ID"),
+                            IncidentId = GetNullableIntInput("Incident ID"),
+                            PartId = GetIntInput("Part ID"),
+                            Quantity = GetIntInput("Quantity"),
+                            ReplacedBy = GetStringInput("Replaced By (User ID)"),
+                            Remarks = GetStringInput("Remarks")
+                        };
+                        var result3 = await TestCreateAsync(replacement3);
+                        Console.WriteLine(FormatReplacement(result3));
+                        break;
+                    case "4":
+                        var id4 = GetIntInput("Replacement ID to update");
+                        var replacement4 = new ReplacementHistory
+                        {
+                            Quantity = GetIntInput("Quantity"),
+                            Status = GetStringInput("Status"),
+                            Remarks = GetStringInput("Remarks")
+                        };
+                        var result4 = await TestUpdateAsync(id4, replacement4);
+                        if (result4 != null)
+                            Console.WriteLine(FormatReplacement(result4));
+                        break;
+                    case "5":
+                        var id5 = GetIntInput("Replacement ID to delete");
+                        var result5 = await TestDeleteAsync(id5);
+                        Console.WriteLine($"Delete result: {result5}");
+                        break;
+                    case "6":
+                        var equipmentId6 = GetIntInput("Equipment ID");
+                        var result6 = await TestGetByEquipmentIdAsync(equipmentId6);
+                        Console.WriteLine($"Found {result6.Count()} replacement histories");
+                        foreach (var replacement in result6)
+                        {
+                            Console.WriteLine(FormatReplacement(replacement));
+                        }
+                        break;
+                    case "7":
+                        var incidentId7 = GetIntInput("Incident ID");
+                        var result7 = await TestGetByIncidentIdAsync(incidentId7);
+                        Console.WriteLine($"Found {result7.Count()} replacement histories");
+                        foreach (var replacement in result7)
+                        {
+                            Console.WriteLine(FormatReplacement(replacement));
+                        }
+                        break;
+                    case "8":
+                        var partId8 = GetIntInput("Part ID");
+                        var result8 = await TestGetByPartIdAsync(partId8);
+                        Console.WriteLine($"Found {result8.Count()} replacement histories");
+                        foreach (var replacement in result8)
+                        {
+                            Console.WriteLine(FormatReplacement(replacement));
+                        }
+                        break;
+                    case "9":
+                        Console.Write("[INPUT] Enter User ID: ");
+                        var userId9 = Console.ReadLine();
+                        var result9 = await TestGetByUserIdAsync(userId9 ?? "");
+                        Console.WriteLine($"Found {result9.Count()} replacement histories");
+                        foreach (var replacement in result9)
+                        {
+                            Console.WriteLine(FormatReplacement(replacement));
+                        }
+                        break;
+                    case "10":
+                        var startDate10 = GetDateInput("Start Date");
+                        var endDate10 = GetDateInput("End Date");
+                        var result10 = await TestGetByDateRangeAsync(startDate10, endDate10);
+                        Console.WriteLine($"Found {result10.Count()} replacement histories");
+                        foreach (var replacement in result10)
+                        {
+                            Console.WriteLine(FormatReplacement(replacement));
+                        }
+                        break;
+                    case "11":
+                        Console.Write("[INPUT] Enter Status: ");
+                        var status11 = Console.ReadLine();
+                        var result11 = await TestGetByStatusAsync(status11 ?? "");
+                        Console.WriteLine($"Found {result11.Count()} replacement histories");
+                        foreach (var replacement in result11)
+                        {
+                            Console.WriteLine(FormatReplacement(replacement));
+                        }
+                        break;
+                    case "12":
+                        var id12 = GetIntInput("Replacement ID to confirm return");
+                        var confirmationDto12 = new ReturnConfirmationDto
+                        {
+                            ActualQuantityUsed = GetIntInput("Actual Quantity Used"),
+                            ReturnConfirmedBy = GetStringInput("Return Confirmed By"),
+                            ReturnRemarks = GetStringInput("Return Remarks")
+                        };
+                        var result12 = await TestConfirmReturnAsync(id12, confirmationDto12);
+                        if (result12 != null)
+                        {
+                            Console.WriteLine(FormatReplacement(result12));
+                            if (result12.QuantityToReturn.HasValue && result12.QuantityToReturn.Value > 0)
+                            {
+                                Console.WriteLine($"Quantity to return: {result12.QuantityToReturn.Value}");
+                            }
+                        }
+                        break;
+                    case "13":
+                        var result13 = await TestGetPendingReturnAsync();
+                        Console.WriteLine($"Found {result13.Count()} pending returns");
+                        foreach (var replacement in result13)
+                        {
+                            Console.WriteLine(FormatReplacement(replacement));
+                            Console.WriteLine($"  → Need to return: {replacement.QuantityToReturn} units");
+                        }
+                        break;
+                    case "0":
+                        Console.WriteLine("Goodbye!");
+                        return;
+                    default:
+                        Console.WriteLine("Invalid choice. Please try again.");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
             }
 
             Console.WriteLine("\nPress any key to continue...");
@@ -104,120 +203,33 @@ public class ReplacementHistoryServiceManualTest
         Console.Write("Enter your choice: ");
     }
 
-    private async Task TestGetAllAsync()
+    private async Task<IEnumerable<ReplacementHistory>> TestGetAllAsync()
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetAllAsync");
-        Console.WriteLine("=========================================");
+        // Setup mock
+        _mockRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testReplacements);
 
-        try
-        {
-            // Setup mock
-            _mockRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(_testReplacements);
+        var result = await _service.GetAllAsync();
 
-            // Execute
-            Console.WriteLine("[STATUS] Executing GetAllAsync...");
-            var result = await _service.GetAllAsync();
+        // Verify repository call
+        _mockRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
 
-            // Verify
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count()} replacement histories");
-            Console.WriteLine("\n[DATA] Replacement History List:");
-            Console.WriteLine("----------------------------------------");
-            foreach (var replacement in result)
-            {
-                Console.WriteLine(FormatReplacement(replacement));
-            }
-
-            // Verify repository call
-            _mockRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
-            Console.WriteLine("[VERIFY] Repository method called exactly once");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        return result;
     }
 
-    private async Task TestGetByIdAsync()
+    private async Task<ReplacementHistory?> TestGetByIdAsync(int id)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetByIdAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Replacement ID to test: ");
-        int.TryParse(Console.ReadLine(), out int id);
-
         var replacement = _testReplacements.FirstOrDefault(r => r.ReplacementId == id);
-
-        if (replacement == null)
-        {
-            Console.WriteLine($"[WARNING] Test data not found for ID: {id}");
-        }
 
         _mockRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(replacement);
 
-        Console.WriteLine($"[STATUS] Executing GetByIdAsync with ID: {id}...");
-
-        try
-        {
-            var result = await _service.GetByIdAsync(id);
-
-            if (result != null)
-            {
-                Console.WriteLine("[SUCCESS] Replacement history found:");
-                Console.WriteLine(FormatReplacement(result));
-            }
-            else
-            {
-                Console.WriteLine($"[NOT FOUND] No replacement history found with ID: {id}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetByIdAsync(id);
+        return result;
     }
 
-    private async Task TestCreateAsync()
+    private async Task<ReplacementHistory> TestCreateAsync(ReplacementHistory replacement)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: CreateAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Equipment ID (or 0 to skip): ");
-        int.TryParse(Console.ReadLine(), out int equipmentId);
-
-        Console.Write("[INPUT] Enter Incident ID (or 0 to skip): ");
-        int.TryParse(Console.ReadLine(), out int incidentId);
-
-        Console.Write("[INPUT] Enter Part ID: ");
-        int.TryParse(Console.ReadLine(), out int partId);
-
-        Console.Write("[INPUT] Enter Quantity: ");
-        int.TryParse(Console.ReadLine(), out int quantity);
-
-        Console.Write("[INPUT] Enter Replaced By (User ID): ");
-        var replacedBy = Console.ReadLine();
-
-        Console.Write("[INPUT] Enter Remarks (or press Enter to skip): ");
-        var remarks = Console.ReadLine();
-
-        Console.WriteLine("\n[INPUT] Creating replacement history object...");
-        var replacement = new ReplacementHistory
-        {
-            EquipmentId = equipmentId > 0 ? equipmentId : null,
-            IncidentId = incidentId > 0 ? incidentId : null,
-            PartId = partId,
-            Quantity = quantity,
-            ReplacedDate = DateTime.Now,
-            ReplacedBy = replacedBy ?? "",
-            Status = "Chờ duyệt cấp phát",
-            Remarks = remarks
-        };
-        Console.WriteLine($"[INPUT DATA] PartId: {replacement.PartId}, Quantity: {replacement.Quantity}, ReplacedBy: {replacement.ReplacedBy}, Status: {replacement.Status}");
-
         // Setup mock
         var newReplacement = new ReplacementHistory
         {
@@ -235,67 +247,18 @@ public class ReplacementHistoryServiceManualTest
         _mockRepository.Setup(x => x.CreateAsync(It.IsAny<ReplacementHistory>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(newReplacement);
 
-        try
-        {
-            Console.WriteLine("[STATUS] Executing CreateAsync...");
-            var result = await _service.CreateAsync(replacement);
-
-            Console.WriteLine("[SUCCESS] Replacement history created successfully:");
-            Console.WriteLine(FormatReplacement(result));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.CreateAsync(replacement);
+        return result;
     }
 
-    private async Task TestUpdateAsync()
+    private async Task<ReplacementHistory?> TestUpdateAsync(int id, ReplacementHistory replacement)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: UpdateAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Replacement ID to update: ");
-        int.TryParse(Console.ReadLine(), out int id);
-
         var existingReplacement = _testReplacements.FirstOrDefault(r => r.ReplacementId == id);
-
-        if (existingReplacement == null)
-        {
-            Console.WriteLine($"[NOT FOUND] Replacement history with ID {id} not found in test data");
-        }
-        else
-        {
-            Console.WriteLine($"[CURRENT DATA] Existing replacement:");
-            Console.WriteLine(FormatReplacement(existingReplacement));
-        }
-
-        Console.Write("\n[INPUT] Enter new Quantity: ");
-        int.TryParse(Console.ReadLine(), out int quantity);
-
-        Console.Write("[INPUT] Enter new Status: ");
-        var status = Console.ReadLine();
-
-        Console.Write("[INPUT] Enter new Remarks: ");
-        var remarks = Console.ReadLine();
-
-        Console.WriteLine("\n[INPUT] Creating update object...");
-        var replacement = new ReplacementHistory
-        {
-            EquipmentId = existingReplacement?.EquipmentId,
-            IncidentId = existingReplacement?.IncidentId,
-            PartId = existingReplacement?.PartId ?? 1,
-            Quantity = quantity,
-            ReplacedDate = existingReplacement?.ReplacedDate ?? DateTime.Now,
-            ReplacedBy = existingReplacement?.ReplacedBy ?? "",
-            Status = status ?? existingReplacement?.Status ?? "",
-            Remarks = remarks ?? existingReplacement?.Remarks
-        };
-        Console.WriteLine($"[INPUT DATA] Quantity: {replacement.Quantity}, Status: {replacement.Status}");
+        if (existingReplacement == null) return null;
 
         // Setup mock
         _mockRepository.Setup(x => x.ExistsAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingReplacement != null);
+            .ReturnsAsync(true);
 
         var updatedReplacement = new ReplacementHistory
         {
@@ -313,394 +276,106 @@ public class ReplacementHistoryServiceManualTest
         _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<ReplacementHistory>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(updatedReplacement);
 
-        try
-        {
-            Console.WriteLine("[STATUS] Executing UpdateAsync...");
-            var result = await _service.UpdateAsync(id, replacement);
-
-            Console.WriteLine("[SUCCESS] Replacement history updated successfully:");
-            Console.WriteLine(FormatReplacement(result));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.UpdateAsync(id, replacement);
+        return result;
     }
 
-    private async Task TestDeleteAsync()
+    private async Task<bool> TestDeleteAsync(int id)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: DeleteAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Replacement ID to delete: ");
-        int.TryParse(Console.ReadLine(), out int id);
-
         var existingReplacement = _testReplacements.FirstOrDefault(r => r.ReplacementId == id);
-        if (existingReplacement != null)
-        {
-            Console.WriteLine($"[WARNING] Will delete replacement history ID: {id}");
-            Console.WriteLine(FormatReplacement(existingReplacement));
-        }
-        else
-        {
-            Console.WriteLine($"[NOT FOUND] Replacement history with ID {id} not found in test data");
-        }
-
-        Console.Write($"[CONFIRM] Are you sure you want to delete? (y/n): ");
-        var confirm = Console.ReadLine();
-
-        if (confirm?.ToLower() != "y")
-        {
-            Console.WriteLine("[CANCELLED] Delete operation cancelled");
-            return;
-        }
+        if (existingReplacement == null) return false;
 
         // Setup mock
         _mockRepository.Setup(x => x.DeleteAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        try
-        {
-            Console.WriteLine("[STATUS] Executing DeleteAsync...");
-            var result = await _service.DeleteAsync(id);
-
-            Console.WriteLine($"[SUCCESS] Delete result: {result}");
-            Console.WriteLine($"[RESULT] {(result ? "Deleted successfully" : "Failed to delete")}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.DeleteAsync(id);
+        return result;
     }
 
-    private async Task TestGetByEquipmentIdAsync()
+    private async Task<IEnumerable<ReplacementHistory>> TestGetByEquipmentIdAsync(int equipmentId)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetByEquipmentIdAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Equipment ID: ");
-        int.TryParse(Console.ReadLine(), out int equipmentId);
-
         var replacements = _testReplacements.Where(r => r.EquipmentId == equipmentId).ToList();
 
         // Setup mock
         _mockRepository.Setup(x => x.GetByEquipmentIdAsync(equipmentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(replacements);
 
-        Console.WriteLine($"[STATUS] Executing GetByEquipmentIdAsync with Equipment ID: {equipmentId}...");
-
-        try
-        {
-            var result = await _service.GetByEquipmentIdAsync(equipmentId);
-
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count()} replacement histories for equipment {equipmentId}");
-
-            if (result.Any())
-            {
-                Console.WriteLine("\n[DATA] Replacement History List:");
-                Console.WriteLine("----------------------------------------");
-                foreach (var replacement in result)
-                {
-                    Console.WriteLine(FormatReplacement(replacement));
-                }
-            }
-            else
-            {
-                Console.WriteLine("[INFO] No replacement histories found for this equipment");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetByEquipmentIdAsync(equipmentId);
+        return result;
     }
 
-    private async Task TestGetByIncidentIdAsync()
+    private async Task<IEnumerable<ReplacementHistory>> TestGetByIncidentIdAsync(int incidentId)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetByIncidentIdAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Incident ID: ");
-        int.TryParse(Console.ReadLine(), out int incidentId);
-
         var replacements = _testReplacements.Where(r => r.IncidentId == incidentId).ToList();
 
         // Setup mock
         _mockRepository.Setup(x => x.GetByIncidentIdAsync(incidentId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(replacements);
 
-        Console.WriteLine($"[STATUS] Executing GetByIncidentIdAsync with Incident ID: {incidentId}...");
-
-        try
-        {
-            var result = await _service.GetByIncidentIdAsync(incidentId);
-
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count()} replacement histories for incident {incidentId}");
-
-            if (result.Any())
-            {
-                Console.WriteLine("\n[DATA] Replacement History List:");
-                Console.WriteLine("----------------------------------------");
-                foreach (var replacement in result)
-                {
-                    Console.WriteLine(FormatReplacement(replacement));
-                }
-            }
-            else
-            {
-                Console.WriteLine("[INFO] No replacement histories found for this incident");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetByIncidentIdAsync(incidentId);
+        return result;
     }
 
-    private async Task TestGetByPartIdAsync()
+    private async Task<IEnumerable<ReplacementHistory>> TestGetByPartIdAsync(int partId)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetByPartIdAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Part ID: ");
-        int.TryParse(Console.ReadLine(), out int partId);
-
         var replacements = _testReplacements.Where(r => r.PartId == partId).ToList();
 
         // Setup mock
         _mockRepository.Setup(x => x.GetByPartIdAsync(partId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(replacements);
 
-        Console.WriteLine($"[STATUS] Executing GetByPartIdAsync with Part ID: {partId}...");
-
-        try
-        {
-            var result = await _service.GetByPartIdAsync(partId);
-
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count()} replacement histories for part {partId}");
-
-            if (result.Any())
-            {
-                Console.WriteLine("\n[DATA] Replacement History List:");
-                Console.WriteLine("----------------------------------------");
-                foreach (var replacement in result)
-                {
-                    Console.WriteLine(FormatReplacement(replacement));
-                }
-            }
-            else
-            {
-                Console.WriteLine("[INFO] No replacement histories found for this part");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetByPartIdAsync(partId);
+        return result;
     }
 
-    private async Task TestGetByUserIdAsync()
+    private async Task<IEnumerable<ReplacementHistory>> TestGetByUserIdAsync(string userId)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetByUserIdAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter User ID: ");
-        var userId = Console.ReadLine();
-
-        if (string.IsNullOrWhiteSpace(userId))
-        {
-            Console.WriteLine("[ERROR] User ID cannot be empty.");
-            return;
-        }
-
         var replacements = _testReplacements.Where(r => r.ReplacedBy == userId).ToList();
 
         // Setup mock
         _mockRepository.Setup(x => x.GetByUserIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(replacements);
 
-        Console.WriteLine($"[STATUS] Executing GetByUserIdAsync with User ID: {userId}...");
-
-        try
-        {
-            var result = await _service.GetByUserIdAsync(userId);
-
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count()} replacement histories by user {userId}");
-
-            if (result.Any())
-            {
-                Console.WriteLine("\n[DATA] Replacement History List:");
-                Console.WriteLine("----------------------------------------");
-                foreach (var replacement in result)
-                {
-                    Console.WriteLine(FormatReplacement(replacement));
-                }
-            }
-            else
-            {
-                Console.WriteLine("[INFO] No replacement histories found for this user");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetByUserIdAsync(userId);
+        return result;
     }
 
-    private async Task TestGetByDateRangeAsync()
+    private async Task<IEnumerable<ReplacementHistory>> TestGetByDateRangeAsync(DateTime startDate, DateTime endDate)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetByDateRangeAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Start Date (yyyy-MM-dd): ");
-        if (!DateTime.TryParse(Console.ReadLine(), out DateTime startDate))
-        {
-            Console.WriteLine("[ERROR] Invalid date format");
-            return;
-        }
-
-        Console.Write("[INPUT] Enter End Date (yyyy-MM-dd): ");
-        if (!DateTime.TryParse(Console.ReadLine(), out DateTime endDate))
-        {
-            Console.WriteLine("[ERROR] Invalid date format");
-            return;
-        }
-
-        var replacements = _testReplacements.Where(r => 
+        var replacements = _testReplacements.Where(r =>
             r.ReplacedDate >= startDate && r.ReplacedDate <= endDate).ToList();
 
         // Setup mock
         _mockRepository.Setup(x => x.GetByDateRangeAsync(startDate, endDate, It.IsAny<CancellationToken>()))
             .ReturnsAsync(replacements);
 
-        Console.WriteLine($"[STATUS] Executing GetByDateRangeAsync from {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}...");
-
-        try
-        {
-            var result = await _service.GetByDateRangeAsync(startDate, endDate);
-
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count()} replacement histories in date range");
-
-            if (result.Any())
-            {
-                Console.WriteLine("\n[DATA] Replacement History List:");
-                Console.WriteLine("----------------------------------------");
-                foreach (var replacement in result)
-                {
-                    Console.WriteLine(FormatReplacement(replacement));
-                }
-            }
-            else
-            {
-                Console.WriteLine("[INFO] No replacement histories found in this date range");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetByDateRangeAsync(startDate, endDate);
+        return result;
     }
 
-    private async Task TestGetByStatusAsync()
+    private async Task<IEnumerable<ReplacementHistory>> TestGetByStatusAsync(string status)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetByStatusAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Status (e.g., Chờ duyệt cấp phát, Đã cấp phát, Hoàn thành): ");
-        var status = Console.ReadLine();
-
-        if (string.IsNullOrWhiteSpace(status))
-        {
-            Console.WriteLine("[ERROR] Status cannot be empty.");
-            return;
-        }
-
         var replacements = _testReplacements.Where(r => r.Status == status).ToList();
 
         // Setup mock
         _mockRepository.Setup(x => x.GetByStatusAsync(status, It.IsAny<CancellationToken>()))
             .ReturnsAsync(replacements);
 
-        Console.WriteLine($"[STATUS] Executing GetByStatusAsync with status: {status}...");
-
-        try
-        {
-            var result = await _service.GetByStatusAsync(status);
-
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count()} replacement histories with status '{status}'");
-
-            if (result.Any())
-            {
-                Console.WriteLine("\n[DATA] Replacement History List:");
-                Console.WriteLine("----------------------------------------");
-                foreach (var replacement in result)
-                {
-                    Console.WriteLine(FormatReplacement(replacement));
-                }
-            }
-            else
-            {
-                Console.WriteLine("[INFO] No replacement histories found with this status");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetByStatusAsync(status);
+        return result;
     }
 
-    private async Task TestConfirmReturnAsync()
+    private async Task<ReplacementHistory?> TestConfirmReturnAsync(int id, ReturnConfirmationDto confirmationDto)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: ConfirmReturnAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Replacement ID to confirm return: ");
-        int.TryParse(Console.ReadLine(), out int id);
-
         var existingReplacement = _testReplacements.FirstOrDefault(r => r.ReplacementId == id);
-
-        if (existingReplacement != null)
-        {
-            Console.WriteLine($"[CURRENT DATA]:");
-            Console.WriteLine(FormatReplacement(existingReplacement));
-        }
-        else
-        {
-            Console.WriteLine($"[NOT FOUND] Replacement with ID {id} not found");
-        }
-
-        Console.Write("\n[INPUT] Enter Actual Quantity Used: ");
-        int.TryParse(Console.ReadLine(), out int actualQty);
-
-        Console.Write("[INPUT] Enter Return Confirmed By (User ID): ");
-        var confirmedBy = Console.ReadLine();
-
-        Console.Write("[INPUT] Enter Return Remarks: ");
-        var returnRemarks = Console.ReadLine();
-
-        var confirmationDto = new ReturnConfirmationDto
-        {
-            ActualQuantityUsed = actualQty,
-            ReturnedDate = DateTime.Now,
-            ReturnConfirmedBy = confirmedBy,
-            ReturnRemarks = returnRemarks
-        };
-
-        Console.WriteLine($"\n[INPUT DATA] ActualQtyUsed: {confirmationDto.ActualQuantityUsed}, ConfirmedBy: {confirmationDto.ReturnConfirmedBy}");
+        if (existingReplacement == null) return null;
 
         // Setup mock
         _mockRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingReplacement);
 
-        var updatedReplacement = existingReplacement != null ? new ReplacementHistory
+        var updatedReplacement = new ReplacementHistory
         {
             ReplacementId = existingReplacement.ReplacementId,
             EquipmentId = existingReplacement.EquipmentId,
@@ -711,85 +386,28 @@ public class ReplacementHistoryServiceManualTest
             ReplacedBy = existingReplacement.ReplacedBy,
             Status = "Hoàn thành",
             Remarks = existingReplacement.Remarks,
-            ActualQuantityUsed = actualQty,
-            QuantityToReturn = existingReplacement.Quantity - actualQty > 0 ? existingReplacement.Quantity - actualQty : null,
-            ReturnedDate = DateTime.Now,
-            ReturnConfirmedBy = confirmedBy,
-            ReturnRemarks = returnRemarks
-        } : null;
+            ActualQuantityUsed = confirmationDto.ActualQuantityUsed,
+            QuantityToReturn = existingReplacement.Quantity - confirmationDto.ActualQuantityUsed > 0 ? existingReplacement.Quantity - confirmationDto.ActualQuantityUsed : null,
+            ReturnedDate = confirmationDto.ReturnedDate,
+            ReturnConfirmedBy = confirmationDto.ReturnConfirmedBy,
+            ReturnRemarks = confirmationDto.ReturnRemarks
+        };
 
         _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<ReplacementHistory>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(updatedReplacement);
 
-        try
-        {
-            Console.WriteLine("[STATUS] Executing ConfirmReturnAsync...");
-            var result = await _service.ConfirmReturnAsync(id, confirmationDto);
-
-            Console.WriteLine("[SUCCESS] Return confirmed successfully:");
-            Console.WriteLine(FormatReplacement(result));
-            
-            if (result.QuantityToReturn.HasValue && result.QuantityToReturn.Value > 0)
-            {
-                Console.WriteLine($"[INFO] Quantity to return: {result.QuantityToReturn.Value}");
-            }
-            else
-            {
-                Console.WriteLine("[INFO] No excess quantity to return");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.ConfirmReturnAsync(id, confirmationDto);
+        return result;
     }
 
-    private async Task TestGetPendingReturnAsync()
+    private async Task<IEnumerable<ReplacementHistory>> TestGetPendingReturnAsync()
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetPendingReturnAsync");
-        Console.WriteLine("=========================================");
+        // Setup mock
+        _mockRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testReplacements);
 
-        try
-        {
-            // For testing, simulate pending returns
-            var pendingReturns = _testReplacements.Where(r =>
-                r.ActualQuantityUsed.HasValue &&
-                r.QuantityToReturn.HasValue &&
-                r.QuantityToReturn > 0 &&
-                string.IsNullOrEmpty(r.ReturnConfirmedBy)
-            ).ToList();
-
-            // Setup mock
-            _mockRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(_testReplacements);
-
-            // Execute
-            Console.WriteLine("[STATUS] Executing GetPendingReturnAsync...");
-            var result = await _service.GetPendingReturnAsync();
-
-            // Verify
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count()} pending returns");
-
-            if (result.Any())
-            {
-                Console.WriteLine("\n[DATA] Pending Return List:");
-                Console.WriteLine("----------------------------------------");
-                foreach (var replacement in result)
-                {
-                    Console.WriteLine(FormatReplacement(replacement));
-                    Console.WriteLine($"  → Need to return: {replacement.QuantityToReturn} units");
-                }
-            }
-            else
-            {
-                Console.WriteLine("[INFO] No pending returns found");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetPendingReturnAsync();
+        return result;
     }
 
     private List<ReplacementHistory> InitializeReplacementTestData()
@@ -876,6 +494,35 @@ public class ReplacementHistoryServiceManualTest
         if (replacement == null) return "[NULL]";
 
         return $"{{ID:{replacement.ReplacementId}, EqID:{replacement.EquipmentId}, IncID:{replacement.IncidentId}, PartID:{replacement.PartId}, Qty:{replacement.Quantity}, Used:{replacement.ActualQuantityUsed}, ToReturn:{replacement.QuantityToReturn}, Status:\"{replacement.Status}\", By:\"{replacement.ReplacedBy}\", Date:{replacement.ReplacedDate:yyyy-MM-dd}}}";
+    }
+
+    private int GetIntInput(string prompt, int defaultValue = 0)
+    {
+        Console.Write($"[INPUT] {prompt}: ");
+        var input = Console.ReadLine();
+        return int.TryParse(input, out int result) ? result : defaultValue;
+    }
+
+    private DateTime GetDateInput(string prompt)
+    {
+        Console.Write($"[INPUT] {prompt} (yyyy-MM-dd): ");
+        var input = Console.ReadLine();
+        return DateTime.TryParse(input, out DateTime result) ? result : DateTime.Now;
+    }
+
+    private string GetStringInput(string prompt, string defaultValue = "")
+    {
+        Console.Write($"[INPUT] {prompt}: ");
+        var input = Console.ReadLine();
+        return string.IsNullOrWhiteSpace(input) ? defaultValue : input;
+    }
+
+    private int? GetNullableIntInput(string prompt)
+    {
+        Console.Write($"[INPUT] {prompt} (or press Enter for null): ");
+        var input = Console.ReadLine();
+        if (string.IsNullOrWhiteSpace(input)) return null;
+        return int.TryParse(input, out int result) ? result : null;
     }
 }
 

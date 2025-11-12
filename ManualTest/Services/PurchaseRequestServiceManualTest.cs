@@ -42,41 +42,113 @@ public class PurchaseRequestServiceManualTest
             ShowMenu();
             var choice = Console.ReadLine();
 
-            switch (choice)
+            try
             {
-                case "1":
-                    await TestGetAllPurchaseRequestsAsync();
-                    break;
-                case "2":
-                    await TestGetPurchaseRequestByIdAsync();
-                    break;
-                case "3":
-                    await TestGetPurchaseRequestsByStatusAsync();
-                    break;
-                case "4":
-                    await TestGetMyPurchaseRequestsAsync();
-                    break;
-                case "5":
-                    await TestCreatePurchaseRequestAsync();
-                    break;
-                case "6":
-                    await TestUpdatePurchaseRequestAsync();
-                    break;
-                case "7":
-                    await TestDeletePurchaseRequestAsync();
-                    break;
-                case "8":
-                    await TestApprovePurchaseRequestAsync();
-                    break;
-                case "9":
-                    await TestRejectPurchaseRequestAsync();
-                    break;
-                case "0":
-                    Console.WriteLine("Goodbye!");
-                    return;
-                default:
-                    Console.WriteLine("Invalid choice. Please try again.");
-                    break;
+                switch (choice)
+                {
+                    case "1":
+                        var result1 = await TestGetAllPurchaseRequestsAsync();
+                        Console.WriteLine($"Found {result1.Count} purchase requests");
+                        foreach (var request in result1)
+                        {
+                            Console.WriteLine(FormatPurchaseRequest(request));
+                        }
+                        break;
+                    case "2":
+                        Console.Write("[INPUT] Enter Purchase Request ID: ");
+                        int.TryParse(Console.ReadLine(), out int id2);
+                        var result2 = await TestGetPurchaseRequestByIdAsync(id2);
+                        if (result2 != null)
+                            Console.WriteLine(FormatPurchaseRequest(result2));
+                        else
+                            Console.WriteLine("Purchase request not found");
+                        break;
+                    case "3":
+                        Console.Write("[INPUT] Enter Status (Chờ duyệt, Đã duyệt, Từ chối): ");
+                        var status3 = Console.ReadLine();
+                        var result3 = await TestGetPurchaseRequestsByStatusAsync(status3 ?? "");
+                        Console.WriteLine($"Found {result3.Count} purchase requests");
+                        foreach (var request in result3)
+                        {
+                            Console.WriteLine(FormatPurchaseRequest(request));
+                        }
+                        break;
+                    case "4":
+                        Console.Write("[INPUT] Enter User ID: ");
+                        var userId4 = Console.ReadLine();
+                        var result4 = await TestGetMyPurchaseRequestsAsync(userId4 ?? "");
+                        Console.WriteLine($"Found {result4.Count} purchase requests");
+                        foreach (var request in result4)
+                        {
+                            Console.WriteLine(FormatPurchaseRequest(request));
+                        }
+                        break;
+                    case "5":
+                        var request5 = new CreatePurchaseRequestRequest
+                        {
+                            PartId = GetIntInput("Part ID"),
+                            Quantity = GetIntInput("Quantity"),
+                            Reason = GetStringInput("Reason")
+                        };
+                        Console.Write("[INPUT] Enter User ID (Requester): ");
+                        var userId5 = Console.ReadLine();
+                        var result5 = await TestCreatePurchaseRequestAsync(request5, userId5 ?? "");
+                        if (result5 != null)
+                            Console.WriteLine(FormatPurchaseRequest(result5));
+                        break;
+                    case "6":
+                        var id6 = GetIntInput("Purchase Request ID to update");
+                        var request6 = new UpdatePurchaseRequestRequest
+                        {
+                            PartId = GetIntInput("Part ID"),
+                            Quantity = GetIntInput("Quantity"),
+                            Reason = GetStringInput("Reason")
+                        };
+                        Console.Write("[INPUT] Enter User ID (Requester): ");
+                        var userId6 = Console.ReadLine();
+                        var result6 = await TestUpdatePurchaseRequestAsync(id6, request6, userId6 ?? "");
+                        if (result6 != null)
+                            Console.WriteLine(FormatPurchaseRequest(result6));
+                        break;
+                    case "7":
+                        var id7 = GetIntInput("Purchase Request ID to delete");
+                        Console.Write("[INPUT] Enter User ID (Requester): ");
+                        var userId7 = Console.ReadLine();
+                        var result7 = await TestDeletePurchaseRequestAsync(id7, userId7 ?? "");
+                        Console.WriteLine($"Delete result: {result7}");
+                        break;
+                    case "8":
+                        var id8 = GetIntInput("Purchase Request ID to approve");
+                        Console.Write("[INPUT] Enter Manager ID: ");
+                        var managerId8 = Console.ReadLine();
+                        var result8 = await TestApprovePurchaseRequestAsync(id8, managerId8 ?? "");
+                        if (result8 != null)
+                            Console.WriteLine(FormatPurchaseRequest(result8));
+                        break;
+                    case "9":
+                        var id9 = GetIntInput("Purchase Request ID to reject");
+                        Console.Write("[INPUT] Enter Manager ID: ");
+                        var managerId9 = Console.ReadLine();
+                        Console.Write("[INPUT] Enter Rejection Reason: ");
+                        var reason9 = Console.ReadLine();
+                        var result9 = await TestRejectPurchaseRequestAsync(id9, managerId9 ?? "", reason9 ?? "");
+                        if (result9 != null)
+                        {
+                            Console.WriteLine(FormatPurchaseRequest(result9));
+                            Console.WriteLine($"Rejection reason: {reason9}");
+                        }
+                        break;
+                    case "0":
+                        Console.WriteLine("Goodbye!");
+                        return;
+                    default:
+                        Console.WriteLine("Invalid choice. Please try again.");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
             }
 
             Console.WriteLine("\nPress any key to continue...");
@@ -103,176 +175,62 @@ public class PurchaseRequestServiceManualTest
         Console.Write("Enter your choice: ");
     }
 
-    private async Task TestGetAllPurchaseRequestsAsync()
+    private async Task<IReadOnlyList<PurchaseRequestDTO>> TestGetAllPurchaseRequestsAsync()
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetAllPurchaseRequestsAsync");
-        Console.WriteLine("=========================================");
-
         // Setup mock
         _mockPurchaseRequestRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testData);
 
-        // Execute
-        Console.WriteLine("[STATUS] Executing GetAllPurchaseRequestsAsync...");
         var result = await _service.GetAllPurchaseRequestsAsync();
-
-        // Verify
-        Console.WriteLine($"[SUCCESS] Result: Found {result.Count} purchase requests");
-        Console.WriteLine("\n[DATA] Purchase Request List:");
-        Console.WriteLine("----------------------------------------");
-        foreach (var request in result)
-        {
-            Console.WriteLine(FormatPurchaseRequest(request));
-        }
 
         // Verify repository call
         _mockPurchaseRequestRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
-        Console.WriteLine("[VERIFY] Repository method called exactly once");
+
+        return result;
     }
 
-    private async Task TestGetPurchaseRequestByIdAsync()
+    private async Task<PurchaseRequestDTO?> TestGetPurchaseRequestByIdAsync(int id)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetPurchaseRequestByIdAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Purchase Request ID to test: ");
-        int.TryParse(Console.ReadLine(), out int id);
-        
         var request = _testData.FirstOrDefault(r => r.RequestId == id);
-        
-        if (request == null)
-        {
-            Console.WriteLine($"[WARNING] Test data not found for ID: {id}");
-        }
-        
+
         _mockPurchaseRequestRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(request);
 
-        Console.WriteLine($"[STATUS] Executing GetPurchaseRequestByIdAsync with ID: {id}...");
-        
-        try
-        {
-            var result = await _service.GetPurchaseRequestByIdAsync(id);
-            
-            if (result != null)
-            {
-                Console.WriteLine("[SUCCESS] Purchase Request found:");
-                Console.WriteLine(FormatPurchaseRequest(result));
-            }
-            else
-            {
-                Console.WriteLine($"[NOT FOUND] No purchase request found with ID: {id}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetPurchaseRequestByIdAsync(id);
+        return result;
     }
 
-    private async Task TestGetPurchaseRequestsByStatusAsync()
+    private async Task<IReadOnlyList<PurchaseRequestDTO>> TestGetPurchaseRequestsByStatusAsync(string status)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetPurchaseRequestsByStatusAsync");
-        Console.WriteLine("=========================================");
-
-        Console.WriteLine("[INFO] Available statuses: Chờ duyệt, Đã duyệt, Từ chối");
-        Console.Write("[INPUT] Enter Status to filter: ");
-        var status = Console.ReadLine();
-
         var requestsByStatus = _testData.Where(r => r.Status == status).ToList();
-        
-        _mockPurchaseRequestRepository.Setup(x => x.GetByStatusAsync(status ?? "", It.IsAny<CancellationToken>()))
+
+        _mockPurchaseRequestRepository.Setup(x => x.GetByStatusAsync(status, It.IsAny<CancellationToken>()))
             .ReturnsAsync(requestsByStatus);
 
-        try
-        {
-            Console.WriteLine($"[STATUS] Executing GetPurchaseRequestsByStatusAsync with Status: {status}...");
-            var result = await _service.GetPurchaseRequestsByStatusAsync(status ?? "");
-            
-            Console.WriteLine($"[SUCCESS] Found {result.Count} purchase requests with status '{status}':");
-            Console.WriteLine("\n[DATA] Purchase Request List:");
-            Console.WriteLine("----------------------------------------");
-            foreach (var request in result)
-            {
-                Console.WriteLine(FormatPurchaseRequest(request));
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetPurchaseRequestsByStatusAsync(status);
+        return result;
     }
 
-    private async Task TestGetMyPurchaseRequestsAsync()
+    private async Task<IReadOnlyList<PurchaseRequestDTO>> TestGetMyPurchaseRequestsAsync(string userId)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetMyPurchaseRequestsAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter User ID to get their requests: ");
-        var userId = Console.ReadLine();
-
         var myRequests = _testData.Where(r => r.RequestedBy == userId).ToList();
-        
-        _mockPurchaseRequestRepository.Setup(x => x.GetByRequestedByAsync(userId ?? "", It.IsAny<CancellationToken>()))
+
+        _mockPurchaseRequestRepository.Setup(x => x.GetByRequestedByAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(myRequests);
 
-        try
-        {
-            Console.WriteLine($"[STATUS] Executing GetMyPurchaseRequestsAsync with User ID: {userId}...");
-            var result = await _service.GetMyPurchaseRequestsAsync(userId ?? "");
-            
-            Console.WriteLine($"[SUCCESS] Found {result.Count} purchase requests for user {userId}:");
-            Console.WriteLine("\n[DATA] Purchase Request List:");
-            Console.WriteLine("----------------------------------------");
-            foreach (var request in result)
-            {
-                Console.WriteLine(FormatPurchaseRequest(request));
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetMyPurchaseRequestsAsync(userId);
+        return result;
     }
 
-    private async Task TestCreatePurchaseRequestAsync()
+    private async Task<PurchaseRequestDTO?> TestCreatePurchaseRequestAsync(CreatePurchaseRequestRequest request, string userId)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: CreatePurchaseRequestAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Part ID: ");
-        int.TryParse(Console.ReadLine(), out int partId);
-        
-        Console.Write("[INPUT] Enter Quantity: ");
-        int.TryParse(Console.ReadLine(), out int quantity);
-        
-        Console.Write("[INPUT] Enter Reason: ");
-        var reason = Console.ReadLine();
-        
-        Console.Write("[INPUT] Enter User ID (Requester): ");
-        var userId = Console.ReadLine();
-
-        Console.WriteLine("\n[INPUT] Creating request object...");
-        var request = new CreatePurchaseRequestRequest
-        {
-            PartId = partId,
-            Quantity = quantity,
-            Reason = reason
-        };
-        Console.WriteLine($"[INPUT DATA] PartId: {request.PartId}, Quantity: {request.Quantity}, Reason: {request.Reason ?? "null"}");
-
         // Setup mock for user validation
         var user = _userTestData.FirstOrDefault(u => u.Id == userId);
-        _mockUserRepository.Setup(x => x.GetUserByIdAsync(userId ?? "", It.IsAny<CancellationToken>()))
+        _mockUserRepository.Setup(x => x.GetUserByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
         // Setup mock for duplicate check
-        _mockPurchaseRequestRepository.Setup(x => x.GetByPartIdAndStatusAsync(partId, "Chờ duyệt", It.IsAny<CancellationToken>()))
+        _mockPurchaseRequestRepository.Setup(x => x.GetByPartIdAndStatusAsync(request.PartId, "Chờ duyệt", It.IsAny<CancellationToken>()))
             .ReturnsAsync((PurchaseRequest?)null);
 
         // Setup mock for managers
@@ -284,72 +242,25 @@ public class PurchaseRequestServiceManualTest
         {
             RequestId = _testData.Max(r => r.RequestId) + 1,
             PartId = request.PartId,
-            RequestedBy = userId ?? "",
+            RequestedBy = userId,
             Quantity = request.Quantity,
             Reason = request.Reason,
             Status = "Chờ duyệt",
-            Part = _sparePartTestData.FirstOrDefault(p => p.PartId == partId),
+            Part = _sparePartTestData.FirstOrDefault(p => p.PartId == request.PartId),
             RequestedByNavigation = user
         };
 
         _mockPurchaseRequestRepository.Setup(x => x.CreateAsync(It.IsAny<PurchaseRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(newRequest);
 
-        try
-        {
-            Console.WriteLine("[STATUS] Executing CreatePurchaseRequestAsync...");
-            var result = await _service.CreatePurchaseRequestAsync(request, userId ?? "");
-            
-            Console.WriteLine("[SUCCESS] Purchase Request created successfully:");
-            Console.WriteLine(FormatPurchaseRequest(result));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.CreatePurchaseRequestAsync(request, userId);
+        return result;
     }
 
-    private async Task TestUpdatePurchaseRequestAsync()
+    private async Task<PurchaseRequestDTO?> TestUpdatePurchaseRequestAsync(int id, UpdatePurchaseRequestRequest request, string userId)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: UpdatePurchaseRequestAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Purchase Request ID to update: ");
-        int.TryParse(Console.ReadLine(), out int id);
-
         var existingRequest = _testData.FirstOrDefault(r => r.RequestId == id);
-        
-        if (existingRequest == null)
-        {
-            Console.WriteLine($"[NOT FOUND] Purchase request with ID {id} not found in test data");
-        }
-        else
-        {
-            Console.WriteLine($"[CURRENT DATA] Existing purchase request:");
-            Console.WriteLine(FormatPurchaseRequestEntity(existingRequest));
-        }
-        
-        Console.Write("\n[INPUT] Enter new Part ID: ");
-        int.TryParse(Console.ReadLine(), out int newPartId);
-        
-        Console.Write("[INPUT] Enter new Quantity: ");
-        int.TryParse(Console.ReadLine(), out int newQuantity);
-        
-        Console.Write("[INPUT] Enter new Reason: ");
-        var newReason = Console.ReadLine();
-        
-        Console.Write("[INPUT] Enter User ID (Requester): ");
-        var userId = Console.ReadLine();
-
-        Console.WriteLine("\n[INPUT] Creating update request...");
-        var request = new UpdatePurchaseRequestRequest
-        {
-            PartId = newPartId,
-            Quantity = newQuantity,
-            Reason = newReason
-        };
-        Console.WriteLine($"[INPUT DATA] PartId: {request.PartId}, Quantity: {request.Quantity}, Reason: {request.Reason ?? "null"}");
+        if (existingRequest == null) return null;
 
         // Setup mock
         _mockPurchaseRequestRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
@@ -359,68 +270,25 @@ public class PurchaseRequestServiceManualTest
         {
             RequestId = id,
             PartId = request.PartId,
-            RequestedBy = userId ?? "",
+            RequestedBy = userId,
             Quantity = request.Quantity,
             Reason = request.Reason,
-            Status = existingRequest?.Status ?? "Chờ duyệt",
-            Part = _sparePartTestData.FirstOrDefault(p => p.PartId == newPartId),
+            Status = existingRequest.Status,
+            Part = _sparePartTestData.FirstOrDefault(p => p.PartId == request.PartId),
             RequestedByNavigation = _userTestData.FirstOrDefault(u => u.Id == userId)
         };
 
         _mockPurchaseRequestRepository.Setup(x => x.UpdateAsync(It.IsAny<PurchaseRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(updatedRequest);
 
-        try
-        {
-            Console.WriteLine("[STATUS] Executing UpdatePurchaseRequestAsync...");
-            var result = await _service.UpdatePurchaseRequestAsync(id, request, userId ?? "");
-            
-            if (result != null)
-            {
-                Console.WriteLine("[SUCCESS] Purchase Request updated successfully:");
-                Console.WriteLine(FormatPurchaseRequest(result));
-            }
-            else
-            {
-                Console.WriteLine("[WARNING] Update returned null");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.UpdatePurchaseRequestAsync(id, request, userId);
+        return result;
     }
 
-    private async Task TestDeletePurchaseRequestAsync()
+    private async Task<bool> TestDeletePurchaseRequestAsync(int id, string userId)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: DeletePurchaseRequestAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Purchase Request ID to delete: ");
-        int.TryParse(Console.ReadLine(), out int id);
-
-        Console.Write("[INPUT] Enter User ID (Requester): ");
-        var userId = Console.ReadLine();
-
         var existingRequest = _testData.FirstOrDefault(r => r.RequestId == id);
-        if (existingRequest != null)
-        {
-            Console.WriteLine($"[WARNING] Will delete: Part {existingRequest.Part?.PartName} (ID: {id})");
-        }
-        else
-        {
-            Console.WriteLine($"[NOT FOUND] Purchase request with ID {id} not found in test data");
-        }
-
-        Console.Write($"[CONFIRM] Are you sure you want to delete purchase request with ID {id}? (y/n): ");
-        var confirm = Console.ReadLine();
-        
-        if (confirm?.ToLower() != "y")
-        {
-            Console.WriteLine("[CANCELLED] Delete operation cancelled");
-            return;
-        }
+        if (existingRequest == null) return false;
 
         // Setup mock
         _mockPurchaseRequestRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
@@ -428,170 +296,80 @@ public class PurchaseRequestServiceManualTest
         _mockPurchaseRequestRepository.Setup(x => x.DeleteAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        try
-        {
-            Console.WriteLine("[STATUS] Executing DeletePurchaseRequestAsync...");
-            var result = await _service.DeletePurchaseRequestAsync(id, userId ?? "");
-            
-            Console.WriteLine($"[SUCCESS] Delete result: {result}");
-            Console.WriteLine($"[RESULT] {(result ? "Purchase request deleted successfully" : "Failed to delete purchase request")}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.DeletePurchaseRequestAsync(id, userId);
+        return result;
     }
 
-    private async Task TestApprovePurchaseRequestAsync()
+    private async Task<PurchaseRequestDTO?> TestApprovePurchaseRequestAsync(int id, string managerId)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: ApprovePurchaseRequestAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Purchase Request ID to approve: ");
-        int.TryParse(Console.ReadLine(), out int id);
-
-        Console.Write("[INPUT] Enter Manager ID: ");
-        var managerId = Console.ReadLine();
-
         var existingRequest = _testData.FirstOrDefault(r => r.RequestId == id);
         var manager = _userTestData.FirstOrDefault(u => u.Id == managerId);
-        
-        if (existingRequest == null)
-        {
-            Console.WriteLine($"[NOT FOUND] Purchase request with ID {id} not found in test data");
-        }
-        else
-        {
-            Console.WriteLine($"[CURRENT DATA] Existing purchase request:");
-            Console.WriteLine(FormatPurchaseRequestEntity(existingRequest));
-            Console.WriteLine($"[CURRENT STATUS] Status: {existingRequest.Status}");
-            Console.WriteLine($"[EXPECTED STATUS] Will change to: Đã duyệt");
-        }
+        if (existingRequest == null || manager == null) return null;
 
         // Setup mock
         _mockPurchaseRequestRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingRequest);
-        _mockUserRepository.Setup(x => x.GetUserByIdAsync(managerId ?? "", It.IsAny<CancellationToken>()))
+        _mockUserRepository.Setup(x => x.GetUserByIdAsync(managerId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(manager);
 
         var approvedRequest = new PurchaseRequest
         {
             RequestId = id,
-            PartId = existingRequest?.PartId ?? 0,
-            RequestedBy = existingRequest?.RequestedBy ?? "",
-            Quantity = existingRequest?.Quantity ?? 0,
-            Reason = existingRequest?.Reason,
+            PartId = existingRequest.PartId,
+            RequestedBy = existingRequest.RequestedBy,
+            Quantity = existingRequest.Quantity,
+            Reason = existingRequest.Reason,
             Status = "Đã duyệt",
             ApprovedBy = managerId,
             ApprovedAt = DateTime.UtcNow,
             RejectedBy = null,
             RejectedAt = null,
-            Part = existingRequest?.Part,
-            RequestedByNavigation = existingRequest?.RequestedByNavigation,
+            Part = existingRequest.Part,
+            RequestedByNavigation = existingRequest.RequestedByNavigation,
             ApprovedByNavigation = manager
         };
 
         _mockPurchaseRequestRepository.Setup(x => x.UpdateAsync(It.IsAny<PurchaseRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(approvedRequest);
 
-        try
-        {
-            Console.WriteLine("[STATUS] Executing ApprovePurchaseRequestAsync...");
-            var result = await _service.ApprovePurchaseRequestAsync(id, managerId ?? "");
-            
-            if (result != null)
-            {
-                Console.WriteLine("[SUCCESS] Purchase Request approved successfully:");
-                Console.WriteLine(FormatPurchaseRequest(result));
-            }
-            else
-            {
-                Console.WriteLine("[WARNING] Approval returned null");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.ApprovePurchaseRequestAsync(id, managerId);
+        return result;
     }
 
-    private async Task TestRejectPurchaseRequestAsync()
+    private async Task<PurchaseRequestDTO?> TestRejectPurchaseRequestAsync(int id, string managerId, string rejectionReason)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: RejectPurchaseRequestAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Purchase Request ID to reject: ");
-        int.TryParse(Console.ReadLine(), out int id);
-
-        Console.Write("[INPUT] Enter Manager ID: ");
-        var managerId = Console.ReadLine();
-        
-        Console.Write("[INPUT] Enter Rejection Reason: ");
-        var rejectionReason = Console.ReadLine();
-
         var existingRequest = _testData.FirstOrDefault(r => r.RequestId == id);
         var manager = _userTestData.FirstOrDefault(u => u.Id == managerId);
-        
-        if (existingRequest == null)
-        {
-            Console.WriteLine($"[NOT FOUND] Purchase request with ID {id} not found in test data");
-        }
-        else
-        {
-            Console.WriteLine($"[CURRENT DATA] Existing purchase request:");
-            Console.WriteLine(FormatPurchaseRequestEntity(existingRequest));
-            Console.WriteLine($"[CURRENT STATUS] Status: {existingRequest.Status}");
-            Console.WriteLine($"[EXPECTED STATUS] Will change to: Từ chối");
-        }
+        if (existingRequest == null || manager == null) return null;
 
         // Setup mock
         _mockPurchaseRequestRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingRequest);
-        _mockUserRepository.Setup(x => x.GetUserByIdAsync(managerId ?? "", It.IsAny<CancellationToken>()))
+        _mockUserRepository.Setup(x => x.GetUserByIdAsync(managerId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(manager);
 
         var rejectedRequest = new PurchaseRequest
         {
             RequestId = id,
-            PartId = existingRequest?.PartId ?? 0,
-            RequestedBy = existingRequest?.RequestedBy ?? "",
-            Quantity = existingRequest?.Quantity ?? 0,
+            PartId = existingRequest.PartId,
+            RequestedBy = existingRequest.RequestedBy,
+            Quantity = existingRequest.Quantity,
             Reason = rejectionReason,
             Status = "Từ chối",
             RejectedBy = managerId,
             RejectedAt = DateTime.UtcNow,
             ApprovedBy = null,
             ApprovedAt = null,
-            Part = existingRequest?.Part,
-            RequestedByNavigation = existingRequest?.RequestedByNavigation,
+            Part = existingRequest.Part,
+            RequestedByNavigation = existingRequest.RequestedByNavigation,
             RejectedByNavigation = manager
         };
 
         _mockPurchaseRequestRepository.Setup(x => x.UpdateAsync(It.IsAny<PurchaseRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(rejectedRequest);
 
-        try
-        {
-            Console.WriteLine("[STATUS] Executing RejectPurchaseRequestAsync...");
-            var result = await _service.RejectPurchaseRequestAsync(id, managerId ?? "", rejectionReason ?? "");
-            
-            if (result != null)
-            {
-                Console.WriteLine("[SUCCESS] Purchase Request rejected successfully:");
-                Console.WriteLine(FormatPurchaseRequest(result));
-                Console.WriteLine($"[REJECTION REASON] {rejectionReason}");
-            }
-            else
-            {
-                Console.WriteLine("[WARNING] Rejection returned null");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.RejectPurchaseRequestAsync(id, managerId, rejectionReason);
+        return result;
     }
 
     private List<PurchaseRequest> InitializeTestData()
@@ -784,7 +562,21 @@ public class PurchaseRequestServiceManualTest
     private string FormatPurchaseRequestEntity(PurchaseRequest request)
     {
         if (request == null) return "[NULL]";
-        
+
         return $"{{{request.RequestId},{request.PartId},\"{(request.Part?.PartNumber ?? "null")}\",\"{(request.Part?.PartName ?? "null")}\",\"{request.RequestedBy}\",\"{(request.RequestedByNavigation?.FullName ?? "null")}\",{request.Quantity},\"{(request.Reason ?? "null")}\",\"{(request.Status ?? "null")}\",\"{(request.ApprovedBy ?? "null")}\",\"{(request.ApprovedByNavigation?.FullName ?? "null")}\",\"{(request.RejectedBy ?? "null")}\",\"{(request.RejectedByNavigation?.FullName ?? "null")}\",{(request.ApprovedAt.HasValue ? $"new DateTime({request.ApprovedAt.Value.Year},{request.ApprovedAt.Value.Month},{request.ApprovedAt.Value.Day},{request.ApprovedAt.Value.Hour},{request.ApprovedAt.Value.Minute},{request.ApprovedAt.Value.Second})" : "null")},{(request.RejectedAt.HasValue ? $"new DateTime({request.RejectedAt.Value.Year},{request.RejectedAt.Value.Month},{request.RejectedAt.Value.Day},{request.RejectedAt.Value.Hour},{request.RejectedAt.Value.Minute},{request.RejectedAt.Value.Second})" : "null")}}}";
+    }
+
+    private int GetIntInput(string prompt, int defaultValue = 0)
+    {
+        Console.Write($"[INPUT] {prompt}: ");
+        var input = Console.ReadLine();
+        return int.TryParse(input, out int result) ? result : defaultValue;
+    }
+
+    private string GetStringInput(string prompt, string defaultValue = "")
+    {
+        Console.Write($"[INPUT] {prompt}: ");
+        var input = Console.ReadLine();
+        return string.IsNullOrWhiteSpace(input) ? defaultValue : input;
     }
 }

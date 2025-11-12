@@ -36,16 +36,36 @@ public class NotificationServiceManualTest
             switch (choice)
             {
                 case "1":
-                    await TestCreateNotificationAsync();
+                    var createResult = await TestCreateNotificationAsync();
+                    if (createResult != null)
+                    {
+                        Console.WriteLine(FormatNotificationDTO(createResult));
+                    }
                     break;
                 case "2":
-                    await TestGetNotificationByIdAsync();
+                    var getResult = await TestGetNotificationByIdAsync();
+                    if (getResult != null)
+                    {
+                        Console.WriteLine(FormatNotificationDTO(getResult));
+                    }
                     break;
                 case "3":
-                    await TestGetUserNotificationsAsync();
+                    var userNotificationsResult = await TestGetUserNotificationsAsync();
+                    foreach (var notification in userNotificationsResult)
+                    {
+                        Console.WriteLine(FormatNotificationDTO(notification));
+                    }
                     break;
                 case "4":
-                    await TestGetUserNotificationSummaryAsync();
+                    var summaryResult = await TestGetUserNotificationSummaryAsync();
+                    if (summaryResult != null)
+                    {
+                        Console.WriteLine($"Total: {summaryResult.TotalNotifications}, Unread: {summaryResult.UnreadCount}");
+                        foreach (var notification in summaryResult.RecentNotifications)
+                        {
+                            Console.WriteLine(FormatNotificationDTO(notification));
+                        }
+                    }
                     break;
                 case "5":
                     await TestMarkAsReadAsync();
@@ -118,11 +138,9 @@ public class NotificationServiceManualTest
         Console.Write("Enter your choice: ");
     }
 
-    private async Task TestCreateNotificationAsync()
+    private async Task<NotificationDTO> TestCreateNotificationAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: CreateNotificationAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter User ID: ");
         var userId = Console.ReadLine();
@@ -136,7 +154,7 @@ public class NotificationServiceManualTest
         if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(message))
         {
             Console.WriteLine("[ERROR] User ID and Message are required.");
-            return;
+            return null;
         }
 
         var request = new CreateNotificationRequest
@@ -145,8 +163,6 @@ public class NotificationServiceManualTest
             Title = title,
             Message = message
         };
-
-        Console.WriteLine($"\n[INPUT DATA] UserId: {request.UserId}, Title: {request.Title}, Message: {request.Message}");
 
         // Setup mock
         var newNotification = new Notification
@@ -164,38 +180,28 @@ public class NotificationServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing CreateNotificationAsync...");
             var result = await _service.CreateNotificationAsync(request);
-
-            Console.WriteLine("[SUCCESS] Notification created successfully:");
-            Console.WriteLine(FormatNotificationDTO(result));
+            Console.WriteLine("[SUCCESS] Notification created successfully");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
         }
     }
 
-    private async Task TestGetNotificationByIdAsync()
+    private async Task<NotificationDTO> TestGetNotificationByIdAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetNotificationByIdAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Notification ID: ");
         int.TryParse(Console.ReadLine(), out int id);
 
         var notification = _testNotifications.FirstOrDefault(n => n.NotificationId == id);
 
-        if (notification == null)
-        {
-            Console.WriteLine($"[WARNING] Test data not found for ID: {id}");
-        }
-
         _mockRepository.Setup(x => x.GetByIdAsync(id))
             .ReturnsAsync(notification);
-
-        Console.WriteLine($"[STATUS] Executing GetNotificationByIdAsync with ID: {id}...");
 
         try
         {
@@ -203,25 +209,24 @@ public class NotificationServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Notification found:");
-                Console.WriteLine(FormatNotificationDTO(result));
+                Console.WriteLine($"[SUCCESS] Notification found with ID: {id}");
             }
             else
             {
                 Console.WriteLine($"[NOT FOUND] No notification found with ID: {id}");
             }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
         }
     }
 
-    private async Task TestGetUserNotificationsAsync()
+    private async Task<IEnumerable<NotificationDTO>> TestGetUserNotificationsAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetUserNotificationsAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter User ID: ");
         var userId = Console.ReadLine();
@@ -229,7 +234,7 @@ public class NotificationServiceManualTest
         if (string.IsNullOrWhiteSpace(userId))
         {
             Console.WriteLine("[ERROR] User ID cannot be empty.");
-            return;
+            return new List<NotificationDTO>();
         }
 
         Console.Write("[INPUT] Unread only? (y/n): ");
@@ -244,39 +249,22 @@ public class NotificationServiceManualTest
         _mockRepository.Setup(x => x.GetByUserIdAsync(userId, unreadOnly))
             .ReturnsAsync(userNotifications);
 
-        Console.WriteLine($"[STATUS] Executing GetUserNotificationsAsync for user: {userId} (unreadOnly: {unreadOnly})...");
-
         try
         {
             var result = await _service.GetUserNotificationsAsync(userId, unreadOnly);
-
-            Console.WriteLine($"[SUCCESS] Result: Found {result.Count()} notifications");
-
-            if (result.Any())
-            {
-                Console.WriteLine("\n[DATA] Notification List:");
-                Console.WriteLine("----------------------------------------");
-                foreach (var notification in result)
-                {
-                    Console.WriteLine(FormatNotificationDTO(notification));
-                }
-            }
-            else
-            {
-                Console.WriteLine("[INFO] No notifications found for this user");
-            }
+            Console.WriteLine($"[SUCCESS] Found {result.Count()} notifications");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return new List<NotificationDTO>();
         }
     }
 
-    private async Task TestGetUserNotificationSummaryAsync()
+    private async Task<NotificationSummaryDTO> TestGetUserNotificationSummaryAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetUserNotificationSummaryAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter User ID: ");
         var userId = Console.ReadLine();
@@ -284,7 +272,7 @@ public class NotificationServiceManualTest
         if (string.IsNullOrWhiteSpace(userId))
         {
             Console.WriteLine("[ERROR] User ID cannot be empty.");
-            return;
+            return null;
         }
 
         var userNotifications = _testNotifications.Where(n => n.UserId == userId).ToList();
@@ -299,38 +287,22 @@ public class NotificationServiceManualTest
         _mockRepository.Setup(x => x.GetRecentByUserIdAsync(userId, 10))
             .ReturnsAsync(recentNotifications);
 
-        Console.WriteLine($"[STATUS] Executing GetUserNotificationSummaryAsync for user: {userId}...");
-
         try
         {
             var result = await _service.GetUserNotificationSummaryAsync(userId);
-
-            Console.WriteLine("[SUCCESS] Notification summary:");
-            Console.WriteLine($"  Total Notifications: {result.TotalNotifications}");
-            Console.WriteLine($"  Unread Count: {result.UnreadCount}");
-            Console.WriteLine($"  Recent Notifications: {result.RecentNotifications.Count}");
-
-            if (result.RecentNotifications.Any())
-            {
-                Console.WriteLine("\n[DATA] Recent Notifications:");
-                Console.WriteLine("----------------------------------------");
-                foreach (var notification in result.RecentNotifications)
-                {
-                    Console.WriteLine(FormatNotificationDTO(notification));
-                }
-            }
+            Console.WriteLine("[SUCCESS] Notification summary retrieved");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
         }
     }
 
-    private async Task TestMarkAsReadAsync()
+    private async Task<bool> TestMarkAsReadAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: MarkAsReadAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Notification ID: ");
         int.TryParse(Console.ReadLine(), out int id);
@@ -341,40 +313,39 @@ public class NotificationServiceManualTest
         if (string.IsNullOrWhiteSpace(userId))
         {
             Console.WriteLine("[ERROR] User ID cannot be empty.");
-            return;
+            return false;
         }
 
         var notification = _testNotifications.FirstOrDefault(n => n.NotificationId == id && n.UserId == userId);
-
-        if (notification != null)
-        {
-            Console.WriteLine($"[CURRENT] Notification status: IsRead = {notification.IsRead}");
-        }
 
         // Setup mock
         _mockRepository.Setup(x => x.MarkAsReadAsync(id, userId))
             .ReturnsAsync(notification != null);
 
-        Console.WriteLine($"[STATUS] Executing MarkAsReadAsync...");
-
         try
         {
             var result = await _service.MarkAsReadAsync(id, userId);
 
-            Console.WriteLine($"[SUCCESS] Mark as read result: {result}");
-            Console.WriteLine($"[RESULT] {(result ? "Notification marked as read successfully" : "Failed to mark notification as read")}");
+            if (result)
+            {
+                Console.WriteLine("[SUCCESS] Notification marked as read successfully");
+            }
+            else
+            {
+                Console.WriteLine("[FAILED] Failed to mark notification as read");
+            }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return false;
         }
     }
 
-    private async Task TestMarkAllAsReadAsync()
+    private async Task<bool> TestMarkAllAsReadAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: MarkAllAsReadAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter User ID: ");
         var userId = Console.ReadLine();
@@ -382,7 +353,7 @@ public class NotificationServiceManualTest
         if (string.IsNullOrWhiteSpace(userId))
         {
             Console.WriteLine("[ERROR] User ID cannot be empty.");
-            return;
+            return false;
         }
 
         var unreadCount = _testNotifications.Count(n => n.UserId == userId && !n.IsRead);
@@ -392,49 +363,49 @@ public class NotificationServiceManualTest
         _mockRepository.Setup(x => x.MarkAllAsReadAsync(userId))
             .ReturnsAsync(true);
 
-        Console.WriteLine($"[STATUS] Executing MarkAllAsReadAsync...");
-
         try
         {
             var result = await _service.MarkAllAsReadAsync(userId);
 
-            Console.WriteLine($"[SUCCESS] Mark all as read result: {result}");
-            Console.WriteLine($"[RESULT] {(result ? "All notifications marked as read successfully" : "Failed to mark all notifications as read")}");
+            if (result)
+            {
+                Console.WriteLine("[SUCCESS] All notifications marked as read successfully");
+            }
+            else
+            {
+                Console.WriteLine("[FAILED] Failed to mark all notifications as read");
+            }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return false;
         }
     }
 
-    private async Task TestDeleteNotificationAsync()
+    private async Task<bool> TestDeleteNotificationAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: DeleteNotificationAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Notification ID to delete: ");
         int.TryParse(Console.ReadLine(), out int id);
 
         var notification = _testNotifications.FirstOrDefault(n => n.NotificationId == id);
 
-        if (notification != null)
+        if (notification == null)
         {
-            Console.WriteLine($"[WARNING] Will delete notification:");
-            Console.WriteLine(FormatNotification(notification));
-        }
-        else
-        {
-            Console.WriteLine($"[NOT FOUND] Notification with ID {id} not found in test data");
+            Console.WriteLine($"[NOT FOUND] Notification with ID {id} not found");
+            return false;
         }
 
-        Console.Write($"[CONFIRM] Are you sure you want to delete? (y/n): ");
+        Console.Write($"[CONFIRM] Delete notification '{notification.Title}'? (y/n): ");
         var confirm = Console.ReadLine();
 
         if (confirm?.ToLower() != "y")
         {
             Console.WriteLine("[CANCELLED] Delete operation cancelled");
-            return;
+            return false;
         }
 
         // Setup mock
@@ -443,23 +414,28 @@ public class NotificationServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing DeleteNotificationAsync...");
             var result = await _service.DeleteNotificationAsync(id);
 
-            Console.WriteLine($"[SUCCESS] Delete result: {result}");
-            Console.WriteLine($"[RESULT] {(result ? "Notification deleted successfully" : "Failed to delete notification")}");
+            if (result)
+            {
+                Console.WriteLine("[SUCCESS] Notification deleted successfully");
+            }
+            else
+            {
+                Console.WriteLine("[FAILED] Failed to delete notification");
+            }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return false;
         }
     }
 
     private async Task TestDeleteAllReadNotificationsAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: DeleteAllReadNotificationsAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter User ID: ");
         var userId = Console.ReadLine();
@@ -477,13 +453,10 @@ public class NotificationServiceManualTest
         _mockRepository.Setup(x => x.DeleteAllReadByUserIdAsync(userId))
             .Returns(Task.CompletedTask);
 
-        Console.WriteLine($"[STATUS] Executing DeleteAllReadNotificationsAsync...");
-
         try
         {
             await _service.DeleteAllReadNotificationsAsync(userId);
-
-            Console.WriteLine($"[SUCCESS] All read notifications deleted successfully");
+            Console.WriteLine("[SUCCESS] All read notifications deleted successfully");
         }
         catch (Exception ex)
         {

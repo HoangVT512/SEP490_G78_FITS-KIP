@@ -64,28 +64,52 @@ public class IncidentServiceManualTest
             switch (choice)
             {
                 case "1":
-                    await TestGetAllIncidentsAsync();
+                    var incidentsResult = await TestGetAllIncidentsAsync();
+                    foreach (var incident in incidentsResult)
+                    {
+                        Console.WriteLine(FormatIncident(incident));
+                    }
                     break;
                 case "2":
-                    await TestGetIncidentByIdAsync();
+                    var incidentResult = await TestGetIncidentByIdAsync();
+                    if (incidentResult != null)
+                    {
+                        Console.WriteLine(FormatIncident(incidentResult));
+                    }
                     break;
                 case "3":
-                    await TestCreateIncidentAsync();
+                    var createResult = await TestCreateIncidentAsync();
+                    if (createResult != null)
+                    {
+                        Console.WriteLine(FormatIncident(createResult));
+                    }
                     break;
                 case "4":
-                    await TestUpdateIncidentAsync();
+                    var updateResult = await TestUpdateIncidentAsync();
+                    if (updateResult != null)
+                    {
+                        Console.WriteLine(FormatIncident(updateResult));
+                    }
                     break;
                 case "5":
-                    await TestDeleteIncidentAsync();
+                    var deleteResult = await TestDeleteIncidentAsync();
                     break;
                 case "6":
-                    await TestAssignTechnicianAsync();
+                    var assignResult = await TestAssignTechnicianAsync();
                     break;
                 case "7":
-                    await TestGetIncidentsByUserLinesAsync();
+                    var userLinesResult = await TestGetIncidentsByUserLinesAsync();
+                    foreach (var incident in userLinesResult)
+                    {
+                        Console.WriteLine(FormatIncident(incident));
+                    }
                     break;
                 case "8":
-                    await TestGetIncidentsAssignedToTechnicianAsync();
+                    var technicianResult = await TestGetIncidentsAssignedToTechnicianAsync();
+                    foreach (var incident in technicianResult)
+                    {
+                        Console.WriteLine(FormatIncident(incident));
+                    }
                     break;
                 case "0":
                     Console.WriteLine("Goodbye!");
@@ -118,54 +142,35 @@ public class IncidentServiceManualTest
         Console.Write("Enter your choice: ");
     }
 
-    private async Task TestGetAllIncidentsAsync()
+    private async Task<IReadOnlyList<IncidentHistory>> TestGetAllIncidentsAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetIncidentsAsync");
-        Console.WriteLine("=========================================");
 
         // Setup mock
         _mockIncidentRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testIncidents);
 
         // Execute
-        Console.WriteLine("[STATUS] Executing GetIncidentsAsync...");
         var result = await _service.GetIncidentsAsync();
 
         // Verify
-        Console.WriteLine($"[SUCCESS] Result: Found {result.Count} incidents");
-        Console.WriteLine("\n[DATA] Incident List:");
-        Console.WriteLine("----------------------------------------");
-        foreach (var incident in result)
-        {
-            Console.WriteLine(FormatIncident(incident));
-        }
-
-        // Verify repository call
         _mockIncidentRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
-        Console.WriteLine("[VERIFY] Repository method called exactly once");
+
+        Console.WriteLine($"[SUCCESS] Found {result.Count} incidents");
+        return result;
     }
 
-    private async Task TestGetIncidentByIdAsync()
+    private async Task<IncidentHistory?> TestGetIncidentByIdAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetIncidentByIdAsync");
-        Console.WriteLine("=========================================");
 
-        Console.Write("[INPUT] Enter Incident ID to test: ");
+        Console.Write("[INPUT] Enter Incident ID: ");
         int.TryParse(Console.ReadLine(), out int id);
 
         var incident = _testIncidents.FirstOrDefault(i => i.IncidentId == id);
 
-        if (incident == null)
-        {
-            Console.WriteLine($"[WARNING] Test data not found for ID: {id}");
-        }
-
         _mockIncidentRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(incident);
-
-        Console.WriteLine($"[STATUS] Executing GetIncidentByIdAsync with ID: {id}...");
 
         try
         {
@@ -173,25 +178,24 @@ public class IncidentServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Incident found:");
-                Console.WriteLine(FormatIncident(result));
+                Console.WriteLine($"[SUCCESS] Incident found with ID: {id}");
             }
             else
             {
                 Console.WriteLine($"[NOT FOUND] No incident found with ID: {id}");
             }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            throw;
         }
     }
 
-    private async Task TestCreateIncidentAsync()
+    private async Task<IncidentHistory> TestCreateIncidentAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: CreateIncidentAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Equipment ID: ");
         int.TryParse(Console.ReadLine(), out int equipmentId);
@@ -202,29 +206,21 @@ public class IncidentServiceManualTest
         Console.Write("[INPUT] Enter Issue Description: ");
         var issue = Console.ReadLine();
 
-        Console.Write("[INPUT] Enter Reason (optional): ");
-        var reason = Console.ReadLine();
-
         Console.Write("[INPUT] Enter Type ID (1-5): ");
         int.TryParse(Console.ReadLine(), out int typeId);
 
         Console.Write("[INPUT] Enter Reported By User ID: ");
         var reportedBy = Console.ReadLine();
 
-        Console.Write("[INPUT] Is Tech Support (true/false): ");
-        bool.TryParse(Console.ReadLine(), out bool isTechSupport);
-
-        Console.WriteLine("\n[INPUT] Creating request object...");
         var request = new CreateIncidentRequest
         {
             EquipmentId = equipmentId,
             LineId = lineId,
             Issue = issue,
-            Reason = reason,
             TypeId = typeId,
             StartTime = DateTime.Now,
             ReportedByUserId = reportedBy,
-            IsTechSupport = isTechSupport
+            IsTechSupport = false
         };
 
         // Setup mocks
@@ -242,12 +238,11 @@ public class IncidentServiceManualTest
             EquipmentId = equipmentId,
             LineId = lineId,
             Issue = issue,
-            Reason = reason,
             TypeId = typeId,
             StartTime = request.StartTime,
             Status = "Chờ xử lý",
             ReportedByUserId = reportedBy,
-            IsTechSupport = isTechSupport,
+            IsTechSupport = false,
             CreatedDate = DateTime.Now,
             Equipment = equipment,
             Line = line
@@ -258,23 +253,20 @@ public class IncidentServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing CreateIncidentAsync...");
             var result = await _service.CreateIncidentAsync(request);
-
-            Console.WriteLine("[SUCCESS] Incident created successfully:");
-            Console.WriteLine(FormatIncident(result));
+            Console.WriteLine("[SUCCESS] Incident created successfully");
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            throw;
         }
     }
 
-    private async Task TestUpdateIncidentAsync()
+    private async Task<IncidentHistory?> TestUpdateIncidentAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: UpdateIncidentAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Incident ID to update: ");
         int.TryParse(Console.ReadLine(), out int id);
@@ -283,15 +275,11 @@ public class IncidentServiceManualTest
 
         if (existingIncident == null)
         {
-            Console.WriteLine($"[NOT FOUND] Incident with ID {id} not found in test data");
-        }
-        else
-        {
-            Console.WriteLine($"[CURRENT DATA] Existing incident:");
-            Console.WriteLine(FormatIncident(existingIncident));
+            Console.WriteLine($"[NOT FOUND] Incident with ID {id} not found");
+            return null;
         }
 
-        Console.Write("\n[INPUT] Enter new Equipment ID: ");
+        Console.Write("[INPUT] Enter new Equipment ID: ");
         int.TryParse(Console.ReadLine(), out int equipmentId);
 
         Console.Write("[INPUT] Enter new Line ID: ");
@@ -300,37 +288,19 @@ public class IncidentServiceManualTest
         Console.Write("[INPUT] Enter new Issue: ");
         var issue = Console.ReadLine();
 
-        Console.Write("[INPUT] Enter new Reason: ");
-        var reason = Console.ReadLine();
-
-        Console.Write("[INPUT] Enter new Solution: ");
-        var solution = Console.ReadLine();
-
         Console.Write("[INPUT] Enter Status (Chờ xử lý/Đang xử lý/Hoàn thành/Hủy): ");
         var status = Console.ReadLine();
 
-        Console.Write("[INPUT] Enter End Time (yyyy-MM-dd HH:mm:ss or press Enter to skip): ");
-        var endTimeInput = Console.ReadLine();
-        DateTime? endTime = null;
-        if (!string.IsNullOrWhiteSpace(endTimeInput) && DateTime.TryParse(endTimeInput, out DateTime parsedEndTime))
-        {
-            endTime = parsedEndTime;
-        }
-
-        Console.WriteLine("\n[INPUT] Creating update request...");
         var request = new UpdateIncidentRequest
         {
             EquipmentId = equipmentId,
             LineId = lineId,
-            Issue = issue ?? existingIncident?.Issue,
-            Reason = reason ?? existingIncident?.Reason,
-            Solution = solution,
-            Status = status ?? existingIncident?.Status,
-            StartTime = existingIncident?.StartTime ?? DateTime.Now,
-            EndTime = endTime,
-            TypeId = existingIncident?.TypeId,
-            ReportedByUserId = existingIncident?.ReportedByUserId,
-            IsTechSupport = existingIncident?.IsTechSupport ?? false
+            Issue = issue ?? existingIncident.Issue,
+            Status = status ?? existingIncident.Status,
+            StartTime = existingIncident.StartTime ?? DateTime.Now,
+            TypeId = existingIncident.TypeId,
+            ReportedByUserId = existingIncident.ReportedByUserId,
+            IsTechSupport = existingIncident.IsTechSupport
         };
 
         // Setup mocks
@@ -354,11 +324,8 @@ public class IncidentServiceManualTest
             EquipmentId = equipmentId,
             LineId = lineId,
             Issue = request.Issue,
-            Reason = request.Reason,
-            Solution = request.Solution,
             Status = request.Status,
             StartTime = request.StartTime,
-            EndTime = request.EndTime,
             TypeId = request.TypeId,
             ReportedByUserId = request.ReportedByUserId,
             IsTechSupport = request.IsTechSupport,
@@ -371,52 +338,46 @@ public class IncidentServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing UpdateIncidentAsync...");
             var result = await _service.UpdateIncidentAsync(id, request);
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Incident updated successfully:");
-                Console.WriteLine(FormatIncident(result));
+                Console.WriteLine("[SUCCESS] Incident updated successfully");
             }
             else
             {
                 Console.WriteLine("[WARNING] Update returned null");
             }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            throw;
         }
     }
 
-    private async Task TestDeleteIncidentAsync()
+    private async Task<bool> TestDeleteIncidentAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: DeleteIncidentAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Incident ID to delete: ");
         int.TryParse(Console.ReadLine(), out int id);
 
         var existingIncident = _testIncidents.FirstOrDefault(i => i.IncidentId == id);
-        if (existingIncident != null)
+        if (existingIncident == null)
         {
-            Console.WriteLine($"[WARNING] Will delete incident ID: {id}");
-            Console.WriteLine(FormatIncident(existingIncident));
-        }
-        else
-        {
-            Console.WriteLine($"[NOT FOUND] Incident with ID {id} not found in test data");
+            Console.WriteLine($"[NOT FOUND] Incident with ID {id} not found");
+            return false;
         }
 
-        Console.Write($"[CONFIRM] Are you sure you want to delete incident with ID {id}? (y/n): ");
+        Console.Write($"[CONFIRM] Delete incident '{existingIncident.Issue}'? (y/n): ");
         var confirm = Console.ReadLine();
 
         if (confirm?.ToLower() != "y")
         {
             Console.WriteLine("[CANCELLED] Delete operation cancelled");
-            return;
+            return false;
         }
 
         // Setup mock
@@ -425,23 +386,28 @@ public class IncidentServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing DeleteIncidentAsync...");
             var result = await _service.DeleteIncidentAsync(id);
 
-            Console.WriteLine($"[SUCCESS] Delete result: {result}");
-            Console.WriteLine($"[RESULT] {(result ? "Incident deleted successfully" : "Failed to delete incident")}");
+            if (result)
+            {
+                Console.WriteLine("[SUCCESS] Incident deleted successfully");
+            }
+            else
+            {
+                Console.WriteLine("[FAILED] Failed to delete incident");
+            }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return false;
         }
     }
 
-    private async Task TestAssignTechnicianAsync()
+    private async Task<bool> TestAssignTechnicianAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: AssignTechnicianAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Incident ID: ");
         int.TryParse(Console.ReadLine(), out int incidentId);
@@ -455,12 +421,8 @@ public class IncidentServiceManualTest
         var existingIncident = _testIncidents.FirstOrDefault(i => i.IncidentId == incidentId);
         if (existingIncident == null)
         {
-            Console.WriteLine($"[NOT FOUND] Incident with ID {incidentId} not found in test data");
-        }
-        else
-        {
-            Console.WriteLine($"[CURRENT DATA] Incident:");
-            Console.WriteLine(FormatIncident(existingIncident));
+            Console.WriteLine($"[NOT FOUND] Incident with ID {incidentId} not found");
+            return false;
         }
 
         // Setup mocks
@@ -485,27 +447,28 @@ public class IncidentServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing AssignTechnicianAsync...");
             var result = await _service.AssignTechnicianAsync(incidentId, technicianId!, updateStatus);
 
-            Console.WriteLine($"[SUCCESS] Assign technician result: {result}");
-            if (result && existingIncident != null)
+            if (result)
             {
-                Console.WriteLine($"[RESULT] Technician {technicianId} assigned to incident {incidentId}");
-                Console.WriteLine(FormatIncident(existingIncident));
+                Console.WriteLine("[SUCCESS] Technician assigned successfully");
             }
+            else
+            {
+                Console.WriteLine("[FAILED] Failed to assign technician");
+            }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return false;
         }
     }
 
-    private async Task TestGetIncidentsByUserLinesAsync()
+    private async Task<IReadOnlyList<IncidentHistory>> TestGetIncidentsByUserLinesAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetIncidentsByUserLinesAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter User ID: ");
         var userId = Console.ReadLine();
@@ -515,36 +478,28 @@ public class IncidentServiceManualTest
         _mockLineRepository.Setup(x => x.GetLinesByUserAsync(userId!, It.IsAny<CancellationToken>()))
             .ReturnsAsync(userLines);
 
-        var userIncidents = _testIncidents.Where(i => 
+        var userIncidents = _testIncidents.Where(i =>
             userLines.Any(l => l.LineId == i.LineId)).ToList();
-        
+
         _mockIncidentRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testIncidents);
 
         try
         {
-            Console.WriteLine($"[STATUS] Executing GetIncidentsByUserLinesAsync for user: {userId}...");
             var result = await _service.GetIncidentsByUserLinesAsync(userId!);
-
             Console.WriteLine($"[SUCCESS] Found {result.Count} incidents for user's lines");
-            Console.WriteLine("\n[DATA] Incident List:");
-            Console.WriteLine("----------------------------------------");
-            foreach (var incident in result)
-            {
-                Console.WriteLine(FormatIncident(incident));
-            }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return new List<IncidentHistory>();
         }
     }
 
-    private async Task TestGetIncidentsAssignedToTechnicianAsync()
+    private async Task<IReadOnlyList<IncidentHistory>> TestGetIncidentsAssignedToTechnicianAsync()
     {
-        Console.WriteLine("\n=========================================");
         Console.WriteLine("TEST: GetIncidentsAssignedToTechnicianAsync");
-        Console.WriteLine("=========================================");
 
         Console.Write("[INPUT] Enter Technician ID: ");
         var technicianId = Console.ReadLine();
@@ -556,20 +511,14 @@ public class IncidentServiceManualTest
 
         try
         {
-            Console.WriteLine($"[STATUS] Executing GetIncidentsAssignedToTechnicianAsync for technician: {technicianId}...");
             var result = await _service.GetIncidentsAssignedToTechnicianAsync(technicianId!);
-
             Console.WriteLine($"[SUCCESS] Found {result.Count} incidents assigned to technician");
-            Console.WriteLine("\n[DATA] Incident List:");
-            Console.WriteLine("----------------------------------------");
-            foreach (var incident in result)
-            {
-                Console.WriteLine(FormatIncident(incident));
-            }
+            return result;
         }
         catch (Exception ex)
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return new List<IncidentHistory>();
         }
     }
 

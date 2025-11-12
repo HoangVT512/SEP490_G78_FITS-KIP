@@ -46,53 +46,143 @@ public class ProductionOutputServiceManualTest
             ShowMenu();
             var choice = Console.ReadLine();
 
-            switch (choice)
+            try
             {
-                case "1":
-                    await TestGetProductionOutputsAsync();
-                    break;
-                case "2":
-                    await TestGetProductionOutputByIdAsync();
-                    break;
-                case "3":
-                    await TestCreateProductionOutputAsync();
-                    break;
-                case "4":
-                    await TestUpdateProductionOutputAsync();
-                    break;
-                case "5":
-                    await TestDeleteProductionOutputAsync();
-                    break;
-                case "6":
-                    await TestGetProductionOutputsByLineAsync();
-                    break;
-                case "7":
-                    await TestGetProductionOutputsByDateRangeAsync();
-                    break;
-                case "8":
-                    await TestGetProductionOutputsByLineAndDateAsync();
-                    break;
-                case "9":
-                    await TestGetAvailableSlotTimesAsync();
-                    break;
-                case "10":
-                    await TestCalculateLoadingTimeAsync();
-                    break;
-                case "11":
-                    await TestCalculateOEEAsync();
-                    break;
-                case "12":
-                    await TestCalculateOEEForShiftAsync();
-                    break;
-                case "13":
-                    await TestCalculateOEEForDayAsync();
-                    break;
-                case "0":
-                    Console.WriteLine("Goodbye!");
-                    return;
-                default:
-                    Console.WriteLine("Invalid choice. Please try again.");
-                    break;
+                switch (choice)
+                {
+                    case "1":
+                        var result1 = await TestGetProductionOutputsAsync();
+                        Console.WriteLine($"Found {result1.Count} production outputs");
+                        foreach (var output in result1)
+                        {
+                            Console.WriteLine(FormatProductionOutput(output));
+                        }
+                        break;
+                    case "2":
+                        Console.Write("[INPUT] Enter Output ID: ");
+                        int.TryParse(Console.ReadLine(), out int id);
+                        var result2 = await TestGetProductionOutputByIdAsync(id);
+                        if (result2 != null)
+                            Console.WriteLine(FormatProductionOutput(result2));
+                        else
+                            Console.WriteLine("No production output found");
+                        break;
+                    case "3":
+                        var request3 = new CreateProductionOutputRequest
+                        {
+                            LineId = GetIntInput("Line ID"),
+                            Date = GetDateInput("Date"),
+                            ShiftId = GetIntInput("Shift ID"),
+                            SlotTime = GetStringInput("Slot Time", "7h-8h"),
+                            TargetAmount = GetNullableIntInput("Target Amount"),
+                            ResultAmount = GetNullableIntInput("Result Amount")
+                        };
+                        var result3 = await TestCreateProductionOutputAsync(request3);
+                        if (result3 != null)
+                            Console.WriteLine(FormatProductionOutput(result3));
+                        break;
+                    case "4":
+                        var id4 = GetIntInput("Output ID to update");
+                        var request4 = new UpdateProductionOutputRequest
+                        {
+                            TargetAmount = GetNullableIntInput("Target Amount"),
+                            ResultAmount = GetNullableIntInput("Result Amount")
+                        };
+                        var result4 = await TestUpdateProductionOutputAsync(id4, request4);
+                        if (result4 != null)
+                            Console.WriteLine(FormatProductionOutput(result4));
+                        break;
+                    case "5":
+                        var id5 = GetIntInput("Output ID to delete");
+                        var result5 = await TestDeleteProductionOutputAsync(id5);
+                        Console.WriteLine($"Delete result: {result5}");
+                        break;
+                    case "6":
+                        var lineId6 = GetIntInput("Line ID");
+                        var result6 = await TestGetProductionOutputsByLineAsync(lineId6);
+                        Console.WriteLine($"Found {result6.Count} production outputs");
+                        foreach (var output in result6)
+                        {
+                            Console.WriteLine(FormatProductionOutput(output));
+                        }
+                        break;
+                    case "7":
+                        var startDate7 = GetDateInput("Start Date");
+                        var endDate7 = GetDateInput("End Date");
+                        var result7 = await TestGetProductionOutputsByDateRangeAsync(startDate7, endDate7);
+                        Console.WriteLine($"Found {result7.Count} production outputs");
+                        foreach (var output in result7)
+                        {
+                            Console.WriteLine(FormatProductionOutput(output));
+                        }
+                        break;
+                    case "8":
+                        var lineId8 = GetIntInput("Line ID");
+                        var date8 = GetDateInput("Date");
+                        var result8 = await TestGetProductionOutputsByLineAndDateAsync(lineId8, date8);
+                        Console.WriteLine($"Found {result8.Count} production outputs");
+                        foreach (var output in result8)
+                        {
+                            Console.WriteLine(FormatProductionOutput(output));
+                        }
+                        break;
+                    case "9":
+                        var request9 = new ProductionOutputSlotTimeRequest
+                        {
+                            LineId = GetIntInput("Line ID"),
+                            Date = GetDateInput("Date"),
+                            ShiftId = GetIntInput("Shift ID")
+                        };
+                        var result9 = await TestGetAvailableSlotTimesAsync(request9);
+                        Console.WriteLine($"Found {result9.Count} available slot times");
+                        foreach (var slot in result9)
+                        {
+                            Console.WriteLine($"Slot: {slot.SlotTime}, LoadingTime: {slot.LoadingTime} mins, Available: {slot.IsAvailable}");
+                        }
+                        break;
+                    case "10":
+                        var lineId10 = GetIntInput("Line ID");
+                        var date10 = GetDateInput("Date");
+                        var shiftId10 = GetIntInput("Shift ID");
+                        var slotTime10 = GetStringInput("Slot Time", "7h-8h");
+                        var result10 = await TestCalculateLoadingTimeAsync(lineId10, date10, shiftId10, slotTime10);
+                        Console.WriteLine($"Loading time: {result10} minutes");
+                        break;
+                    case "11":
+                        var lineId11 = GetIntInput("Line ID");
+                        var date11 = GetDateInput("Date");
+                        var shiftId11 = GetIntInput("Shift ID");
+                        var slotTime11 = GetStringInput("Slot Time", "7h-8h");
+                        var targetAmount11 = GetNullableIntInput("Target Amount");
+                        var resultAmount11 = GetNullableIntInput("Result Amount");
+                        var runTime11 = GetIntInput("Run Time", 60);
+                        var result11 = await TestCalculateOEEAsync(lineId11, date11, shiftId11, slotTime11, targetAmount11, resultAmount11, runTime11);
+                        Console.WriteLine($"OEE: {result11:F4} ({result11 * 100:F2}%)");
+                        break;
+                    case "12":
+                        var lineId12 = GetIntInput("Line ID");
+                        var date12 = GetDateInput("Date");
+                        var shiftId12 = GetIntInput("Shift ID");
+                        var result12 = await TestCalculateOEEForShiftAsync(lineId12, date12, shiftId12);
+                        Console.WriteLine($"OEE: {result12.OEE:F4} ({result12.OEEPercentage}%)");
+                        break;
+                    case "13":
+                        var lineId13 = GetIntInput("Line ID");
+                        var date13 = GetDateInput("Date");
+                        var result13 = await TestCalculateOEEForDayAsync(lineId13, date13);
+                        Console.WriteLine($"OEE: {result13.OEE:F4} ({result13.OEEPercentage}%)");
+                        break;
+                    case "0":
+                        Console.WriteLine("Goodbye!");
+                        return;
+                    default:
+                        Console.WriteLine("Invalid choice. Please try again.");
+                        break;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error: {ex.Message}");
             }
 
             Console.WriteLine("\nPress any key to continue...");
@@ -123,148 +213,55 @@ public class ProductionOutputServiceManualTest
         Console.Write("Enter your choice: ");
     }
 
-    private async Task TestGetProductionOutputsAsync()
+    private async Task<IReadOnlyList<ProductionOutputDTO>> TestGetProductionOutputsAsync()
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetProductionOutputsAsync");
-        Console.WriteLine("=========================================");
-
         // Setup mock
         _mockRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testData);
 
         // Execute
-        Console.WriteLine("[STATUS] Executing GetProductionOutputsAsync...");
         var result = await _service.GetProductionOutputsAsync();
-
-        // Verify
-        Console.WriteLine($"[SUCCESS] Result: Found {result.Count} production outputs");
-        Console.WriteLine("\n[DATA] Production Output List:");
-        Console.WriteLine("----------------------------------------");
-        foreach (var output in result)
-        {
-            Console.WriteLine(FormatProductionOutput(output));
-        }
 
         // Verify repository call
         _mockRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
-        Console.WriteLine("[VERIFY] Repository method called exactly once");
+
+        return result;
     }
 
-    private async Task TestGetProductionOutputByIdAsync()
+    private async Task<ProductionOutputDTO?> TestGetProductionOutputByIdAsync(int id)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetProductionOutputByIdAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Output ID to test: ");
-        int.TryParse(Console.ReadLine(), out int id);
-        
         var output = _testData.FirstOrDefault(o => o.OutputId == id);
-        
-        if (output == null)
-        {
-            Console.WriteLine($"[WARNING] Test data not found for ID: {id}");
-        }
-        
+
         _mockRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(output);
 
-        Console.WriteLine($"[STATUS] Executing GetProductionOutputByIdAsync with ID: {id}...");
-        
-        try
-        {
-            var result = await _service.GetProductionOutputByIdAsync(id);
-            
-            if (result != null)
-            {
-                Console.WriteLine("[SUCCESS] Production output found:");
-                Console.WriteLine(FormatProductionOutput(result));
-            }
-            else
-            {
-                Console.WriteLine($"[NOT FOUND] No production output found with ID: {id}");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetProductionOutputByIdAsync(id);
+
+        return result;
     }
 
-    private async Task TestCreateProductionOutputAsync()
+    private async Task<ProductionOutputDTO?> TestCreateProductionOutputAsync(CreateProductionOutputRequest request)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: CreateProductionOutputAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Line ID: ");
-        int.TryParse(Console.ReadLine(), out int lineId);
-        
-        Console.Write("[INPUT] Enter Date (yyyy-MM-dd): ");
-        DateTime.TryParse(Console.ReadLine(), out DateTime date);
-        
-        Console.Write("[INPUT] Enter Shift ID: ");
-        int.TryParse(Console.ReadLine(), out int shiftId);
-        
-        Console.Write("[INPUT] Enter Slot Time (e.g., 7h-8h): ");
-        var slotTime = Console.ReadLine();
-        
-        Console.Write("[INPUT] Enter Target Amount (or press Enter for null): ");
-        var targetInput = Console.ReadLine();
-        int? targetAmount = null;
-        if (!string.IsNullOrWhiteSpace(targetInput) && int.TryParse(targetInput, out int target))
-        {
-            targetAmount = target;
-        }
-        
-        Console.Write("[INPUT] Enter Result Amount (or press Enter for null): ");
-        var resultInput = Console.ReadLine();
-        int? resultAmount = null;
-        if (!string.IsNullOrWhiteSpace(resultInput) && int.TryParse(resultInput, out int r))
-        {
-            resultAmount = r;
-        }
-
-        Console.WriteLine("\n[INPUT] Creating request object...");
-        var request = new CreateProductionOutputRequest
-        {
-            LineId = lineId,
-            Date = date,
-            ShiftId = shiftId,
-            SlotTime = slotTime ?? "7h-8h",
-            TargetAmount = targetAmount,
-            ResultAmount = resultAmount
-        };
-        
-        Console.WriteLine($"[INPUT DATA] LineId: {request.LineId}, Date: {request.Date:yyyy-MM-dd}, ShiftId: {request.ShiftId}, SlotTime: {request.SlotTime}, TargetAmount: {targetAmount}, ResultAmount: {resultAmount}");
-
         // Setup mock - Check line exists
-        var line = _testLines.FirstOrDefault(l => l.LineId == lineId);
-        if (line == null)
-        {
-            Console.WriteLine($"[ERROR] Line with ID {lineId} not found in test data");
-            return;
-        }
-        _mockLineRepository.Setup(x => x.GetByIdAsync(lineId, It.IsAny<CancellationToken>()))
+        var line = _testLines.FirstOrDefault(l => l.LineId == request.LineId);
+        if (line == null) return null;
+
+        _mockLineRepository.Setup(x => x.GetByIdAsync(request.LineId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(line);
 
         // Setup mock - Check shift exists
-        var shift = _testShifts.FirstOrDefault(s => s.ShiftId == shiftId);
-        if (shift == null)
-        {
-            Console.WriteLine($"[ERROR] Shift with ID {shiftId} not found in test data");
-            return;
-        }
-        _mockShiftRepository.Setup(x => x.GetByIdAsync(shiftId, It.IsAny<CancellationToken>()))
+        var shift = _testShifts.FirstOrDefault(s => s.ShiftId == request.ShiftId);
+        if (shift == null) return null;
+
+        _mockShiftRepository.Setup(x => x.GetByIdAsync(request.ShiftId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(shift);
 
         // Setup mock - Check if slot exists
-        _mockRepository.Setup(x => x.ExistsAsync(lineId, date, shiftId, slotTime ?? "7h-8h", It.IsAny<CancellationToken>()))
+        _mockRepository.Setup(x => x.ExistsAsync(request.LineId, request.Date, request.ShiftId, request.SlotTime, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         // Setup mock - Get incidents for calculating loading time
-        _mockIncidentRepository.Setup(x => x.GetByLineIdAsync(lineId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+        _mockIncidentRepository.Setup(x => x.GetByLineIdAsync(request.LineId, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<IncidentHistory>());
 
         var newOutput = new ProductionOutput
@@ -277,8 +274,8 @@ public class ProductionOutputServiceManualTest
             TargetAmount = request.TargetAmount,
             ResultAmount = request.ResultAmount,
             LoadingTime = 60,
-            OEE = request.ResultAmount.HasValue && request.TargetAmount.HasValue 
-                ? (decimal)(request.ResultAmount.Value) / request.TargetAmount.Value 
+            OEE = request.ResultAmount.HasValue && request.TargetAmount.HasValue
+                ? (decimal)(request.ResultAmount.Value) / request.TargetAmount.Value
                 : 0,
             CreatedAt = DateTime.UtcNow,
             Line = line,
@@ -288,65 +285,14 @@ public class ProductionOutputServiceManualTest
         _mockRepository.Setup(x => x.CreateAsync(It.IsAny<ProductionOutput>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(newOutput);
 
-        try
-        {
-            Console.WriteLine("[STATUS] Executing CreateProductionOutputAsync...");
-            var result = await _service.CreateProductionOutputAsync(request);
-            
-            Console.WriteLine("[SUCCESS] Production output created successfully:");
-            Console.WriteLine(FormatProductionOutput(result));
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.CreateProductionOutputAsync(request);
+        return result;
     }
 
-    private async Task TestUpdateProductionOutputAsync()
+    private async Task<ProductionOutputDTO?> TestUpdateProductionOutputAsync(int id, UpdateProductionOutputRequest request)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: UpdateProductionOutputAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Output ID to update: ");
-        int.TryParse(Console.ReadLine(), out int id);
-
         var existingOutput = _testData.FirstOrDefault(o => o.OutputId == id);
-        
-        if (existingOutput == null)
-        {
-            Console.WriteLine($"[NOT FOUND] Output with ID {id} not found in test data");
-        }
-        else
-        {
-            Console.WriteLine($"[CURRENT DATA] Existing production output:");
-            Console.WriteLine(FormatProductionOutputEntity(existingOutput));
-        }
-        
-        Console.Write("\n[INPUT] Enter new Target Amount (or press Enter to keep current): ");
-        var targetInput = Console.ReadLine();
-        int? targetAmount = existingOutput?.TargetAmount;
-        if (!string.IsNullOrWhiteSpace(targetInput) && int.TryParse(targetInput, out int target))
-        {
-            targetAmount = target;
-        }
-        
-        Console.Write("[INPUT] Enter new Result Amount (or press Enter to keep current): ");
-        var resultInput = Console.ReadLine();
-        int? resultAmount = existingOutput?.ResultAmount;
-        if (!string.IsNullOrWhiteSpace(resultInput) && int.TryParse(resultInput, out int r))
-        {
-            resultAmount = r;
-        }
-
-        Console.WriteLine("\n[INPUT] Creating update request...");
-        var request = new UpdateProductionOutputRequest
-        {
-            TargetAmount = targetAmount,
-            ResultAmount = resultAmount
-        };
-        
-        Console.WriteLine($"[INPUT DATA] TargetAmount: {targetAmount}, ResultAmount: {resultAmount}");
+        if (existingOutput == null) return null;
 
         // Setup mock
         _mockRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
@@ -354,233 +300,88 @@ public class ProductionOutputServiceManualTest
 
         // Setup mock for OEE calculation
         _mockIncidentRepository.Setup(x => x.GetByLineIdAsync(
-                It.IsAny<int>(), 
-                It.IsAny<DateTime>(), 
-                It.IsAny<DateTime>(), 
+                It.IsAny<int>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<IncidentHistory>());
 
         var updatedOutput = new ProductionOutput
         {
             OutputId = id,
-            LineId = existingOutput?.LineId ?? 1,
-            Date = existingOutput?.Date ?? DateTime.Now,
-            ShiftId = existingOutput?.ShiftId ?? 1,
-            SlotTime = existingOutput?.SlotTime ?? "7h-8h",
+            LineId = existingOutput.LineId,
+            Date = existingOutput.Date,
+            ShiftId = existingOutput.ShiftId,
+            SlotTime = existingOutput.SlotTime,
             TargetAmount = request.TargetAmount,
             ResultAmount = request.ResultAmount,
-            LoadingTime = existingOutput?.LoadingTime ?? 60,
-            OEE = resultAmount.HasValue && targetAmount.HasValue 
-                ? (decimal)(resultAmount.Value) / targetAmount.Value 
+            LoadingTime = existingOutput.LoadingTime,
+            OEE = request.ResultAmount.HasValue && request.TargetAmount.HasValue
+                ? (decimal)(request.ResultAmount.Value) / request.TargetAmount.Value
                 : 0,
-            CreatedAt = existingOutput?.CreatedAt ?? DateTime.UtcNow,
+            CreatedAt = existingOutput.CreatedAt,
             UpdatedAt = DateTime.UtcNow,
-            Line = existingOutput?.Line ?? null,
-            Shift = existingOutput?.Shift ?? null
+            Line = existingOutput.Line,
+            Shift = existingOutput.Shift
         };
 
         _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<ProductionOutput>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(updatedOutput);
 
-        try
-        {
-            Console.WriteLine("[STATUS] Executing UpdateProductionOutputAsync...");
-            var result = await _service.UpdateProductionOutputAsync(id, request);
-            
-            if (result != null)
-            {
-                Console.WriteLine("[SUCCESS] Production output updated successfully:");
-                Console.WriteLine(FormatProductionOutput(result));
-            }
-            else
-            {
-                Console.WriteLine("[WARNING] Update returned null");
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.UpdateProductionOutputAsync(id, request);
+        return result;
     }
 
-    private async Task TestDeleteProductionOutputAsync()
+    private async Task<bool> TestDeleteProductionOutputAsync(int id)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: DeleteProductionOutputAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Output ID to delete: ");
-        int.TryParse(Console.ReadLine(), out int id);
-
         var existingOutput = _testData.FirstOrDefault(o => o.OutputId == id);
-        if (existingOutput != null)
-        {
-            Console.WriteLine($"[WARNING] Will delete production output with ID: {id}");
-        }
-        else
-        {
-            Console.WriteLine($"[NOT FOUND] Production output with ID {id} not found in test data");
-        }
-
-        Console.Write($"[CONFIRM] Are you sure you want to delete production output with ID {id}? (y/n): ");
-        var confirm = Console.ReadLine();
-        
-        if (confirm?.ToLower() != "y")
-        {
-            Console.WriteLine("[CANCELLED] Delete operation cancelled");
-            return;
-        }
+        if (existingOutput == null) return false;
 
         // Setup mock
         _mockRepository.Setup(x => x.DeleteAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        try
-        {
-            Console.WriteLine("[STATUS] Executing DeleteProductionOutputAsync...");
-            var result = await _service.DeleteProductionOutputAsync(id);
-            
-            Console.WriteLine($"[SUCCESS] Delete result: {result}");
-            Console.WriteLine($"[RESULT] {(result ? "Production output deleted successfully" : "Failed to delete production output")}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.DeleteProductionOutputAsync(id);
+        return result;
     }
 
-    private async Task TestGetProductionOutputsByLineAsync()
+    private async Task<IReadOnlyList<ProductionOutputDTO>> TestGetProductionOutputsByLineAsync(int lineId)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetProductionOutputsByLineAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Line ID: ");
-        int.TryParse(Console.ReadLine(), out int lineId);
-
         // Setup mock
         _mockRepository.Setup(x => x.GetByLineIdAsync(lineId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testData.Where(o => o.LineId == lineId).ToList());
 
-        Console.WriteLine($"[STATUS] Executing GetProductionOutputsByLineAsync with Line ID: {lineId}...");
-        
-        try
-        {
-            var result = await _service.GetProductionOutputsByLineAsync(lineId);
-            
-            Console.WriteLine($"[SUCCESS] Found {result.Count} production outputs for line {lineId}");
-            Console.WriteLine("\n[DATA] Production Output List:");
-            Console.WriteLine("----------------------------------------");
-            foreach (var output in result)
-            {
-                Console.WriteLine(FormatProductionOutput(output));
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetProductionOutputsByLineAsync(lineId);
+        return result;
     }
 
-    private async Task TestGetProductionOutputsByDateRangeAsync()
+    private async Task<IReadOnlyList<ProductionOutputDTO>> TestGetProductionOutputsByDateRangeAsync(DateTime startDate, DateTime endDate)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetProductionOutputsByDateRangeAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Start Date (yyyy-MM-dd): ");
-        DateTime.TryParse(Console.ReadLine(), out DateTime startDate);
-        
-        Console.Write("[INPUT] Enter End Date (yyyy-MM-dd): ");
-        DateTime.TryParse(Console.ReadLine(), out DateTime endDate);
-
         // Setup mock
         _mockRepository.Setup(x => x.GetByDateRangeAsync(startDate, endDate, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testData.Where(o => o.Date >= startDate && o.Date <= endDate).ToList());
 
-        Console.WriteLine($"[STATUS] Executing GetProductionOutputsByDateRangeAsync from {startDate:yyyy-MM-dd} to {endDate:yyyy-MM-dd}...");
-        
-        try
-        {
-            var result = await _service.GetProductionOutputsByDateRangeAsync(startDate, endDate);
-            
-            Console.WriteLine($"[SUCCESS] Found {result.Count} production outputs in date range");
-            Console.WriteLine("\n[DATA] Production Output List:");
-            Console.WriteLine("----------------------------------------");
-            foreach (var output in result)
-            {
-                Console.WriteLine(FormatProductionOutput(output));
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetProductionOutputsByDateRangeAsync(startDate, endDate);
+        return result;
     }
 
-    private async Task TestGetProductionOutputsByLineAndDateAsync()
+    private async Task<IReadOnlyList<ProductionOutputDTO>> TestGetProductionOutputsByLineAndDateAsync(int lineId, DateTime date)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetProductionOutputsByLineAndDateAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Line ID: ");
-        int.TryParse(Console.ReadLine(), out int lineId);
-        
-        Console.Write("[INPUT] Enter Date (yyyy-MM-dd): ");
-        DateTime.TryParse(Console.ReadLine(), out DateTime date);
-
         // Setup mock
         _mockRepository.Setup(x => x.GetByLineAndDateAsync(lineId, date, It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testData.Where(o => o.LineId == lineId && o.Date.Date == date.Date).ToList());
 
-        Console.WriteLine($"[STATUS] Executing GetProductionOutputsByLineAndDateAsync for Line {lineId} on {date:yyyy-MM-dd}...");
-        
-        try
-        {
-            var result = await _service.GetProductionOutputsByLineAndDateAsync(lineId, date);
-            
-            Console.WriteLine($"[SUCCESS] Found {result.Count} production outputs for line {lineId} on {date:yyyy-MM-dd}");
-            Console.WriteLine("\n[DATA] Production Output List:");
-            Console.WriteLine("----------------------------------------");
-            foreach (var output in result)
-            {
-                Console.WriteLine(FormatProductionOutput(output));
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetProductionOutputsByLineAndDateAsync(lineId, date);
+        return result;
     }
 
-    private async Task TestGetAvailableSlotTimesAsync()
+    private async Task<IReadOnlyList<SlotTimeResponse>> TestGetAvailableSlotTimesAsync(ProductionOutputSlotTimeRequest request)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: GetAvailableSlotTimesAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Line ID: ");
-        int.TryParse(Console.ReadLine(), out int lineId);
-        
-        Console.Write("[INPUT] Enter Date (yyyy-MM-dd): ");
-        DateTime.TryParse(Console.ReadLine(), out DateTime date);
-        
-        Console.Write("[INPUT] Enter Shift ID: ");
-        int.TryParse(Console.ReadLine(), out int shiftId);
-
-        var request = new ProductionOutputSlotTimeRequest
-        {
-            LineId = lineId,
-            Date = date,
-            ShiftId = shiftId
-        };
-
         // Setup mock - Get incidents for each slot
         _mockIncidentRepository.Setup(x => x.GetByLineIdAsync(
-                It.IsAny<int>(), 
-                It.IsAny<DateTime>(), 
-                It.IsAny<DateTime>(), 
+                It.IsAny<int>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<IncidentHistory>());
 
@@ -588,151 +389,40 @@ public class ProductionOutputServiceManualTest
         _mockRepository.Setup(x => x.ExistsAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
-        Console.WriteLine($"[STATUS] Executing GetAvailableSlotTimesAsync for Line {lineId}, Date {date:yyyy-MM-dd}, Shift {shiftId}...");
-        
-        try
-        {
-            var result = await _service.GetAvailableSlotTimesAsync(request);
-            
-            Console.WriteLine($"[SUCCESS] Found {result.Count} available slot times");
-            Console.WriteLine("\n[DATA] Available Slot Times:");
-            Console.WriteLine("----------------------------------------");
-            foreach (var slot in result)
-            {
-                Console.WriteLine($"Slot: {slot.SlotTime}, LoadingTime: {slot.LoadingTime} mins, Available: {slot.IsAvailable}");
-                if (!string.IsNullOrEmpty(slot.Reason))
-                {
-                    Console.WriteLine($"  Reason: {slot.Reason}");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.GetAvailableSlotTimesAsync(request);
+        return result;
     }
 
-    private async Task TestCalculateLoadingTimeAsync()
+    private async Task<int> TestCalculateLoadingTimeAsync(int lineId, DateTime date, int shiftId, string slotTime)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: CalculateLoadingTimeAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Line ID: ");
-        int.TryParse(Console.ReadLine(), out int lineId);
-        
-        Console.Write("[INPUT] Enter Date (yyyy-MM-dd): ");
-        DateTime.TryParse(Console.ReadLine(), out DateTime date);
-        
-        Console.Write("[INPUT] Enter Shift ID: ");
-        int.TryParse(Console.ReadLine(), out int shiftId);
-        
-        Console.Write("[INPUT] Enter Slot Time (e.g., 7h-8h): ");
-        var slotTime = Console.ReadLine() ?? "7h-8h";
-
         // Setup mock - Get incidents
         _mockIncidentRepository.Setup(x => x.GetByLineIdAsync(
-                It.IsAny<int>(), 
-                It.IsAny<DateTime>(), 
-                It.IsAny<DateTime>(), 
+                It.IsAny<int>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<IncidentHistory>());
 
-        Console.WriteLine($"[STATUS] Executing CalculateLoadingTimeAsync...");
-        
-        try
-        {
-            var result = await _service.CalculateLoadingTimeAsync(lineId, date, shiftId, slotTime);
-            
-            Console.WriteLine($"[SUCCESS] Loading time: {result} minutes");
-            Console.WriteLine($"[INFO] This represents available production time in a 60-minute slot");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.CalculateLoadingTimeAsync(lineId, date, shiftId, slotTime);
+        return result;
     }
 
-    private async Task TestCalculateOEEAsync()
+    private async Task<decimal> TestCalculateOEEAsync(int lineId, DateTime date, int shiftId, string slotTime, int? targetAmount, int? resultAmount, int runTime)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: CalculateOEEAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Line ID: ");
-        int.TryParse(Console.ReadLine(), out int lineId);
-        
-        Console.Write("[INPUT] Enter Date (yyyy-MM-dd): ");
-        DateTime.TryParse(Console.ReadLine(), out DateTime date);
-        
-        Console.Write("[INPUT] Enter Shift ID: ");
-        int.TryParse(Console.ReadLine(), out int shiftId);
-        
-        Console.Write("[INPUT] Enter Slot Time (e.g., 7h-8h): ");
-        var slotTime = Console.ReadLine() ?? "7h-8h";
-        
-        Console.Write("[INPUT] Enter Target Amount (or press Enter for null): ");
-        var targetInput = Console.ReadLine();
-        int? targetAmount = null;
-        if (!string.IsNullOrWhiteSpace(targetInput) && int.TryParse(targetInput, out int target))
-        {
-            targetAmount = target;
-        }
-        
-        Console.Write("[INPUT] Enter Result Amount (or press Enter for null): ");
-        var resultInput = Console.ReadLine();
-        int? resultAmount = null;
-        if (!string.IsNullOrWhiteSpace(resultInput) && int.TryParse(resultInput, out int r))
-        {
-            resultAmount = r;
-        }
-        
-        Console.Write("[INPUT] Enter Run Time in minutes (default 60): ");
-        var runTimeInput = Console.ReadLine();
-        int runTime = 60;
-        if (!string.IsNullOrWhiteSpace(runTimeInput) && int.TryParse(runTimeInput, out int rt))
-        {
-            runTime = rt;
-        }
-
         // Setup mock - Get incidents
         _mockIncidentRepository.Setup(x => x.GetByLineIdAsync(
-                It.IsAny<int>(), 
-                It.IsAny<DateTime>(), 
-                It.IsAny<DateTime>(), 
+                It.IsAny<int>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<IncidentHistory>());
 
-        Console.WriteLine($"[STATUS] Executing CalculateOEEAsync...");
-        
-        try
-        {
-            var result = await _service.CalculateOEEAsync(lineId, date, shiftId, slotTime, targetAmount, resultAmount, runTime);
-            
-            Console.WriteLine($"[SUCCESS] OEE: {result:F4} ({result * 100:F2}%)");
-            Console.WriteLine($"[INFO] OEE = Availability × Performance × Quality");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.CalculateOEEAsync(lineId, date, shiftId, slotTime, targetAmount, resultAmount, runTime);
+        return result;
     }
 
-    private async Task TestCalculateOEEForShiftAsync()
+    private async Task<OEEResult> TestCalculateOEEForShiftAsync(int lineId, DateTime date, int shiftId)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: CalculateOEEForShiftAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Line ID: ");
-        int.TryParse(Console.ReadLine(), out int lineId);
-        
-        Console.Write("[INPUT] Enter Date (yyyy-MM-dd): ");
-        DateTime.TryParse(Console.ReadLine(), out DateTime date);
-        
-        Console.Write("[INPUT] Enter Shift ID: ");
-        int.TryParse(Console.ReadLine(), out int shiftId);
-
         // Setup mock
         var shiftOutputs = _testData.Where(o => o.LineId == lineId && o.Date.Date == date.Date && o.ShiftId == shiftId).ToList();
         _mockRepository.Setup(x => x.GetByLineDateAndShiftAsync(lineId, date, shiftId, It.IsAny<CancellationToken>()))
@@ -740,41 +430,18 @@ public class ProductionOutputServiceManualTest
 
         // Setup mock for OEE calculation
         _mockIncidentRepository.Setup(x => x.GetByLineIdAsync(
-                It.IsAny<int>(), 
-                It.IsAny<DateTime>(), 
-                It.IsAny<DateTime>(), 
+                It.IsAny<int>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<IncidentHistory>());
 
-        Console.WriteLine($"[STATUS] Executing CalculateOEEForShiftAsync...");
-        
-        try
-        {
-            var result = await _service.CalculateOEEForShiftAsync(lineId, date, shiftId);
-            
-            Console.WriteLine($"[SUCCESS] OEE for shift:");
-            Console.WriteLine($"  Type: {result.CalculationType}");
-            Console.WriteLine($"  OEE: {result.OEE:F4}");
-            Console.WriteLine($"  OEE Percentage: {result.OEEPercentage}%");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.CalculateOEEForShiftAsync(lineId, date, shiftId);
+        return result;
     }
 
-    private async Task TestCalculateOEEForDayAsync()
+    private async Task<OEEResult> TestCalculateOEEForDayAsync(int lineId, DateTime date)
     {
-        Console.WriteLine("\n=========================================");
-        Console.WriteLine("TEST: CalculateOEEForDayAsync");
-        Console.WriteLine("=========================================");
-
-        Console.Write("[INPUT] Enter Line ID: ");
-        int.TryParse(Console.ReadLine(), out int lineId);
-        
-        Console.Write("[INPUT] Enter Date (yyyy-MM-dd): ");
-        DateTime.TryParse(Console.ReadLine(), out DateTime date);
-
         // Setup mock
         var dayOutputs = _testData.Where(o => o.LineId == lineId && o.Date.Date == date.Date).ToList();
         _mockRepository.Setup(x => x.GetByLineAndDateAsync(lineId, date, It.IsAny<CancellationToken>()))
@@ -782,27 +449,14 @@ public class ProductionOutputServiceManualTest
 
         // Setup mock for OEE calculation
         _mockIncidentRepository.Setup(x => x.GetByLineIdAsync(
-                It.IsAny<int>(), 
-                It.IsAny<DateTime>(), 
-                It.IsAny<DateTime>(), 
+                It.IsAny<int>(),
+                It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
                 It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<IncidentHistory>());
 
-        Console.WriteLine($"[STATUS] Executing CalculateOEEForDayAsync...");
-        
-        try
-        {
-            var result = await _service.CalculateOEEForDayAsync(lineId, date);
-            
-            Console.WriteLine($"[SUCCESS] OEE for day:");
-            Console.WriteLine($"  Type: {result.CalculationType}");
-            Console.WriteLine($"  OEE: {result.OEE:F4}");
-            Console.WriteLine($"  OEE Percentage: {result.OEEPercentage}%");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-        }
+        var result = await _service.CalculateOEEForDayAsync(lineId, date);
+        return result;
     }
 
     private List<ProductionOutput> InitializeTestData()
@@ -944,8 +598,37 @@ public class ProductionOutputServiceManualTest
     private string FormatProductionOutputEntity(ProductionOutput output)
     {
         if (output == null) return "[NULL]";
-        
+
         return $"{{Id:{output.OutputId}, Line:{output.LineId}({output.Line?.LineName ?? "N/A"}), Date:{output.Date:yyyy-MM-dd}, Shift:{output.ShiftId}({output.Shift?.ShiftName ?? "N/A"}), Slot:{output.SlotTime}, Loading:{output.LoadingTime}min, Target:{output.TargetAmount}, Result:{output.ResultAmount}, OEE:{output.OEE?.ToString("F2") ?? "N/A"}}}";
+    }
+
+    private int GetIntInput(string prompt, int defaultValue = 0)
+    {
+        Console.Write($"[INPUT] {prompt}: ");
+        var input = Console.ReadLine();
+        return int.TryParse(input, out int result) ? result : defaultValue;
+    }
+
+    private DateTime GetDateInput(string prompt)
+    {
+        Console.Write($"[INPUT] {prompt} (yyyy-MM-dd): ");
+        var input = Console.ReadLine();
+        return DateTime.TryParse(input, out DateTime result) ? result : DateTime.Now;
+    }
+
+    private string GetStringInput(string prompt, string defaultValue = "")
+    {
+        Console.Write($"[INPUT] {prompt}: ");
+        var input = Console.ReadLine();
+        return string.IsNullOrWhiteSpace(input) ? defaultValue : input;
+    }
+
+    private int? GetNullableIntInput(string prompt)
+    {
+        Console.Write($"[INPUT] {prompt} (or press Enter for null): ");
+        var input = Console.ReadLine();
+        if (string.IsNullOrWhiteSpace(input)) return null;
+        return int.TryParse(input, out int result) ? result : null;
     }
 }
 
