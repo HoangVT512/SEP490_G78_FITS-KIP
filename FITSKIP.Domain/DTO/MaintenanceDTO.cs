@@ -123,17 +123,13 @@ namespace FITSKIP.Domain.DTO
         public DateTime StartDate { get; set; }
         public DateTime NextDueDate { get; set; }
         
+        /// <summary>
+        /// Số ngày thông báo trước hạn bảo trì
+        /// </summary>
+        public int ReminderDaysBefore { get; set; }
+        
         // Assignment - Danh sách kỹ thuật viên được phân công
         public List<AssignedTechnicianDTO> AssignedTechnicians { get; set; } = new();
-        
-        // Backward compatibility
-        public string? AssignedToElectrical { get; set; }
-        public string? ElectricalTechnicianName { get; set; }
-        public string? ElectricalEmployeeCode { get; set; }
-        
-        public string? AssignedToMechanical { get; set; }
-        public string? MechanicalTechnicianName { get; set; }
-        public string? MechanicalEmployeeCode { get; set; }
         
         // Status
         public bool IsActive { get; set; }
@@ -188,10 +184,13 @@ namespace FITSKIP.Domain.DTO
         [Required(ErrorMessage = "Ngày bắt đầu là bắt buộc")]
         public DateTime StartDate { get; set; }
 
-        public string? AssignedToElectrical { get; set; }
-        public string? AssignedToMechanical { get; set; }
+        /// <summary>
+        /// Số ngày thông báo trước hạn bảo trì (mặc định: 3 ngày)
+        /// </summary>
+        [Range(0, 365, ErrorMessage = "Số ngày thông báo phải từ 0 đến 365")]
+        public int ReminderDaysBefore { get; set; } = 3;
         
-        // ✅ THÊM: Properties để lưu tạm các code khi import Excel (sẽ resolve sang ID sau)
+        // ✅ Properties để lưu tạm các code khi import Excel (sẽ resolve sau)
         /// <summary>
         /// Mã thiết bị - dùng cho import Excel (sẽ resolve sang EquipmentId)
         /// </summary>
@@ -201,16 +200,6 @@ namespace FITSKIP.Domain.DTO
         /// Mã template - dùng cho import Excel (sẽ resolve sang TemplateId)
         /// </summary>
         public string? TemplateCode { get; set; }
-        
-        /// <summary>
-        /// Mã nhân viên KTV Điện - dùng cho import Excel (sẽ resolve sang AssignedToElectrical)
-        /// </summary>
-        public string? ElectricalTechCode { get; set; }
-        
-        /// <summary>
-        /// Mã nhân viên KTV Cơ - dùng cho import Excel (sẽ resolve sang AssignedToMechanical)
-        /// </summary>
-        public string? MechanicalTechCode { get; set; }
     }
 
     public class UpdateMaintenancePlanRequest
@@ -227,10 +216,13 @@ namespace FITSKIP.Domain.DTO
 
         public DateTime? NextDueDate { get; set; }
 
-        public string? AssignedToElectrical { get; set; }
-        public string? AssignedToMechanical { get; set; }
-
         public bool IsActive { get; set; }
+
+        /// <summary>
+        /// Số ngày thông báo trước hạn bảo trì
+        /// </summary>
+        [Range(0, 365, ErrorMessage = "Số ngày thông báo phải từ 0 đến 365")]
+        public int? ReminderDaysBefore { get; set; }
     }
 
     // ===== MAINTENANCE WORK ORDER DTOs =====
@@ -307,10 +299,13 @@ namespace FITSKIP.Domain.DTO
         [Required(ErrorMessage = "Ngày dự định bảo trì là bắt buộc")]
         public DateTime ScheduledDate { get; set; }
 
-        // ✅ Bỏ Required - nếu không có, backend sẽ tự set = ScheduledDate
+        // Nếu không có, backend sẽ tự set = ScheduledDate
         public DateTime? DueDate { get; set; }
 
+        [MaxLength(450)]
         public string? AssignedToElectrical { get; set; }
+
+        [MaxLength(450)]
         public string? AssignedToMechanical { get; set; }
 
         [MaxLength(1000)]
@@ -325,9 +320,13 @@ namespace FITSKIP.Domain.DTO
     public class UpdateMaintenanceWorkOrderRequest
     {
         public DateTime? DueDate { get; set; }
-        public string? AssignedToElectrical { get; set; }
-        public string? AssignedToMechanical { get; set; }
         public string? Status { get; set; }
+
+        [MaxLength(450)]
+        public string? AssignedToElectrical { get; set; }
+
+        [MaxLength(450)]
+        public string? AssignedToMechanical { get; set; }
 
         [MaxLength(1000)]
         public string? Notes { get; set; }

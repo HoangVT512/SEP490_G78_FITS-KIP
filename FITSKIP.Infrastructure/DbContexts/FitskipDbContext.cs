@@ -224,13 +224,12 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.TemplateId).HasColumnName("TemplateID");
             entity.Property(e => e.IntervalType).HasMaxLength(20);
             entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Pending");
-            entity.Property(e => e.AssignedToElectrical).HasMaxLength(450);
-            entity.Property(e => e.AssignedToMechanical).HasMaxLength(450);
             entity.Property(e => e.CreatedBy).HasMaxLength(450);
             entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.StartDate).HasColumnType("datetime");
             entity.Property(e => e.NextDueDate).HasColumnType("datetime");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.ReminderDaysBefore).HasDefaultValue(3);
 
             // Equipment relationship
             entity.HasOne(d => d.Equipment).WithMany()
@@ -244,28 +243,16 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .OnDelete(DeleteBehavior.SetNull)
                 .HasConstraintName("FK_MaintenancePlans_Templates");
 
-            // Electrical Technician relationship - NO ACTION để tránh multiple cascade paths
-            entity.HasOne(d => d.ElectricalTechnician).WithMany()
-                .HasForeignKey(d => d.AssignedToElectrical)
-                .OnDelete(DeleteBehavior.NoAction)
-                .HasConstraintName("FK_MaintenancePlans_ElectricalTech");
-
-            // Mechanical Technician relationship - NO ACTION để tránh multiple cascade paths
-            entity.HasOne(d => d.MechanicalTechnician).WithMany()
-                .HasForeignKey(d => d.AssignedToMechanical)
-                .OnDelete(DeleteBehavior.NoAction)
-                .HasConstraintName("FK_MaintenancePlans_MechanicalTech");
-
             // CreatedBy relationship - NO ACTION để tránh multiple cascade paths
             entity.HasOne(d => d.CreatedByUser).WithMany()
                 .HasForeignKey(d => d.CreatedBy)
                 .OnDelete(DeleteBehavior.NoAction)
                 .HasConstraintName("FK_MaintenancePlans_CreatedBy");
 
-            // Backward compatibility - deprecated fields
-            entity.Property(e => e.AssignedTo).HasMaxLength(450);
-            entity.Ignore(e => e.AssignedToUser);
+            // Ignore obsolete fields
+#pragma warning disable CS0618
             entity.Ignore(e => e.ChecklistItems);
+#pragma warning restore CS0618
         });
 
         modelBuilder.Entity<MaintenanceTemplate>(entity =>
@@ -408,8 +395,10 @@ public partial class FitskipDbContext : IdentityDbContext<User>
                 .HasConstraintName("FK_MaintenanceChecklistItems_CompletedBy");
 
             // Backward compatibility - deprecated
+#pragma warning disable CS0618
             entity.Property(e => e.PlanId).HasColumnName("PlanID");
             entity.Ignore(e => e.Plan);
+#pragma warning restore CS0618
         });
 
         modelBuilder.Entity<MaintenancePlanAssignment>(entity =>

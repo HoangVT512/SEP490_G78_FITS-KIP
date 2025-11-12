@@ -4,6 +4,7 @@ using FITSKIP.Infrastructure.DbContexts;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    partial class FitskipDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251108104328_UpdateTemplateItemsRequiredRole")]
+    partial class UpdateTemplateItemsRequiredRole
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -358,6 +361,18 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PlanId"));
 
+                    b.Property<string>("AssignedTo")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AssignedToElectrical")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("AssignedToMechanical")
+                        .HasMaxLength(450)
+                        .HasColumnType("nvarchar(450)");
+
                     b.Property<string>("CreatedBy")
                         .HasMaxLength(450)
                         .HasColumnType("nvarchar(450)");
@@ -396,11 +411,6 @@ namespace FITSKIP.Infrastructure.Migrations
                     b.Property<string>("PostponedReason")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<int>("ReminderDaysBefore")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int")
-                        .HasDefaultValue(3);
-
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime");
 
@@ -417,6 +427,10 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     b.HasKey("PlanId")
                         .HasName("PK__Maintena__755C22D75A5E8C31");
+
+                    b.HasIndex("AssignedToElectrical");
+
+                    b.HasIndex("AssignedToMechanical");
 
                     b.HasIndex("CreatedBy");
 
@@ -1364,6 +1378,18 @@ namespace FITSKIP.Infrastructure.Migrations
 
             modelBuilder.Entity("FITSKIP.Domain.Entities.MaintenancePlan", b =>
                 {
+                    b.HasOne("FITSKIP.Domain.Entities.User", "ElectricalTechnician")
+                        .WithMany()
+                        .HasForeignKey("AssignedToElectrical")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_MaintenancePlans_ElectricalTech");
+
+                    b.HasOne("FITSKIP.Domain.Entities.User", "MechanicalTechnician")
+                        .WithMany()
+                        .HasForeignKey("AssignedToMechanical")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .HasConstraintName("FK_MaintenancePlans_MechanicalTech");
+
                     b.HasOne("FITSKIP.Domain.Entities.User", "CreatedByUser")
                         .WithMany()
                         .HasForeignKey("CreatedBy")
@@ -1384,7 +1410,11 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     b.Navigation("CreatedByUser");
 
+                    b.Navigation("ElectricalTechnician");
+
                     b.Navigation("Equipment");
+
+                    b.Navigation("MechanicalTechnician");
 
                     b.Navigation("Template");
                 });

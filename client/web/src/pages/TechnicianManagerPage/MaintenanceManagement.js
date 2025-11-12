@@ -58,6 +58,7 @@ import {
   UploadOutlined,
   PushpinOutlined,
   DownOutlined,
+  SaveOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
@@ -100,13 +101,21 @@ const MaintenanceManagement = () => {
   const [isTemplateModalVisible, setIsTemplateModalVisible] = useState(false);
   const [isWorkOrderModalVisible, setIsWorkOrderModalVisible] = useState(false);
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
+  const [isViewPlanModalVisible, setIsViewPlanModalVisible] = useState(false);
 
   const [editingPlan, setEditingPlan] = useState(null);
   const [editingTemplate, setEditingTemplate] = useState(null);
   const [editingWorkOrder, setEditingWorkOrder] = useState(null);
+  const [viewingPlan, setViewingPlan] = useState(null);
+  const [isViewPlanEditing, setIsViewPlanEditing] = useState(false);
+  const [planMaintenanceHistory, setPlanMaintenanceHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [viewingWorkOrder, setViewingWorkOrder] = useState(null);
+  const [isViewWorkOrderModalVisible, setIsViewWorkOrderModalVisible] = useState(false);
 
   // Forms
   const [planForm] = Form.useForm();
+  const [viewPlanForm] = Form.useForm();
   const [templateForm] = Form.useForm();
   const [workOrderForm] = Form.useForm();
   const [searchText, setSearchText] = useState("");
@@ -169,6 +178,31 @@ const MaintenanceManagement = () => {
       loadUpcomingMaintenance();
     }
   }, [activeTab]);
+
+  // Load lịch sử bảo trì khi mở modal ViewPlan
+  useEffect(() => {
+    const loadPlanHistory = async () => {
+      if (isViewPlanModalVisible && viewingPlan) {
+        setLoadingHistory(true);
+        try {
+          const allWorkOrders = await getAllWorkOrders();
+          const history = allWorkOrders.data?.filter(
+            wo => wo.planId === viewingPlan.planId && wo.status === 'Completed'
+          ).sort((a, b) => new Date(b.completedDate || b.scheduledDate) - new Date(a.completedDate || a.scheduledDate)) || [];
+          setPlanMaintenanceHistory(history);
+        } catch (error) {
+          console.error("Lỗi khi tải lịch sử bảo trì:", error);
+          setPlanMaintenanceHistory([]);
+        } finally {
+          setLoadingHistory(false);
+        }
+      } else {
+        setPlanMaintenanceHistory([]);
+      }
+    };
+
+    loadPlanHistory();
+  }, [isViewPlanModalVisible, viewingPlan]);
 
   const loadAllData = async () => {
     setLoading(true);
@@ -431,6 +465,47 @@ const MaintenanceManagement = () => {
     setIsPlanModalVisible(true);
   };
 
+  const handleViewDetail = (record) => {
+    setViewingPlan(record);
+    setIsViewPlanModalVisible(true);
+    setIsViewPlanEditing(false);
+    // useEffect sẽ tự động load lịch sử
+  };
+
+  const handleUpdatePlanFromView = async (values) => {
+    setLoading(true);
+    try {
+      await updateMaintenancePlan(viewingPlan.planId, {
+        equipmentId: viewingPlan.equipmentId,
+        templateId: viewingPlan.templateId,
+        intervalType: viewingPlan.intervalType,
+        intervalValue: viewingPlan.intervalValue,
+        startDate: viewingPlan.startDate,
+        reminderDaysBefore: values.reminderDaysBefore,
+        isActive: values.isActive,
+      });
+      message.success("Cập nhật kế hoạch bảo trì thành công!");
+      setIsViewPlanEditing(false);
+      loadMaintenancePlans();
+      loadStats();
+      // Refresh viewingPlan data
+      const updatedPlans = await getMaintenancePlans();
+      const updatedPlan = updatedPlans.find(p => p.planId === viewingPlan.planId);
+      if (updatedPlan) {
+        setViewingPlan(updatedPlan);
+      }
+    } catch (error) {
+      message.error("Lỗi: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewWorkOrderDetail = (workOrder) => {
+    setViewingWorkOrder(workOrder);
+    setIsViewWorkOrderModalVisible(true);
+  };
+
   const handleDeletePlan = async (record) => {
     try {
       await deleteMaintenancePlan(record.planId);
@@ -464,6 +539,7 @@ const MaintenanceManagement = () => {
           intervalType: values.intervalType,
           intervalValue: values.intervalValue,
           startDate: values.startDate.format('YYYY-MM-DD'), // ✅ Dùng format thay vì toISOString() để tránh lùi giờ
+          reminderDaysBefore: values.reminderDaysBefore ?? 3,
         };
         await createMaintenancePlan(planData);
         message.success("Tạo chu kỳ bảo trì thành công!");
@@ -2303,6 +2379,36 @@ const MaintenanceManagement = () => {
                 </Col>
               </Row>
 
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item
+                    name="reminderDaysBefore"
+                    label="Số ngày nhắc nhở trước"
+                    initialValue={3}
+                    rules={[
+                      {
+                        required: true,
+                        message: "Vui lòng nhập số ngày nhắc nhở",
+                      },
+                      {
+                        type: "number",
+                        min: 0,
+                        max: 365,
+                        message: "Số ngày phải từ 0 đến 365",
+                      },
+                    ]}
+                    tooltip="Hệ thống sẽ gửi thông báo trước bao nhiêu ngày đến hạn bảo trì"
+                  >
+                    <InputNumber
+                      min={0}
+                      max={365}
+                      style={{ width: "100%" }}
+                      placeholder="Ví dụ: 3 ngày"
+                    />
+                  </Form.Item>
+                </Col>
+              </Row>
+
               <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
                 <Space style={{ width: "100%", justifyContent: "flex-end" }}>
                   <Button
@@ -2674,6 +2780,519 @@ const MaintenanceManagement = () => {
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Modal Xem Chi Tiết Kế Hoạch Bảo Trì */}
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <EyeOutlined style={{ color: "#1890ff" }} />
+            <span>Chi Tiết Kế Hoạch Bảo Trì</span>
+          </div>
+        }
+        open={isViewPlanModalVisible}
+        onCancel={() => {
+          setIsViewPlanModalVisible(false);
+          setViewingPlan(null);
+          setPlanMaintenanceHistory([]);
+          setIsViewPlanEditing(false);
+          viewPlanForm.resetFields();
+        }}
+        footer={
+          isViewPlanEditing ? [
+            <Button
+              key="cancel"
+              onClick={() => {
+                setIsViewPlanEditing(false);
+                viewPlanForm.resetFields();
+              }}
+            >
+              Hủy
+            </Button>,
+            <Button
+              key="save"
+              type="primary"
+              icon={<SaveOutlined />}
+              loading={loading}
+              onClick={() => viewPlanForm.submit()}
+            >
+              Lưu
+            </Button>,
+          ] : [
+            <Button
+              key="close"
+              onClick={() => {
+                setIsViewPlanModalVisible(false);
+                setViewingPlan(null);
+                setPlanMaintenanceHistory([]);
+              }}
+            >
+              Đóng
+            </Button>,
+            <Button
+              key="update"
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={() => {
+                setIsViewPlanEditing(true);
+                viewPlanForm.setFieldsValue({
+                  isActive: viewingPlan.isActive,
+                  reminderDaysBefore: viewingPlan.reminderDaysBefore || 3,
+                });
+              }}
+            >
+              Cập nhật
+            </Button>,
+          ]
+        }
+        width={800}
+      >
+        {viewingPlan && (
+          <Form
+            form={viewPlanForm}
+            layout="vertical"
+            onFinish={handleUpdatePlanFromView}
+          >
+            <div>
+            <Descriptions bordered column={2} size="small">
+              <Descriptions.Item label="Mã Kế Hoạch" span={1}>
+                <Tag color="blue">
+                  PLAN{String(viewingPlan.planId).padStart(4, "0")}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng Thái" span={1}>
+                {isViewPlanEditing ? (
+                  <Form.Item
+                    name="isActive"
+                    style={{ marginBottom: 0 }}
+                  >
+                    <Select style={{ width: '100%' }}>
+                      <Option value={true}>
+                        <Tag color="success" icon={<CheckCircleOutlined />}>
+                          Hoạt động
+                        </Tag>
+                      </Option>
+                      <Option value={false}>
+                        <Tag color="default" icon={<CloseOutlined />}>
+                          Không hoạt động
+                        </Tag>
+                      </Option>
+                    </Select>
+                  </Form.Item>
+                ) : (
+                  viewingPlan.isActive ? (
+                    <Tag color="success" icon={<CheckCircleOutlined />}>
+                      Hoạt động
+                    </Tag>
+                  ) : (
+                    <Tag color="default" icon={<CloseOutlined />}>
+                      Không hoạt động
+                    </Tag>
+                  )
+                )}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Thiết Bị" span={2}>
+                <div>
+                  <div>
+                    <strong>{viewingPlan.equipmentName}</strong>
+                  </div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Mã TB: {viewingPlan.equipmentCode} | Công đoạn:{" "}
+                    {viewingPlan.stageName || "N/A"}
+                  </Text>
+                </div>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Template Checklist" span={2}>
+                <div>
+                  <div>
+                    <strong>{viewingPlan.templateName}</strong>
+                  </div>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Mã: TPL{String(viewingPlan.templateId).padStart(3, "0")}
+                  </Text>
+                </div>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Chu Kỳ Bảo Trì" span={2}>
+                <Tag color="processing">
+                  {viewingPlan.intervalValue}{" "}
+                  {viewingPlan.intervalType === "Days" && "Ngày"}
+                  {viewingPlan.intervalType === "Weeks" && "Tuần"}
+                  {viewingPlan.intervalType === "Months" && "Tháng"}
+                  {viewingPlan.intervalType === "Years" && "Năm"}
+                </Tag>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Số Ngày Nhắc Nhở" span={2}>
+                {isViewPlanEditing ? (
+                  <Form.Item
+                    name="reminderDaysBefore"
+                    style={{ marginBottom: 0 }}
+                    rules={[
+                      {
+                        required: true,
+                        message: "Vui lòng nhập số ngày nhắc nhở",
+                      },
+                      {
+                        type: "number",
+                        min: 0,
+                        max: 365,
+                        message: "Số ngày phải từ 0 đến 365",
+                      },
+                    ]}
+                  >
+                    <InputNumber
+                      min={0}
+                      max={365}
+                      style={{ width: '200px' }}
+                      placeholder="Ví dụ: 3 ngày"
+                      addonAfter="ngày"
+                    />
+                  </Form.Item>
+                ) : (
+                  <>
+                    <Tag color="orange" icon={<BellOutlined />}>
+                      Trước {viewingPlan.reminderDaysBefore || 3} ngày
+                    </Tag>
+                    <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
+                      Hệ thống sẽ gửi thông báo trước {viewingPlan.reminderDaysBefore || 3} ngày đến hạn
+                    </Text>
+                  </>
+                )}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Ngày Bắt Đầu" span={1}>
+                <Text>
+                  <CalendarOutlined style={{ marginRight: 4 }} />
+                  {dayjs(viewingPlan.startDate).format("DD/MM/YYYY")}
+                </Text>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Lần Bảo Trì Tiếp Theo" span={1}>
+                {viewingPlan.nextDueDate ? (
+                  <Text>
+                    {dayjs(viewingPlan.nextDueDate).format("DD/MM/YYYY")}
+                  </Text>
+                ) : (
+                  <Text type="secondary">Chưa xác định</Text>
+                )}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Lần Bảo Trì Cuối" span={1}>
+                {planMaintenanceHistory.length > 0 ? (
+                  <Text type="success">
+                    <CheckOutlined style={{ marginRight: 4 }} />
+                    {dayjs(planMaintenanceHistory[0].completedDate || planMaintenanceHistory[0].scheduledDate).format(
+                      "DD/MM/YYYY"
+                    )}
+                  </Text>
+                ) : (
+                  <Text type="secondary">Chưa có</Text>
+                )}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Người Tạo" span={1}>
+                <Text>{viewingPlan.createdByName || viewingPlan.createdBy || "N/A"}</Text>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Ngày Tạo" span={1}>
+                <Text type="secondary">
+                  {viewingPlan.createdAt
+                    ? dayjs(viewingPlan.createdAt).format("DD/MM/YYYY HH:mm")
+                    : "N/A"}
+                </Text>
+              </Descriptions.Item>
+
+              {viewingPlan.hasActiveWorkOrder && (
+                <Descriptions.Item label="Trạng Thái Work Order" span={2}>
+                  <Alert
+                    message="Đang có Work Order đang chạy"
+                    type="info"
+                    showIcon
+                    icon={<PlayCircleOutlined />}
+                  />
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+
+            {/* Lịch Sử Bảo Trì */}
+            <Divider orientation="left">
+              <FileTextOutlined /> Lịch Sử Bảo Trì ({planMaintenanceHistory.length})
+            </Divider>
+            
+            {loadingHistory ? (
+              <div style={{ textAlign: 'center', padding: '20px' }}>
+                <ReloadOutlined spin /> Đang tải lịch sử...
+              </div>
+            ) : planMaintenanceHistory.length === 0 ? (
+              <Empty 
+                description="Chưa có lịch sử bảo trì"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            ) : (
+              <Timeline mode="left">
+                {planMaintenanceHistory.map((wo) => (
+                  <Timeline.Item
+                    key={wo.workOrderId}
+                    color={wo.status === 'Completed' ? 'green' : 'blue'}
+                    label={
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        {dayjs(wo.completedDate || wo.scheduledDate).format("DD/MM/YYYY")}
+                      </Text>
+                    }
+                  >
+                    <Card 
+                      size="small" 
+                      hoverable
+                      onClick={() => handleViewWorkOrderDetail(wo)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Text strong>
+                            WO{String(wo.workOrderId).padStart(4, "0")}
+                          </Text>
+                          <Tag color="success" icon={<CheckCircleOutlined />}>
+                            Hoàn thành
+                          </Tag>
+                        </div>
+                        
+                        {wo.completedDate && (
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            <ClockCircleOutlined /> Hoàn thành: {dayjs(wo.completedDate).format("DD/MM/YYYY HH:mm")}
+                          </Text>
+                        )}
+                        
+                        <div>
+                          {wo.mechanicalTechnicianName && (
+                            <div>
+                              <Tag color="orange" size="small" icon={<ToolOutlined />}>
+                                Cơ khí
+                              </Tag>
+                              <Text style={{ fontSize: 12 }}>{wo.mechanicalTechnicianName}</Text>
+                            </div>
+                          )}
+                          {wo.electricalTechnicianName && (
+                            <div>
+                              <Tag color="blue" size="small" icon={<ThunderboltOutlined />}>
+                                Điện
+                              </Tag>
+                              <Text style={{ fontSize: 12 }}>{wo.electricalTechnicianName}</Text>
+                            </div>
+                          )}
+                        </div>
+
+                        {wo.completionNotes && (
+                          <Text type="secondary" italic style={{ fontSize: 12 }}>
+                            "{wo.completionNotes}"
+                          </Text>
+                        )}
+                        
+                        <Button 
+                          type="link" 
+                          size="small" 
+                          icon={<EyeOutlined />}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewWorkOrderDetail(wo);
+                          }}
+                        >
+                          Xem chi tiết
+                        </Button>
+                      </Space>
+                    </Card>
+                  </Timeline.Item>
+                ))}
+              </Timeline>
+            )}
+          </div>
+          </Form>
+        )}
+      </Modal>
+
+      {/* Modal Xem Chi Tiết Work Order */}
+      <Modal
+        title={
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <FileTextOutlined style={{ color: "#52c41a" }} />
+            <span>Chi Tiết Work Order</span>
+          </div>
+        }
+        open={isViewWorkOrderModalVisible}
+        onCancel={() => {
+          setIsViewWorkOrderModalVisible(false);
+          setViewingWorkOrder(null);
+        }}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => {
+              setIsViewWorkOrderModalVisible(false);
+              setViewingWorkOrder(null);
+            }}
+          >
+            Đóng
+          </Button>
+        ]}
+        width={900}
+      >
+        {viewingWorkOrder && (
+          <div>
+            <Descriptions bordered column={2} size="small">
+              <Descriptions.Item label="Mã Work Order" span={1}>
+                <Tag color="green">
+                  WO{String(viewingWorkOrder.workOrderId).padStart(4, "0")}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng Thái" span={1}>
+                {viewingWorkOrder.status === 'Completed' && (
+                  <Tag color="success" icon={<CheckCircleOutlined />}>
+                    Hoàn thành
+                  </Tag>
+                )}
+                {viewingWorkOrder.status === 'InProgress' && (
+                  <Tag color="processing" icon={<PlayCircleOutlined />}>
+                    Đang thực hiện
+                  </Tag>
+                )}
+                {viewingWorkOrder.status === 'Pending' && (
+                  <Tag color="warning" icon={<ClockCircleOutlined />}>
+                    Chờ xử lý
+                  </Tag>
+                )}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Kế Hoạch" span={2}>
+                <Tag color="blue">
+                  PLAN{String(viewingWorkOrder.planId).padStart(4, "0")}
+                </Tag>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Ngày Lên Lịch" span={1}>
+                <Text>
+                  <CalendarOutlined style={{ marginRight: 4 }} />
+                  {dayjs(viewingWorkOrder.scheduledDate).format("DD/MM/YYYY")}
+                </Text>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Ngày Bắt Đầu" span={1}>
+                {viewingWorkOrder.startedDate ? (
+                  <Text type="success">
+                    {dayjs(viewingWorkOrder.startedDate).format("DD/MM/YYYY HH:mm")}
+                  </Text>
+                ) : (
+                  <Text type="secondary">Chưa bắt đầu</Text>
+                )}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Ngày Hoàn Thành" span={2}>
+                {viewingWorkOrder.completedDate ? (
+                  <Text type="success">
+                    <CheckOutlined style={{ marginRight: 4 }} />
+                    {dayjs(viewingWorkOrder.completedDate).format("DD/MM/YYYY HH:mm")}
+                  </Text>
+                ) : (
+                  <Text type="secondary">Chưa hoàn thành</Text>
+                )}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Kỹ Thuật Viên Cơ Khí" span={1}>
+                {viewingWorkOrder.mechanicalTechnicianName ? (
+                  <div>
+                    <Tag color="orange" icon={<ToolOutlined />}>
+                      Cơ khí
+                    </Tag>
+                    <Text>{viewingWorkOrder.mechanicalTechnicianName}</Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Mã NV: {viewingWorkOrder.mechanicalTechnicianEmployeeCode}
+                    </Text>
+                  </div>
+                ) : (
+                  <Text type="secondary">Chưa phân công</Text>
+                )}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Kỹ Thuật Viên Điện" span={1}>
+                {viewingWorkOrder.electricalTechnicianName ? (
+                  <div>
+                    <Tag color="blue" icon={<ThunderboltOutlined />}>
+                      Điện
+                    </Tag>
+                    <Text>{viewingWorkOrder.electricalTechnicianName}</Text>
+                    <br />
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Mã NV: {viewingWorkOrder.electricalTechnicianEmployeeCode}
+                    </Text>
+                  </div>
+                ) : (
+                  <Text type="secondary">Chưa phân công</Text>
+                )}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Ghi Chú Hoàn Thành" span={2}>
+                {viewingWorkOrder.completionNotes ? (
+                  <Text>{viewingWorkOrder.completionNotes}</Text>
+                ) : (
+                  <Text type="secondary">Không có ghi chú</Text>
+                )}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {/* Checklist Items */}
+            {viewingWorkOrder.checklistItems && viewingWorkOrder.checklistItems.length > 0 && (
+              <>
+                <Divider orientation="left">
+                  <CheckOutlined /> Checklist ({viewingWorkOrder.checklistItems.length} items)
+                </Divider>
+                <List
+                  dataSource={viewingWorkOrder.checklistItems}
+                  renderItem={(item) => (
+                    <List.Item>
+                      <List.Item.Meta
+                        avatar={
+                          item.isCompleted ? (
+                            <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 20 }} />
+                          ) : (
+                            <CloseOutlined style={{ color: '#d9d9d9', fontSize: 20 }} />
+                          )
+                        }
+                        title={
+                          <div>
+                            <Text strong>{item.itemDescription}</Text>
+                            {item.category && (
+                              <Tag 
+                                color={item.category === 'Mechanical' ? 'orange' : 'blue'} 
+                                style={{ marginLeft: 8 }}
+                              >
+                                {item.category === 'Mechanical' ? 'Cơ khí' : 'Điện'}
+                              </Tag>
+                            )}
+                            {item.isRequired && (
+                              <Tag color="red" style={{ marginLeft: 8 }}>Bắt buộc</Tag>
+                            )}
+                          </div>
+                        }
+                        description={
+                          item.notes ? (
+                            <Text type="secondary" italic>{item.notes}</Text>
+                          ) : null
+                        }
+                      />
+                      {item.completedDate && (
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          <ClockCircleOutlined /> {dayjs(item.completedDate).format("DD/MM/YYYY HH:mm")}
+                        </Text>
+                      )}
+                    </List.Item>
+                  )}
+                />
+              </>
+            )}
+          </div>
+        )}
       </Modal>
 
       

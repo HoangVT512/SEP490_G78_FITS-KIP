@@ -462,13 +462,10 @@ namespace FITSKIP.Application.Services
                             IntervalType = intervalType,
                             IntervalValue = intervalValue,
                             StartDate = startDate,
-                            AssignedToElectrical = null, // Sẽ được resolve từ ElectricalTechCode sau
-                            AssignedToMechanical = null, // Sẽ được resolve từ MechanicalTechCode sau
+                            // TODO: Technician assignment moved to WorkOrder level
                             // ✅ Lưu tạm các code để resolve sau
                             EquipmentCode = equipmentCode,
-                            TemplateCode = templateCode,
-                            ElectricalTechCode = electricalTechCode,
-                            MechanicalTechCode = mechanicalTechCode
+                            TemplateCode = templateCode
                         });
                     }
                     catch (Exception)

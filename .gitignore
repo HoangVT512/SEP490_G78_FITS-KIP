@@ -40,3 +40,4 @@ yarn-error.log*
 Thumbs.db
 .vs/FITSKIP/DesignTimeBuild/.dtbcache.v2
 *.v2
+RemoveObsoleteColumns.sql
