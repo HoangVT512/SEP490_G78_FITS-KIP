@@ -1365,6 +1365,8 @@ const IncidentManagement = () => {
       console.error("Lỗi khi lưu sự cố:", error);
       const errMsg = error?.message || error?.data?.message || "Lưu thất bại!";
       message.error(errMsg);
+      // Don't close modal on error - keep it open for user to fix
+      return;
     } finally {
       setLoading(false);
     }

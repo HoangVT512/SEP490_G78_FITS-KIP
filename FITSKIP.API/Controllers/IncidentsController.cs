@@ -382,6 +382,12 @@ public class IncidentsController : ControllerBase
                     return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Line ID phải lớn hơn 0" });
                 }
 
+                // Validate StartTime cannot be in the future
+                if (incident.StartTime.HasValue && incident.StartTime.Value > DateTime.Now)
+                {
+                    return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Thời gian bắt đầu không thể trong tương lai" });
+                }
+
                 if (incident.EndTime.HasValue && incident.StartTime.HasValue && incident.EndTime.Value <= incident.StartTime.Value)
                 {
                     return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Thời gian kết thúc phải sau thời gian bắt đầu" });
