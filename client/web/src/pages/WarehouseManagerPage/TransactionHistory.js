@@ -18,6 +18,7 @@ import {
   Tabs,
   Tooltip,
   message,
+  Dropdown,
 } from "antd";
 import {
   EyeOutlined,
@@ -30,6 +31,7 @@ import {
   ToolOutlined,
   FileTextOutlined,
   InboxOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import replacementHistoryService from "../../services/replacementHistoryService";
@@ -263,13 +265,15 @@ const TransactionHistory = () => {
       render: (status) => getStatusTag(status),
     },
     {
-      title: "Người cấp phát",
+      title: "Người yêu cầu",
       key: "replacedBy",
       width: 150,
       render: (_, record) => (
         <div>
           <div style={{ fontSize: "13px", fontWeight: 500 }}>
-            {record.replacedByFullName || record.replacedByUserName || "Chưa xác định"}
+            {record.replacedByFullName ||
+              record.replacedByUserName ||
+              "Chưa xác định"}
           </div>
           {record.replacedByEmployeeCode && (
             <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
@@ -280,7 +284,7 @@ const TransactionHistory = () => {
       ),
     },
     {
-      title: "Ngày cấp phát",
+      title: "Ngày yêu cầu",
       dataIndex: "replacedDate",
       key: "replacedDate",
       width: 140,
@@ -305,18 +309,29 @@ const TransactionHistory = () => {
       key: "action",
       width: 100,
       fixed: "right",
-      render: (_, record) => (
-        <Tooltip title="Xem chi tiết">
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => showDetailModal(record)}
-            style={{ padding: 0 }}
+      render: (_, record) => {
+        const menuItems = [
+          {
+            key: "detail",
+            label: "Xem chi tiết",
+            icon: <EyeOutlined />,
+            onClick: () => showDetailModal(record),
+          },
+        ];
+        return (
+          <Dropdown
+            menu={{ items: menuItems }}
+            trigger={["click"]}
+            placement="bottomRight"
           >
-            Chi tiết
-          </Button>
-        </Tooltip>
-      ),
+            <Button
+              type="link"
+              icon={<DownOutlined />}
+              style={{ padding: "4px 8px", color: "#334766" }}
+            />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -416,13 +431,15 @@ const TransactionHistory = () => {
       render: (status) => getStatusTag(status),
     },
     {
-      title: "Người cấp phát",
+      title: "Người yêu cầu",
       key: "replacedBy",
       width: 150,
       render: (_, record) => (
         <div>
           <div style={{ fontSize: "13px", fontWeight: 500 }}>
-            {record.replacedByFullName || record.replacedByUserName || "Chưa xác định"}
+            {record.replacedByFullName ||
+              record.replacedByUserName ||
+              "Chưa xác định"}
           </div>
           {record.replacedByEmployeeCode && (
             <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
@@ -433,7 +450,7 @@ const TransactionHistory = () => {
       ),
     },
     {
-      title: "Ngày cấp phát",
+      title: "Ngày yêu cầu",
       dataIndex: "replacedDate",
       key: "replacedDate",
       width: 140,
@@ -458,18 +475,29 @@ const TransactionHistory = () => {
       key: "action",
       width: 100,
       fixed: "right",
-      render: (_, record) => (
-        <Tooltip title="Xem chi tiết">
-          <Button
-            type="link"
-            icon={<EyeOutlined />}
-            onClick={() => showDetailModal(record)}
-            style={{ padding: 0 }}
+      render: (_, record) => {
+        const menuItems = [
+          {
+            key: "detail",
+            label: "Xem chi tiết",
+            icon: <EyeOutlined />,
+            onClick: () => showDetailModal(record),
+          },
+        ];
+        return (
+          <Dropdown
+            menu={{ items: menuItems }}
+            trigger={["click"]}
+            placement="bottomRight"
           >
-            Chi tiết
-          </Button>
-        </Tooltip>
-      ),
+            <Button
+              type="link"
+              icon={<DownOutlined />}
+              style={{ padding: "4px 8px", color: "#334766" }}
+            />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -752,7 +780,7 @@ const TransactionHistory = () => {
       <Modal
         title={
           <Space>
-            <FileTextOutlined style={{ color: "#283652"}} />
+            <FileTextOutlined style={{ color: "#283652" }} />
             <span>Chi tiết giao dịch cấp phát</span>
           </Space>
         }
@@ -814,33 +842,46 @@ const TransactionHistory = () => {
             </Descriptions.Item>
 
             <Descriptions.Item label="Số lượng sử dụng">
-              <strong style={{ color: "#52c41a" }}>
-                {selectedHistory.actualQuantityUsed !== null &&
-                  selectedHistory.actualQuantityUsed !== undefined
-                  ? `${selectedHistory.actualQuantityUsed} cái`
-                  : "Chưa xác định"}
-              </strong>
+              {selectedHistory.status === "Hoàn thành" ||
+              selectedHistory.status === "Đã trả lại" ||
+              (selectedHistory.actualQuantityUsed !== null &&
+                selectedHistory.actualQuantityUsed !== undefined) ? (
+                <strong style={{ color: "#52c41a" }}>
+                  {selectedHistory.actualQuantityUsed ?? 0} cái
+                </strong>
+              ) : (
+                <span style={{ color: "#8c8c8c", fontStyle: "italic" }}>
+                  Chưa xác định
+                </span>
+              )}
             </Descriptions.Item>
 
-            {selectedHistory.actualQuantityUsed !== null &&
-              selectedHistory.actualQuantityUsed !== undefined && (
-                <Descriptions.Item label="Số lượng trả lại" span={2}>
-                  <strong style={{ color: "#1890ff" }}>
-                    {selectedHistory.quantity -
-                      selectedHistory.actualQuantityUsed}{" "}
-                    cái
-                  </strong>
-                </Descriptions.Item>
-              )}
+            {(selectedHistory.status === "Hoàn thành" ||
+              selectedHistory.status === "Đã trả lại" ||
+              (selectedHistory.actualQuantityUsed !== null &&
+                selectedHistory.actualQuantityUsed !== undefined)) && (
+              <Descriptions.Item label="Số lượng trả lại" span={2}>
+                <strong style={{ color: "#1890ff" }}>
+                  {selectedHistory.quantityToReturn !== null &&
+                  selectedHistory.quantityToReturn !== undefined
+                    ? selectedHistory.quantityToReturn
+                    : (selectedHistory.quantity || 0) -
+                      (selectedHistory.actualQuantityUsed ?? 0)}{" "}
+                  cái
+                </strong>
+              </Descriptions.Item>
+            )}
 
             <Descriptions.Item label="Trạng thái" span={2}>
               {getStatusTag(selectedHistory.status)}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Người cấp phát">
+            <Descriptions.Item label="Người yêu cầu">
               <div>
                 <div style={{ fontWeight: 600 }}>
-                  {selectedHistory.replacedByFullName || selectedHistory.replacedByUserName || "Chưa xác định"}
+                  {selectedHistory.replacedByFullName ||
+                    selectedHistory.replacedByUserName ||
+                    "Chưa xác định"}
                 </div>
                 {selectedHistory.replacedByEmployeeCode && (
                   <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
@@ -850,11 +891,9 @@ const TransactionHistory = () => {
               </div>
             </Descriptions.Item>
 
-            <Descriptions.Item label="Ngày cấp phát">
+            <Descriptions.Item label="Ngày yêu cầu">
               {selectedHistory.replacedDate
-                ? dayjs(selectedHistory.replacedDate).format(
-                  "DD/MM/YYYY HH:mm"
-                )
+                ? dayjs(selectedHistory.replacedDate).format("DD/MM/YYYY HH:mm")
                 : "-"}
             </Descriptions.Item>
 

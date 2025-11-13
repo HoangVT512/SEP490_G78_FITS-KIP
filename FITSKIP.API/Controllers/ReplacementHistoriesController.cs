@@ -64,7 +64,10 @@ namespace FITSKIP.API.Controllers
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     ReplacementID = s.ReplacementId,
                     Quantity = s.Quantity,
+                    ActualQuantityUsed = s.ActualQuantityUsed,
+                    QuantityToReturn = s.QuantityToReturn,
                     ReplacedDate = s.ReplacedDate,
+                    ReturnedDate = s.ReturnedDate,
                     Status = s.Status,
                     Remarks = s.Remarks
                 });
