@@ -682,6 +682,18 @@ const IncidentList = () => {
       width: 100,
       render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
     },
+    // Show end time column only for completed incidents
+    ...(activeTab === "completed"
+      ? [
+          {
+            title: "Thời gian KT",
+            dataIndex: "resolveDate",
+            key: "endTime",
+            width: 100,
+            render: (d) => (d ? dayjs(d).format("HH:mm") : "-"),
+          },
+        ]
+      : []),
     // Hide downtime column for pending/solving incidents
     ...(activeTab === "completed"
       ? [
