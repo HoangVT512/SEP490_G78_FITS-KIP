@@ -130,16 +130,8 @@ const TechnicianManagerLayout = () => {
             fetchNotifications();
           }
 
-          // Hiển thị message toast CHỈ MỘT LẦN
-          antdMessage.success({
-            content: `🔔 ${
-              notificationData.title ||
-              notificationData.message ||
-              "Bạn có thông báo mới"
-            }`,
-            duration: 5,
-            key: `notification-${Date.now()}`, // Unique key để tránh duplicate
-          });
+          // Note: Toast message removed to avoid duplicate notifications
+          // User can see notifications in the notification drawer (bell icon)
         };
 
         // Lắng nghe thông báo cá nhân (listener được track trong service để tránh duplicate)

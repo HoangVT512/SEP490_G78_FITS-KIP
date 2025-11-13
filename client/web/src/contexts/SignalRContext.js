@@ -109,16 +109,9 @@ export const SignalRProvider = ({ children }) => {
         console.log("🔔 Received notification:", notification);
         setNotifications((prev) => [notification, ...prev]);
 
-        // Hiển thị toast notification
-        if (notification.type === "Success") {
-          message.success(notification.message);
-        } else if (notification.type === "Warning") {
-          message.warning(notification.message);
-        } else if (notification.type === "Error") {
-          message.error(notification.message);
-        } else {
-          message.info(notification.message);
-        }
+        // Note: Toast notification removed from global context
+        // Each layout should handle displaying notifications based on their needs
+        // to avoid duplicate notifications
       });
 
       // 2. Cập nhật dữ liệu real-time
