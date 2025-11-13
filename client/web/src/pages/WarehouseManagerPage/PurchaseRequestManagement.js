@@ -139,10 +139,17 @@ const PurchaseRequestManagement = () => {
       width: 100,
     },
     {
-      title: "Người yêu cầu",
-      dataIndex: "requestedByName",
-      key: "requestedByName",
+      title: "Người phê duyệt",
+      key: "approvedBy",
       width: 150,
+      render: (_, record) => {
+        if (record.status === "Đã duyệt" || record.status === "Đã nhập") {
+          return record.approvedByName || "-";
+        } else if (record.status === "Từ chối") {
+          return record.rejectedByName || "-";
+        }
+        return <span style={{ color: "#8c8c8c" }}>Chưa duyệt</span>;
+      },
     },
     {
       title: "Ngày yêu cầu",
@@ -448,7 +455,12 @@ const PurchaseRequestManagement = () => {
     const matchSearch =
       req.partNumber.toLowerCase().includes(searchText.toLowerCase()) ||
       req.partName.toLowerCase().includes(searchText.toLowerCase()) ||
-      req.requestedByName.toLowerCase().includes(searchText.toLowerCase());
+      (req.approvedByName || "")
+        .toLowerCase()
+        .includes(searchText.toLowerCase()) ||
+      (req.rejectedByName || "")
+        .toLowerCase()
+        .includes(searchText.toLowerCase());
     const matchStatus = filterStatus === "all" || req.status === filterStatus;
     return matchSearch && matchStatus;
   });
@@ -555,7 +567,7 @@ const PurchaseRequestManagement = () => {
         <Row gutter={16}>
           <Col xs={24} sm={12} md={10}>
             <Search
-              placeholder="Tìm theo mã, tên phụ tùng hoặc tên người yêu cầu"
+              placeholder="Tìm theo mã, tên phụ tùng hoặc người phê duyệt"
               prefix={<SearchOutlined />}
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
