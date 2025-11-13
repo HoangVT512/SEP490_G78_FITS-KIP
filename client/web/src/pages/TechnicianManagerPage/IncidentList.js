@@ -39,6 +39,7 @@ import { incidentService } from "../../services/incidentService";
 import { userService } from "../../services/userService";
 import { lineService } from "../../services/lineService";
 import { stageService } from "../../services/stageService";
+import { replacementHistoryService } from "../../services/replacementHistoryService";
 import signalRService from "../../services/signalRService";
 import { useAuth } from "../../contexts/AuthContext";
 import { useSignalR } from "../../contexts/SignalRContext";
@@ -476,6 +477,49 @@ const IncidentList = () => {
     }
   };
 
+  const handleViewReplacementHistory = async (record) => {
+    try {
+      // Check if there are any approved replacement requests for this incident
+      const res = await replacementHistoryService.getByIncidentId(record.id);
+      const data = Array.isArray(res) ? res : res?.data || [];
+
+      // Check if there's at least one approved request
+      const hasApprovedReplacement = data.some(
+        (r) =>
+          r.status === "Đã duyệt cấp phát" ||
+          r.status === "Completed" ||
+          r.status === "Chờ trả lại" ||
+          r.status === "Hoàn thành"
+      );
+
+      if (!hasApprovedReplacement) {
+        message.warning({
+          content:
+            "Vui lòng tạo yêu cầu phụ tùng và chờ Quản lý kho duyệt cấp phát trước khi xem lịch sử thay thế",
+          duration: 5,
+        });
+        return;
+      }
+
+      // If there are approved replacements, show the modal
+      setSelectedIncidentId(record.id);
+      setSelectedEquipmentId(record.equipmentId);
+      setSelectedEquipmentInfo({
+        name: record.equipmentName,
+        code: record.equipmentCode,
+      });
+      setHistoryModalVisible(true);
+    } catch (error) {
+      console.error("Error checking replacement history:", error);
+      // Nếu có lỗi API (ví dụ: chưa có yêu cầu nào), cũng hiển thị message hướng dẫn
+      message.warning({
+        content:
+          "Vui lòng tạo yêu cầu phụ tùng và chờ Quản lý kho duyệt cấp phát trước khi xem lịch sử thay thế",
+        duration: 5,
+      });
+    }
+  };
+
   const columns = [
     {
       title: "#",
@@ -674,15 +718,7 @@ const IncidentList = () => {
             key: "replacementHistory",
             label: "Xem lịch sử thay thế",
             icon: <EyeOutlined />,
-            onClick: () => {
-              setSelectedIncidentId(record.id); // Use record.id instead of record.incidentId
-              setSelectedEquipmentId(record.equipmentId);
-              setSelectedEquipmentInfo({
-                name: record.equipmentName,
-                code: record.equipmentCode,
-              });
-              setHistoryModalVisible(true);
-            },
+            onClick: () => handleViewReplacementHistory(record),
           },
         ];
 
@@ -757,7 +793,10 @@ const IncidentList = () => {
             </Space>
           }
           extra={
-            <Button icon={<ReloadOutlined />} onClick={() => fetchIncidents(false)}>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => fetchIncidents(false)}
+            >
               Làm mới
             </Button>
           }
@@ -831,7 +870,10 @@ const IncidentList = () => {
             </Space>
           }
           extra={
-            <Button icon={<ReloadOutlined />} onClick={() => fetchIncidents(false)}>
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => fetchIncidents(false)}
+            >
               Làm mới
             </Button>
           }
