@@ -487,22 +487,6 @@ const ReplacementApprovalModal = ({
     {
       title: (
         <Text strong style={{ fontSize: "13px" }}>
-          ID
-        </Text>
-      ),
-      dataIndex: "replacementID",
-      key: "replacementID",
-      width: 70,
-      align: "center",
-      render: (id) => (
-        <Text strong style={{ color: "#1890ff" }}>
-          #{id}
-        </Text>
-      ),
-    },
-    {
-      title: (
-        <Text strong style={{ fontSize: "13px" }}>
           Mã phụ tùng
         </Text>
       ),
@@ -510,7 +494,7 @@ const ReplacementApprovalModal = ({
       key: "partNumber",
       width: 130,
       render: (text) => (
-        <Text code style={{ fontSize: "13px" }}>
+        <Text code style={{ fontSize: "13px", fontWeight: 600 }}>
           {text}
         </Text>
       ),
@@ -523,7 +507,7 @@ const ReplacementApprovalModal = ({
       ),
       dataIndex: "partName",
       key: "partName",
-      width: 200,
+      width: 250,
       ellipsis: {
         showTitle: false,
       },
@@ -544,77 +528,9 @@ const ReplacementApprovalModal = ({
       width: 100,
       align: "center",
       render: (qty) => (
-        <Tag color="blue" style={{ fontSize: "13px", fontWeight: 500 }}>
+        <Tag color="blue" style={{ fontSize: "14px", fontWeight: 600 }}>
           {qty}
         </Tag>
-      ),
-    },
-    // {
-    //   title: <Text strong style={{ fontSize: '13px' }}>Tồn kho</Text>,
-    //   key: "stockQuantity",
-    //   width: 110,
-    //   align: "center",
-    //   render: (_, record) => {
-    //     const stock = sparePartsStock[record.sparePartId];
-    //     if (!stock) {
-    //       return <Text type="secondary" style={{ fontSize: '13px' }}>...</Text>;
-    //     }
-
-    //     const available = stock.quantity || 0;
-    //     const requested = record.quantity || 0;
-    //     const isOutOfStock = available === 0;
-    //     const isInsufficient = available < requested;
-
-    //     let color = "green";
-    //     let icon = "✓";
-
-    //     if (isOutOfStock) {
-    //       color = "red";
-    //       icon = "✕";
-    //     } else if (isInsufficient) {
-    //       color = "orange";
-    //       icon = "⚠";
-    //     }
-
-    //     return (
-    //       <Tooltip title={
-    //         isOutOfStock ? "Hết hàng" :
-    //           isInsufficient ? `Thiếu ${requested - available} sản phẩm` :
-    //             `Đủ hàng (còn ${available - requested} sau cấp phát)`
-    //       }>
-    //         <Tag color={color} style={{ fontSize: '13px', fontWeight: 500 }}>
-    //           {icon} {available}
-    //         </Tag>
-    //       </Tooltip>
-    //     );
-    //   },
-    // },
-    {
-      title: (
-        <Text strong style={{ fontSize: "13px" }}>
-          Ngày yêu cầu
-        </Text>
-      ),
-      dataIndex: "replacedDate",
-      key: "replacedDate",
-      width: 140,
-      render: (d) => (
-        <Text style={{ fontSize: "13px" }}>
-          {d ? dayjs(d).format("DD/MM/YYYY HH:mm") : "-"}
-        </Text>
-      ),
-    },
-    {
-      title: (
-        <Text strong style={{ fontSize: "13px" }}>
-          Người yêu cầu
-        </Text>
-      ),
-      dataIndex: "replacedBy",
-      key: "replacedBy",
-      width: 160,
-      render: (replacedBy) => (
-        <Text style={{ fontSize: "13px" }}>{getUserName(replacedBy)}</Text>
       ),
     },
     {
@@ -625,7 +541,7 @@ const ReplacementApprovalModal = ({
       ),
       dataIndex: "status",
       key: "status",
-      width: 140,
+      width: 170,
       align: "center",
       render: (s) => {
         let color = "orange";
@@ -655,31 +571,11 @@ const ReplacementApprovalModal = ({
     {
       title: (
         <Text strong style={{ fontSize: "13px" }}>
-          Ghi chú
-        </Text>
-      ),
-      dataIndex: "remarks",
-      key: "remarks",
-      width: 180,
-      ellipsis: {
-        showTitle: false,
-      },
-      render: (r) => (
-        <Tooltip title={r}>
-          <Text type="secondary" style={{ fontSize: "13px" }}>
-            {r || "-"}
-          </Text>
-        </Tooltip>
-      ),
-    },
-    {
-      title: (
-        <Text strong style={{ fontSize: "13px" }}>
           Thao tác
         </Text>
       ),
       key: "action",
-      width: 160,
+      width: 120,
       align: "center",
       fixed: "right",
       render: (_, record) => (
@@ -1502,66 +1398,7 @@ const ReplacementApprovalModal = ({
                           </Text>
                         ),
                       }}
-                      scroll={{ x: 1350, y: 450 }}
-                    />
-                  ),
-                },
-              ]),
-          {
-            key: "approved",
-            label: (
-              <span style={{ fontSize: "14px", fontWeight: 500 }}>
-                <CheckCircleOutlined style={{ marginRight: 6 }} />
-                {viewMode
-                  ? `Lịch sử thay thế (${approvedItems.length})`
-                  : `Đã duyệt (${approvedItems.length})`}
-              </span>
-            ),
-            children: (
-              <Table
-                columns={viewMode ? columnsHistory : columnsApproved}
-                dataSource={approvedItems}
-                rowKey={(r) => r.replacementID || r.replacementId}
-                loading={loading}
-                pagination={{
-                  pageSize: 8,
-                  showTotal: (total) => (
-                    <Text style={{ fontSize: "13px" }}>
-                      Tổng số: <Text strong>{total}</Text>{" "}
-                      {viewMode ? "lịch sử thay thế" : "yêu cầu"}
-                    </Text>
-                  ),
-                }}
-                scroll={{ x: 1350, y: 450 }}
-              />
-            ),
-          },
-          ...(viewMode
-            ? []
-            : [
-                {
-                  key: "pendingReturn",
-                  label: (
-                    <span style={{ fontSize: "14px", fontWeight: 500 }}>
-                      <HistoryOutlined style={{ marginRight: 6 }} />
-                      Chờ trả lại ({pendingReturnItems.length})
-                    </span>
-                  ),
-                  children: (
-                    <Table
-                      columns={columnsReturnConfirm}
-                      dataSource={pendingReturnItems}
-                      rowKey={(r) => r.replacementID || r.replacementId}
-                      loading={loading}
-                      pagination={{
-                        pageSize: 8,
-                        showTotal: (total) => (
-                          <Text style={{ fontSize: "13px" }}>
-                            Tổng số: <Text strong>{total}</Text> yêu cầu
-                          </Text>
-                        ),
-                      }}
-                      scroll={{ x: 1350, y: 450 }}
+                      scroll={{ y: 450 }}
                     />
                   ),
                 },

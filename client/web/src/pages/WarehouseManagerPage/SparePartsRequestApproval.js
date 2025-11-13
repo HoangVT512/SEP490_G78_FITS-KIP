@@ -15,6 +15,7 @@ import {
   Tabs,
   Badge,
   Empty,
+  Dropdown,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -24,6 +25,7 @@ import {
   WarningOutlined,
   ToolOutlined,
   FileTextOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import replacementHistoryService from "../../services/replacementHistoryService";
@@ -33,12 +35,13 @@ import { incidentService } from "../../services/incidentService";
 
 const SparePartsRequestApproval = () => {
   const [loading, setLoading] = useState(false);
-  const [incidents, setIncidents] = useState([]);
-  const [workOrders, setWorkOrders] = useState([]);
-  const [selectedIncident, setSelectedIncident] = useState(null);
-  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
+  const [incidentRequests, setIncidentRequests] = useState([]); // Danh sách yêu cầu từ sự cố
+  const [workOrderRequests, setWorkOrderRequests] = useState([]); // Danh sách yêu cầu từ bảo trì
+  const [selectedRequest, setSelectedRequest] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [activeTab, setActiveTab] = useState("incident");
+  const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
+  const [selectedRequestDetail, setSelectedRequestDetail] = useState(null);
 
   useEffect(() => {
     fetchPendingRequests();
@@ -53,46 +56,54 @@ const SparePartsRequestApproval = () => {
       );
       const requests = data || [];
 
-      // Group by incident
-      const incidentMap = new Map();
-      const workOrderMap = new Map();
+      // Group theo incidentId - mỗi sự cố chỉ hiển thị 1 dòng
+      const incidentGroups = {};
+      const workOrderGroups = {};
 
       requests.forEach((req) => {
-        if (req.incidentId) {
-          if (!incidentMap.has(req.incidentId)) {
-            incidentMap.set(req.incidentId, {
+        if (req.incidentId != null) {
+          const key = req.incidentId;
+          if (!incidentGroups[key]) {
+            incidentGroups[key] = {
               incidentId: req.incidentId,
               equipmentId: req.equipmentId,
-              equipmentName: req.equipmentName || "N/A",
-              equipmentCode: req.equipmentCode || "N/A",
-              incidentDescription: req.incidentDescription || "Sự cố",
-              pendingCount: 0,
-              requests: [],
-            });
+              equipmentName: req.equipmentName,
+              equipmentCode: req.equipmentCode,
+              replacedByFullName: req.replacedByFullName,
+              replacedByEmployeeCode: req.replacedByEmployeeCode,
+              status: req.status,
+              parts: [],
+            };
           }
-          const incident = incidentMap.get(req.incidentId);
-          incident.pendingCount++;
-          incident.requests.push(req);
-        } else if (req.workOrderId) {
-          if (!workOrderMap.has(req.workOrderId)) {
-            workOrderMap.set(req.workOrderId, {
+          incidentGroups[key].parts.push({
+            partNumber: req.partNumber,
+            partName: req.partName,
+            quantity: req.quantity,
+          });
+        } else if (req.workOrderId != null) {
+          const key = req.workOrderId;
+          if (!workOrderGroups[key]) {
+            workOrderGroups[key] = {
               workOrderId: req.workOrderId,
               equipmentId: req.equipmentId,
-              equipmentName: req.equipmentName || "N/A",
-              equipmentCode: req.equipmentCode || "N/A",
-              workOrderDescription: req.workOrderDescription || "Bảo trì",
-              pendingCount: 0,
-              requests: [],
-            });
+              equipmentName: req.equipmentName,
+              equipmentCode: req.equipmentCode,
+              replacedByFullName: req.replacedByFullName,
+              replacedByEmployeeCode: req.replacedByEmployeeCode,
+              status: req.status,
+              parts: [],
+            };
           }
-          const wo = workOrderMap.get(req.workOrderId);
-          wo.pendingCount++;
-          wo.requests.push(req);
+          workOrderGroups[key].parts.push({
+            partNumber: req.partNumber,
+            partName: req.partName,
+            quantity: req.quantity,
+          });
         }
       });
 
-      setIncidents(Array.from(incidentMap.values()));
-      setWorkOrders(Array.from(workOrderMap.values()));
+      setIncidentRequests(Object.values(incidentGroups));
+      setWorkOrderRequests(Object.values(workOrderGroups));
     } catch (error) {
       console.error("Error fetching pending requests:", error);
       message.error("Không thể tải danh sách yêu cầu");
@@ -101,32 +112,30 @@ const SparePartsRequestApproval = () => {
     }
   };
 
-  const handleOpenModal = (incident, workOrder) => {
-    if (incident) {
-      setSelectedIncident(incident);
-      setSelectedWorkOrder(null);
-    } else if (workOrder) {
-      setSelectedWorkOrder(workOrder);
-      setSelectedIncident(null);
-    }
+  const handleOpenModal = (
+    equipmentId,
+    incidentId,
+    workOrderId,
+    equipmentInfo
+  ) => {
+    setSelectedRequest({ equipmentId, incidentId, workOrderId, equipmentInfo });
     setIsModalVisible(true);
   };
 
   const handleCloseModal = () => {
     setIsModalVisible(false);
-    setSelectedIncident(null);
-    setSelectedWorkOrder(null);
-    // Reload data after modal closes
+    setSelectedRequest(null);
     fetchPendingRequests();
   };
 
-  // Columns for incident table
+  // Columns hiển thị chi tiết yêu cầu từ sự cố
   const incidentColumns = [
     {
       title: "Mã sự cố",
+      dataIndex: "incidentId",
       key: "incidentId",
-      width: 100,
-      render: (_, record) => `INC-${record.incidentId}`,
+      width: 120,
+      render: (id) => <Tag color="orange">INC-{id}</Tag>,
     },
     {
       title: "Thiết bị",
@@ -134,58 +143,94 @@ const SparePartsRequestApproval = () => {
       width: 250,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 600 }}>{record.equipmentName}</div>
+          <div style={{ fontWeight: 600 }}>{record.equipmentName || "N/A"}</div>
           <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
-            {record.equipmentCode}
+            {record.equipmentCode || "N/A"}
           </div>
         </div>
       ),
     },
     {
-      title: "Mô tả sự cố",
-      dataIndex: "incidentDescription",
-      key: "incidentDescription",
-      width: 300,
-      ellipsis: true,
+      title: "Số loại linh kiện",
+      key: "partCount",
+      width: 140,
+      align: "center",
+      render: (_, record) => (
+        <Tag color="blue" style={{ fontSize: "14px" }}>
+          {record.parts?.length || 0} loại
+        </Tag>
+      ),
     },
     {
-      title: "Số lượng yêu cầu chờ duyệt",
-      dataIndex: "pendingCount",
-      key: "pendingCount",
-      width: 180,
-      align: "center",
-      render: (count) => (
-        <Badge count={count} showZero style={{ backgroundColor: "#faad14" }} />
+      title: "Người yêu cầu",
+      key: "requester",
+      width: 200,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>
+            {record.replacedByFullName || "N/A"}
+          </div>
+          <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+            {record.replacedByEmployeeCode
+              ? `(${record.replacedByEmployeeCode})`
+              : ""}
+          </div>
+        </div>
       ),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 150,
+      render: (status) => <Tag color="orange">{status || "N/A"}</Tag>,
     },
     {
       title: "Thao tác",
       key: "action",
-      width: 150,
+      width: 80,
       fixed: "right",
+      align: "center",
       render: (_, record) => (
-        <Button
-          type="primary"
-          icon={<FileTextOutlined />}
-          onClick={() => handleOpenModal(record, null)}
-          style={{
-            backgroundColor: "#283652",
-            borderColor: "#283652",
+        <Dropdown
+          menu={{
+            items: [
+              {
+                key: "detail",
+                icon: <EyeOutlined />,
+                label: "Xem chi tiết",
+                onClick: () => {
+                  setSelectedRequestDetail(record);
+                  setDetailDrawerVisible(true);
+                },
+              },
+              {
+                key: "approve",
+                icon: <FileTextOutlined />,
+                label: "Xem yêu cầu linh kiện",
+                onClick: () =>
+                  handleOpenModal(record.equipmentId, record.incidentId, null, {
+                    name: record.equipmentName,
+                    code: record.equipmentCode,
+                  }),
+              },
+            ],
           }}
         >
-          Duyệt yêu cầu
-        </Button>
+          <Button type="text" size="small" icon={<DownOutlined />} />
+        </Dropdown>
       ),
     },
   ];
 
-  // Columns for work order table
+  // Columns hiển thị chi tiết yêu cầu từ bảo trì
   const workOrderColumns = [
     {
       title: "Mã phiếu BT",
+      dataIndex: "workOrderId",
       key: "workOrderId",
-      width: 100,
-      render: (_, record) => `WO-${record.workOrderId}`,
+      width: 120,
+      render: (id) => <Tag color="blue">WO-{id}</Tag>,
     },
     {
       title: "Thiết bị",
@@ -193,47 +238,84 @@ const SparePartsRequestApproval = () => {
       width: 250,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 600 }}>{record.equipmentName}</div>
+          <div style={{ fontWeight: 600 }}>{record.equipmentName || "N/A"}</div>
           <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
-            {record.equipmentCode}
+            {record.equipmentCode || "N/A"}
           </div>
         </div>
       ),
     },
     {
-      title: "Mô tả bảo trì",
-      dataIndex: "workOrderDescription",
-      key: "workOrderDescription",
-      width: 300,
-      ellipsis: true,
+      title: "Số loại linh kiện",
+      key: "partCount",
+      width: 140,
+      align: "center",
+      render: (_, record) => (
+        <Tag color="blue" style={{ fontSize: "14px" }}>
+          {record.parts?.length || 0} loại
+        </Tag>
+      ),
     },
     {
-      title: "Số lượng yêu cầu chờ duyệt",
-      dataIndex: "pendingCount",
-      key: "pendingCount",
-      width: 180,
-      align: "center",
-      render: (count) => (
-        <Badge count={count} showZero style={{ backgroundColor: "#1890ff" }} />
+      title: "Người yêu cầu",
+      key: "requester",
+      width: 200,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>
+            {record.replacedByFullName || "N/A"}
+          </div>
+          <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+            {record.replacedByEmployeeCode
+              ? `(${record.replacedByEmployeeCode})`
+              : ""}
+          </div>
+        </div>
       ),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 150,
+      render: (status) => <Tag color="orange">{status || "N/A"}</Tag>,
     },
     {
       title: "Thao tác",
       key: "action",
-      width: 150,
+      width: 80,
       fixed: "right",
+      align: "center",
       render: (_, record) => (
-        <Button
-          type="primary"
-          icon={<FileTextOutlined />}
-          onClick={() => handleOpenModal(null, record)}
-          style={{
-            backgroundColor: "#283652",
-            borderColor: "#283652",
+        <Dropdown
+          menu={{
+            items: [
+              {
+                key: "detail",
+                icon: <EyeOutlined />,
+                label: "Xem chi tiết",
+                onClick: () => {
+                  setSelectedRequestDetail(record);
+                  setDetailDrawerVisible(true);
+                },
+              },
+              {
+                key: "approve",
+                icon: <FileTextOutlined />,
+                label: "Xem yêu cầu linh kiện",
+                onClick: () =>
+                  handleOpenModal(
+                    record.equipmentId,
+                    null,
+                    record.workOrderId,
+                    { name: record.equipmentName, code: record.equipmentCode }
+                  ),
+              },
+            ],
           }}
         >
-          Duyệt yêu cầu
-        </Button>
+          <Button type="text" size="small" icon={<DownOutlined />} />
+        </Dropdown>
       ),
     },
   ];
@@ -273,7 +355,7 @@ const SparePartsRequestApproval = () => {
                   />
                   Yêu cầu từ sự cố
                   <Badge
-                    count={incidents.length}
+                    count={incidentRequests.length}
                     style={{
                       marginLeft: 8,
                       backgroundColor: "#ff4d4f",
@@ -283,12 +365,12 @@ const SparePartsRequestApproval = () => {
               ),
               children: (
                 <Table
-                  dataSource={incidents}
+                  dataSource={incidentRequests}
                   columns={incidentColumns}
                   rowKey="incidentId"
                   loading={loading}
                   pagination={{
-                    total: incidents.length,
+                    total: incidentRequests.length,
                     pageSize: 10,
                     showSizeChanger: true,
                     showTotal: (total) => `Tổng ${total} sự cố`,
@@ -298,7 +380,7 @@ const SparePartsRequestApproval = () => {
                     emptyText: (
                       <Empty
                         image={Empty.PRESENTED_IMAGE_SIMPLE}
-                        description="Không có sự cố nào có yêu cầu phụ tùng chờ duyệt"
+                        description="Không có yêu cầu phụ tùng từ sự cố"
                       />
                     ),
                   }}
@@ -312,7 +394,7 @@ const SparePartsRequestApproval = () => {
                   <ToolOutlined style={{ marginRight: 6, color: "#1890ff" }} />
                   Yêu cầu từ bảo trì
                   <Badge
-                    count={workOrders.length}
+                    count={workOrderRequests.length}
                     style={{
                       marginLeft: 8,
                       backgroundColor: "#1890ff",
@@ -322,22 +404,22 @@ const SparePartsRequestApproval = () => {
               ),
               children: (
                 <Table
-                  dataSource={workOrders}
+                  dataSource={workOrderRequests}
                   columns={workOrderColumns}
                   rowKey="workOrderId"
                   loading={loading}
                   pagination={{
-                    total: workOrders.length,
+                    total: workOrderRequests.length,
                     pageSize: 10,
                     showSizeChanger: true,
-                    showTotal: (total) => `Tổng ${total} phiếu bảo trì`,
+                    showTotal: (total) => `Tổng ${total} phiếu`,
                   }}
                   scroll={{ x: 1200 }}
                   locale={{
                     emptyText: (
                       <Empty
                         image={Empty.PRESENTED_IMAGE_SIMPLE}
-                        description="Không có phiếu bảo trì nào có yêu cầu phụ tùng chờ duyệt"
+                        description="Không có yêu cầu phụ tùng từ bảo trì"
                       />
                     ),
                   }}
@@ -348,22 +430,128 @@ const SparePartsRequestApproval = () => {
         />
       </Card>
 
+      {/* Detail Modal */}
+      <Modal
+        title="Chi tiết yêu cầu phụ tùng"
+        open={detailDrawerVisible}
+        onCancel={() => {
+          setDetailDrawerVisible(false);
+          setSelectedRequestDetail(null);
+        }}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => {
+              setDetailDrawerVisible(false);
+              setSelectedRequestDetail(null);
+            }}
+          >
+            Đóng
+          </Button>,
+        ]}
+        width={800}
+      >
+        {selectedRequestDetail && (
+          <div>
+            <Descriptions
+              bordered
+              column={1}
+              size="small"
+              style={{ marginBottom: 16 }}
+            >
+              <Descriptions.Item label="Thiết bị" span={1}>
+                <div>
+                  <div style={{ fontWeight: 600 }}>
+                    {selectedRequestDetail.equipmentName || "N/A"}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                    Mã: {selectedRequestDetail.equipmentCode || "N/A"}
+                  </div>
+                </div>
+              </Descriptions.Item>
+              <Descriptions.Item label="Sự cố" span={1}>
+                {selectedRequestDetail.incidentId ? (
+                  <Tag color="orange">
+                    INC-{selectedRequestDetail.incidentId}
+                  </Tag>
+                ) : (
+                  "N/A"
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Phiếu bảo trì" span={1}>
+                {selectedRequestDetail.workOrderId ? (
+                  <Tag color="blue">WO-{selectedRequestDetail.workOrderId}</Tag>
+                ) : (
+                  "N/A"
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Người yêu cầu" span={1}>
+                <div>
+                  <div style={{ fontWeight: 500 }}>
+                    {selectedRequestDetail.replacedByFullName || "N/A"}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                    {selectedRequestDetail.replacedByEmployeeCode
+                      ? `(${selectedRequestDetail.replacedByEmployeeCode})`
+                      : ""}
+                  </div>
+                </div>
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái" span={1}>
+                <Tag color="orange">
+                  {selectedRequestDetail.status || "N/A"}
+                </Tag>
+              </Descriptions.Item>
+            </Descriptions>
+
+            <div style={{ marginBottom: 8, fontWeight: 600, fontSize: "14px" }}>
+              Danh sách linh kiện yêu cầu (
+              {selectedRequestDetail.parts?.length || 0} loại)
+            </div>
+            <Table
+              dataSource={selectedRequestDetail.parts || []}
+              columns={[
+                {
+                  title: "Mã phụ tùng",
+                  dataIndex: "partNumber",
+                  key: "partNumber",
+                  width: 150,
+                  render: (text) => (
+                    <span style={{ fontWeight: 600, color: "#1890ff" }}>
+                      {text || "N/A"}
+                    </span>
+                  ),
+                },
+                {
+                  title: "Tên phụ tùng",
+                  dataIndex: "partName",
+                  key: "partName",
+                  ellipsis: true,
+                },
+                {
+                  title: "Số lượng",
+                  dataIndex: "quantity",
+                  key: "quantity",
+                  width: 120,
+                  align: "center",
+                  render: (qty) => <Tag color="blue">{qty}</Tag>,
+                },
+              ]}
+              pagination={false}
+              rowKey={(record, index) => index}
+              size="small"
+            />
+          </div>
+        )}
+      </Modal>
+
       {/* Replacement Approval Modal */}
-      {(selectedIncident || selectedWorkOrder) && (
+      {selectedRequest && (
         <ReplacementApprovalModal
-          equipmentId={
-            selectedIncident?.equipmentId || selectedWorkOrder?.equipmentId
-          }
-          incidentId={selectedIncident?.incidentId}
-          workOrderId={selectedWorkOrder?.workOrderId}
-          equipmentInfo={{
-            name:
-              selectedIncident?.equipmentName ||
-              selectedWorkOrder?.equipmentName,
-            code:
-              selectedIncident?.equipmentCode ||
-              selectedWorkOrder?.equipmentCode,
-          }}
+          equipmentId={selectedRequest.equipmentId}
+          incidentId={selectedRequest.incidentId}
+          workOrderId={selectedRequest.workOrderId}
+          equipmentInfo={selectedRequest.equipmentInfo}
           open={isModalVisible}
           onClose={handleCloseModal}
           onUpdated={fetchPendingRequests}
