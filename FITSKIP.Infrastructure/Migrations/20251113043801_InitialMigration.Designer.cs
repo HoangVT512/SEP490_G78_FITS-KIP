@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251112053842_SyncModelAfterManualDbUpdate")]
-    partial class SyncModelAfterManualDbUpdate
+    [Migration("20251113043801_InitialMigration")]
+    partial class InitialMigration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -398,6 +398,11 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     b.Property<string>("PostponedReason")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("ReminderDaysBefore")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(3);
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime");

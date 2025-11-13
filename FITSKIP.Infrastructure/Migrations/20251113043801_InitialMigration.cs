@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FITSKIP.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate : Migration
+    public partial class InitialMigration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -453,15 +453,13 @@ namespace FITSKIP.Infrastructure.Migrations
                     StartDate = table.Column<DateTime>(type: "datetime", nullable: false),
                     NextDueDate = table.Column<DateTime>(type: "datetime", nullable: false),
                     PostponedDueDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    AssignedToElectrical = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
-                    AssignedToMechanical = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
+                    ReminderDaysBefore = table.Column<int>(type: "int", nullable: false, defaultValue: 3),
                     CreatedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),
                     CreatedDate = table.Column<DateTime>(type: "datetime", nullable: false, defaultValueSql: "GETDATE()"),
                     IsActive = table.Column<bool>(type: "bit", nullable: false, defaultValue: true),
                     Status = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false, defaultValue: "Pending"),
                     PostponedReason = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    PostponedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    AssignedTo = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true)
+                    PostponedDate = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -472,21 +470,11 @@ namespace FITSKIP.Infrastructure.Migrations
                         principalTable: "AspNetUsers",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_MaintenancePlans_ElectricalTech",
-                        column: x => x.AssignedToElectrical,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
-                    table.ForeignKey(
                         name: "FK_MaintenancePlans_Equipment",
                         column: x => x.EquipmentID,
                         principalTable: "Equipment",
                         principalColumn: "EquipmentID",
                         onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_MaintenancePlans_MechanicalTech",
-                        column: x => x.AssignedToMechanical,
-                        principalTable: "AspNetUsers",
-                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_MaintenancePlans_Templates",
                         column: x => x.TemplateID,
@@ -858,16 +846,6 @@ namespace FITSKIP.Infrastructure.Migrations
                 name: "IX_MaintenancePlanAssignments_TechnicianId",
                 table: "MaintenancePlanAssignments",
                 column: "TechnicianId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_MaintenancePlans_AssignedToElectrical",
-                table: "MaintenancePlans",
-                column: "AssignedToElectrical");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_MaintenancePlans_AssignedToMechanical",
-                table: "MaintenancePlans",
-                column: "AssignedToMechanical");
 
             migrationBuilder.CreateIndex(
                 name: "IX_MaintenancePlans_CreatedBy",
