@@ -14,10 +14,10 @@ namespace FITSKIP.Domain.DTO
         public int? WorkOrderId { get; set; } // Add WorkOrderId field
         public int PartID { get; set; }
         public int Quantity { get; set; }
-        public DateTime ReplacedDate { get; set; }
-        public string ReplacedBy { get; set; }
-        public string Status { get; set; }
-        public string Remarks { get; set; }
+        public DateTime? ReplacedDate { get; set; }
+        public string? ReplacedBy { get; set; }
+        public string? Status { get; set; }
+        public string? Remarks { get; set; }
 
         /// <summary>
         /// Số lượng thực tế sử dụng
@@ -39,15 +39,10 @@ namespace FITSKIP.Domain.DTO
         /// </summary>
         public string? ReturnConfirmedBy { get; set; }
 
-        /// <summary>
-        /// Ghi chú về trả lại
-        /// </summary>
-        public string? ReturnRemarks { get; set; }
-
-        public string EquipmentName { get; set; }
-        public string EquipmentCode { get; set; }
-        public string PartName { get; set; }
-        public string PartNumber { get; set; }
+        public string? EquipmentName { get; set; }
+        public string? EquipmentCode { get; set; }
+        public string? PartName { get; set; }
+        public string? PartNumber { get; set; }
         public string ReplacedByUserName { get; set; } = null!;
         public string? ReplacedByEmail { get; set; }
         public string? ReplacedByFullName { get; set; }

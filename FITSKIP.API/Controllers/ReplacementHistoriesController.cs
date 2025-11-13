@@ -1,4 +1,5 @@
 using FITSKIP.Application.Interfaces;
+using FITSKIP.Application.Helpers;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Infrastructure.DbContexts;
@@ -103,7 +104,6 @@ namespace FITSKIP.API.Controllers
                     QuantityToReturn = result.QuantityToReturn,
                     ReplacedDate = result.ReplacedDate,
                     ReturnedDate = result.ReturnedDate,
-                    ReturnRemarks = result.ReturnRemarks,
                     Status = result.Status,
                     Remarks = result.Remarks
                 };
@@ -141,9 +141,12 @@ namespace FITSKIP.API.Controllers
                     IncidentId = request.IncidentId, // Add IncidentId mapping
                     WorkOrderId = request.WorkOrderId, // Add WorkOrderId mapping
                     Quantity = request.Quantity,
-                    ReplacedDate = request.ReplacedDate,
+                    // ⚠️ LƯU Ý: Khi tạo yêu cầu linh kiện, chưa cần insert ReplacedDate
+                    // ReplacedDate sẽ được ghi nhận khi Quản lý kho duyệt/xác nhận yêu cầu
+                    // Trạng thái hiện tại: "Chờ duyệt cấp phát"
+                    ReplacedDate = null,
                     ReplacedBy = request.ReplacedBy,
-                    Status = request.Status,
+                    Status = "Chờ duyệt cấp phát", // Mặc định trạng thái khi tạo
                     Remarks = request.Remarks,
 
                 };
@@ -248,7 +251,9 @@ namespace FITSKIP.API.Controllers
                     IncidentId = request.IncidentId, // Add IncidentId mapping
                     WorkOrderId = request.WorkOrderId, // Add WorkOrderId mapping
                     Quantity = request.Quantity,
-                    ReplacedDate = request.ReplacedDate,
+                    // ⚠️ LƯU Ý: Khi quản lý kho duyệt/xác nhận, vẫn để ReplacedDate = NULL
+                    // ReplacedDate chỉ được ghi nhận khi Hoàn thành việc sử dụng (RecordUsage endpoint)
+                    ReplacedDate = null,
                     ReplacedBy = request.ReplacedBy,
                     Status = request.Status,
                     Remarks = request.Remarks,
@@ -309,6 +314,12 @@ namespace FITSKIP.API.Controllers
                 var toReturn = existing.Quantity - request.ActualQuantityUsed;
                 existing.QuantityToReturn = toReturn > 0 ? toReturn : 0;
                 existing.Status = request.Status; // "Chờ trả lại" or "Hoàn thành"
+
+                // ✅ MỚI: Khi ghi nhận hoàn thành (Status = "Hoàn thành"), set ReplacedDate = giờ Việt Nam hiện tại
+                if (request.Status == "Hoàn thành" && existing.ReplacedDate == null)
+                {
+                    existing.ReplacedDate = DateTimeHelper.GetVietnamNow();
+                }
 
                 if (!string.IsNullOrEmpty(request.Remarks))
                     existing.Remarks = request.Remarks;
@@ -410,6 +421,12 @@ namespace FITSKIP.API.Controllers
                     // Determine status based on usage
                     existing.Status = toReturn > 0 ? "Chờ trả lại" : "Hoàn thành";
 
+                    // ✅ MỚI: Khi ghi nhận hoàn thành (dùng hết), set ReplacedDate = giờ Việt Nam hiện tại
+                    if (existing.Status == "Hoàn thành" && existing.ReplacedDate == null)
+                    {
+                        existing.ReplacedDate = DateTimeHelper.GetVietnamNow();
+                    }
+
                     if (!string.IsNullOrEmpty(item.Remarks))
                         existing.Remarks = item.Remarks;
 
@@ -496,7 +513,7 @@ namespace FITSKIP.API.Controllers
                     QuantityToReturn = s.QuantityToReturn,
                     ReplacedDate = s.ReplacedDate,
                     ReturnedDate = s.ReturnedDate,
-                    ReturnRemarks = s.ReturnRemarks,
+
                     Status = s.Status,
                     Remarks = s.Remarks
                 });
@@ -535,7 +552,7 @@ namespace FITSKIP.API.Controllers
                     QuantityToReturn = s.QuantityToReturn,
                     ReplacedDate = s.ReplacedDate,
                     ReturnedDate = s.ReturnedDate,
-                    ReturnRemarks = s.ReturnRemarks,
+
                     Status = s.Status,
                     Remarks = s.Remarks
                 });
@@ -641,7 +658,7 @@ namespace FITSKIP.API.Controllers
                     QuantityToReturn = s.QuantityToReturn,
                     ReplacedDate = s.ReplacedDate,
                     ReturnedDate = s.ReturnedDate,
-                    ReturnRemarks = s.ReturnRemarks,
+
                     Status = s.Status,
                     Remarks = s.Remarks
                 }).OrderByDescending(x => x.ReplacedDate);
@@ -714,7 +731,7 @@ namespace FITSKIP.API.Controllers
                     QuantityToReturn = s.QuantityToReturn,
                     ReplacedDate = s.ReplacedDate,
                     ReturnedDate = s.ReturnedDate,
-                    ReturnRemarks = s.ReturnRemarks,
+
                     Status = s.Status,
                     Remarks = s.Remarks
                 });
@@ -779,7 +796,7 @@ namespace FITSKIP.API.Controllers
                     ReplacedDate = result.ReplacedDate,
                     ReturnedDate = result.ReturnedDate,
                     ReturnConfirmedBy = result.ReturnConfirmedBy,
-                    ReturnRemarks = result.ReturnRemarks,
+
                     Status = result.Status,
                     Remarks = result.Remarks
                 };
@@ -817,7 +834,7 @@ namespace FITSKIP.API.Controllers
                     ReplacedDate = s.ReplacedDate,
                     ReturnedDate = s.ReturnedDate,
                     ReturnConfirmedBy = s.ReturnConfirmedBy,
-                    ReturnRemarks = s.ReturnRemarks,
+
                     Status = s.Status,
                     Remarks = s.Remarks
                 });

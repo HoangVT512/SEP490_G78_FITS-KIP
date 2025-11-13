@@ -1,4 +1,5 @@
 ﻿using FITSKIP.Application.Interfaces;
+using FITSKIP.Application.Helpers;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
 using FITSKIP.Domain.DTO;
@@ -82,12 +83,17 @@ namespace FITSKIP.Application.Services
             // Cập nhật thông tin trả lại
             existing.ReturnedDate = confirmationDto.ReturnedDate ?? DateTime.Now;
             existing.ReturnConfirmedBy = confirmationDto.ReturnConfirmedBy;
-            existing.ReturnRemarks = confirmationDto.ReturnRemarks;
 
             // Nếu đã xác nhận trả lại, cập nhật status thành "Hoàn thành" (tiếng Việt)
             if (!string.IsNullOrEmpty(confirmationDto.ReturnConfirmedBy))
             {
                 existing.Status = "Hoàn thành"; // Hoàn thành - status cuối cùng (tiếng Việt)
+
+                // ✅ MỚI: Set ReplacedDate = giờ Việt Nam hiện tại khi hoàn thành trả lại
+                if (existing.ReplacedDate == null)
+                {
+                    existing.ReplacedDate = DateTimeHelper.GetVietnamNow();
+                }
             }
 
             return await _repository.UpdateAsync(existing, cancellationToken);

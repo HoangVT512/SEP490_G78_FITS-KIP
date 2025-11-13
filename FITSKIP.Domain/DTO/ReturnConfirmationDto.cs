@@ -19,10 +19,5 @@ namespace FITSKIP.Domain.DTO
         /// Tên người xác nhận trả lại (thường là nhân viên kho)
         /// </summary>
         public string? ReturnConfirmedBy { get; set; }
-
-        /// <summary>
-        /// Ghi chú về việc trả lại
-        /// </summary>
-        public string? ReturnRemarks { get; set; }
     }
 }

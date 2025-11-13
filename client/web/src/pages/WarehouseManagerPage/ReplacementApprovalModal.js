@@ -390,6 +390,13 @@ const ReplacementApprovalModal = ({
         );
       } else {
         // Các status khác dùng generic update
+        // ⚠️ QUAN TRỌNG: Gửi giờ Việt Nam (UTC+7) chứ không phải UTC
+        // Client sẽ convert từ UTC sang Việt Nam trước khi gửi
+        const vietnamDate = new Date();
+        const vietnamTime = vietnamDate.toLocaleString("sv-SE", {
+          timeZone: "Asia/Ho_Chi_Minh",
+        }); // Format: YYYY-MM-DD HH:mm:ss
+
         const payload = {
           partId:
             record.partId ||
@@ -407,7 +414,7 @@ const ReplacementApprovalModal = ({
           replacedDate:
             record.replacedDate ||
             record.ReplacedDate ||
-            new Date().toISOString(),
+            new Date(vietnamTime).toISOString(),
           replacedBy: userId || record.replacedBy || record.ReplacedBy || "",
           status: newStatus,
           remarks: record.remarks || record.Remarks || "",
