@@ -135,11 +135,9 @@ const IncidentAssignList = () => {
       width: 180,
       render: (record) => (
         <div>
-          <div style={{ fontWeight: 500, color: "#1890ff" }}>
-            {record.equipmentCode}
-          </div>
+          <div style={{ fontWeight: 500 }}>{record.equipmentName}</div>
           <div style={{ fontSize: "12px", color: "#888" }}>
-            {record.equipmentName}
+            {record.equipmentCode}
           </div>
         </div>
       ),
