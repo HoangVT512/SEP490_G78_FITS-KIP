@@ -1032,6 +1032,13 @@ const IncidentManagement = () => {
     multiple: true, // Allow selecting multiple files at once
     accept: "image/*",
     beforeUpload: async (file) => {
+      // Check if already have 5 images
+      const currentFileList = imageFileList[formId] || [];
+      if (currentFileList.length >= 5) {
+        message.error("Bạn chỉ được đính kèm tối đa 5 ảnh!");
+        return Upload.LIST_IGNORE;
+      }
+
       // Validate file type
       const isImage = file.type.startsWith("image/");
       if (!isImage) {
@@ -1077,7 +1084,7 @@ const IncidentManagement = () => {
 
           return {
             ...prev,
-            [formId]: newUrls.length > 0 ? newUrls : null,
+            [formId]: newUrls, // Keep empty array instead of null
           };
         });
       }
@@ -1211,7 +1218,9 @@ const IncidentManagement = () => {
             : {}),
           isTechSupport: values.isTechSupport || false,
           imageUrls:
-            uploadedImageUrls["edit"] || selectedIncident.imageUrls || null,
+            uploadedImageUrls["edit"] !== undefined
+              ? uploadedImageUrls["edit"]
+              : selectedIncident.imageUrls || null,
         };
 
         const id =
