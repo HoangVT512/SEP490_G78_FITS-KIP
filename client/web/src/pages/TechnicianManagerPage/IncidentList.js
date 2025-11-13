@@ -525,11 +525,24 @@ const IncidentList = () => {
       title: "#",
       dataIndex: "rowIndex",
       key: "rowIndex",
-      width: 80,
+      width: 100,
       fixed: "left",
       render: (text, record) => (
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <span style={{ fontWeight: 500 }}>{text}</span>
+          {!record.assignedTo && (
+            <Tooltip title="Chưa phân công kỹ thuật viên">
+              <UserAddOutlined
+                style={{
+                  color: "#ff4d4f",
+                  fontSize: "16px",
+                  cursor: "pointer",
+                  animation: "pulse 2s infinite",
+                }}
+                onClick={() => handleViewDetail(record)}
+              />
+            </Tooltip>
+          )}
         </div>
       ),
     },
