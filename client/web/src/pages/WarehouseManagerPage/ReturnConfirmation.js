@@ -12,11 +12,13 @@ import {
   Tooltip,
   Tabs,
   Badge,
+  Dropdown,
 } from "antd";
 import {
   CheckCircleOutlined,
   EyeOutlined,
   ReloadOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import replacementHistoryService from "../../services/replacementHistoryService";
@@ -40,6 +42,8 @@ const ReturnConfirmation = () => {
       ...dto,
       historyId: dto.replacementID,
       replacedByName: dto.replacedByUserName,
+      replacedByFullName: dto.replacedByFullName,
+      replacedByEmployeeCode: dto.replacedByEmployeeCode,
       replacementDate: dto.replacedDate,
       notes: dto.remarks,
     };
@@ -101,6 +105,12 @@ const ReturnConfirmation = () => {
       ),
       okText: "Xác nhận",
       cancelText: "Hủy",
+      okButtonProps: {
+        style: {
+          backgroundColor: "#334766",
+          borderColor: "#334766",
+        },
+      },
       onOk: async () => {
         try {
           await replacementHistoryService.confirmReturn(record.historyId, {
@@ -164,10 +174,23 @@ const ReturnConfirmation = () => {
       },
     },
     {
-      title: "Người thay thế",
-      dataIndex: "replacedByName",
-      key: "replacedByName",
+      title: "Người trả",
+      key: "replacedBy",
       width: 150,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontSize: "13px", fontWeight: 500 }}>
+            {record.replacedByFullName ||
+              record.replacedByUserName ||
+              "Chưa xác định"}
+          </div>
+          {record.replacedByEmployeeCode && (
+            <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+              {record.replacedByEmployeeCode}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
       title: "Ngày thay thế",
@@ -179,29 +202,30 @@ const ReturnConfirmation = () => {
     {
       title: "Thao tác",
       key: "action",
-      width: 180,
+      width: 100,
       fixed: "right",
+      align: "center",
       render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="Xem chi tiết">
-            <Button
-              type="link"
-              icon={<EyeOutlined />}
-              onClick={() => showDetailModal(record)}
-              size="small"
-            />
-          </Tooltip>
-          <Tooltip title="Xác nhận trả lại">
-            <Button
-              type="primary"
-              icon={<CheckCircleOutlined />}
-              onClick={() => handleConfirmReturn(record)}
-              size="small"
-            >
-              Xác nhận
-            </Button>
-          </Tooltip>
-        </Space>
+        <Dropdown
+          menu={{
+            items: [
+              {
+                key: "detail",
+                icon: <EyeOutlined />,
+                label: "Xem chi tiết",
+                onClick: () => showDetailModal(record),
+              },
+              {
+                key: "confirm",
+                icon: <CheckCircleOutlined />,
+                label: "Xác nhận trả lại",
+                onClick: () => handleConfirmReturn(record),
+              },
+            ],
+          }}
+        >
+          <Button type="text" size="small" icon={<DownOutlined />} />
+        </Dropdown>
       ),
     },
   ];
@@ -316,8 +340,8 @@ const ReturnConfirmation = () => {
               handleConfirmReturn(selectedReturn);
             }}
             style={{
-              backgroundColor: "#283652",
-              borderColor: "#283652",
+              backgroundColor: "#334766",
+              borderColor: "#334766",
               height: "40px",
               fontSize: "16px",
               minWidth: "120px",
@@ -353,8 +377,19 @@ const ReturnConfirmation = () => {
                   cái
                 </Tag>
               </Descriptions.Item>
-              <Descriptions.Item label="Người thay thế">
-                {selectedReturn.replacedByName}
+              <Descriptions.Item label="Người trả">
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 500 }}>
+                    {selectedReturn.replacedByFullName ||
+                      selectedReturn.replacedByName ||
+                      "Chưa xác định"}
+                  </div>
+                  {selectedReturn.replacedByEmployeeCode && (
+                    <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                      {selectedReturn.replacedByEmployeeCode}
+                    </div>
+                  )}
+                </div>
               </Descriptions.Item>
               <Descriptions.Item label="Ngày thay thế">
                 {selectedReturn.replacementDate
