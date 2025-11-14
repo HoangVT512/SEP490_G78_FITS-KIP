@@ -308,6 +308,11 @@ const KtvReturnConfirmPage = () => {
                     setSelectedReturn(null);
                     form.resetFields();
                   }}
+                  style={{
+                    height: "40px",
+                    fontSize: "16px",
+                    minWidth: "120px",
+                  }}
                 >
                   Hủy
                 </Button>
@@ -316,7 +321,13 @@ const KtvReturnConfirmPage = () => {
                   htmlType="submit"
                   icon={<CheckCircleOutlined />}
                   loading={loading}
-                  style={{ backgroundColor: "#52c41a", borderColor: "#52c41a" }}
+                  style={{
+                    backgroundColor: "#52c41a",
+                    borderColor: "#52c41a",
+                    height: "40px",
+                    fontSize: "16px",
+                    minWidth: "120px",
+                  }}
                 >
                   Xác Nhận Đã Giao
                 </Button>

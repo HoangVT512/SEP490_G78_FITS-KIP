@@ -2,6 +2,7 @@ using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
+using FITSKIP.Domain.Exceptions;
 
 namespace FITSKIP.Application.Services
 {
@@ -21,13 +22,29 @@ namespace FITSKIP.Application.Services
             _userRepository = userRepository;
         }
 
+        // Validation-enabled method
         public async Task<NotificationDTO> CreateNotificationAsync(CreateNotificationRequest request)
         {
+            // Validate message
+            ValidateMessage(request.Message);
+
+            // Validate title if provided
+            if (!string.IsNullOrWhiteSpace(request.Title))
+            {
+                ValidateTitle(request.Title);
+            }
+
+            // Validate user ID if provided
+            if (!string.IsNullOrWhiteSpace(request.UserId))
+            {
+                await ValidateUserIdAsync(request.UserId);
+            }
+
             var notification = new Notification
             {
                 UserId = request.UserId,
-                Message = request.Message,
-                Title = request.Title,
+                Message = request.Message.Trim(),
+                Title = request.Title?.Trim(),
                 IsRead = false,
                 CreatedDate = DateTime.UtcNow
             };
@@ -69,6 +86,32 @@ namespace FITSKIP.Application.Services
 
         public async Task<bool> MarkAsReadAsync(int notificationId, string userId)
         {
+            // Validate user ID
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                throw new NotificationValidationException(
+                    "User ID không được để trống",
+                    "NOTIFICATION_USER_ID_REQUIRED");
+            }
+
+            // Validate notification exists and belongs to user
+            var notification = await _notificationRepository.GetByIdAsync(notificationId);
+            if (notification == null)
+            {
+                throw new NotificationValidationException(
+                    $"Không tìm thấy thông báo với ID {notificationId}",
+                    "NOTIFICATION_NOT_FOUND",
+                    new { NotificationId = notificationId });
+            }
+
+            if (notification.UserId != userId)
+            {
+                throw new NotificationValidationException(
+                    "Bạn không có quyền đánh dấu đọc thông báo này",
+                    "NOTIFICATION_UNAUTHORIZED_ACCESS",
+                    new { NotificationId = notificationId, RequestedUserId = userId, OwnerUserId = notification.UserId });
+            }
+
             return await _notificationRepository.MarkAsReadAsync(notificationId, userId);
         }
 
@@ -79,6 +122,16 @@ namespace FITSKIP.Application.Services
 
         public async Task<bool> DeleteNotificationAsync(int notificationId)
         {
+            // Validate notification exists
+            var notification = await _notificationRepository.GetByIdAsync(notificationId);
+            if (notification == null)
+            {
+                throw new NotificationValidationException(
+                    $"Không tìm thấy thông báo với ID {notificationId}",
+                    "NOTIFICATION_NOT_FOUND",
+                    new { NotificationId = notificationId });
+            }
+
             return await _notificationRepository.DeleteAsync(notificationId);
         }
 
@@ -218,6 +271,63 @@ namespace FITSKIP.Application.Services
                 UserName = notification.User?.UserName,
                 UserEmail = notification.User?.Email
             };
+        }
+
+        private void ValidateMessage(string message)
+        {
+            if (string.IsNullOrWhiteSpace(message))
+            {
+                throw new NotificationValidationException(
+                    "Nội dung thông báo không được để trống",
+                    "NOTIFICATION_MESSAGE_REQUIRED");
+            }
+
+            var trimmedMessage = message.Trim();
+            if (trimmedMessage.Length < 5)
+            {
+                throw new NotificationValidationException(
+                    "Nội dung thông báo phải có ít nhất 5 ký tự",
+                    "NOTIFICATION_MESSAGE_TOO_SHORT",
+                    new { MinLength = 5, ActualLength = trimmedMessage.Length });
+            }
+
+            if (trimmedMessage.Length > 500)
+            {
+                throw new NotificationValidationException(
+                    "Nội dung thông báo không được vượt quá 500 ký tự",
+                    "NOTIFICATION_MESSAGE_TOO_LONG",
+                    new { MaxLength = 500, ActualLength = trimmedMessage.Length });
+            }
+        }
+
+        private void ValidateTitle(string title)
+        {
+            if (title.Length > 200)
+            {
+                throw new NotificationValidationException(
+                    "Tiêu đề thông báo không được vượt quá 200 ký tự",
+                    "NOTIFICATION_TITLE_TOO_LONG",
+                    new { MaxLength = 200, ActualLength = title.Length });
+            }
+        }
+
+        private async Task ValidateUserIdAsync(string userId)
+        {
+            if (string.IsNullOrWhiteSpace(userId))
+            {
+                throw new NotificationValidationException(
+                    "User ID không được để trống",
+                    "NOTIFICATION_USER_ID_REQUIRED");
+            }
+
+            var user = await _userRepository.GetUserByIdAsync(userId);
+            if (user == null)
+            {
+                throw new NotificationValidationException(
+                    $"Không tìm thấy người dùng với ID {userId}",
+                    "USER_NOT_FOUND",
+                    new { UserId = userId });
+            }
         }
     }
 }

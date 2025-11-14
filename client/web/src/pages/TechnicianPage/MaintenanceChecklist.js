@@ -610,6 +610,11 @@ const MaintenanceChecklist = () => {
                   icon={<SaveOutlined />}
                   onClick={handleSaveChecklist}
                   loading={loading}
+                  style={{
+                    height: "40px",
+                    fontSize: "16px",
+                    minWidth: "120px",
+                  }}
                 >
                   Lưu tiến độ
                 </Button>,
@@ -623,6 +628,13 @@ const MaintenanceChecklist = () => {
                     selectedChecklist?.completedSteps !==
                     selectedChecklist?.totalSteps
                   }
+                  style={{
+                    backgroundColor: "#283652",
+                    borderColor: "#283652",
+                    height: "40px",
+                    fontSize: "16px",
+                    minWidth: "120px",
+                  }}
                 >
                   Hoàn thành
                 </Button>,
@@ -631,6 +643,11 @@ const MaintenanceChecklist = () => {
                 <Button
                   key="close"
                   onClick={() => setChecklistModalVisible(false)}
+                  style={{
+                    height: "40px",
+                    fontSize: "16px",
+                    minWidth: "120px",
+                  }}
                 >
                   Đóng
                 </Button>,

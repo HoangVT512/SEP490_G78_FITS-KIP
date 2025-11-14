@@ -11,11 +11,16 @@ public partial class ReplacementHistory
 
     public int? IncidentId { get; set; }
 
+    public int? WorkOrderId { get; set; }
+
     public int PartId { get; set; }
 
     public int Quantity { get; set; }
 
-    public DateTime ReplacedDate { get; set; }
+    /// <summary>
+    /// Ngày cấp phát linh kiện (NULL khi ở trạng thái "Chờ duyệt cấp phát", được ghi khi Quản lý kho duyệt)
+    /// </summary>
+    public DateTime? ReplacedDate { get; set; }
 
     public string ReplacedBy { get; set; } = null!;
 
@@ -43,14 +48,11 @@ public partial class ReplacementHistory
     /// </summary>
     public string? ReturnConfirmedBy { get; set; }
 
-    /// <summary>
-    /// Ghi chú về việc trả lại
-    /// </summary>
-    public string? ReturnRemarks { get; set; }
-
     public virtual Equipment? Equipment { get; set; }
 
     public virtual IncidentHistory? Incident { get; set; }
+
+    public virtual MaintenanceWorkOrder? WorkOrder { get; set; }
 
     public virtual SparePart Part { get; set; } = null!;
 

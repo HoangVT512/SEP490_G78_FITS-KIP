@@ -147,11 +147,11 @@ namespace FITSKIP.Infrastructure.Repositories
         public async Task<Dictionary<int, int>> GetUsageByWeekAsync(int week, int year, CancellationToken cancellationToken = default)
         {
             var replacements = await _context.ReplacementHistories
-                .Where(rh => rh.ReplacedDate.Year == year)
+                .Where(rh => rh.ReplacedDate != null && rh.ReplacedDate.Value.Year == year)
                 .ToListAsync(cancellationToken);
 
             var result = replacements
-                .Where(rh => GetWeekOfYear(rh.ReplacedDate) == week)
+                .Where(rh => GetWeekOfYear(rh.ReplacedDate!.Value) == week)
                 .GroupBy(rh => rh.PartId)
                 .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity));
 
@@ -161,7 +161,7 @@ namespace FITSKIP.Infrastructure.Repositories
         public async Task<Dictionary<int, int>> GetUsageByMonthAsync(int month, int year, CancellationToken cancellationToken = default)
         {
             var result = await _context.ReplacementHistories
-                .Where(rh => rh.ReplacedDate.Month == month && rh.ReplacedDate.Year == year)
+                .Where(rh => rh.ReplacedDate != null && rh.ReplacedDate.Value.Month == month && rh.ReplacedDate.Value.Year == year)
                 .GroupBy(rh => rh.PartId)
                 .Select(g => new { PartId = g.Key, Quantity = g.Sum(x => x.Quantity) })
                 .ToDictionaryAsync(x => x.PartId, x => x.Quantity, cancellationToken);
@@ -176,11 +176,11 @@ namespace FITSKIP.Infrastructure.Repositories
             var currentYear = today.Year;
 
             var replacements = await _context.ReplacementHistories
-                .Where(rh => rh.ReplacedDate.Year == currentYear)
+                .Where(rh => rh.ReplacedDate != null && rh.ReplacedDate.Value.Year == currentYear)
                 .ToListAsync(cancellationToken);
 
             var result = replacements
-                .Where(rh => GetWeekOfYear(rh.ReplacedDate) == currentWeek)
+                .Where(rh => GetWeekOfYear(rh.ReplacedDate!.Value) == currentWeek)
                 .GroupBy(rh => rh.PartId)
                 .ToDictionary(g => g.Key, g => g.Sum(x => x.Quantity));
 
@@ -194,7 +194,7 @@ namespace FITSKIP.Infrastructure.Repositories
             var currentYear = today.Year;
 
             var result = await _context.ReplacementHistories
-                .Where(rh => rh.ReplacedDate.Month == currentMonth && rh.ReplacedDate.Year == currentYear)
+                .Where(rh => rh.ReplacedDate != null && rh.ReplacedDate.Value.Month == currentMonth && rh.ReplacedDate.Value.Year == currentYear)
                 .GroupBy(rh => rh.PartId)
                 .Select(g => new { PartId = g.Key, Quantity = g.Sum(x => x.Quantity) })
                 .ToDictionaryAsync(x => x.PartId, x => x.Quantity, cancellationToken);

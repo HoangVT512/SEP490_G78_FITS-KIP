@@ -1,6 +1,7 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using FITSKIP.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 
@@ -53,6 +54,16 @@ namespace FITSKIP.API.Controllers
                 var created = await departmentService.CreateAsync(request, cancellationToken);
                 return CreatedAtAction(nameof(GetById), new { id = created.DepartmentId }, created);
             }
+            catch (DepartmentValidationException ex)
+            {
+                // Return validation error with structured response
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message,
+                    errorCode = ex.ErrorCode,
+                    errorData = ex.ErrorData
+                });
+            }
             catch (InvalidOperationException ex)
             {
                 // Trả về thông báo lỗi cụ thể từ service layer
@@ -72,6 +83,16 @@ namespace FITSKIP.API.Controllers
                 var updated = await departmentService.UpdateAsync(id, request, cancellationToken);
                 if (updated == null) return NotFound();
                 return Ok(updated);
+            }
+            catch (DepartmentValidationException ex)
+            {
+                // Return validation error with structured response
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message,
+                    errorCode = ex.ErrorCode,
+                    errorData = ex.ErrorData
+                });
             }
             catch (InvalidOperationException ex)
             {

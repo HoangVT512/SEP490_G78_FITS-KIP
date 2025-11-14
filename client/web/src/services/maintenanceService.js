@@ -40,6 +40,14 @@ export const deleteTemplate = async (templateId) => {
   });
 };
 
+// Add checklist item to template (for import Excel)
+export const addChecklistItemToTemplate = async (templateId, itemData) => {
+  return apiRequest(`/maintenance/templates/${templateId}/checklist`, {
+    method: "POST",
+    body: JSON.stringify(itemData),
+  });
+};
+
 // ===== MAINTENANCE PLAN MANAGEMENT =====
 
 // Get all maintenance plans
@@ -210,6 +218,14 @@ export const cancelWorkOrder = async (workOrderId, reason) => {
   });
 };
 
+// Postpone work order (Hoãn phiếu bảo trì)
+export const postponeWorkOrder = async (workOrderId, postponeData) => {
+  return apiRequest(`/maintenance/work-orders/${workOrderId}/postpone`, {
+    method: "POST",
+    body: JSON.stringify(postponeData),
+  });
+};
+
 // Delete work order
 export const deleteWorkOrder = async (workOrderId) => {
   return apiRequest(`/maintenance/work-orders/${workOrderId}`, {
@@ -257,6 +273,13 @@ export const getMechanicalTechnicians = async () => {
 // Get electrical technicians
 export const getElectricalTechnicians = async () => {
   return apiRequest("/maintenance/technicians/electrical", { method: "GET" });
+};
+
+// Get technicians workload by date
+export const getTechniciansWorkloadByDate = async (date) => {
+  // Format date to YYYY-MM-DD
+  const dateStr = date instanceof Date ? date.toISOString().split('T')[0] : date;
+  return apiRequest(`/maintenance/technicians/workload?date=${dateStr}`, { method: "GET" });
 };
 
 // ===== STATISTICS & REPORTS =====

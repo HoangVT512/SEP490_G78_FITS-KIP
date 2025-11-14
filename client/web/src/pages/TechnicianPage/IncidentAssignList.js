@@ -36,6 +36,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { incidentService } from "../../services/incidentService";
+import { replacementHistoryService } from "../../services/replacementHistoryService";
 import SparepartRequestModal from "./SparepartRequestModal";
 import ReplacementCreate from "./ReplacementCreate";
 import ReplacementHistoryList from "./ReplacementHistoryList";
@@ -95,7 +96,6 @@ const IncidentAssignList = () => {
         startTime: it.startTime || it.reportDate,
         endTime: it.endTime || null,
         assignedDate: it.assignedDate || it.startTime || it.reportDate,
-        dueDate: it.dueDate || it.expectedEndTime || null,
         reportedBy:
           it.reportedByUser?.fullName || it.reportedByName || it.reporter || "",
         lineName:
@@ -135,11 +135,9 @@ const IncidentAssignList = () => {
       width: 180,
       render: (record) => (
         <div>
-          <div style={{ fontWeight: 500, color: "#1890ff" }}>
-            {record.equipmentCode}
-          </div>
+          <div style={{ fontWeight: 500 }}>{record.equipmentName}</div>
           <div style={{ fontSize: "12px", color: "#888" }}>
-            {record.equipmentName}
+            {record.equipmentCode}
           </div>
         </div>
       ),
@@ -172,23 +170,6 @@ const IncidentAssignList = () => {
       ),
     },
     {
-      title: "Ưu tiên",
-      dataIndex: "priority",
-      key: "priority",
-      width: 100,
-      render: (priority) => {
-        let color = "default";
-        if (priority === "Cao") color = "red";
-        else if (priority === "Trung bình") color = "orange";
-        else if (priority === "Thấp") color = "green";
-        return (
-          <Tag color={color} style={{ fontWeight: 500 }}>
-            {priority}
-          </Tag>
-        );
-      },
-    },
-    {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
@@ -218,29 +199,19 @@ const IncidentAssignList = () => {
       dataIndex: "assignedDate",
       key: "assignedDate",
       width: 150,
-      render: (text) => <div style={{ fontSize: "12px" }}>{text}</div>,
-    },
-    {
-      title: "Hạn xử lý",
-      dataIndex: "dueDate",
-      key: "dueDate",
-      width: 150,
-      render: (text, record) => {
-        const isOverdue =
-          new Date(text) < new Date() && record.status !== "Hoàn thành";
-        return (
-          <div
-            style={{
-              fontSize: "12px",
-              color: isOverdue ? "#ff4d4f" : "inherit",
-              fontWeight: isOverdue ? 500 : "normal",
-            }}
-          >
-            {text}
-            {isOverdue && <Badge status="error" style={{ marginLeft: 8 }} />}
+      render: (text) =>
+        text ? (
+          <div>
+            <div style={{ fontSize: "13px" }}>
+              {dayjs(text).format("DD/MM/YYYY")}
+            </div>
+            <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+              {dayjs(text).format("HH:mm")}
+            </div>
           </div>
-        );
-      },
+        ) : (
+          ""
+        ),
     },
     {
       title: "Thao tác",
@@ -263,9 +234,66 @@ const IncidentAssignList = () => {
             key: "recordReplacement",
             icon: <ToolOutlined />,
             label: "Ghi nhận thay thế",
-            onClick: () => {
-              setReplacementForIncident(record);
-              setReplacementModalVisible(true);
+            onClick: async () => {
+              // Check if there are any approved replacement requests
+              try {
+                const incidentId =
+                  record.incidentId || record.id || record.incidentID;
+
+                if (!incidentId) {
+                  console.error("Cannot find incident ID in record:", record);
+                  message.error("Không tìm thấy mã sự cố");
+                  return;
+                }
+
+                console.log(
+                  "=== Checking replacement for incident:",
+                  incidentId
+                );
+
+                const res = await replacementHistoryService.getByIncidentId(
+                  incidentId
+                );
+                const data = Array.isArray(res) ? res : res?.data || [];
+
+                console.log("API Response:", res);
+                console.log("Parsed data:", data);
+                console.log(
+                  "Data statuses:",
+                  data.map((r) => ({ id: r.replacementID, status: r.status }))
+                );
+
+                const hasApprovedReplacement = data.some(
+                  (r) =>
+                    r.status === "Đã duyệt cấp phát" || r.status === "Completed"
+                );
+
+                console.log(
+                  "Has approved replacement:",
+                  hasApprovedReplacement
+                );
+
+                if (!hasApprovedReplacement) {
+                  message.warning({
+                    content:
+                      "Vui lòng tạo yêu cầu phụ tùng và chờ Quản lý kho duyệt cấp phát trước khi ghi nhận thay thế",
+                    duration: 5,
+                  });
+                  return;
+                }
+
+                // If there are approved replacements, show the modal
+                setReplacementForIncident(record);
+                setReplacementModalVisible(true);
+              } catch (error) {
+                console.error("Error checking replacement history:", error);
+                // Nếu có lỗi API (ví dụ: chưa có yêu cầu nào), cũng hiển thị message hướng dẫn
+                message.warning({
+                  content:
+                    "Vui lòng tạo yêu cầu phụ tùng và chờ Quản lý kho duyệt cấp phát trước khi ghi nhận thay thế",
+                  duration: 5,
+                });
+              }
             },
           });
         }
@@ -294,14 +322,14 @@ const IncidentAssignList = () => {
         }
 
         // Chỉ hiển thị "Cập nhật" khi sự cố chưa hoàn thành
-        if (record.status !== "Hoàn thành") {
-          items.push({
-            key: "update",
-            icon: <EditOutlined />,
-            label: "Cập nhật",
-            onClick: () => handleUpdateIncident(record),
-          });
-        }
+        // if (record.status !== "Hoàn thành") {
+        //   items.push({
+        //     key: "update",
+        //     icon: <EditOutlined />,
+        //     label: "Cập nhật",
+        //     onClick: () => handleUpdateIncident(record),
+        //   });
+        // }
 
         return (
           <Dropdown
@@ -342,22 +370,22 @@ const IncidentAssignList = () => {
     setUpdateModalVisible(true);
   };
 
-  const handleUpdateSubmit = async (values) => {
-    try {
-      setLoading(true);
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+  // const handleUpdateSubmit = async (values) => {
+  //   try {
+  //     setLoading(true);
+  //     // Simulate API call
+  //     await new Promise((resolve) => setTimeout(resolve, 1000));
 
-      message.success("Cập nhật sự cố thành công!");
-      setUpdateModalVisible(false);
-      form.resetFields();
-      fetchIncidents();
-    } catch (error) {
-      message.error("Cập nhật sự cố thất bại!");
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     message.success("Cập nhật sự cố thành công!");
+  //     setUpdateModalVisible(false);
+  //     form.resetFields();
+  //     fetchIncidents();
+  //   } catch (error) {
+  //     message.error("Cập nhật sự cố thất bại!");
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   const getStatusBadge = (status) => {
     const badges = {
@@ -382,9 +410,16 @@ const IncidentAssignList = () => {
       {/* Statistics */}
       <Row gutter={[16, 16]} className={styles.statsRow}>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #e8e8e8" }}>
+          <Card
+            className={styles.statsCard}
+            style={{ borderRadius: "8px", border: "1px solid #e8e8e8" }}
+          >
             <Statistic
-              title={<span style={{ color: "#283652", fontWeight: "600" }}>Tổng sự cố</span>}
+              title={
+                <span style={{ color: "#283652", fontWeight: "600" }}>
+                  Tổng sự cố
+                </span>
+              }
               value={stats.total}
               prefix={<InboxOutlined style={{ color: "#283652" }} />}
               valueStyle={{
@@ -396,11 +431,20 @@ const IncidentAssignList = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #ffccc7" }}>
+          <Card
+            className={styles.statsCard}
+            style={{ borderRadius: "8px", border: "1px solid #ffccc7" }}
+          >
             <Statistic
-              title={<span style={{ color: "#ff4d4f", fontWeight: "600" }}>Chưa xử lý</span>}
+              title={
+                <span style={{ color: "#ff4d4f", fontWeight: "600" }}>
+                  Chưa xử lý
+                </span>
+              }
               value={stats.pending}
-              prefix={<ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />}
+              prefix={
+                <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
+              }
               valueStyle={{
                 color: "#ff4d4f",
                 fontSize: "28px",
@@ -410,9 +454,16 @@ const IncidentAssignList = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #ffe58f" }}>
+          <Card
+            className={styles.statsCard}
+            style={{ borderRadius: "8px", border: "1px solid #ffe58f" }}
+          >
             <Statistic
-              title={<span style={{ color: "#faad14", fontWeight: "600" }}>Đang xử lý</span>}
+              title={
+                <span style={{ color: "#faad14", fontWeight: "600" }}>
+                  Đang xử lý
+                </span>
+              }
               value={stats.inProgress}
               prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />}
               valueStyle={{
@@ -424,9 +475,16 @@ const IncidentAssignList = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #b7eb8f" }}>
+          <Card
+            className={styles.statsCard}
+            style={{ borderRadius: "8px", border: "1px solid #b7eb8f" }}
+          >
             <Statistic
-              title={<span style={{ color: "#52c41a", fontWeight: "600" }}>Hoàn thành</span>}
+              title={
+                <span style={{ color: "#52c41a", fontWeight: "600" }}>
+                  Hoàn thành
+                </span>
+              }
               value={stats.completed}
               prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
               valueStyle={{
@@ -454,7 +512,7 @@ const IncidentAssignList = () => {
             </Button>
           </Space>
         }
-         variant="borderless"
+        variant="borderless"
       >
         {/* Filter Tabs */}
         <div className={styles.filterTabs}>
@@ -462,15 +520,19 @@ const IncidentAssignList = () => {
             <Button
               type={filterStatus === "all" ? "primary" : "default"}
               onClick={() => setFilterStatus("all")}
-              style={filterStatus === "all" ? {
-                borderRadius: "6px",
-                fontWeight: "500",
-              } : {
-                borderColor: "#d9d9d9",
-                color: "#595959",
-                borderRadius: "6px",
-                fontWeight: "500",
-              }}
+              style={
+                filterStatus === "all"
+                  ? {
+                      borderRadius: "6px",
+                      fontWeight: "500",
+                    }
+                  : {
+                      borderColor: "#d9d9d9",
+                      color: "#595959",
+                      borderRadius: "6px",
+                      fontWeight: "500",
+                    }
+              }
             >
               Tất cả ({incidents.length})
             </Button>
@@ -478,15 +540,19 @@ const IncidentAssignList = () => {
               <Button
                 type={filterStatus === "Chưa xử lý" ? "primary" : "default"}
                 onClick={() => setFilterStatus("Chưa xử lý")}
-                style={filterStatus === "Chưa xử lý" ? {
-                  borderRadius: "6px",
-                  fontWeight: "500",
-                } : {
-                  borderColor: "#d9d9d9",
-                  color: "#595959",
-                  borderRadius: "6px",
-                  fontWeight: "500",
-                }}
+                style={
+                  filterStatus === "Chưa xử lý"
+                    ? {
+                        borderRadius: "6px",
+                        fontWeight: "500",
+                      }
+                    : {
+                        borderColor: "#d9d9d9",
+                        color: "#595959",
+                        borderRadius: "6px",
+                        fontWeight: "500",
+                      }
+                }
               >
                 Chưa xử lý
               </Button>
@@ -495,15 +561,19 @@ const IncidentAssignList = () => {
               <Button
                 type={filterStatus === "Đang xử lý" ? "primary" : "default"}
                 onClick={() => setFilterStatus("Đang xử lý")}
-                style={filterStatus === "Đang xử lý" ? {
-                  borderRadius: "6px",
-                  fontWeight: "500",
-                } : {
-                  borderColor: "#d9d9d9",
-                  color: "#595959",
-                  borderRadius: "6px",
-                  fontWeight: "500",
-                }}
+                style={
+                  filterStatus === "Đang xử lý"
+                    ? {
+                        borderRadius: "6px",
+                        fontWeight: "500",
+                      }
+                    : {
+                        borderColor: "#d9d9d9",
+                        color: "#595959",
+                        borderRadius: "6px",
+                        fontWeight: "500",
+                      }
+                }
               >
                 Đang xử lý
               </Button>
@@ -512,15 +582,19 @@ const IncidentAssignList = () => {
               <Button
                 type={filterStatus === "Hoàn thành" ? "primary" : "default"}
                 onClick={() => setFilterStatus("Hoàn thành")}
-                style={filterStatus === "Hoàn thành" ? {
-                  borderRadius: "6px",
-                  fontWeight: "500",
-                } : {
-                  borderColor: "#d9d9d9",
-                  color: "#595959",
-                  borderRadius: "6px",
-                  fontWeight: "500",
-                }}
+                style={
+                  filterStatus === "Hoàn thành"
+                    ? {
+                        borderRadius: "6px",
+                        fontWeight: "500",
+                      }
+                    : {
+                        borderColor: "#d9d9d9",
+                        color: "#595959",
+                        borderRadius: "6px",
+                        fontWeight: "500",
+                      }
+                }
               >
                 Hoàn thành
               </Button>
@@ -544,6 +618,13 @@ const IncidentAssignList = () => {
           }}
           style={{ borderRadius: "6px" }}
         />
+        {incidents.length === 0 && !loading && (
+          <div
+            style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}
+          >
+            Không có sự cố nào được giao
+          </div>
+        )}
       </Card>
 
       {/* Spare parts modal (request spare parts) */}
@@ -562,7 +643,9 @@ const IncidentAssignList = () => {
       {/* Replacement create modal (embedded form) */}
       <Modal
         title={
-          <div style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}>
+          <div
+            style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}
+          >
             Ghi nhận thay thế (liên quan sự cố)
           </div>
         }
@@ -594,17 +677,19 @@ const IncidentAssignList = () => {
       <Modal
         title={
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "50%",
-              backgroundColor: "#283652",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-              fontSize: "18px"
-            }}>
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                backgroundColor: "#283652",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                fontSize: "18px",
+              }}
+            >
               <FileTextOutlined />
             </div>
             <div>
@@ -618,7 +703,8 @@ const IncidentAssignList = () => {
                   fontWeight: "normal",
                 }}
               >
-                {selectedIncident?.incidentCode} • {selectedIncident?.equipmentName}
+                {selectedIncident?.incidentCode} •{" "}
+                {selectedIncident?.equipmentName}
               </div>
             </div>
           </div>
@@ -628,11 +714,15 @@ const IncidentAssignList = () => {
         width={1200}
         centered
         footer={[
-          <Button key="close" onClick={() => setDetailModalVisible(false)} style={{
-            height: "40px",
-            fontSize: "16px",
-            minWidth: "120px",
-          }}>
+          <Button
+            key="close"
+            onClick={() => setDetailModalVisible(false)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
             Đóng
           </Button>,
           <Button
@@ -662,8 +752,8 @@ const IncidentAssignList = () => {
                 handleUpdateIncident(selectedIncident);
               }}
               style={{
-                backgroundColor: "#1890ff",
-                borderColor: "#1890ff",
+                backgroundColor: "#283652",
+                borderColor: "#283652",
                 height: "40px",
                 fontSize: "16px",
                 minWidth: "120px",
@@ -697,8 +787,8 @@ const IncidentAssignList = () => {
                     selectedIncident.status === "Hoàn thành"
                       ? "success"
                       : selectedIncident.status === "Đang xử lý"
-                        ? "processing"
-                        : "warning"
+                      ? "processing"
+                      : "warning"
                   }
                 >
                   {selectedIncident.status}
@@ -720,33 +810,52 @@ const IncidentAssignList = () => {
               <Descriptions.Item label="Giải pháp" span={2}>
                 {selectedIncident.solution || "Chưa có giải pháp"}
               </Descriptions.Item>
-              <Descriptions.Item label="Ưu tiên" span={1}>
-                <Tag
-                  color={
-                    selectedIncident.priority === "Cao"
-                      ? "red"
-                      : selectedIncident.priority === "Trung bình"
-                        ? "orange"
-                        : "green"
-                  }
-                >
-                  {selectedIncident.priority}
-                </Tag>
-              </Descriptions.Item>
               <Descriptions.Item label="Người báo cáo" span={1}>
                 {selectedIncident.reportedBy}
               </Descriptions.Item>
               <Descriptions.Item label="Thời gian bắt đầu" span={1}>
-                {selectedIncident.startTime}
+                {selectedIncident.startTime ? (
+                  <div>
+                    <div style={{ fontSize: "13px" }}>
+                      {dayjs(selectedIncident.startTime).format("DD/MM/YYYY")}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                      {dayjs(selectedIncident.startTime).format("HH:mm")}
+                    </div>
+                  </div>
+                ) : (
+                  ""
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="Thời gian kết thúc" span={1}>
-                {selectedIncident.endTime || "Chưa hoàn thành"}
+                {selectedIncident.endTime ? (
+                  <div>
+                    <div style={{ fontSize: "13px" }}>
+                      {dayjs(selectedIncident.endTime).format("DD/MM/YYYY")}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                      {dayjs(selectedIncident.endTime).format("HH:mm")}
+                    </div>
+                  </div>
+                ) : (
+                  "Chưa hoàn thành"
+                )}
               </Descriptions.Item>
               <Descriptions.Item label="Ngày giao" span={1}>
-                {selectedIncident.assignedDate}
-              </Descriptions.Item>
-              <Descriptions.Item label="Hạn xử lý" span={1}>
-                {selectedIncident.dueDate}
+                {selectedIncident.assignedDate ? (
+                  <div>
+                    <div style={{ fontSize: "13px" }}>
+                      {dayjs(selectedIncident.assignedDate).format(
+                        "DD/MM/YYYY"
+                      )}
+                    </div>
+                    <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                      {dayjs(selectedIncident.assignedDate).format("HH:mm")}
+                    </div>
+                  </div>
+                ) : (
+                  ""
+                )}
               </Descriptions.Item>
             </Descriptions>
           </div>
@@ -756,7 +865,9 @@ const IncidentAssignList = () => {
       {/* Replacement history modal */}
       <Modal
         title={
-          <div style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}>
+          <div
+            style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}
+          >
             Lịch sử thay thế
           </div>
         }
@@ -788,7 +899,7 @@ const IncidentAssignList = () => {
       </Modal>
 
       {/* Update Modal */}
-      <Modal
+      {/* <Modal
         title={
           <div style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}>
             Cập nhật sự cố
@@ -879,7 +990,7 @@ const IncidentAssignList = () => {
             </Space>
           </Form.Item>
         </Form>
-      </Modal>
+      </Modal> */}
     </div>
   );
 };

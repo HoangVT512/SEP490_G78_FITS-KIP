@@ -157,31 +157,33 @@ public class TestDbContext : IdentityDbContext<User>
             entity.Property(e => e.PlanId).HasColumnName("PlanID");
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
             entity.Property(e => e.IntervalType).HasMaxLength(20);
-            entity.Property(e => e.AssignedTo).HasMaxLength(450);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
             entity.HasOne(d => d.Equipment).WithMany()
                 .HasForeignKey(d => d.EquipmentId)
                 .HasConstraintName("FK__MaintenanPlan__Equip__1234567");
 
-            entity.HasOne(d => d.AssignedToUser).WithMany()
-                .HasForeignKey(d => d.AssignedTo)
-                .HasConstraintName("FK__MaintenanPlan__User__2345678");
+            // AssignedTo, AssignedToUser removed - now using Assignments
+            #pragma warning disable CS0618 // Obsolete
+            entity.Ignore(e => e.ChecklistItems); // Obsolete - use WorkOrders
+            #pragma warning restore CS0618
         });
 
         modelBuilder.Entity<MaintenanceChecklistItem>(entity =>
         {
             entity.HasKey(e => e.ChecklistId).HasName("PK__Maintena__26C4E2F5A1234567");
             entity.Property(e => e.ChecklistId).HasColumnName("ChecklistID");
+            #pragma warning disable CS0618 // Obsolete
             entity.Property(e => e.PlanId).HasColumnName("PlanID");
+            #pragma warning restore CS0618
+
             entity.Property(e => e.StepName).HasMaxLength(200);
             entity.Property(e => e.CompletedDate).HasColumnType("datetime");
             entity.Property(e => e.Notes).HasMaxLength(500);
 
-            entity.HasOne(d => d.Plan).WithMany(p => p.ChecklistItems)
-                .HasForeignKey(d => d.PlanId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Maintena__PlanID__3456789");
+            #pragma warning disable CS0618 // Obsolete
+            entity.Ignore(e => e.Plan);
+            #pragma warning restore CS0618
         });
 
         modelBuilder.Entity<ProductionOutput>(entity =>

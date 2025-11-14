@@ -1,5 +1,6 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using FITSKIP.Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -69,6 +70,15 @@ public class ProductionOutputsController : ControllerBase
             return CreatedAtAction(nameof(GetProductionOutput), new { id = output.OutputId },
                 new { success = true, data = output, message = "Tạo sản lượng sản xuất thành công" });
         }
+        catch (ProductionOutputValidationException ex)
+        {
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
+        }
         catch (ArgumentException ex)
         {
             return BadRequest(new { success = false, message = ex.Message });
@@ -99,6 +109,15 @@ public class ProductionOutputsController : ControllerBase
                 return NotFound(new { success = false, message = "Không tìm thấy sản lượng sản xuất với ID: " + id });
 
             return Ok(new { success = true, data = output, message = "Cập nhật sản lượng sản xuất thành công" });
+        }
+        catch (ProductionOutputValidationException ex)
+        {
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
         }
         catch (Exception ex)
         {

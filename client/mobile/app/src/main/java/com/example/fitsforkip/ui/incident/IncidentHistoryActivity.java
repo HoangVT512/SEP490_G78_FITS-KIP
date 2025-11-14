@@ -36,6 +36,7 @@ import com.google.android.material.navigation.NavigationView;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -328,7 +329,10 @@ public class IncidentHistoryActivity extends AppCompatActivity {
             request.setLineId(lineId); // Add lineId
             request.setStartTime(formatDate(entity.getStartTime()));
             request.setEndTime(formatDate(entity.getEndTime()));
-            request.setDuration(entity.getDuration());
+            // Recalculate duration with break deduction and floor
+            double adjustedDuration = calculateDurationWithBreakDeduction(entity.getStartTime(), entity.getEndTime());
+            double roundedDuration = Math.floor(adjustedDuration * 100) / 100;
+            request.setDuration(roundedDuration);
             request.setTypeId(entity.getTypeId());
             request.setReason(entity.getReason());
             request.setSolution(entity.getSolution());
@@ -442,6 +446,47 @@ public class IncidentHistoryActivity extends AppCompatActivity {
             drawerLayout.closeDrawer(GravityCompat.START);
         } else {
             super.onBackPressed();
+        }
+    }
+
+    private double calculateDurationWithBreakDeduction(Date startTime, Date endTime) {
+        double totalMinutes = (endTime.getTime() - startTime.getTime()) / (1000.0 * 60.0);
+
+        // Trừ break time giống backend
+        double break1Overlap = calculateBreakOverlap(startTime, endTime, 11, 0, 11, 30);
+        double break2Overlap = calculateBreakOverlap(startTime, endTime, 18, 0, 18, 30);
+
+        return Math.max(0.0, totalMinutes - break1Overlap - break2Overlap);
+    }
+
+    private double calculateBreakOverlap(Date startTime, Date endTime, int breakStartHour, int breakStartMinute, int breakEndHour, int breakEndMinute) {
+        // Tạo Date cho break start và end trong cùng ngày với startTime
+        Calendar breakStart = Calendar.getInstance();
+        breakStart.setTime(startTime);
+        breakStart.set(Calendar.HOUR_OF_DAY, breakStartHour);
+        breakStart.set(Calendar.MINUTE, breakStartMinute);
+        breakStart.set(Calendar.SECOND, 0);
+        breakStart.set(Calendar.MILLISECOND, 0);
+
+        Calendar breakEnd = Calendar.getInstance();
+        breakEnd.setTime(startTime);
+        breakEnd.set(Calendar.HOUR_OF_DAY, breakEndHour);
+        breakEnd.set(Calendar.MINUTE, breakEndMinute);
+        breakEnd.set(Calendar.SECOND, 0);
+        breakEnd.set(Calendar.MILLISECOND, 0);
+
+        // Nếu break end < break start, nghĩa là qua ngày hôm sau
+        if (breakEnd.before(breakStart)) {
+            breakEnd.add(Calendar.DAY_OF_MONTH, 1);
+        }
+
+        long overlapStart = Math.max(startTime.getTime(), breakStart.getTimeInMillis());
+        long overlapEnd = Math.min(endTime.getTime(), breakEnd.getTimeInMillis());
+
+        if (overlapStart < overlapEnd) {
+            return (overlapEnd - overlapStart) / (1000.0 * 60.0);
+        } else {
+            return 0.0;
         }
     }
 }

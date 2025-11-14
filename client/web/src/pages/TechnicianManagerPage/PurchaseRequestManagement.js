@@ -578,6 +578,9 @@ const PurchaseRequestManagement = () => {
             showTotal: (total) => `Tổng ${total} yêu cầu`,
           }}
           style={{ borderRadius: "6px" }}
+          locale={{
+            emptyText: "Không có yêu cầu mua hàng nào"
+          }}
         />
       </Space>
     </Card>

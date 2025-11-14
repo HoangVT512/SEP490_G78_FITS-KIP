@@ -1,14 +1,19 @@
-﻿using FITSKIP.Application.Interfaces;
+using FITSKIP.Application.Interfaces;
+using FITSKIP.Application.Helpers;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Infrastructure.DbContexts;
+using FITSKIP.API.Hubs;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using FITSKIP.Domain.Exceptions;
 
 namespace FITSKIP.API.Controllers
 {
@@ -20,15 +25,21 @@ namespace FITSKIP.API.Controllers
         private readonly IReplacementHistoryService _service;
         private readonly FitskipDbContext _context;
         private readonly IIncidentService _incidentService;
+        private readonly IHubContext<NotificationHub> _notificationHubContext;
+        private readonly INotificationService _notificationService; // ✅ THÊM
 
         public ReplacementHistoriesController(
             IReplacementHistoryService service,
             FitskipDbContext context,
-            IIncidentService incidentService)
+            IIncidentService incidentService,
+            IHubContext<NotificationHub> notificationHubContext,
+            INotificationService notificationService) // ✅ THÊM
         {
             _service = service;
             _context = context;
             _incidentService = incidentService;
+            _notificationHubContext = notificationHubContext;
+            _notificationService = notificationService; // ✅ THÊM
         }
 
         [HttpGet]
@@ -41,6 +52,7 @@ namespace FITSKIP.API.Controllers
                 {
                     EquipmentID = s.EquipmentId,
                     IncidentId = s.IncidentId,
+                    WorkOrderId = s.WorkOrderId,
                     PartID = s.PartId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
@@ -48,10 +60,15 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
                     ReplacedBy = s.ReplacedBy,
                     ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     ReplacementID = s.ReplacementId,
                     Quantity = s.Quantity,
+                    ActualQuantityUsed = s.ActualQuantityUsed,
+                    QuantityToReturn = s.QuantityToReturn,
                     ReplacedDate = s.ReplacedDate,
+                    ReturnedDate = s.ReturnedDate,
                     Status = s.Status,
                     Remarks = s.Remarks
                 });
@@ -82,6 +99,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = result.Equipment != null ? result.Equipment.EquipmentCode : null,
                     ReplacedBy = result.ReplacedBy,
                     ReplacedByUserName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.Email : null,
                     ReplacementID = result.ReplacementId,
                     Quantity = result.Quantity,
@@ -89,7 +108,6 @@ namespace FITSKIP.API.Controllers
                     QuantityToReturn = result.QuantityToReturn,
                     ReplacedDate = result.ReplacedDate,
                     ReturnedDate = result.ReturnedDate,
-                    ReturnRemarks = result.ReturnRemarks,
                     Status = result.Status,
                     Remarks = result.Remarks
                 };
@@ -102,7 +120,7 @@ namespace FITSKIP.API.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<ReplacementHistoryDTO>> Create([FromBody] CreateReplacementHistoryRequest request, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<ReplacementHistoryDTO>> Create([FromBody] ReplacementHistory request, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -119,25 +137,47 @@ namespace FITSKIP.API.Controllers
                     }
                 }
 
-                // Mapping DTO to Entity
-                var replacementHistory = new ReplacementHistory
-                {
-                    PartId = request.PartId,
-                    EquipmentId = request.EquipmentId,
-                    IncidentId = request.IncidentId, // Add IncidentId mapping
-                    Quantity = request.Quantity,
-                    ReplacedDate = request.ReplacedDate,
-                    ReplacedBy = request.ReplacedBy,
-                    Status = request.Status,
-                    Remarks = request.Remarks,
+                // Use validation-enabled service method
+                var created = await _service.CreateAsync(request, cancellationToken);
 
-                };
-                if (request.Quantity <= 0)
+                // ✅ GỬI THÔNG BÁO ĐẾN QUẢN LÝ KHO
+                try
                 {
-                    return BadRequest(new { message = "Số lượng phụ tùng phải lớn hơn 0" });
+                    var partInfo = created.Part != null
+                        ? $"{created.Part.PartName} ({created.Part.PartNumber})"
+                        : "Phụ tùng";
+
+                    var equipmentInfo = created.Equipment != null
+                        ? $"{created.Equipment.EquipmentName} ({created.Equipment.EquipmentCode})"
+                        : "Thiết bị";
+
+                    var requestType = created.IncidentId.HasValue ? "sự cố" : "bảo trì";
+                    var referenceId = created.IncidentId.HasValue
+                        ? $"INC-{created.IncidentId}"
+                        : created.WorkOrderId.HasValue
+                            ? $"WO-{created.WorkOrderId}"
+                            : "";
+
+                    var message = $"Yêu cầu phụ tùng mới từ {requestType} {referenceId}: {partInfo} cho {equipmentInfo} - Số lượng: {created.Quantity}";
+
+                    await _notificationService.SendNotificationToRoleAsync(
+                        "Quản lý kho",
+                        message,
+                        "ReplacementRequest"
+                    );
+
+                    // Broadcast SignalR notification
+                    await _notificationHubContext.Clients.All.SendAsync(
+                        "ReceiveDataUpdate",
+                        new { type = "replacementRequest", action = "created", id = created.ReplacementId },
+                        cancellationToken
+                    );
                 }
-
-                var created = await _service.CreateAsync(replacementHistory, cancellationToken);
+                catch (Exception notificationEx)
+                {
+                    // Log notification error but don't fail the request
+                    Console.WriteLine($"Failed to send notification: {notificationEx.Message}");
+                }
 
                 // Mapping Entity to DTO
                 var response = new ReplacementHistoryDTO
@@ -151,6 +191,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = created.Equipment != null ? created.Equipment.EquipmentCode : null,
                     ReplacedBy = created.ReplacedBy,
                     ReplacedByUserName = created.ReplacedByNavigation != null ? created.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = created.ReplacedByNavigation != null ? created.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = created.ReplacedByNavigation != null ? created.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = created.ReplacedByNavigation != null ? created.ReplacedByNavigation.Email : null,
                     ReplacementID = created.ReplacementId,
                     Quantity = created.Quantity,
@@ -166,6 +208,15 @@ namespace FITSKIP.API.Controllers
                 // Return BadRequest so client sees a readable validation error
                 return BadRequest(new { message = ex.Message });
             }
+            catch (ReplacementHistoryValidationException ex)
+            {
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message,
+                    errorCode = ex.ErrorCode,
+                    errorData = ex.ErrorData
+                });
+            }
             catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -177,36 +228,27 @@ namespace FITSKIP.API.Controllers
         }
 
         [HttpPut("{id:int}")]
-        public async Task<ActionResult<ReplacementHistoryDTO>> Update(int id, [FromBody] UpdateReplacementHistoryRequest request, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<ReplacementHistoryDTO>> Update(int id, [FromBody] ReplacementHistory request, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                // Mapping DTO to Entity
-                var replacementHistory = new ReplacementHistory
-                {
-                    PartId = request.PartId,
-                    EquipmentId = request.EquipmentId,
-                    IncidentId = request.IncidentId, // Add IncidentId mapping
-                    Quantity = request.Quantity,
-                    ReplacedDate = request.ReplacedDate,
-                    ReplacedBy = request.ReplacedBy,
-                    Status = request.Status,
-                    Remarks = request.Remarks,
-                    ActualQuantityUsed = request.ActualQuantityUsed,
-                    QuantityToReturn = request.QuantityToReturn,
-                };
-                if (request.Quantity <= 0)
-                {
-                    return BadRequest(new { message = "Số lượng phụ tùng phải lớn hơn 0" });
-                }
-
-                var result = await _service.UpdateAsync(id, replacementHistory, cancellationToken);
+                // Use validation-enabled service method
+                var result = await _service.UpdateAsync(id, request, cancellationToken);
 
 
                 return NoContent();
+            }
+            catch (ReplacementHistoryValidationException ex)
+            {
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message,
+                    errorCode = ex.ErrorCode,
+                    errorData = ex.ErrorData
+                });
             }
             catch (KeyNotFoundException ex)
             {
@@ -253,6 +295,12 @@ namespace FITSKIP.API.Controllers
                 existing.QuantityToReturn = toReturn > 0 ? toReturn : 0;
                 existing.Status = request.Status; // "Chờ trả lại" or "Hoàn thành"
 
+                // ✅ MỚI: Khi ghi nhận hoàn thành (Status = "Hoàn thành"), set ReplacedDate = giờ Việt Nam hiện tại
+                if (request.Status == "Hoàn thành" && existing.ReplacedDate == null)
+                {
+                    existing.ReplacedDate = DateTimeHelper.GetVietnamNow();
+                }
+
                 if (!string.IsNullOrEmpty(request.Remarks))
                     existing.Remarks = request.Remarks;
 
@@ -274,7 +322,7 @@ namespace FITSKIP.API.Controllers
                         _context.SpareParts.Update(sparePart);
                         await _context.SaveChangesAsync(cancellationToken);
 
-                        Console.WriteLine($"✓ Auto-reduced SparePart {result.PartId}: Quantity -= {result.ActualQuantityUsed.Value}, New Quantity = {sparePart.Quantity}");
+                        Console.WriteLine($"? Auto-reduced SparePart {result.PartId}: Quantity -= {result.ActualQuantityUsed.Value}, New Quantity = {sparePart.Quantity}");
                     }
                 }
 
@@ -289,6 +337,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = result.Equipment != null ? result.Equipment.EquipmentCode : null,
                     ReplacedBy = result.ReplacedBy,
                     ReplacedByUserName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.Email : null,
                     ReplacementID = result.ReplacementId,
                     Quantity = result.Quantity,
@@ -351,6 +401,12 @@ namespace FITSKIP.API.Controllers
                     // Determine status based on usage
                     existing.Status = toReturn > 0 ? "Chờ trả lại" : "Hoàn thành";
 
+                    // ✅ MỚI: Khi ghi nhận hoàn thành (dùng hết), set ReplacedDate = giờ Việt Nam hiện tại
+                    if (existing.Status == "Hoàn thành" && existing.ReplacedDate == null)
+                    {
+                        existing.ReplacedDate = DateTimeHelper.GetVietnamNow();
+                    }
+
                     if (!string.IsNullOrEmpty(item.Remarks))
                         existing.Remarks = item.Remarks;
 
@@ -372,7 +428,7 @@ namespace FITSKIP.API.Controllers
                             _context.SpareParts.Update(sparePart);
                             await _context.SaveChangesAsync(cancellationToken);
 
-                            Console.WriteLine($"✓ Auto-reduced SparePart {result.PartId}: Quantity -= {result.ActualQuantityUsed.Value}, New Quantity = {sparePart.Quantity}");
+                            Console.WriteLine($"? Auto-reduced SparePart {result.PartId}: Quantity -= {result.ActualQuantityUsed.Value}, New Quantity = {sparePart.Quantity}");
                         }
                     }
 
@@ -387,6 +443,8 @@ namespace FITSKIP.API.Controllers
                         EquipmentCode = result.Equipment != null ? result.Equipment.EquipmentCode : null,
                         ReplacedBy = result.ReplacedBy,
                         ReplacedByUserName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.UserName : null,
+                        ReplacedByFullName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.FullName : null,
+                        ReplacedByEmployeeCode = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.EmployeeCode : null,
                         ReplacedByEmail = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.Email : null,
                         ReplacementID = result.ReplacementId,
                         Quantity = result.Quantity,
@@ -418,6 +476,7 @@ namespace FITSKIP.API.Controllers
                 {
                     EquipmentID = s.EquipmentId,
                     IncidentId = s.IncidentId,
+                    WorkOrderId = s.WorkOrderId,
                     PartID = s.PartId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
@@ -425,6 +484,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
                     ReplacedBy = s.ReplacedBy,
                     ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     ReplacementID = s.ReplacementId,
                     Quantity = s.Quantity,
@@ -432,7 +493,7 @@ namespace FITSKIP.API.Controllers
                     QuantityToReturn = s.QuantityToReturn,
                     ReplacedDate = s.ReplacedDate,
                     ReturnedDate = s.ReturnedDate,
-                    ReturnRemarks = s.ReturnRemarks,
+
                     Status = s.Status,
                     Remarks = s.Remarks
                 });
@@ -454,6 +515,7 @@ namespace FITSKIP.API.Controllers
                 {
                     EquipmentID = s.EquipmentId,
                     IncidentId = s.IncidentId,
+                    WorkOrderId = s.WorkOrderId,
                     PartID = s.PartId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
@@ -461,6 +523,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
                     ReplacedBy = s.ReplacedBy,
                     ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     ReplacementID = s.ReplacementId,
                     Quantity = s.Quantity,
@@ -468,7 +532,7 @@ namespace FITSKIP.API.Controllers
                     QuantityToReturn = s.QuantityToReturn,
                     ReplacedDate = s.ReplacedDate,
                     ReturnedDate = s.ReturnedDate,
-                    ReturnRemarks = s.ReturnRemarks,
+
                     Status = s.Status,
                     Remarks = s.Remarks
                 });
@@ -490,6 +554,7 @@ namespace FITSKIP.API.Controllers
                 {
                     EquipmentID = s.EquipmentId,
                     IncidentId = s.IncidentId,
+                    WorkOrderId = s.WorkOrderId,
                     PartID = s.PartId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
@@ -540,6 +605,52 @@ namespace FITSKIP.API.Controllers
             }
         }
 
+        [HttpGet("workorder/{workOrderId:int}")]
+        public async Task<ActionResult<IEnumerable<ReplacementHistoryDTO>>> GetByWorkOrderId(int workOrderId, CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                var result = await _context.ReplacementHistories
+                    .Where(r => r.WorkOrderId == workOrderId)
+                    .Include(r => r.Part)
+                    .Include(r => r.Equipment)
+                    .Include(r => r.ReplacedByNavigation)
+                    .ToListAsync(cancellationToken);
+
+                var responses = result.Select(s => new ReplacementHistoryDTO
+                {
+                    ReplacementID = s.ReplacementId,
+                    EquipmentID = s.EquipmentId,
+                    IncidentId = s.IncidentId,
+                    WorkOrderId = s.WorkOrderId,
+                    PartID = s.PartId,
+                    PartName = s.Part != null ? s.Part.PartName : null,
+                    PartNumber = s.Part != null ? s.Part.PartNumber : null,
+                    EquipmentName = s.Equipment != null ? s.Equipment.EquipmentName : null,
+                    EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
+                    ReplacedBy = s.ReplacedBy,
+                    ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.EmployeeCode : null,
+                    ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
+                    Quantity = s.Quantity,
+                    ActualQuantityUsed = s.ActualQuantityUsed,
+                    QuantityToReturn = s.QuantityToReturn,
+                    ReplacedDate = s.ReplacedDate,
+                    ReturnedDate = s.ReturnedDate,
+
+                    Status = s.Status,
+                    Remarks = s.Remarks
+                }).OrderByDescending(x => x.ReplacedDate);
+
+                return Ok(responses);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Lỗi khi lấy lịch sử linh kiện", error = ex.Message });
+            }
+        }
+
         [HttpGet("date-range")]
         public async Task<ActionResult<IEnumerable<ReplacementHistoryDTO>>> GetByDateRange(
             [FromQuery] DateTime startDate,
@@ -583,6 +694,7 @@ namespace FITSKIP.API.Controllers
                 {
                     EquipmentID = s.EquipmentId,
                     IncidentId = s.IncidentId,
+                    WorkOrderId = s.WorkOrderId,
                     PartID = s.PartId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
@@ -590,6 +702,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentCode = s.Equipment != null ? s.Equipment.EquipmentCode : null,
                     ReplacedBy = s.ReplacedBy,
                     ReplacedByUserName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = s.ReplacedByNavigation != null ? s.ReplacedByNavigation.Email : null,
                     ReplacementID = s.ReplacementId,
                     Quantity = s.Quantity,
@@ -597,7 +711,7 @@ namespace FITSKIP.API.Controllers
                     QuantityToReturn = s.QuantityToReturn,
                     ReplacedDate = s.ReplacedDate,
                     ReturnedDate = s.ReturnedDate,
-                    ReturnRemarks = s.ReturnRemarks,
+
                     Status = s.Status,
                     Remarks = s.Remarks
                 });
@@ -640,7 +754,7 @@ namespace FITSKIP.API.Controllers
                         _context.SpareParts.Update(sparePart);
                         await _context.SaveChangesAsync(cancellationToken);
 
-                        Console.WriteLine($"✓ Updated SparePart {result.PartId}: Quantity -= {result.ActualQuantityUsed.Value}, New Quantity = {sparePart.Quantity}");
+                        Console.WriteLine($"? Updated SparePart {result.PartId}: Quantity -= {result.ActualQuantityUsed.Value}, New Quantity = {sparePart.Quantity}");
                     }
                 }
 
@@ -652,6 +766,8 @@ namespace FITSKIP.API.Controllers
                     EquipmentName = result.Equipment != null ? result.Equipment.EquipmentName : null,
                     EquipmentCode = result.Equipment != null ? result.Equipment.EquipmentCode : null,
                     ReplacedByUserName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.UserName : null,
+                    ReplacedByFullName = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.FullName : null,
+                    ReplacedByEmployeeCode = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.EmployeeCode : null,
                     ReplacedByEmail = result.ReplacedByNavigation != null ? result.ReplacedByNavigation.Email : null,
                     ReplacementID = result.ReplacementId,
                     Quantity = result.Quantity,
@@ -660,7 +776,7 @@ namespace FITSKIP.API.Controllers
                     ReplacedDate = result.ReplacedDate,
                     ReturnedDate = result.ReturnedDate,
                     ReturnConfirmedBy = result.ReturnConfirmedBy,
-                    ReturnRemarks = result.ReturnRemarks,
+
                     Status = result.Status,
                     Remarks = result.Remarks
                 };
@@ -684,6 +800,7 @@ namespace FITSKIP.API.Controllers
                 var responses = result.Select(s => new ReplacementHistoryDTO
                 {
                     IncidentId = s.IncidentId,
+                    WorkOrderId = s.WorkOrderId,
                     PartName = s.Part != null ? s.Part.PartName : null,
                     PartNumber = s.Part != null ? s.Part.PartNumber : null,
                     EquipmentName = s.Equipment != null ? s.Equipment.EquipmentName : null,
@@ -697,7 +814,7 @@ namespace FITSKIP.API.Controllers
                     ReplacedDate = s.ReplacedDate,
                     ReturnedDate = s.ReturnedDate,
                     ReturnConfirmedBy = s.ReturnConfirmedBy,
-                    ReturnRemarks = s.ReturnRemarks,
+
                     Status = s.Status,
                     Remarks = s.Remarks
                 });
@@ -706,6 +823,123 @@ namespace FITSKIP.API.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// Gửi yêu cầu linh kiện từ phiếu bảo trì (từ kỹ thuật viên)
+        /// Tạo các record ReplacementHistory với status "Chờ duyệt cấp phát"
+        /// </summary>
+        [HttpPost("request-from-maintenance")]
+        public async Task<ActionResult<List<ReplacementHistoryDTO>>> RequestSparePartsFromMaintenance(
+            [FromBody] MaintenanceSparePartRequestDto request,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                if (request.Items == null || !request.Items.Any())
+                    return BadRequest(new { message = "Danh sách linh kiện không được trống" });
+
+                // Kiểm tra WorkOrder tồn tại
+                var workOrder = await _context.MaintenanceWorkOrders
+                    .FirstOrDefaultAsync(wo => wo.WorkOrderId == request.WorkOrderId, cancellationToken);
+                if (workOrder == null)
+                    return NotFound(new { message = $"Phiếu bảo trì với ID {request.WorkOrderId} không tồn tại" });
+
+                // Kiểm tra người yêu cầu tồn tại
+                var requestedUser = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Id == request.RequestedBy, cancellationToken);
+                if (requestedUser == null)
+                    return NotFound(new { message = $"Người dùng với ID {request.RequestedBy} không tồn tại" });
+
+                var createdReplacements = new List<ReplacementHistoryDTO>();
+
+                // Tạo ReplacementHistory cho mỗi linh kiện
+                foreach (var item in request.Items)
+                {
+                    // Tìm spare part theo tên
+                    var sparePart = await _context.SpareParts
+                        .FirstOrDefaultAsync(sp => sp.PartName == item.PartName, cancellationToken);
+
+                    if (sparePart == null)
+                        return BadRequest(new { message = $"Linh kiện '{item.PartName}' không tồn tại trong hệ thống" });
+
+                    // Tạo ReplacementHistory mới
+                    var replacementHistory = new ReplacementHistory
+                    {
+                        WorkOrderId = request.WorkOrderId,
+                        PartId = sparePart.PartId,
+                        EquipmentId = workOrder.EquipmentId,
+                        Quantity = item.Quantity,
+                        ReplacedDate = request.RequestDate,
+                        ReplacedBy = request.RequestedBy,
+                        Status = "Chờ duyệt cấp phát", // Trạng thái mặc định
+                        Remarks = request.Notes
+                    };
+
+                    await _service.CreateAsync(replacementHistory, cancellationToken);
+
+                    // Map to DTO for response
+                    var dto = new ReplacementHistoryDTO
+                    {
+                        ReplacementID = replacementHistory.ReplacementId,
+                        EquipmentID = replacementHistory.EquipmentId,
+                        WorkOrderId = replacementHistory.WorkOrderId,
+                        PartID = replacementHistory.PartId,
+                        PartName = sparePart.PartName,
+                        PartNumber = sparePart.PartNumber,
+                        EquipmentName = workOrder.Equipment?.EquipmentName,
+                        EquipmentCode = workOrder.Equipment?.EquipmentCode,
+                        ReplacedBy = replacementHistory.ReplacedBy,
+                        ReplacedByUserName = requestedUser.UserName,
+                        ReplacedByFullName = requestedUser.FullName,
+                        ReplacedByEmployeeCode = requestedUser.EmployeeCode,
+                        ReplacedByEmail = requestedUser.Email,
+                        Quantity = replacementHistory.Quantity,
+                        ReplacedDate = replacementHistory.ReplacedDate,
+                        Status = replacementHistory.Status,
+                        Remarks = replacementHistory.Remarks
+                    };
+
+                    createdReplacements.Add(dto);
+                }
+
+                // Gửi SignalR notification cho QLKT về yêu cầu linh kiện
+                try
+                {
+                    await _notificationHubContext.Clients.All.SendAsync(
+                        "SparePartRequest",
+                        new
+                        {
+                            workOrderId = request.WorkOrderId,
+                            count = createdReplacements.Count,
+                            requestedBy = requestedUser.UserName,
+                            requestedDate = request.RequestDate,
+                            timestamp = DateTime.Now
+                        }
+                    );
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error sending SignalR notification: {ex.Message}");
+                }
+
+                return Ok(new
+                {
+                    message = $"Gửi yêu cầu {createdReplacements.Count} linh kiện thành công!",
+                    data = createdReplacements
+                });
+            }
+            catch (KeyNotFoundException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Internal server error", error = ex.Message });
             }
         }
     }

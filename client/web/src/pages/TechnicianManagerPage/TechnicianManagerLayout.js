@@ -35,8 +35,6 @@ import styles from "../../styles/pages/TechnicianManagerLayout.module.css";
 // Import technician manager pages
 import TechnicianManagerDashboard from "./TechnicianManagerDashboard";
 import IncidentManagement from "./IncidentList";
-import InventoryManagement from "./InventoryManagement";
-import PurchaseRequestManagement from "./PurchaseRequestManagement";
 import MaintenancePlanManagement from "./MaintenanceManagement";
 import NotificationsList from "../ManagerPage/NotificationsList";
 import ReplacementReturnPage from "./ReplacementReturnPage";
@@ -115,7 +113,10 @@ const TechnicianManagerLayout = () => {
 
         // Define notification handler
         notificationHandler = (notificationData) => {
-          console.log("📩 [TechnicianManagerLayout] Received notification:", notificationData);
+          console.log(
+            "📩 [TechnicianManagerLayout] Received notification:",
+            notificationData
+          );
 
           // Tăng số lượng notification badge NGAY LẬP TỨC
           setNotificationCount((prev) => {
@@ -129,16 +130,8 @@ const TechnicianManagerLayout = () => {
             fetchNotifications();
           }
 
-          // Hiển thị message toast CHỈ MỘT LẦN
-          antdMessage.success({
-            content: `🔔 ${
-              notificationData.title ||
-              notificationData.message ||
-              "Bạn có thông báo mới"
-            }`,
-            duration: 5,
-            key: `notification-${Date.now()}`, // Unique key để tránh duplicate
-          });
+          // Note: Toast message removed to avoid duplicate notifications
+          // User can see notifications in the notification drawer (bell icon)
         };
 
         // Lắng nghe thông báo cá nhân (listener được track trong service để tránh duplicate)
@@ -152,7 +145,9 @@ const TechnicianManagerLayout = () => {
 
     // Cleanup function - pass the specific handler to remove
     return () => {
-      console.log("🧹 Cleaning up SignalR listeners in TechnicianManagerLayout");
+      console.log(
+        "🧹 Cleaning up SignalR listeners in TechnicianManagerLayout"
+      );
       if (notificationHandler) {
         signalRService.offReceiveNotification(notificationHandler);
       }
@@ -174,35 +169,23 @@ const TechnicianManagerLayout = () => {
       onClick: () => navigate("/technician-manager/incidents"),
     },
     {
-      key: "inventory",
-      icon: <ToolOutlined />,
-      label: "Quản lý phụ tùng",
-      onClick: () => navigate("/technician-manager/inventory"),
-    },
-    {
-      key: "purchase",
-      icon: <FileTextOutlined />,
-      label: "Yêu cầu mua hàng",
-      onClick: () => navigate("/technician-manager/purchase-requests"),
-    },
-    {
       key: "maintenance",
       icon: <SafetyOutlined />,
       label: "Kế hoạch bảo trì",
       onClick: () => navigate("/technician-manager/maintenance-plans"),
     },
-    {
-      key: "returns",
-      icon: <EditOutlined />,
-      label: "Xác nhận trả lại",
-      onClick: () => navigate("/technician-manager/replacement-returns"),
-    },
-    {
-      key: "ktv-confirm-return",
-      icon: <CheckCircleOutlined />,
-      label: "Xác nhận đã giao kho",
-      onClick: () => navigate("/technician-manager/ktv-confirm-return"),
-    },
+    // {
+    //   key: "returns",
+    //   icon: <EditOutlined />,
+    //   label: "Xác nhận trả lại",
+    //   onClick: () => navigate("/technician-manager/replacement-returns"),
+    // },
+    // {
+    //   key: "ktv-confirm-return",
+    //   icon: <CheckCircleOutlined />,
+    //   label: "Xác nhận đã giao kho",
+    //   onClick: () => navigate("/technician-manager/ktv-confirm-return"),
+    // },
   ];
 
   // Handle menu click
@@ -228,10 +211,6 @@ const TechnicianManagerLayout = () => {
       return <TechnicianManagerDashboard />;
     } else if (path.includes("incidents")) {
       return <IncidentManagement />;
-    } else if (path.includes("inventory")) {
-      return <InventoryManagement />;
-    } else if (path.includes("purchase-requests")) {
-      return <PurchaseRequestManagement />;
     } else if (path.includes("maintenance-plans")) {
       return <MaintenancePlanManagement />;
     } else if (path.includes("replacement-returns")) {

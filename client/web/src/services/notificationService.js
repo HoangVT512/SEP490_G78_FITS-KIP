@@ -282,6 +282,30 @@ export const sendToTechnicians = async (notificationData) => {
   }
 };
 
+export const sendToWarehouseManagers = async (notificationData) => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/Notifications/send-to-warehouse-managers`,
+      getFetchConfig({
+        method: "POST",
+        body: JSON.stringify(notificationData),
+      })
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(
+        errorData.message || `HTTP error! status: ${response.status}`
+      );
+    }
+
+    return true;
+  } catch (error) {
+    console.error("Error sending notification to warehouse managers:", error);
+    throw error;
+  }
+};
+
 export default {
   getNotifications,
   getUnreadCount,
@@ -293,4 +317,5 @@ export default {
   deleteAllReadNotifications,
   sendToTechnicalManagers,
   sendToTechnicians,
+  sendToWarehouseManagers,
 };

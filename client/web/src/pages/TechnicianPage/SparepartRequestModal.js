@@ -133,11 +133,11 @@ const SparepartRequestModal = ({ incident, open, onClose, onSuccess }) => {
         await replacementHistoryService.create(request);
       }
 
-      // Send real-time notification to Technical Managers
+      // Send real-time notification to Warehouse Managers
       try {
         const notificationMessage = `Kỹ thuật viên ${currentUser?.fullName || currentUser?.username} đã gửi yêu cầu thay thế phụ tùng cho sự cố #${incident?.incidentId || 'N/A'} - Thiết bị: ${incident?.equipmentName || 'N/A'} (${incident?.equipmentCode || ''}). Tổng số: ${selectedParts.length} loại phụ tùng.`;
 
-        await notificationService.sendToTechnicalManagers({
+        await notificationService.sendToWarehouseManagers({
           message: notificationMessage,
           type: "sparePartRequest",
           data: {

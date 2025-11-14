@@ -285,11 +285,11 @@ const TechnicianLayout = () => {
       icon: <CalendarOutlined />,
       label: "Lịch bảo trì",
     },
-    {
-      key: "checklist",
-      icon: <CheckSquareOutlined />,
-      label: "Xác nhận Checklist",
-    },
+    // {
+    //   key: "checklist",
+    //   icon: <CheckSquareOutlined />,
+    //   label: "Xác nhận Checklist",
+    // },
   ];
 
   const handleMenuClick = ({ key }) => {

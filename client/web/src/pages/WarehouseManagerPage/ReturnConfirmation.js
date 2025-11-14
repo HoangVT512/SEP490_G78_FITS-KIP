@@ -1,0 +1,428 @@
+import React, { useState, useEffect } from "react";
+import {
+  Card,
+  Table,
+  Button,
+  Tag,
+  Space,
+  Modal,
+  Descriptions,
+  message,
+  Alert,
+  Tooltip,
+  Tabs,
+  Badge,
+  Dropdown,
+} from "antd";
+import {
+  CheckCircleOutlined,
+  EyeOutlined,
+  ReloadOutlined,
+  DownOutlined,
+} from "@ant-design/icons";
+import dayjs from "dayjs";
+import replacementHistoryService from "../../services/replacementHistoryService";
+import { useAuth } from "../../contexts/AuthContext";
+
+const ReturnConfirmation = () => {
+  const [loading, setLoading] = useState(false);
+  const [incidentReturns, setIncidentReturns] = useState([]);
+  const [workOrderReturns, setWorkOrderReturns] = useState([]);
+  const [selectedReturn, setSelectedReturn] = useState(null);
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState("incident");
+  const { user } = useAuth();
+
+  useEffect(() => {
+    fetchPendingReturns();
+  }, []);
+
+  const mapDtoToModel = (dto) => {
+    return {
+      ...dto,
+      historyId: dto.replacementID,
+      replacedByName: dto.replacedByUserName,
+      replacedByFullName: dto.replacedByFullName,
+      replacedByEmployeeCode: dto.replacedByEmployeeCode,
+      replacementDate: dto.replacedDate,
+      notes: dto.remarks,
+    };
+  };
+
+  const fetchPendingReturns = async () => {
+    setLoading(true);
+    try {
+      const data = await replacementHistoryService.getByStatus("Chờ trả lại");
+      console.log("Raw data from backend:", data);
+      const returns = (data || []).map(mapDtoToModel);
+      console.log("Mapped returns:", returns);
+
+      // Separate by incident and workorder
+      const incidents = returns.filter((r) => r.incidentId);
+      const workOrders = returns.filter((r) => r.workOrderId);
+
+      setIncidentReturns(incidents);
+      setWorkOrderReturns(workOrders);
+    } catch (error) {
+      console.error("Error fetching pending returns:", error);
+      message.error("Không thể tải danh sách phụ tùng chờ xác nhận");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const showDetailModal = (record) => {
+    setSelectedReturn(record);
+    setIsDetailModalVisible(true);
+  };
+
+  const handleConfirmReturn = async (record) => {
+    Modal.confirm({
+      title: "Xác nhận trả lại phụ tùng",
+      content: (
+        <div>
+          <p>
+            <strong>Phụ tùng:</strong> {record.partName}
+          </p>
+          <p>
+            <strong>Số lượng xuất:</strong> {record.quantity} cái
+          </p>
+          <p>
+            <strong>Số lượng thực tế sử dụng:</strong>{" "}
+            {record.actualQuantityUsed || 0} cái
+          </p>
+          <p>
+            <strong>Số lượng trả lại:</strong>{" "}
+            {(record.quantity || 0) - (record.actualQuantityUsed || 0)} cái
+          </p>
+          <Alert
+            message="Xác nhận trả lại sẽ cập nhật tồn kho và đánh dấu giao dịch hoàn thành"
+            type="info"
+            showIcon
+            style={{ marginTop: 16 }}
+          />
+        </div>
+      ),
+      okText: "Xác nhận",
+      cancelText: "Hủy",
+      okButtonProps: {
+        style: {
+          backgroundColor: "#334766",
+          borderColor: "#334766",
+        },
+      },
+      onOk: async () => {
+        try {
+          await replacementHistoryService.confirmReturn(record.historyId, {
+            returnConfirmedBy: user?.fullName || "Warehouse Manager",
+          });
+
+          message.success("Xác nhận trả lại thành công");
+          fetchPendingReturns();
+        } catch (error) {
+          console.error("Error confirming return:", error);
+          message.error("Không thể xác nhận trả lại");
+        }
+      },
+    });
+  };
+
+  const columns = [
+    {
+      title: "Mã phiếu",
+      dataIndex: "historyId",
+      key: "historyId",
+      width: 100,
+      fixed: "left",
+    },
+    {
+      title: "Mã phụ tùng",
+      dataIndex: "partNumber",
+      key: "partNumber",
+      width: 120,
+    },
+    {
+      title: "Tên phụ tùng",
+      dataIndex: "partName",
+      key: "partName",
+      width: 200,
+    },
+    {
+      title: "SL xuất",
+      dataIndex: "quantity",
+      key: "quantity",
+      width: 80,
+      render: (qty) => <strong>{qty || 0}</strong>,
+    },
+    {
+      title: "SL thực tế sử dụng",
+      dataIndex: "actualQuantityUsed",
+      key: "actualQuantityUsed",
+      width: 150,
+      render: (qty) => <strong>{qty || 0}</strong>,
+    },
+    {
+      title: "SL trả lại",
+      key: "returnQuantity",
+      width: 100,
+      render: (_, record) => {
+        const returnQty =
+          (record.quantity || 0) - (record.actualQuantityUsed || 0);
+        return (
+          <Tag color={returnQty > 0 ? "blue" : "default"}>{returnQty} cái</Tag>
+        );
+      },
+    },
+    {
+      title: "Người trả",
+      key: "replacedBy",
+      width: 150,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontSize: "13px", fontWeight: 500 }}>
+            {record.replacedByFullName ||
+              record.replacedByUserName ||
+              "Chưa xác định"}
+          </div>
+          {record.replacedByEmployeeCode && (
+            <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+              {record.replacedByEmployeeCode}
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      title: "Ngày thay thế",
+      dataIndex: "replacementDate",
+      key: "replacementDate",
+      width: 150,
+      render: (date) => (date ? dayjs(date).format("DD/MM/YYYY HH:mm") : "-"),
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      width: 100,
+      fixed: "right",
+      align: "center",
+      render: (_, record) => (
+        <Dropdown
+          menu={{
+            items: [
+              {
+                key: "detail",
+                icon: <EyeOutlined />,
+                label: "Xem chi tiết",
+                onClick: () => showDetailModal(record),
+              },
+              {
+                key: "confirm",
+                icon: <CheckCircleOutlined />,
+                label: "Xác nhận trả lại",
+                onClick: () => handleConfirmReturn(record),
+              },
+            ],
+          }}
+        >
+          <Button type="text" size="small" icon={<DownOutlined />} />
+        </Dropdown>
+      ),
+    },
+  ];
+
+  return (
+    <div>
+      <Card
+        title="Xác nhận trả lại phụ tùng"
+        extra={
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchPendingReturns}
+            loading={loading}
+          >
+            Làm mới
+          </Button>
+        }
+      >
+        <Alert
+          message="Lưu ý"
+          description="Xác nhận trả lại phụ tùng sau khi kỹ thuật viên hoàn thành công việc và trả lại phụ tùng không sử dụng. Số lượng trả lại sẽ được cập nhật vào tồn kho."
+          type="info"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          items={[
+            {
+              key: "incident",
+              label: (
+                <span>
+                  Trả lại từ sự cố{" "}
+                  <Badge
+                    count={incidentReturns.length}
+                    style={{ backgroundColor: "#1890ff" }}
+                  />
+                </span>
+              ),
+              children: (
+                <Table
+                  dataSource={incidentReturns}
+                  columns={columns}
+                  rowKey="historyId"
+                  loading={loading}
+                  pagination={{
+                    total: incidentReturns.length,
+                    pageSize: 10,
+                    showSizeChanger: true,
+                    showTotal: (total) => `Tổng ${total} phụ tùng chờ xác nhận`,
+                  }}
+                  scroll={{ x: 1200 }}
+                />
+              ),
+            },
+            {
+              key: "workorder",
+              label: (
+                <span>
+                  Trả lại từ bảo trì{" "}
+                  <Badge
+                    count={workOrderReturns.length}
+                    style={{ backgroundColor: "#1890ff" }}
+                  />
+                </span>
+              ),
+              children: (
+                <Table
+                  dataSource={workOrderReturns}
+                  columns={columns}
+                  rowKey="historyId"
+                  loading={loading}
+                  pagination={{
+                    total: workOrderReturns.length,
+                    pageSize: 10,
+                    showSizeChanger: true,
+                    showTotal: (total) => `Tổng ${total} phụ tùng chờ xác nhận`,
+                  }}
+                  scroll={{ x: 1200 }}
+                />
+              ),
+            },
+          ]}
+        />
+      </Card>
+
+      {/* Detail Modal */}
+      <Modal
+        title="Chi tiết trả lại phụ tùng"
+        open={isDetailModalVisible}
+        onCancel={() => setIsDetailModalVisible(false)}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => setIsDetailModalVisible(false)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
+            Đóng
+          </Button>,
+          <Button
+            key="confirm"
+            type="primary"
+            icon={<CheckCircleOutlined />}
+            onClick={() => {
+              setIsDetailModalVisible(false);
+              handleConfirmReturn(selectedReturn);
+            }}
+            style={{
+              backgroundColor: "#334766",
+              borderColor: "#334766",
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
+            Xác nhận trả lại
+          </Button>,
+        ]}
+        width={700}
+      >
+        {selectedReturn && (
+          <>
+            <Descriptions bordered column={2}>
+              <Descriptions.Item label="Mã phiếu" span={2}>
+                {selectedReturn.historyId}
+              </Descriptions.Item>
+              <Descriptions.Item label="Mã phụ tùng">
+                {selectedReturn.partNumber}
+              </Descriptions.Item>
+              <Descriptions.Item label="Tên phụ tùng">
+                {selectedReturn.partName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Số lượng xuất kho">
+                <strong>{selectedReturn.quantity || 0} cái</strong>
+              </Descriptions.Item>
+              <Descriptions.Item label="Số lượng thực tế sử dụng">
+                <strong>{selectedReturn.actualQuantityUsed || 0} cái</strong>
+              </Descriptions.Item>
+              <Descriptions.Item label="Số lượng trả lại" span={2}>
+                <Tag color="blue" style={{ fontSize: "16px" }}>
+                  {(selectedReturn.quantity || 0) -
+                    (selectedReturn.actualQuantityUsed || 0)}{" "}
+                  cái
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Người trả">
+                <div>
+                  <div style={{ fontSize: "13px", fontWeight: 500 }}>
+                    {selectedReturn.replacedByFullName ||
+                      selectedReturn.replacedByName ||
+                      "Chưa xác định"}
+                  </div>
+                  {selectedReturn.replacedByEmployeeCode && (
+                    <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                      {selectedReturn.replacedByEmployeeCode}
+                    </div>
+                  )}
+                </div>
+              </Descriptions.Item>
+              <Descriptions.Item label="Ngày thay thế">
+                {selectedReturn.replacementDate
+                  ? dayjs(selectedReturn.replacementDate).format(
+                      "DD/MM/YYYY HH:mm"
+                    )
+                  : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Mã phiếu bảo trì" span={2}>
+                {selectedReturn.workOrderId || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Ghi chú" span={2}>
+                {selectedReturn.notes || "Không có ghi chú"}
+              </Descriptions.Item>
+            </Descriptions>
+
+            <Alert
+              message="Thông tin"
+              description={`Sau khi xác nhận, ${
+                (selectedReturn.quantity || 0) -
+                (selectedReturn.actualQuantityUsed || 0)
+              } cái ${
+                selectedReturn.partName
+              } sẽ được nhập lại vào kho và trạng thái giao dịch sẽ được đánh dấu hoàn thành.`}
+              type="info"
+              showIcon
+              style={{ marginTop: 16 }}
+            />
+          </>
+        )}
+      </Modal>
+    </div>
+  );
+};
+
+export default ReturnConfirmation;

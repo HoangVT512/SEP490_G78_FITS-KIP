@@ -128,7 +128,7 @@ const TeamLeaderLayout = () => {
     {
       key: "downtime-chart",
       icon: <BarChartOutlined />,
-      label: "Biểu đồ thời gian ngừng",
+      label: "Biểu đồ quản lý dừng máy",
     },
     {
       key: "EFormProductionInput",
@@ -145,21 +145,21 @@ const TeamLeaderLayout = () => {
       icon: <ToolOutlined />,
       label: "Quản lý thiết bị",
     },
-    {
-      key: "replacement",
-      icon: <SwapOutlined />,
-      label: "Linh kiện thay thế",
-    },
+    // {
+    //   key: "replacement",
+    //   icon: <SwapOutlined />,
+    //   label: "Linh kiện thay thế",
+    // },
     {
       key: "incidents",
       icon: <WarningOutlined />,
       label: "Quản lý sự cố",
     },
-    {
-      key: "reports",
-      icon: <BarChartOutlined />,
-      label: "Báo cáo",
-    },
+    // {
+    //   key: "reports",
+    //   icon: <BarChartOutlined />,
+    //   label: "Báo cáo",
+    // },
   ];
 
   const handleMenuClick = ({ key }) => {

@@ -408,6 +408,13 @@ namespace FITSKIP.Infrastructure.SeedData
                         Name = "Quản trị viên",
                         NormalizedName = "QUẢN TRỊ VIÊN",
                         ConcurrencyStamp = Guid.NewGuid().ToString()
+                    },
+                    new IdentityRole
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        Name = "Quản lý kho",
+                        NormalizedName = "QUẢN LÝ KHO",
+                        ConcurrencyStamp = Guid.NewGuid().ToString()
                     }
                 };
 
@@ -622,6 +629,25 @@ namespace FITSKIP.Infrastructure.SeedData
                 };
                 teamLeader2.PasswordHash = _passwordHasher.HashPassword(teamLeader2, "123456");
                 users.Add(teamLeader2);
+
+                // Warehouse Manager - Quản lý kho
+                var warehouseManager = new User
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    UserName = "quanly.kho",
+                    NormalizedUserName = "QUANLY.KHO",
+                    Email = "quanly.kho@kipvietnam.vn",
+                    NormalizedEmail = "QUANLY.KHO@KIPVIETNAM.VN",
+                    EmailConfirmed = true,
+                    SecurityStamp = Guid.NewGuid().ToString(),
+                    ConcurrencyStamp = Guid.NewGuid().ToString(),
+                    FullName = "Nguyễn Văn Kho",
+                    EmployeeCode = "QLK001",
+                    PhoneNumber = "0934567890"
+                };
+                warehouseManager.PasswordHash = _passwordHasher.HashPassword(warehouseManager, "123456");
+                users.Add(warehouseManager);
+
                 await context.Users.AddRangeAsync(users);
                 await context.SaveChangesAsync();
             }
@@ -651,7 +677,7 @@ namespace FITSKIP.Infrastructure.SeedData
             var managerRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN LÝ");
             if (managerRole != null)
             {
-                var managerUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("QL") == true && !u.EmployeeCode.StartsWith("QLKT") && u.RoleId == null).ToList();
+                var managerUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("QL") == true && !u.EmployeeCode.StartsWith("QLKT") && !u.EmployeeCode.StartsWith("QLK") && u.RoleId == null).ToList();
                 foreach (var user in managerUsers)
                 {
                     user.RoleId = managerRole.Id;
@@ -691,6 +717,18 @@ namespace FITSKIP.Infrastructure.SeedData
                 foreach (var user in technicianUsers)
                 {
                     user.RoleId = technicianRole.Id;
+                    hasChanges = true;
+                }
+            }
+
+            // Phân quyền Quản lý kho
+            var warehouseManagerRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN LÝ KHO");
+            if (warehouseManagerRole != null)
+            {
+                var warehouseManagerUsers = dbUsers.Where(u => u.EmployeeCode?.StartsWith("QLK") == true && u.RoleId == null).ToList();
+                foreach (var user in warehouseManagerUsers)
+                {
+                    user.RoleId = warehouseManagerRole.Id;
                     hasChanges = true;
                 }
             }
@@ -2087,10 +2125,10 @@ namespace FITSKIP.Infrastructure.SeedData
             await SeedDepartments(context);
             await SeedUsers(context);
             await SeedUserRoles(context);
-            
+
             // Cập nhật quyền cho user cụ thể nếu cần
             await UpdateUserRole(context, "83820559-72da-4a1f-80bd-66867dc3d33c", "Quản lý kỹ thuật");
-            
+
             await SeedStopTypes(context);
             await SeedLines(context);
             await SeedStages(context);

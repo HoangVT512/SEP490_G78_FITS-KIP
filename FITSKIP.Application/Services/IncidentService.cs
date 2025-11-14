@@ -912,40 +912,38 @@ public class IncidentService : IIncidentService
 
             Console.WriteLine($"   ✅ Sending notifications to {technicalManagers.Count} Technical Managers across all departments");
 
-            // Create notification record in database for each Technical Manager in company
+            // Send realtime notification to each Technical Manager (no database notification)
             foreach (var manager in technicalManagers)
             {
                 if (!string.IsNullOrEmpty(manager.Id))
                 {
-                    Console.WriteLine($"   📝 Creating notification for manager: {manager.FullName} (ID: {manager.Id}, Dept: {manager.DepartmentId ?? 0})");
-                    await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+                    // Build notification message based on equipment or line
+                    string notificationMessage;
+                    if (equipment != null)
                     {
-                        UserId = manager.Id,
-                        Title = "Sự cố cần hỗ trợ kỹ thuật",
-                        Message = $"Có sự cố mới cần hỗ trợ kỹ thuật tại {(equipment != null ? $"thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode})" : $"dây chuyền {line?.LineName ?? "Chưa xác định"}")} ở {departmentName} - Mã sự cố: {incident.IncidentId}"
-                    });
+                        // Format: "Có sự cố cần hỗ trợ - [Tên thiết bị] ([Mã thiết bị]) - Dây chuyền: [Tên dây chuyền]"
+                        notificationMessage = $"Có sự cố cần hỗ trợ - {equipment.EquipmentName} ({equipment.EquipmentCode}) - Dây chuyền: {line?.LineName ?? "Chưa xác định"}";
+                    }
+                    else
+                    {
+                        // If no equipment, just show line
+                        notificationMessage = $"Có sự cố cần hỗ trợ - Dây chuyền: {line?.LineName ?? "Chưa xác định"}";
+                    }
 
-                    // Send realtime notification to each Technical Manager
-                    Console.WriteLine($"   🔔 Sending realtime notification to manager: {manager.FullName}");
+                    // Send ONLY realtime notification (no database notification, no title)
                     await _notificationService.SendNotificationToUserAsync(
                         manager.Id,
-                        "Sự cố cần hỗ trợ kỹ thuật",
-                        $"Có sự cố mới cần hỗ trợ kỹ thuật tại {(equipment != null ? $"thiết bị {equipment.EquipmentName} ({equipment.EquipmentCode})" : $"dây chuyền {line?.LineName ?? "Chưa xác định"}")} ở {departmentName} - Mã sự cố: {incident.IncidentId}",
+                        "", // Empty title - only show message
+                        notificationMessage,
                         "incident"
                     );
+                    Console.WriteLine($"   ✅ Realtime notification sent to manager: {manager.FullName}");
                 }
             }
             Console.WriteLine($"   ✅ Notifications sent successfully to {technicalManagers.Count} managers");
 
-            // Also broadcast to all Managers group for OEE Dashboard realtime updates
-            Console.WriteLine($"   📡 Broadcasting incident update to Managers group for OEE Dashboard");
-            await _notificationService.SendNotificationToGroupAsync(
-                "Managers",
-                "Cập nhật sự cố",
-                $"Có sự cố mới tại {(equipment != null ? $"thiết bị {equipment.EquipmentName}" : $"dây chuyền {line?.LineName ?? "Chưa xác định"}")} - Mã sự cố: {incident.IncidentId}",
-                "incident"
-            );
-            Console.WriteLine($"   ✅ Broadcast to Managers group completed");
+            // Note: Broadcast to Managers group removed to avoid duplicate notifications
+            // Technical Managers already receive individual notifications above
         }
         catch (Exception ex)
         {

@@ -36,6 +36,11 @@ namespace FITSKIP.Application.Interfaces
         /// </summary>
         Task DeleteTemplateAsync(int templateId);
 
+        /// <summary>
+        /// Thêm checklist item vào template (dùng cho import Excel)
+        /// </summary>
+        Task<MaintenanceTemplateItemDTO> AddChecklistItemToTemplateAsync(int templateId, CreateTemplateItemRequest request);
+
         // ===== MAINTENANCE PLAN MANAGEMENT =====
         
         /// <summary>
@@ -161,6 +166,11 @@ namespace FITSKIP.Application.Interfaces
         Task<MaintenanceWorkOrderDTO> CancelWorkOrderAsync(int workOrderId, string reason);
         
         /// <summary>
+        /// Hoãn work order (TechManager) - chỉ cho phép khi Pending hoặc đã giao việc nhưng chưa ai làm
+        /// </summary>
+        Task<MaintenanceWorkOrderDTO> PostponeWorkOrderAsync(int workOrderId, PostponeWorkOrderRequest request, string userId);
+        
+        /// <summary>
         /// Xóa work order
         /// </summary>
         Task DeleteWorkOrderAsync(int workOrderId);
@@ -210,6 +220,11 @@ namespace FITSKIP.Application.Interfaces
         /// Lấy danh sách kỹ thuật viên điện
         /// </summary>
         Task<IEnumerable<TechnicianDTO>> GetElectricalTechniciansAsync();
+        
+        /// <summary>
+        /// Đếm số công việc đã giao cho các KTV trong một ngày cụ thể
+        /// </summary>
+        Task<IEnumerable<TechnicianWorkloadDTO>> GetTechniciansWorkloadByDateAsync(DateTime date);
 
         // ===== BACKGROUND TASKS =====
         
@@ -227,5 +242,17 @@ namespace FITSKIP.Application.Interfaces
         /// Gửi thông báo nhắc nhở cho TechManager về plans sắp đến hạn
         /// </summary>
         Task SendMaintenanceRemindersAsync();
+        
+        // ===== EXCEL IMPORT/EXPORT =====
+        
+        /// <summary>
+        /// Import maintenance templates từ Excel file
+        /// </summary>
+        Task<List<CreateMaintenanceTemplateRequest>> ImportTemplatesFromExcelAsync(Stream fileStream);
+        
+        /// <summary>
+        /// Generate Excel template file cho maintenance templates
+        /// </summary>
+        byte[] GenerateTemplateExcelTemplate();
     }
 }

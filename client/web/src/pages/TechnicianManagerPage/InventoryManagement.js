@@ -656,6 +656,9 @@ const InventoryManagement = () => {
                       style: { marginTop: "16px" },
                     }}
                     style={{ borderRadius: "6px" }}
+                    locale={{
+                      emptyText: searchText || filterStatus !== "all" ? "Không có phụ tùng nào khớp với tiêu chí tìm kiếm" : "Không có phụ tùng nào trong trạng thái này"
+                    }}
                   />
                 </Space>
               ),
@@ -707,6 +710,9 @@ const InventoryManagement = () => {
                       style: { marginTop: "16px" },
                     }}
                     style={{ borderRadius: "6px" }}
+                    locale={{
+                      emptyText: searchText || filterStatus !== "all" ? "Không có phụ tùng nào khớp với tiêu chí tìm kiếm" : "Không có phụ tùng nào trong trạng thái này"
+                    }}
                   />
                 </Space>
               ),
