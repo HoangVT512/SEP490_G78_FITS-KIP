@@ -2,6 +2,7 @@ using FITSKIP.Application.Interfaces;
 using FITSKIP.Application.Services;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using FITSKIP.Domain.Exceptions;
 using FITSKIP.Infrastructure.DbContexts;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -154,6 +155,15 @@ public class UsersController : ControllerBase
             }
             return Ok(updatedUser);
         }
+        catch (UserValidationException ex)
+        {
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
+        }
         catch (ArgumentException ex)
         {
             return BadRequest(new { success = false, message = $"Error: {ex.Message}" });
@@ -200,6 +210,15 @@ public class UsersController : ControllerBase
             };
 
             return Ok(new { success = true, data = response, message = "Tạo người dùng thành công" });
+        }
+        catch (UserValidationException ex)
+        {
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
         }
         catch (ArgumentException ex)
         {

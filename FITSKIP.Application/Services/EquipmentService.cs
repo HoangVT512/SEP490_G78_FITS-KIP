@@ -2,7 +2,9 @@ using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using FITSKIP.Domain.Exceptions;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace FITSKIP.Application.Services;
 
@@ -25,24 +27,35 @@ public class EquipmentService : IEquipmentService
 
     public async Task<EquipmentDTO> CreateEquipmentAsync(CreateEquipmentRequest request, CancellationToken cancellationToken = default)
     {
+        // Validate equipment code
+        ValidateEquipmentCode(request.EquipmentCode);
+
+        // Validate equipment name
+        ValidateEquipmentName(request.EquipmentName);
+
         // Validate stage if provided
         if (request.StageId.HasValue)
         {
             var stage = await _stageRepository.GetByIdAsync(request.StageId.Value, cancellationToken);
             if (stage == null)
             {
-                throw new InvalidOperationException($"Không tìm thấy công đoạn với ID: {request.StageId}");
+                throw new EquipmentValidationException(
+                    $"Không tìm thấy công đoạn với ID {request.StageId.Value}",
+                    "STAGE_NOT_FOUND",
+                    new { StageId = request.StageId.Value });
             }
         }
 
         // Validate year of manufacture
         if (request.Yom.HasValue)
         {
-            var currentYear = DateTime.Now.Year;
-            if (request.Yom.Value < 1900 || request.Yom.Value > currentYear + 1)
-            {
-                throw new InvalidOperationException($"Năm sản xuất phải nằm trong khoảng 1900 đến {currentYear + 1}");
-            }
+            ValidateYearOfManufacture(request.Yom.Value);
+        }
+
+        // Validate origin if provided
+        if (!string.IsNullOrWhiteSpace(request.Origin))
+        {
+            ValidateOrigin(request.Origin);
         }
 
         // Normalize equipment code
@@ -52,7 +65,10 @@ public class EquipmentService : IEquipmentService
         var existingEquipment = await _equipmentRepository.GetByCodeAsync(normalizedCode, cancellationToken);
         if (existingEquipment != null)
         {
-            throw new InvalidOperationException($"Mã thiết bị '{normalizedCode}' đã tồn tại");
+            throw new EquipmentValidationException(
+                $"Mã thiết bị '{normalizedCode}' đã tồn tại trong hệ thống",
+                "EQUIPMENT_CODE_EXISTS",
+                new { EquipmentCode = normalizedCode, ExistingEquipmentId = existingEquipment.EquipmentId });
         }
 
         var equipment = new Equipment
@@ -82,8 +98,17 @@ public class EquipmentService : IEquipmentService
         var existingEquipment = await _equipmentRepository.GetByIdAsync(id, cancellationToken);
         if (existingEquipment == null)
         {
-            return null;
+            throw new EquipmentValidationException(
+                $"Không tìm thấy thiết bị với ID {id}",
+                "EQUIPMENT_NOT_FOUND",
+                new { EquipmentId = id });
         }
+
+        // Validate equipment code
+        ValidateEquipmentCode(request.EquipmentCode);
+
+        // Validate equipment name
+        ValidateEquipmentName(request.EquipmentName);
 
         // Validate stage if provided
         if (request.StageId.HasValue)
@@ -91,18 +116,23 @@ public class EquipmentService : IEquipmentService
             var stage = await _stageRepository.GetByIdAsync(request.StageId.Value, cancellationToken);
             if (stage == null)
             {
-                throw new InvalidOperationException($"Không tìm thấy công đoạn với ID: {request.StageId}");
+                throw new EquipmentValidationException(
+                    $"Không tìm thấy công đoạn với ID {request.StageId.Value}",
+                    "STAGE_NOT_FOUND",
+                    new { StageId = request.StageId.Value });
             }
         }
 
         // Validate year of manufacture
         if (request.Yom.HasValue)
         {
-            var currentYear = DateTime.Now.Year;
-            if (request.Yom.Value < 1900 || request.Yom.Value > currentYear + 1)
-            {
-                throw new InvalidOperationException($"Năm sản xuất phải nằm trong khoảng 1900 đến {currentYear + 1}");
-            }
+            ValidateYearOfManufacture(request.Yom.Value);
+        }
+
+        // Validate origin if provided
+        if (!string.IsNullOrWhiteSpace(request.Origin))
+        {
+            ValidateOrigin(request.Origin);
         }
 
         // Normalize equipment code
@@ -112,7 +142,10 @@ public class EquipmentService : IEquipmentService
         var duplicateEquipment = await _equipmentRepository.GetByCodeAsync(normalizedCode, cancellationToken);
         if (duplicateEquipment != null && duplicateEquipment.EquipmentId != id)
         {
-            throw new InvalidOperationException($"Mã thiết bị '{normalizedCode}' đã tồn tại");
+            throw new EquipmentValidationException(
+                $"Mã thiết bị '{normalizedCode}' đã tồn tại trong hệ thống",
+                "EQUIPMENT_CODE_EXISTS",
+                new { EquipmentCode = normalizedCode, ExistingEquipmentId = duplicateEquipment.EquipmentId });
         }
 
         existingEquipment.EquipmentCode = normalizedCode;
@@ -201,5 +234,131 @@ public class EquipmentService : IEquipmentService
     {
         var equipments = await _equipmentRepository.GetByLineIdAsync(lineId, cancellationToken);
         return equipments.Select(e => EquipmentDTO.FromEntity(e)).ToList();
+    }
+
+    private void ValidateEquipmentCode(string equipmentCode)
+    {
+        // Check if null or empty
+        if (string.IsNullOrWhiteSpace(equipmentCode))
+        {
+            throw new EquipmentValidationException(
+                "Mã thiết bị không được để trống",
+                "EQUIPMENT_CODE_REQUIRED");
+        }
+
+        // Trim and check again
+        equipmentCode = equipmentCode.Trim();
+
+        // Check minimum length
+        if (equipmentCode.Length < 2)
+        {
+            throw new EquipmentValidationException(
+                "Mã thiết bị phải có ít nhất 2 ký tự",
+                "EQUIPMENT_CODE_TOO_SHORT",
+                new { MinLength = 2, ActualLength = equipmentCode.Length });
+        }
+
+        // Check maximum length
+        if (equipmentCode.Length > 50)
+        {
+            throw new EquipmentValidationException(
+                "Mã thiết bị không được vượt quá 50 ký tự",
+                "EQUIPMENT_CODE_TOO_LONG",
+                new { MaxLength = 50, ActualLength = equipmentCode.Length });
+        }
+
+        // Check for allowed characters (alphanumeric, hyphens, underscores only - no spaces)
+        var allowedPattern = @"^[a-zA-Z0-9\-_]+$";
+        if (!Regex.IsMatch(equipmentCode, allowedPattern))
+        {
+            throw new EquipmentValidationException(
+                "Mã thiết bị chỉ được chứa chữ cái, số, dấu gạch ngang (-) và gạch dưới (_), không có khoảng trắng",
+                "EQUIPMENT_CODE_INVALID_CHARACTERS");
+        }
+    }
+
+    private void ValidateEquipmentName(string equipmentName)
+    {
+        // Check if null or empty
+        if (string.IsNullOrWhiteSpace(equipmentName))
+        {
+            throw new EquipmentValidationException(
+                "Tên thiết bị không được để trống",
+                "EQUIPMENT_NAME_REQUIRED");
+        }
+
+        // Trim and check again
+        equipmentName = equipmentName.Trim();
+
+        // Check minimum length
+        if (equipmentName.Length < 2)
+        {
+            throw new EquipmentValidationException(
+                "Tên thiết bị phải có ít nhất 2 ký tự",
+                "EQUIPMENT_NAME_TOO_SHORT",
+                new { MinLength = 2, ActualLength = equipmentName.Length });
+        }
+
+        // Check maximum length
+        if (equipmentName.Length > 200)
+        {
+            throw new EquipmentValidationException(
+                "Tên thiết bị không được vượt quá 200 ký tự",
+                "EQUIPMENT_NAME_TOO_LONG",
+                new { MaxLength = 200, ActualLength = equipmentName.Length });
+        }
+
+        // Check for allowed characters (alphanumeric, spaces, hyphens, underscores, Vietnamese characters)
+        var allowedPattern = @"^[a-zA-Z0-9\s\-_ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ]+$";
+        if (!Regex.IsMatch(equipmentName, allowedPattern))
+        {
+            throw new EquipmentValidationException(
+                "Tên thiết bị chỉ được chứa chữ cái, số, khoảng trắng, dấu gạch ngang và dấu gạch dưới",
+                "EQUIPMENT_NAME_INVALID_CHARACTERS");
+        }
+    }
+
+    private void ValidateYearOfManufacture(int year)
+    {
+        var currentYear = DateTime.Now.Year;
+
+        // Check minimum year
+        if (year < 1900)
+        {
+            throw new EquipmentValidationException(
+                "Năm sản xuất không được nhỏ hơn 1900",
+                "EQUIPMENT_YOM_TOO_OLD",
+                new { MinYear = 1900, ActualYear = year });
+        }
+
+        // Check maximum year (current year + 1 for future planning)
+        if (year > currentYear + 1)
+        {
+            throw new EquipmentValidationException(
+                $"Năm sản xuất không được lớn hơn {currentYear + 1}",
+                "EQUIPMENT_YOM_TOO_FUTURE",
+                new { MaxYear = currentYear + 1, ActualYear = year });
+        }
+    }
+
+    private void ValidateOrigin(string origin)
+    {
+        // Check maximum length
+        if (origin.Length > 100)
+        {
+            throw new EquipmentValidationException(
+                "Xuất xứ không được vượt quá 100 ký tự",
+                "EQUIPMENT_ORIGIN_TOO_LONG",
+                new { MaxLength = 100, ActualLength = origin.Length });
+        }
+
+        // Check for allowed characters (alphanumeric, spaces, hyphens, underscores, Vietnamese characters)
+        var allowedPattern = @"^[a-zA-Z0-9\s\-_ÀÁÂÃÈÉÊÌÍÒÓÔÕÙÚĂĐĨŨƠàáâãèéêìíòóôõùúăđĩũơƯĂẠẢẤẦẨẪẬẮẰẲẴẶẸẺẼỀỀỂưăạảấầẩẫậắằẳẵặẹẻẽềềểỄỆỈỊỌỎỐỒỔỖỘỚỜỞỠỢỤỦỨỪễệỉịọỏốồổỗộớờởỡợụủứừỬỮỰỲỴÝỶỸửữựỳỵỷỹ]+$";
+        if (!Regex.IsMatch(origin, allowedPattern))
+        {
+            throw new EquipmentValidationException(
+                "Xuất xứ chỉ được chứa chữ cái, số, khoảng trắng, dấu gạch ngang và dấu gạch dưới",
+                "EQUIPMENT_ORIGIN_INVALID_CHARACTERS");
+        }
     }
 }

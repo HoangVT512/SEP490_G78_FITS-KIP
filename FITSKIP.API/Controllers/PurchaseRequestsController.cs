@@ -1,5 +1,6 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using FITSKIP.Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
@@ -232,6 +233,16 @@ public class PurchaseRequestsController : ControllerBase
                 )
             );
         }
+        catch (PurchaseRequestValidationException ex)
+        {
+            _logger.LogWarning(ex, "Lỗi validation khi tạo yêu cầu mua hàng");
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
+        }
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(ex, "Lỗi business logic khi tạo yêu cầu mua hàng");
@@ -312,6 +323,16 @@ public class PurchaseRequestsController : ControllerBase
                 purchaseRequest,
                 "Cập nhật yêu cầu mua hàng thành công"
             ));
+        }
+        catch (PurchaseRequestValidationException ex)
+        {
+            _logger.LogWarning(ex, "Lỗi validation khi cập nhật yêu cầu mua hàng với ID: {RequestId}", id);
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
         }
         catch (UnauthorizedAccessException ex)
         {

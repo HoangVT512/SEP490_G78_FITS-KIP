@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using FITSKIP.Domain.Exceptions;
 
 namespace FITSKIP.API.Controllers
 {
@@ -119,7 +120,7 @@ namespace FITSKIP.API.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<ReplacementHistoryDTO>> Create([FromBody] CreateReplacementHistoryRequest request, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<ReplacementHistoryDTO>> Create([FromBody] ReplacementHistory request, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -136,29 +137,8 @@ namespace FITSKIP.API.Controllers
                     }
                 }
 
-                // Mapping DTO to Entity
-                var replacementHistory = new ReplacementHistory
-                {
-                    PartId = request.PartId,
-                    EquipmentId = request.EquipmentId,
-                    IncidentId = request.IncidentId, // Add IncidentId mapping
-                    WorkOrderId = request.WorkOrderId, // Add WorkOrderId mapping
-                    Quantity = request.Quantity,
-                    // ⚠️ LƯU Ý: Khi tạo yêu cầu linh kiện, chưa cần insert ReplacedDate
-                    // ReplacedDate sẽ được ghi nhận khi Quản lý kho duyệt/xác nhận yêu cầu
-                    // Trạng thái hiện tại: "Chờ duyệt cấp phát"
-                    ReplacedDate = null,
-                    ReplacedBy = request.ReplacedBy,
-                    Status = "Chờ duyệt cấp phát", // Mặc định trạng thái khi tạo
-                    Remarks = request.Remarks,
-
-                };
-                if (request.Quantity <= 0)
-                {
-                    return BadRequest(new { message = "Số lượng phụ tùng phải lớn hơn 0" });
-                }
-
-                var created = await _service.CreateAsync(replacementHistory, cancellationToken);
+                // Use validation-enabled service method
+                var created = await _service.CreateAsync(request, cancellationToken);
 
                 // ✅ GỬI THÔNG BÁO ĐẾN QUẢN LÝ KHO
                 try
@@ -228,6 +208,15 @@ namespace FITSKIP.API.Controllers
                 // Return BadRequest so client sees a readable validation error
                 return BadRequest(new { message = ex.Message });
             }
+            catch (ReplacementHistoryValidationException ex)
+            {
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message,
+                    errorCode = ex.ErrorCode,
+                    errorData = ex.ErrorData
+                });
+            }
             catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -239,39 +228,27 @@ namespace FITSKIP.API.Controllers
         }
 
         [HttpPut("{id:int}")]
-        public async Task<ActionResult<ReplacementHistoryDTO>> Update(int id, [FromBody] UpdateReplacementHistoryRequest request, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<ReplacementHistoryDTO>> Update(int id, [FromBody] ReplacementHistory request, CancellationToken cancellationToken = default)
         {
             try
             {
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                // Mapping DTO to Entity
-                var replacementHistory = new ReplacementHistory
-                {
-                    PartId = request.PartId,
-                    EquipmentId = request.EquipmentId,
-                    IncidentId = request.IncidentId, // Add IncidentId mapping
-                    WorkOrderId = request.WorkOrderId, // Add WorkOrderId mapping
-                    Quantity = request.Quantity,
-                    // ⚠️ LƯU Ý: Khi quản lý kho duyệt/xác nhận, vẫn để ReplacedDate = NULL
-                    // ReplacedDate chỉ được ghi nhận khi Hoàn thành việc sử dụng (RecordUsage endpoint)
-                    ReplacedDate = null,
-                    ReplacedBy = request.ReplacedBy,
-                    Status = request.Status,
-                    Remarks = request.Remarks,
-                    ActualQuantityUsed = request.ActualQuantityUsed,
-                    QuantityToReturn = request.QuantityToReturn,
-                };
-                if (request.Quantity <= 0)
-                {
-                    return BadRequest(new { message = "Số lượng phụ tùng phải lớn hơn 0" });
-                }
-
-                var result = await _service.UpdateAsync(id, replacementHistory, cancellationToken);
+                // Use validation-enabled service method
+                var result = await _service.UpdateAsync(id, request, cancellationToken);
 
 
                 return NoContent();
+            }
+            catch (ReplacementHistoryValidationException ex)
+            {
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message,
+                    errorCode = ex.ErrorCode,
+                    errorData = ex.ErrorData
+                });
             }
             catch (KeyNotFoundException ex)
             {
