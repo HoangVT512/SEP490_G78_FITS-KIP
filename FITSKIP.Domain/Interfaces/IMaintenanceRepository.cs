@@ -39,11 +39,6 @@ namespace FITSKIP.Domain.Interfaces
         Task UpdateAsync(MaintenancePlan plan);
         Task DeleteAsync(int planId);
         Task<bool> ExistsAsync(int planId);
-        
-        // Assignment methods
-        Task<MaintenancePlanAssignment> CreateAssignmentAsync(MaintenancePlanAssignment assignment);
-        Task DeleteAssignmentAsync(int assignmentId);
-        Task<IEnumerable<MaintenancePlanAssignment>> GetAssignmentsByPlanIdAsync(int planId);
     }
 
     // ===== MAINTENANCE WORK ORDER REPOSITORY =====

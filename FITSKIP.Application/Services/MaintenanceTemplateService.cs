@@ -99,7 +99,6 @@ namespace FITSKIP.Application.Services
                 StageId = request.StageId,
                 TemplateName = request.TemplateName,
                 Description = request.Description,
-                InspectionCode = request.InspectionCode,
                 IsActive = true,
                 CreatedDate = DateTime.Now,
                 CreatedBy = userId
@@ -139,7 +138,6 @@ namespace FITSKIP.Application.Services
 
             template.TemplateName = request.TemplateName;
             template.Description = request.Description;
-            template.InspectionCode = request.InspectionCode;
             template.IsActive = request.IsActive;
             template.UpdatedDate = DateTime.Now;
             template.UpdatedBy = userId;
@@ -237,7 +235,6 @@ namespace FITSKIP.Application.Services
                 LineName = template.Stage?.Line?.LineName ?? "",
                 TemplateName = template.TemplateName,
                 Description = template.Description,
-                InspectionCode = template.InspectionCode,
                 IsActive = template.IsActive,
                 CreatedDate = template.CreatedDate,
                 CreatedByName = template.CreatedByUser?.FullName,

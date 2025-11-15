@@ -15,7 +15,6 @@ namespace FITSKIP.Domain.DTO
         public string LineName { get; set; } = string.Empty;
         public string TemplateName { get; set; } = string.Empty;
         public string? Description { get; set; }
-        public string? InspectionCode { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedDate { get; set; }
         public string? CreatedByName { get; set; }
@@ -55,9 +54,6 @@ namespace FITSKIP.Domain.DTO
         [MaxLength(500)]
         public string? Description { get; set; }
 
-        [MaxLength(50)]
-        public string? InspectionCode { get; set; }
-
         public List<CreateTemplateItemRequest> TemplateItems { get; set; } = new();
     }
 
@@ -69,9 +65,6 @@ namespace FITSKIP.Domain.DTO
 
         [MaxLength(500)]
         public string? Description { get; set; }
-
-        [MaxLength(50)]
-        public string? InspectionCode { get; set; }
 
         public bool IsActive { get; set; }
 

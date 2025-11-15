@@ -262,34 +262,6 @@ namespace FITSKIP.Infrastructure.Repositories
         {
             return await _context.MaintenancePlans.AnyAsync(p => p.PlanId == planId);
         }
-
-        // Assignment methods
-        public async Task<MaintenancePlanAssignment> CreateAssignmentAsync(MaintenancePlanAssignment assignment)
-        {
-            await _context.MaintenancePlanAssignments.AddAsync(assignment);
-            await _context.SaveChangesAsync();
-            return assignment;
-        }
-
-        public async Task DeleteAssignmentAsync(int assignmentId)
-        {
-            var assignment = await _context.MaintenancePlanAssignments.FindAsync(assignmentId);
-            if (assignment != null)
-            {
-                _context.MaintenancePlanAssignments.Remove(assignment);
-                await _context.SaveChangesAsync();
-            }
-        }
-
-        public async Task<IEnumerable<MaintenancePlanAssignment>> GetAssignmentsByPlanIdAsync(int planId)
-        {
-            return await _context.MaintenancePlanAssignments
-                .Include(a => a.Technician)
-                .Include(a => a.AssignedByUser)
-                .Where(a => a.PlanId == planId && a.IsActive)
-                .AsNoTracking()
-                .ToListAsync();
-        }
     }
 
     // ===== MAINTENANCE WORK ORDER REPOSITORY =====

@@ -56,9 +56,6 @@ public partial class MaintenancePlan
     public virtual MaintenanceTemplate? Template { get; set; }
     public virtual User? CreatedByUser { get; set; }
     public virtual ICollection<MaintenanceWorkOrder> WorkOrders { get; set; } = new List<MaintenanceWorkOrder>();
-    
-    
-    public virtual ICollection<MaintenancePlanAssignment> Assignments { get; set; } = new List<MaintenancePlanAssignment>();
 
     [Obsolete("Use WorkOrders instead")]
     public virtual ICollection<MaintenanceChecklistItem> ChecklistItems { get; set; } = new List<MaintenanceChecklistItem>();

@@ -67,7 +67,7 @@ namespace FITSKIP.Application.Services
 
         /// <summary>
         /// Import Maintenance Templates từ Excel
-        /// Format: StageName | TemplateName | Description | InspectionCode | StepName | StepDescription | Category | OrderIndex
+        /// Format: StageName | TemplateName | Description | StepName | StepDescription | Category | OrderIndex
         /// </summary>
         public async Task<List<CreateMaintenanceTemplateRequest>> ImportTemplatesFromExcelAsync(Stream fileStream)
         {
@@ -85,11 +85,10 @@ namespace FITSKIP.Application.Services
                         var stageName = worksheet.Cells[row, 1].Value?.ToString()?.Trim();
                         var templateName = worksheet.Cells[row, 2].Value?.ToString()?.Trim();
                         var description = worksheet.Cells[row, 3].Value?.ToString()?.Trim();
-                        var inspectionCode = worksheet.Cells[row, 4].Value?.ToString()?.Trim();
-                        var stepName = worksheet.Cells[row, 5].Value?.ToString()?.Trim();
-                        var stepDescription = worksheet.Cells[row, 6].Value?.ToString()?.Trim(); // ✅ THÊM
-                        var category = worksheet.Cells[row, 7].Value?.ToString()?.Trim(); // ✅ SỬA column
-                        var orderIndexStr = worksheet.Cells[row, 8].Value?.ToString()?.Trim(); // ✅ SỬA column
+                        var stepName = worksheet.Cells[row, 4].Value?.ToString()?.Trim();
+                        var stepDescription = worksheet.Cells[row, 5].Value?.ToString()?.Trim();
+                        var category = worksheet.Cells[row, 6].Value?.ToString()?.Trim();
+                        var orderIndexStr = worksheet.Cells[row, 7].Value?.ToString()?.Trim();
 
                         if (string.IsNullOrEmpty(stageName) || string.IsNullOrEmpty(templateName))
                         {
@@ -130,7 +129,6 @@ namespace FITSKIP.Application.Services
                                 StageName = stageName, // Lưu tạm StageName để resolve sau
                                 TemplateName = templateName,
                                 Description = description,
-                                InspectionCode = inspectionCode,
                                 TemplateItems = new List<CreateTemplateItemRequest>()
                             };
                         }
@@ -180,14 +178,13 @@ namespace FITSKIP.Application.Services
                 worksheet.Cells[1, 1].Value = "Tên công đoạn (Stage)";
                 worksheet.Cells[1, 2].Value = "Tên mẫu bảo trì";
                 worksheet.Cells[1, 3].Value = "Mô tả";
-                worksheet.Cells[1, 4].Value = "Mã kiểm tra";
-                worksheet.Cells[1, 5].Value = "Tên bước kiểm tra";
-                worksheet.Cells[1, 6].Value = "Mô tả chi tiết bước"; // ✅ THÊM
-                worksheet.Cells[1, 7].Value = "Loại (Electrical/Mechanical/General)"; // ✅ SỬA
-                worksheet.Cells[1, 8].Value = "Thứ tự"; // ✅ SỬA column
+                worksheet.Cells[1, 4].Value = "Tên bước kiểm tra";
+                worksheet.Cells[1, 5].Value = "Mô tả chi tiết bước";
+                worksheet.Cells[1, 6].Value = "Loại (Electrical/Mechanical)";
+                worksheet.Cells[1, 7].Value = "Thứ tự";
 
                 // Style header
-                using (var range = worksheet.Cells[1, 1, 1, 8]) // ✅ SỬA range
+                using (var range = worksheet.Cells[1, 1, 1, 7])
                 {
                     range.Style.Font.Bold = true;
                     range.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
@@ -199,29 +196,26 @@ namespace FITSKIP.Application.Services
                 worksheet.Cells[2, 1].Value = "Hàn linh kiện";
                 worksheet.Cells[2, 2].Value = "Bảo trì hàn linh kiện tháng";
                 worksheet.Cells[2, 3].Value = "Bảo trì định kỳ cho máy hàn linh kiện";
-                worksheet.Cells[2, 4].Value = "MT-HAN-001";
-                worksheet.Cells[2, 5].Value = "Kiểm tra nhiệt độ mỏ hàn";
-                worksheet.Cells[2, 6].Value = "Đo nhiệt độ mỏ hàn, nhiệt độ chuẩn từ 300-350°C"; // ✅ THÊM
-                worksheet.Cells[2, 7].Value = "Electrical";
-                worksheet.Cells[2, 8].Value = 1;
+                worksheet.Cells[2, 4].Value = "Kiểm tra nhiệt độ mỏ hàn";
+                worksheet.Cells[2, 5].Value = "Đo nhiệt độ mỏ hàn, nhiệt độ chuẩn từ 300-350°C";
+                worksheet.Cells[2, 6].Value = "Electrical";
+                worksheet.Cells[2, 7].Value = 1;
 
                 worksheet.Cells[3, 1].Value = "Hàn linh kiện";
                 worksheet.Cells[3, 2].Value = "Bảo trì hàn linh kiện tháng";
                 worksheet.Cells[3, 3].Value = "Bảo trì định kỳ cho máy hàn linh kiện";
-                worksheet.Cells[3, 4].Value = "MT-HAN-001";
-                worksheet.Cells[3, 5].Value = "Kiểm tra hệ thống làm mát";
-                worksheet.Cells[3, 6].Value = "Kiểm tra quạt làm mát, đảm bảo hoạt động bình thường"; // ✅ THÊM
-                worksheet.Cells[3, 7].Value = "Mechanical";
-                worksheet.Cells[3, 8].Value = 2;
+                worksheet.Cells[3, 4].Value = "Kiểm tra hệ thống làm mát";
+                worksheet.Cells[3, 5].Value = "Kiểm tra quạt làm mát, đảm bảo hoạt động bình thường";
+                worksheet.Cells[3, 6].Value = "Mechanical";
+                worksheet.Cells[3, 7].Value = 2;
 
                 worksheet.Cells[4, 1].Value = "Hàn linh kiện";
                 worksheet.Cells[4, 2].Value = "Bảo trì hàn linh kiện tháng";
                 worksheet.Cells[4, 3].Value = "Bảo trì định kỳ cho máy hàn linh kiện";
-                worksheet.Cells[4, 4].Value = "MT-HAN-001";
-                worksheet.Cells[4, 5].Value = "Kiểm tra vệ sinh bề mặt";
-                worksheet.Cells[4, 6].Value = "Lau sạch bề mặt máy, kiểm tra không có bụi bẩn"; // ✅ THÊM
-                worksheet.Cells[4, 7].Value = "General"; // ✅ THÊM ví dụ General
-                worksheet.Cells[4, 8].Value = 3;
+                worksheet.Cells[4, 4].Value = "Kiểm tra vệ sinh bề mặt";
+                worksheet.Cells[4, 5].Value = "Lau sạch bề mặt máy, kiểm tra không có bụi bẩn";
+                worksheet.Cells[4, 6].Value = "Electrical";
+                worksheet.Cells[4, 7].Value = 3;
 
                 // Auto-fit columns
                 worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
@@ -366,11 +360,6 @@ namespace FITSKIP.Application.Services
                 worksheet.Cells[5, 3].Value = "Mechanical";
                 worksheet.Cells[5, 4].Value = 4;
 
-                worksheet.Cells[6, 1].Value = "Vệ sinh bề mặt";
-                worksheet.Cells[6, 2].Value = "Lau sạch bề mặt máy, kiểm tra không có bụi bẩn hoặc dầu mỡ";
-                worksheet.Cells[6, 3].Value = "General";
-                worksheet.Cells[6, 4].Value = 5;
-
                 // Auto-fit columns
                 worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
 
@@ -379,7 +368,7 @@ namespace FITSKIP.Application.Services
                 worksheet.Cells[instructionRow, 1].Value = "HƯỚNG DẪN:";
                 worksheet.Cells[instructionRow, 1].Style.Font.Bold = true;
                 worksheet.Cells[instructionRow + 1, 1].Value = "- Mỗi dòng là 1 bước kiểm tra (checklist item)";
-                worksheet.Cells[instructionRow + 2, 1].Value = "- Loại công việc: nhập 'Electrical' (điện), 'Mechanical' (cơ), hoặc 'General' (chung)";
+                worksheet.Cells[instructionRow + 2, 1].Value = "- Loại công việc: nhập 'Electrical' (điện) hoặc 'Mechanical' (cơ)";
                 worksheet.Cells[instructionRow + 3, 1].Value = "- Thứ tự: số nguyên dương (1, 2, 3,...), quyết định thứ tự hiển thị";
                 worksheet.Cells[instructionRow + 4, 1].Value = "- Mô tả chi tiết: Hướng dẫn cụ thể cách thực hiện, tiêu chuẩn đạt/không đạt";
                 worksheet.Cells[instructionRow + 5, 1].Value = "- File này dùng để thêm các bước kiểm tra vào mẫu bảo trì đã tồn tại";

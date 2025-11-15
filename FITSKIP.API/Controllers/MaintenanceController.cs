@@ -254,8 +254,7 @@ namespace FITSKIP.API.Controllers
                     if (duplicateItem != null)
                     {
                         validationErrors.Add(
-                            $"[Dòng {rowNumber}] ❌ Bước kiểm tra TRÙNG: '{itemRequest.StepName}' ({itemRequest.Category}) " +
-                            $"đã tồn tại trong mẫu này (ItemId: {duplicateItem.ItemId}). Vui lòng đổi tên hoặc xóa bước cũ."
+                            $"[Dòng {rowNumber}] ❌ Bước kiểm tra TRÙNG: '{itemRequest.StepName}' đã tồn tại trong mẫu này. Vui lòng đổi tên hoặc xóa bước cũ."
                         );
                     }
 
@@ -284,7 +283,8 @@ namespace FITSKIP.API.Controllers
                     }
                     catch (Exception ex)
                     {
-                        importErrors.Add($"[Dòng {rowNumber}] Lỗi khi thêm bước: {ex.Message}");
+                        var errorMessage = ex.InnerException?.Message ?? ex.Message;
+                        importErrors.Add($"[Dòng {rowNumber}] Lỗi khi thêm bước: {errorMessage}");
                     }
                     rowNumber++;
                 }
@@ -454,7 +454,8 @@ namespace FITSKIP.API.Controllers
                     }
                     catch (Exception ex)
                     {
-                        importErrors.Add($"[Dòng {rowNumber}] Lỗi khi tạo template '{templateRequest.TemplateName}': {ex.Message}");
+                        var errorMessage = ex.InnerException?.Message ?? ex.Message;
+                        importErrors.Add($"[Dòng {rowNumber}] Lỗi khi tạo template '{templateRequest.TemplateName}': {errorMessage}");
                     }
                     rowNumber++;
                 }
@@ -736,8 +737,7 @@ namespace FITSKIP.API.Controllers
 
                 var allTemplates = await _templateService.GetAllTemplatesAsync();
                 var templateDict = allTemplates
-                    .Where(t => !string.IsNullOrEmpty(t.InspectionCode))
-                    .ToDictionary(t => t.InspectionCode!.ToLower(), t => t);
+                    .ToDictionary(t => $"{t.TemplateId}", t => t);
 
                 var allTechnicians = await _workOrderService.GetAllTechniciansAsync();
                 var technicianDict = allTechnicians.ToDictionary(t => t.EmployeeCode.ToLower(), t => t);
@@ -892,70 +892,6 @@ namespace FITSKIP.API.Controllers
         }
 
         /// <summary>
-        /// Assign nhiều kỹ thuật viên vào kế hoạch bảo trì (TechManager)
-        /// Hỗ trợ assign nhiều technicians cùng loại (nhiều điện hoặc nhiều cơ)
-        /// </summary>
-        [HttpPost("plans/{planId}/assign-multiple")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
-        public async Task<IActionResult> AssignMultipleTechnicians(int planId, [FromBody] AssignMultipleTechniciansRequest request)
-        {
-            try
-            {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(ApiResponse.ErrorResponse("Không xác định được người dùng"));
-                }
-
-                var plan = await _planService.AssignMultipleTechniciansAsync(planId, request, userId);
-                return Ok(ApiResponse<MaintenancePlanDTO>.SuccessResponse(plan, "Phân công nhiều kỹ thuật viên thành công"));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Lỗi: {ex.Message}"));
-            }
-        }
-
-        /// <summary>
-        /// Xóa assignment của một technician khỏi kế hoạch bảo trì (TechManager)
-        /// </summary>
-        [HttpDelete("plans/assignments/{assignmentId}")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
-        public async Task<IActionResult> RemoveTechnicianAssignment(int assignmentId)
-        {
-            try
-            {
-                await _planService.RemoveTechnicianAssignmentAsync(assignmentId);
-                return Ok(ApiResponse.SuccessResponse("Xóa phân công kỹ thuật viên thành công"));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ApiResponse.ErrorResponse($"Lỗi: {ex.Message}"));
-            }
-        }
-
-        /// <summary>
-        /// Lấy danh sách kế hoạch chưa có kỹ thuật viên và sắp đến hạn (TechManager)
-        /// </summary>
-        [HttpGet("plans/unassigned")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
-        public async Task<IActionResult> GetUnassignedPlansNeedingAttention([FromQuery] int daysBeforeDue = 3)
-        {
-            try
-            {
-                var plans = await _planService.GetUnassignedPlansNeedingAttentionAsync(daysBeforeDue);
-                return Ok(ApiResponse<IEnumerable<MaintenancePlanDTO>>.SuccessResponse(plans, "Lấy danh sách kế hoạch chưa phân công thành công"));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Lỗi: {ex.Message}"));
-            }
-        }
-
         // ===== WORK ORDER MANAGEMENT (TechManager & Technician) =====
 
         /// <summary>
