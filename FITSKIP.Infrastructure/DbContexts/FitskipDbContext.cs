@@ -315,10 +315,14 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.PlanId).HasColumnName("PlanID");
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
             entity.Property(e => e.AssignedDate).HasColumnType("datetime");
+            entity.Property(e => e.ScheduledDate).HasColumnType("datetime");
             entity.Property(e => e.DueDate).HasColumnType("datetime");
             entity.Property(e => e.AssignedToElectrical).HasMaxLength(450);
             entity.Property(e => e.AssignedToMechanical).HasMaxLength(450);
             entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Pending");
+            entity.Property(e => e.PostponedDueDate).HasColumnType("datetime");
+            entity.Property(e => e.PostponedReason).HasMaxLength(500);
+            entity.Property(e => e.PostponedDate).HasColumnType("datetime");
             entity.Property(e => e.StartedDate).HasColumnType("datetime");
             entity.Property(e => e.CompletedDate).HasColumnType("datetime");
             entity.Property(e => e.Notes).HasMaxLength(1000);

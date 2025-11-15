@@ -29,9 +29,6 @@ public partial class MaintenancePlan
     
     public DateTime NextDueDate { get; set; }
 
-    
-    public DateTime? PostponedDueDate { get; set; }
-
    
     public int ReminderDaysBefore { get; set; } = 3;
 
@@ -44,12 +41,6 @@ public partial class MaintenancePlan
 
     
     public string Status { get; set; } = "Pending";
-
-    
-    public string? PostponedReason { get; set; }
-
-    
-    public DateTime? PostponedDate { get; set; }
 
     
     public virtual Equipment? Equipment { get; set; }

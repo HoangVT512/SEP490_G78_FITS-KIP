@@ -27,12 +27,14 @@ export const SignalRProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const listenersRef = useRef(new Map());
   const reconnectTimeoutRef = useRef(null);
+  const hasListenersRef = useRef(false);
   const API_BASE_URL =
     process.env.REACT_APP_API_BASE_URL || "https://localhost:7003";
 
-  // Kết nối SignalR khi user đăng nhập
+  // Chỉ kết nối SignalR khi có page đăng ký listener (opt-in approach)
+  // Tránh tự động kết nối cho các page không cần SignalR (như Maintenance)
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && hasListenersRef.current) {
       connectToHub();
     } else {
       disconnectFromHub();
@@ -41,7 +43,7 @@ export const SignalRProvider = ({ children }) => {
     return () => {
       disconnectFromHub();
     };
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, hasListenersRef.current]);
 
   const connectToHub = useCallback(async () => {
     try {
@@ -300,6 +302,12 @@ export const SignalRProvider = ({ children }) => {
     }
     listenersRef.current.get(eventType).add(callback);
 
+    // Mark that we have listeners, trigger connection
+    if (!hasListenersRef.current && isAuthenticated && user) {
+      hasListenersRef.current = true;
+      connectToHub();
+    }
+
     // Return unsubscribe function
     return () => {
       const listeners = listenersRef.current.get(eventType);
@@ -309,8 +317,14 @@ export const SignalRProvider = ({ children }) => {
           listenersRef.current.delete(eventType);
         }
       }
+
+      // If no more listeners, disconnect
+      if (listenersRef.current.size === 0) {
+        hasListenersRef.current = false;
+        disconnectFromHub();
+      }
     };
-  }, []);
+  }, [isAuthenticated, user]);
 
   // Send message to hub
   const sendMessage = useCallback(

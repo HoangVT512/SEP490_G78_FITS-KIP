@@ -60,6 +60,7 @@ import {
   PushpinOutlined,
   DownOutlined,
   SaveOutlined,
+  ExclamationCircleOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
@@ -108,6 +109,7 @@ const MaintenanceManagement = () => {
           ))}
         </ul>
       ),
+      width: 600,
       okText: "Đóng",
       closable: true,
       maskClosable: true,
@@ -225,8 +227,9 @@ const MaintenanceManagement = () => {
         setLoadingHistory(true);
         try {
           const allWorkOrders = await getAllWorkOrders();
+          // ✅ Hiển thị cả Completed và Cancelled trong lịch sử
           const history = allWorkOrders.data?.filter(
-            wo => wo.planId === viewingPlan.planId && wo.status === 'Completed'
+            wo => wo.planId === viewingPlan.planId && (wo.status === 'Completed' || wo.status === 'Cancelled')
           ).sort((a, b) => new Date(b.completedDate || b.scheduledDate) - new Date(a.completedDate || a.scheduledDate)) || [];
           setPlanMaintenanceHistory(history);
           
@@ -538,10 +541,13 @@ const MaintenanceManagement = () => {
       loadMaintenancePlans();
       loadStats();
       // Refresh viewingPlan data
-      const updatedPlans = await getMaintenancePlans();
-      const updatedPlan = updatedPlans.find(p => p.planId === viewingPlan.planId);
-      if (updatedPlan) {
-        setViewingPlan(updatedPlan);
+      const response = await getAllMaintenancePlans();
+      const updatedPlans = response?.data || response || [];
+      if (Array.isArray(updatedPlans)) {
+        const updatedPlan = updatedPlans.find(p => p.planId === viewingPlan.planId);
+        if (updatedPlan) {
+          setViewingPlan(updatedPlan);
+        }
       }
     } catch (error) {
       showError("Lỗi khi cập nhật kế hoạch", [error.message || "Lỗi không xác định"]);
@@ -599,7 +605,14 @@ const MaintenanceManagement = () => {
       loadMaintenancePlans();
       loadStats();
     } catch (error) {
-      showError("Lỗi khi xử lý kế hoạch bảo trì", [error.message || "Lỗi không xác định"]);
+      let errorMessage = error.message || "Lỗi không xác định";
+      
+      // Loại bỏ phần "Chu kỳ hiện tại: ..." khỏi thông báo lỗi
+      if (errorMessage.includes("Chu kỳ hiện tại:")) {
+        errorMessage = errorMessage.replace(/Chu kỳ hiện tại:.*?\./g, '').trim();
+      }
+      
+      showError("Lỗi khi xử lý kế hoạch bảo trì", [errorMessage]);
     } finally {
       setLoading(false);
     }
@@ -637,7 +650,17 @@ const MaintenanceManagement = () => {
       message.success("Xóa mẫu bảo trì thành công!");
       loadTemplates();
     } catch (error) {
-      showError("Xóa mẫu bảo trì thất bại", [error.message || "Lỗi không xác định"]);
+      const errorMessage = error.message || "Lỗi không xác định";
+      
+      // Kiểm tra nếu là lỗi đang được sử dụng bởi chu kỳ
+      if (errorMessage.includes("đang được sử dụng bởi") || errorMessage.includes("chu kỳ bảo trì")) {
+        // Trích xuất tên chu kỳ từ message (lấy phần sau "chu kỳ bảo trì đang hoạt động:")
+        const match = errorMessage.match(/đang hoạt động: (.+?) Vui lòng/);
+        const cycleInfo = match ? match[1] : "các chu kỳ bảo trì";
+        message.error(`Mẫu bảo trì này đang được dùng ở chu kỳ ${cycleInfo}. Không thể xóa.`);
+      } else {
+        showError("Xóa mẫu bảo trì thất bại", [errorMessage]);
+      }
     }
   };
 
@@ -648,7 +671,6 @@ const MaintenanceManagement = () => {
         stageId: values.stageId,
         templateName: values.templateName,
         description: values.description,
-        inspectionCode: values.inspectionCode,
         templateItems: checklistItems,
       };
 
@@ -1228,179 +1250,6 @@ const MaintenanceManagement = () => {
       console.error("Import error:", error);
       showError("Import thất bại", [error.message || "Lỗi không xác định"]);
       setImportLoading(false);
-    }
-  };
-
-  // ===== EXCEL IMPORT FOR MAINTENANCE PLANS =====
-
-  const handleDownloadPlanExcel = async () => {
-    try {
-      const apiBaseUrl =
-        process.env.REACT_APP_API_BASE_URL || "http://localhost:7003/api";
-      const token = localStorage.getItem("token");
-
-      const response = await fetch(
-        `${apiBaseUrl}/maintenance/plans/download-template`,
-        {
-          method: "GET",
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error("Không thể tải file Excel");
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `MauBaoTri_ChuKy_${new Date().getTime()}.xlsx`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-
-      message.success("Tải Excel mẫu chu kỳ bảo trì thành công!");
-    } catch (error) {
-      console.error("Download error:", error);
-      showError("Tải Excel mẫu thất bại", [error.message || "Lỗi không xác định"]);
-    }
-  };
-
-  const [uploadedPlanFile, setUploadedPlanFile] = useState(null);
-  const [importPlanLoading, setImportPlanLoading] = useState(false);
-  const [isPlanImportModalVisible, setIsPlanImportModalVisible] =
-    useState(false);
-
-  const handlePlanFileChange = (info) => {
-    const file = info.file.originFileObj || info.file;
-    setUploadedPlanFile(file);
-    console.log("✅ File đã chọn:", file.name);
-  };
-
-  const handleImportPlanExcel = async () => {
-    if (!uploadedPlanFile) {
-      showError("Thiếu file", ["Vui lòng chọn file Excel để import"]);
-      return;
-    }
-
-    setImportPlanLoading(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", uploadedPlanFile);
-
-      const token = localStorage.getItem("token");
-      const apiBaseUrl =
-        process.env.REACT_APP_API_BASE_URL || "http://localhost:7003/api";
-
-      const response = await fetch(`${apiBaseUrl}/maintenance/plans/import`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        message.success(
-          `Import thành công ${result.data.successCount} chu kỳ bảo trì!`
-        );
-
-        if (result.data.errors && result.data.errors.length > 0) {
-          Modal.warning({
-            title: (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <WarningOutlined style={{ color: '#faad14' }} />
-                <span>Phát hiện {result.data.errorCount} lỗi trong file Excel</span>
-              </div>
-            ),
-            content: (
-              <div>
-                <Alert
-                  message={`Đã import thành công ${result.data.successCount} chu kỳ bảo trì`}
-                  type="success"
-                  showIcon
-                  style={{ marginBottom: 16 }}
-                />
-                <div style={{ marginBottom: 8, fontWeight: 'bold' }}>
-                  Vui lòng sửa các lỗi sau và import lại:
-                </div>
-                <ul style={{ 
-                  maxHeight: 400, 
-                  overflow: 'auto', 
-                  paddingLeft: 20,
-                  backgroundColor: '#fff1f0',
-                  padding: '12px 20px',
-                  borderRadius: 4,
-                  border: '1px solid #ffccc7'
-                }}>
-                  {result.data.errors.map((err, idx) => (
-                    <li key={idx} style={{ marginBottom: 8, color: '#cf1322' }}>
-                      {err}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ),
-            width: 700,
-            okText: "Đã hiểu",
-            closable: true,
-            maskClosable: true,
-          });
-        }
-
-        setIsPlanImportModalVisible(false);
-        setUploadedPlanFile(null);
-        loadMaintenancePlans();
-        loadStats();
-      } else {
-        // Hiển thị lỗi validation chi tiết
-        if (result.errors && result.errors.length > 0) {
-          Modal.error({
-            title: (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
-                <span>Phát hiện {result.errors.length} lỗi trong file Excel</span>
-              </div>
-            ),
-            content: (
-              <div>
-                <div style={{ marginBottom: 8 }}>
-                  Vui lòng sửa các lỗi sau và import lại:
-                </div>
-                <ul style={{ 
-                  maxHeight: 400, 
-                  overflow: 'auto', 
-                  paddingLeft: 20,
-                  backgroundColor: '#fff1f0',
-                  padding: '12px 20px',
-                  borderRadius: 4,
-                  border: '1px solid #ffccc7'
-                }}>
-                  {result.errors.map((err, idx) => (
-                    <li key={idx} style={{ marginBottom: 8, color: '#cf1322' }}>
-                      {err}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ),
-            width: 700,
-            okText: "Đã hiểu",
-            closable: true,
-            maskClosable: true,
-          });
-        } else {
-          showError("Import thất bại", [result.message || "Lỗi không xác định"]);
-        }
-      }
-    } catch (error) {
-      showError("Import thất bại", [error.message || "Lỗi không xác định"]);
-    } finally {
-      setImportPlanLoading(false);
     }
   };
 
@@ -2033,29 +1882,13 @@ const MaintenanceManagement = () => {
             />
           </Col>
           <Col xs={24} sm={12} style={{ textAlign: "right" }}>
-            <Space>
-              <Button
-                type="button"
-                icon={<DownloadOutlined />}
-                onClick={handleDownloadPlanExcel}
-              >
-                Tải Excel mẫu
-              </Button>
-              <Button
-                type="button"
-                icon={<UploadOutlined />}
-                onClick={() => setIsPlanImportModalVisible(true)}
-              >
-                Import từ Excel
-              </Button>
-              <Button
-                type="primary"
-                icon={<PlusOutlined />}
-                onClick={handleAddPlan}
-              >
-                Thêm chu kỳ bảo trì
-              </Button>
-            </Space>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={handleAddPlan}
+            >
+              Thêm chu kỳ bảo trì
+            </Button>
           </Col>
         </Row>
 
@@ -2072,50 +1905,6 @@ const MaintenanceManagement = () => {
           }}
         />
       </Space>
-
-      {/* Import Plan Modal */}
-      <Modal
-        title="Import Chu kỳ bảo trì từ Excel"
-        open={isPlanImportModalVisible}
-        onCancel={() => {
-          setIsPlanImportModalVisible(false);
-          setUploadedPlanFile(null);
-        }}
-        footer={null}
-        width={600}
-      >
-        <Upload
-          accept=".xlsx"
-          beforeUpload={() => false}
-          onChange={handlePlanFileChange}
-          maxCount={1}
-        >
-          <Button icon={<UploadOutlined />}>Chọn file Excel</Button>
-        </Upload>
-        {uploadedPlanFile && (
-          <div style={{ marginTop: 16 }}>
-            <Text strong>File đã chọn:</Text> {uploadedPlanFile.name}
-          </div>
-        )}
-        <div style={{ marginTop: 24, textAlign: "right" }}>
-          <Button
-            onClick={() => {
-              setIsPlanImportModalVisible(false);
-              setUploadedPlanFile(null);
-            }}
-            style={{ marginRight: 8 }}
-          >
-            Hủy
-          </Button>
-          <Button
-            type="primary"
-            onClick={handleImportPlanExcel}
-            loading={importPlanLoading}
-          >
-            Import
-          </Button>
-        </div>
-      </Modal>
     </Card>
   );
 
@@ -2126,7 +1915,7 @@ const MaintenanceManagement = () => {
         <Row gutter={16}>
           <Col xs={24} sm={12}>
             <Search
-              placeholder="Tìm theo tên mẫu bảo trì, mô tả hoặc mã kiểm tra"
+              placeholder="Tìm theo tên mẫu bảo trì hoặc mô tả"
               prefix={<SearchOutlined />}
               onChange={(e) => setSearchText(e.target.value)}
               allowClear
@@ -2475,14 +2264,24 @@ const MaintenanceManagement = () => {
                           .includes(input.toLowerCase())
                       }
                     >
-                      {filteredEquipments.map((equipment) => (
-                        <Option
-                          key={equipment.equipmentId}
-                          value={equipment.equipmentId}
-                        >
-                          {equipment.equipmentName} - {equipment.equipmentCode}
-                        </Option>
-                      ))}
+                      {filteredEquipments.map((equipment) => {
+                        const hasMaintenancePlan = maintenancePlans.some(
+                          (plan) => plan.equipmentId === equipment.equipmentId
+                        );
+                        return (
+                          <Option
+                            key={equipment.equipmentId}
+                            value={equipment.equipmentId}
+                          >
+                            {equipment.equipmentName} - {equipment.equipmentCode}
+                            {hasMaintenancePlan && (
+                              <span style={{ color: '#52c41a', marginLeft: 8 }}>
+                                (đã có chu kỳ bảo trì)
+                              </span>
+                            )}
+                          </Option>
+                        );
+                      })}
                     </Select>
                   </Form.Item>
                 </Col>
@@ -2560,7 +2359,13 @@ const MaintenanceManagement = () => {
                       { required: true, message: "Vui lòng chọn ngày bắt đầu" },
                     ]}
                   >
-                    <DatePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
+                    <DatePicker 
+                      format="DD/MM/YYYY" 
+                      style={{ width: "100%" }}
+                      disabledDate={(current) => {
+                        return current && current < dayjs().startOf('day');
+                      }}
+                    />
                   </Form.Item>
                 </Col>
               </Row>
@@ -3041,12 +2846,52 @@ const MaintenanceManagement = () => {
               key="update"
               type="primary"
               icon={<EditOutlined />}
-              onClick={() => {
-                setIsViewPlanEditing(true);
-                viewPlanForm.setFieldsValue({
-                  isActive: viewingPlan.isActive,
-                  reminderDaysBefore: viewingPlan.reminderDaysBefore || 3,
-                });
+              onClick={async () => {
+                // Lấy stageId từ equipment nếu viewingPlan không có
+                let stageIdToUse = viewingPlan.stageId;
+                
+                if (!stageIdToUse && viewingPlan.equipmentId) {
+                  // Tìm equipment từ danh sách để lấy stageId
+                  const equipment = equipments.find(eq => eq.equipmentId === viewingPlan.equipmentId);
+                  if (equipment) {
+                    stageIdToUse = equipment.stageId;
+                  }
+                }
+                
+                console.log('🔍 ViewingPlan:', viewingPlan);
+                console.log('🔍 StageId to use:', stageIdToUse);
+                
+                if (stageIdToUse) {
+                  try {
+                    setLoading(true);
+                    const templateResponse = await getTemplatesByStage(stageIdToUse);
+                    const templateData = templateResponse?.data || templateResponse || [];
+                    console.log('🔍 Templates loaded:', templateData);
+                    console.log('🔍 Current templateId:', viewingPlan.templateId);
+                    
+                    if (Array.isArray(templateData) && templateData.length > 0) {
+                      setFilteredTemplates(templateData);
+                      // Set field values SAU KHI đã có templates
+                      setTimeout(() => {
+                        setIsViewPlanEditing(true);
+                        viewPlanForm.setFieldsValue({
+                          isActive: viewingPlan.isActive,
+                          reminderDaysBefore: viewingPlan.reminderDaysBefore || 3,
+                          templateId: viewingPlan.templateId,
+                        });
+                      }, 100);
+                    } else {
+                      message.warning('Không tìm thấy mẫu bảo trì nào cho công đoạn này');
+                    }
+                  } catch (error) {
+                    console.error('❌ Error loading templates:', error);
+                    message.error('Không thể tải danh sách mẫu bảo trì');
+                  } finally {
+                    setLoading(false);
+                  }
+                } else {
+                  message.error('Không xác định được công đoạn của chu kỳ này');
+                }
               }}
             >
               Cập nhật
@@ -3074,16 +2919,14 @@ const MaintenanceManagement = () => {
                     name="isActive"
                     style={{ marginBottom: 0 }}
                   >
-                    <Select style={{ width: '100%' }}>
+                    <Select style={{ width: '200px' }}>
                       <Option value={true}>
-                        <Tag color="success" icon={<CheckCircleOutlined />}>
-                          Hoạt động
-                        </Tag>
+                        <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 4 }} />
+                        Hoạt động
                       </Option>
                       <Option value={false}>
-                        <Tag color="default" icon={<CloseOutlined />}>
-                          Không hoạt động
-                        </Tag>
+                        <CloseOutlined style={{ color: '#d9d9d9', marginRight: 4 }} />
+                        Không hoạt động
                       </Option>
                     </Select>
                   </Form.Item>
@@ -3123,19 +2966,14 @@ const MaintenanceManagement = () => {
                       placeholder="Chọn mẫu bảo trì"
                       style={{ width: '100%' }}
                       showSearch
-                      optionFilterProp="children"
-                    >
-                      {filteredTemplates.map((template) => (
-                        <Option key={template.templateId} value={template.templateId}>
-                          <div>
-                            <div><strong>{template.templateName}</strong></div>
-                            <Text type="secondary" style={{ fontSize: 11 }}>
-                              TPL{String(template.templateId).padStart(3, "0")} - {template.description}
-                            </Text>
-                          </div>
-                        </Option>
-                      ))}
-                    </Select>
+                      filterOption={(input, option) =>
+                        (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                      }
+                      options={filteredTemplates.map((template) => ({
+                        label: `${template.templateName} (TPL${String(template.templateId).padStart(3, "0")})`,
+                        value: template.templateId,
+                      }))}
+                    />
                   </Form.Item>
                 ) : (
                   <Space direction="vertical" size="small" style={{ width: '100%' }}>
@@ -3288,39 +3126,71 @@ const MaintenanceManagement = () => {
               />
             ) : (
               <Timeline mode="left">
-                {planMaintenanceHistory.map((wo) => (
-                  <Timeline.Item
-                    key={wo.workOrderId}
-                    color={wo.status === 'Completed' ? 'green' : 'blue'}
-                    label={
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {dayjs(wo.completedDate || wo.scheduledDate).format("DD/MM/YYYY")}
-                      </Text>
-                    }
-                  >
-                    <Card 
-                      size="small" 
-                      hoverable
-                      onClick={() => handleViewWorkOrderDetail(wo)}
-                      style={{ cursor: 'pointer' }}
+                {planMaintenanceHistory.map((wo) => {
+                  const isCompleted = wo.status === 'Completed';
+                  const isCancelled = wo.status === 'Cancelled';
+                  const isOverdue = wo.status === 'Overdue';
+                  const color = isCompleted ? 'green' : isCancelled ? 'red' : isOverdue ? 'orange' : 'blue';
+                  
+                  return (
+                    <Timeline.Item
+                      key={wo.workOrderId}
+                      color={color}
+                      label={
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {dayjs(wo.completedDate || wo.dueDate).format("DD/MM/YYYY")}
+                        </Text>
+                      }
                     >
-                      <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text strong>
-                            WO{String(wo.workOrderId).padStart(4, "0")}
-                          </Text>
-                          <Tag color="success" icon={<CheckCircleOutlined />}>
-                            Hoàn thành
-                          </Tag>
-                        </div>
-                        
-                        {wo.completedDate && (
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            <ClockCircleOutlined /> Hoàn thành: {dayjs(wo.completedDate).format("DD/MM/YYYY HH:mm")}
-                          </Text>
-                        )}
-                        
-                        <div>
+                      <Card 
+                        size="small" 
+                        hoverable
+                        onClick={() => handleViewWorkOrderDetail(wo)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text strong>
+                              WO{String(wo.workOrderId).padStart(4, "0")}
+                            </Text>
+                            {isCompleted ? (
+                              <Tag color="success" icon={<CheckCircleOutlined />}>
+                                Hoàn thành
+                              </Tag>
+                            ) : isCancelled ? (
+                              <Tag color="error" icon={<CloseCircleOutlined />}>
+                                Đã hủy
+                              </Tag>
+                            ) : isOverdue ? (
+                              <Tag color="warning" icon={<ExclamationCircleOutlined />}>
+                                Quá hạn
+                              </Tag>
+                            ) : (
+                              <Tag color="processing" icon={<ClockCircleOutlined />}>
+                                {wo.status}
+                              </Tag>
+                            )}
+                          </div>
+                          
+                          {isCompleted && wo.completedDate && (
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              <ClockCircleOutlined /> Hoàn thành: {dayjs(wo.completedDate).format("DD/MM/YYYY HH:mm")}
+                            </Text>
+                          )}
+                          
+                          {isOverdue && (
+                            <Text type="danger" style={{ fontSize: 12 }}>
+                              <WarningOutlined /> Đến hạn: {dayjs(wo.dueDate).format("DD/MM/YYYY")} - Không thực hiện bảo trì
+                            </Text>
+                          )}
+                          
+                          {wo.scheduledDate && (
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              <CalendarOutlined /> Dự kiến: {dayjs(wo.scheduledDate).format("DD/MM/YYYY")}
+                            </Text>
+                          )}
+                          
+                          <div>
                           {wo.mechanicalTechnicianName && (
                             <div>
                               <Tag color="orange" size="small" icon={<ToolOutlined />}>
@@ -3359,7 +3229,8 @@ const MaintenanceManagement = () => {
                       </Space>
                     </Card>
                   </Timeline.Item>
-                ))}
+                  );
+                })}
               </Timeline>
             )}
           </div>
@@ -3407,13 +3278,23 @@ const MaintenanceManagement = () => {
                     Hoàn thành
                   </Tag>
                 )}
+                {viewingWorkOrder.status === 'Cancelled' && (
+                  <Tag color="error" icon={<CloseCircleOutlined />}>
+                    Đã hủy
+                  </Tag>
+                )}
+                {viewingWorkOrder.status === 'Overdue' && (
+                  <Tag color="warning" icon={<ExclamationCircleOutlined />}>
+                    Quá hạn
+                  </Tag>
+                )}
                 {viewingWorkOrder.status === 'InProgress' && (
                   <Tag color="processing" icon={<PlayCircleOutlined />}>
                     Đang thực hiện
                   </Tag>
                 )}
                 {viewingWorkOrder.status === 'Pending' && (
-                  <Tag color="warning" icon={<ClockCircleOutlined />}>
+                  <Tag color="default" icon={<ClockCircleOutlined />}>
                     Chờ xử lý
                   </Tag>
                 )}

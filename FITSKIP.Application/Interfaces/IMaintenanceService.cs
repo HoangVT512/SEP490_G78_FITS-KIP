@@ -89,11 +89,6 @@ namespace FITSKIP.Application.Interfaces
         Task DeletePlanAsync(int planId);
 
         /// <summary>
-        /// Hoãn bảo trì - cập nhật NextDueDate (TechManager)
-        /// </summary>
-        Task<MaintenancePlanDTO> PostponeMaintenancePlanAsync(int planId, PostponeMaintenancePlanRequest request, string userId);
-
-        /// <summary>
         /// Assign nhiều technicians vào maintenance plan (TechManager)
         /// </summary>
         Task<MaintenancePlanDTO> AssignMultipleTechniciansAsync(int planId, AssignMultipleTechniciansRequest request, string userId);

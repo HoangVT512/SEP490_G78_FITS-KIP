@@ -378,7 +378,20 @@ namespace FITSKIP.Infrastructure.Repositories
 
         public async Task UpdateAsync(MaintenanceWorkOrder workOrder)
         {
-            _context.MaintenanceWorkOrders.Update(workOrder);
+            // Explicitly mark all properties as modified to force update
+            var entry = _context.Entry(workOrder);
+            entry.State = EntityState.Modified;
+            
+            // Force update ScheduledDate even if value is same
+            entry.Property(w => w.ScheduledDate).IsModified = true;
+            entry.Property(w => w.DueDate).IsModified = true;
+            entry.Property(w => w.AssignedToElectrical).IsModified = true;
+            entry.Property(w => w.AssignedToMechanical).IsModified = true;
+            entry.Property(w => w.Status).IsModified = true;
+            entry.Property(w => w.Notes).IsModified = true;
+            entry.Property(w => w.UpdatedBy).IsModified = true;
+            entry.Property(w => w.UpdatedDate).IsModified = true;
+            
             await _context.SaveChangesAsync();
         }
 
