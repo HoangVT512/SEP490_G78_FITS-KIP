@@ -724,44 +724,7 @@ const IncidentAssignList = () => {
             }}
           >
             Đóng
-          </Button>,
-          <Button
-            key="history"
-            icon={<ToolOutlined />}
-            onClick={() => {
-              setHistoryEquipmentId(
-                selectedIncident?.equipmentId || selectedIncident?.equipmentId
-              );
-              setHistoryModalVisible(true);
-            }}
-            style={{
-              height: "40px",
-              fontSize: "16px",
-              minWidth: "120px",
-            }}
-          >
-            Lịch sử thay thế
-          </Button>,
-          selectedIncident?.status !== "Hoàn thành" && (
-            <Button
-              key="update"
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={() => {
-                setDetailModalVisible(false);
-                handleUpdateIncident(selectedIncident);
-              }}
-              style={{
-                backgroundColor: "#283652",
-                borderColor: "#283652",
-                height: "40px",
-                fontSize: "16px",
-                minWidth: "120px",
-              }}
-            >
-              Cập nhật
-            </Button>
-          ),
+          </Button>
         ]}
       >
         {selectedIncident && (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   Table,
   Button,
@@ -73,6 +73,30 @@ const IncidentList = () => {
   const { subscribe } = useSignalR();
 
   const searchInput = useRef(null);
+
+  const workCountMap = useMemo(() => {
+    const map = {};
+    allIncidents.forEach(incident => {
+      if (incident.status !== "Hoàn thành" && incident.assignedTo) {
+        map[incident.assignedTo] = (map[incident.assignedTo] || 0) + 1;
+      }
+    });
+    return map;
+  }, [allIncidents]);
+
+  const sortedTechnicians = useMemo(() => {
+    return [...technicians].sort((a, b) => {
+      const aId = a.userId || a.id;
+      const bId = b.userId || b.id;
+      const aWorkCount = workCountMap[aId] || 0;
+      const bWorkCount = workCountMap[bId] || 0;
+      const aAvailable = aWorkCount === 0;
+      const bAvailable = bWorkCount === 0;
+      if (aAvailable && !bAvailable) return -1;
+      if (!aAvailable && bAvailable) return 1;
+      return aWorkCount - bWorkCount;
+    });
+  }, [technicians, workCountMap]);
 
   const getColumnSearchProps = (dataIndex, placeholderText = "") => ({
     filterDropdown: ({
@@ -240,7 +264,7 @@ const IncidentList = () => {
             it.createdByName ||
             "",
           assignedTo:
-            it.assignedToName || it.assignedTo || it.AssignedTo || null,
+            it.assignedTo || it.AssignedTo || null,
           reportDate:
             it.startTime ||
             it.reportDate ||
@@ -1421,23 +1445,27 @@ const IncidentList = () => {
                             onChange={setSelectedTechnicianId}
                             allowClear
                             showSearch
-                            filterOption={(input, option) =>
-                              (option?.children ?? "")
-                                .toLowerCase()
-                                .includes(input.toLowerCase())
-                            }
+                            filterOption={(input, option) => {
+                              const tech = sortedTechnicians.find(t => (t.userId || t.id) === option.value);
+                              if (!tech) return false;
+                              const name = tech.fullName || tech.name || tech.username || '';
+                              const code = tech.employeeCode || '';
+                              const searchText = `${name} ${code}`.toLowerCase();
+                              return searchText.includes(input.toLowerCase());
+                            }}
                           >
-                            {technicians.map((tech) => (
-                              <Option
-                                key={tech.userId || tech.id}
-                                value={tech.userId || tech.id}
-                              >
-                                {tech.fullName || tech.name || tech.username}
-                                {tech.employeeCode
-                                  ? ` (${tech.employeeCode})`
-                                  : ""}
-                              </Option>
-                            ))}
+                            {sortedTechnicians.map((tech) => {
+                              const techId = tech.userId || tech.id;
+                              const workCount = workCountMap[techId] || 0;
+                              const status = workCount === 0 ? "Rảnh" : `Bận (${workCount})`;
+                              const name = tech.fullName || tech.name || tech.username;
+                              const code = tech.employeeCode;
+                              return (
+                                <Option key={techId} value={techId}>
+                                  {name}{code ? ` (${code})` : ""} – {status}
+                                </Option>
+                              );
+                            })}
                           </Select>
                         </Col>
                         <Col span={24}>

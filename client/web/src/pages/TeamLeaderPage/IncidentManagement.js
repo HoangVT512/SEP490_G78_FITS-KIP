@@ -1134,6 +1134,9 @@ const IncidentManagement = () => {
         let status;
         if (hasEndTime) {
           status = "Hoàn thành";
+        } else if (selectedIncident?.status === "Đang xử lý") {
+          // Preserve "Đang xử lý" status when updating non-completion fields for assigned incidents
+          status = "Đang xử lý";
         } else {
           // If user explicitly provided a status in the form, respect it
           if (values.status !== undefined && values.status !== null) {
