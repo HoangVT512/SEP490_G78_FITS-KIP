@@ -34,7 +34,49 @@ public class IncidentsController : ControllerBase
         try
         {
             var incidents = await _incidentService.GetIncidentsAsync();
-            return Ok(new { success = true, data = incidents });
+
+            // Get all users for assignedTo lookup
+            var allUsers = await _userRepository.GetUsersWithRolesAsync();
+            var userLookup = allUsers.ToDictionary(u => u.Id, u => new { u.FullName, u.EmployeeCode });
+
+            // Map incidents with assignedToName and assignedToEmployeeCode
+            var incidentsWithAssignedToName = incidents.Select(i => new
+            {
+                incidentId = i.IncidentId,
+                equipmentId = i.EquipmentId,
+                equipmentCode = i.Equipment?.EquipmentCode,
+                equipmentName = i.Equipment?.EquipmentName,
+                lineId = i.LineId,
+                lineName = i.Line?.LineName,
+                startTime = i.StartTime,
+                endTime = i.EndTime,
+                duration = i.Duration,
+                typeId = i.TypeId,
+                typeName = i.Type?.TypeName,
+                reason = i.Reason,
+                solution = i.Solution,
+                issue = i.Issue,
+                status = i.Status,
+                createdDate = i.CreatedDate,
+                reportedByUserId = i.ReportedByUserId,
+                reportedByUserName = i.ReportedByUser?.FullName,
+                assignedTo = i.AssignedTo,
+                assignedToName = !string.IsNullOrEmpty(i.AssignedTo) && userLookup.ContainsKey(i.AssignedTo)
+                    ? userLookup[i.AssignedTo].FullName
+                    : null,
+                assignedToEmployeeCode = !string.IsNullOrEmpty(i.AssignedTo) && userLookup.ContainsKey(i.AssignedTo)
+                    ? userLookup[i.AssignedTo].EmployeeCode
+                    : null,
+                isTechSupport = i.IsTechSupport,
+                equipment = i.Equipment,
+                line = i.Line,
+                type = i.Type,
+                reportedByUser = i.ReportedByUser,
+                incidentShifts = i.IncidentShifts,
+                incidentImages = i.IncidentImages
+            }).ToList();
+
+            return Ok(new { success = true, data = incidentsWithAssignedToName });
         }
         catch (Exception ex)
         {

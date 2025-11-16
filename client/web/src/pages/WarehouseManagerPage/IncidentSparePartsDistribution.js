@@ -54,10 +54,12 @@ const IncidentSparePartsDistribution = () => {
   const [searchingMaintenances, setSearchingMaintenances] = useState(false);
   const [activeTab, setActiveTab] = useState("incident");
   const [searchText, setSearchText] = useState("");
+  const [selectedRecord, setSelectedRecord] = useState(null);
 
   useEffect(() => {
     fetchSpareParts();
     fetchDistributions();
+    fetchIncidents(); // Load incidents on mount
   }, []);
 
   const fetchDistributions = async () => {
@@ -109,9 +111,26 @@ const IncidentSparePartsDistribution = () => {
     }
   };
 
+  const fetchIncidents = async () => {
+    setSearchingIncidents(true);
+    try {
+      const data = await incidentService.getAll();
+      // Filter incidents that require tech support and have been assigned to technicians
+      const assignedIncidents = (data || []).filter(
+        (incident) => incident.isTechSupport === true && incident.assignedTo
+      );
+      setIncidents(assignedIncidents);
+    } catch (error) {
+      console.error("Error fetching incidents:", error);
+      message.error("Lỗi khi tải danh sách sự cố");
+    } finally {
+      setSearchingIncidents(false);
+    }
+  };
+
   const searchIncidents = async (searchValue) => {
     if (!searchValue) {
-      setIncidents([]);
+      fetchIncidents(); // Reload all incidents if search is cleared
       return;
     }
     setSearchingIncidents(true);
@@ -119,13 +138,15 @@ const IncidentSparePartsDistribution = () => {
       const data = await incidentService.getAll();
       const filtered = (data || []).filter(
         (incident) =>
-          incident.incidentId?.toString().includes(searchValue) ||
-          incident.equipmentName
-            ?.toLowerCase()
-            .includes(searchValue.toLowerCase()) ||
-          incident.equipmentCode
-            ?.toLowerCase()
-            .includes(searchValue.toLowerCase())
+          incident.isTechSupport === true &&
+          incident.assignedTo &&
+          (incident.incidentId?.toString().includes(searchValue) ||
+            incident.equipmentName
+              ?.toLowerCase()
+              .includes(searchValue.toLowerCase()) ||
+            incident.equipmentCode
+              ?.toLowerCase()
+              .includes(searchValue.toLowerCase()))
       );
       setIncidents(filtered);
     } catch (error) {
@@ -165,11 +186,32 @@ const IncidentSparePartsDistribution = () => {
 
   const handleOpenCreateModal = () => {
     setSelectedDistributions([]);
+    setSelectedRecord(null);
     distributionForm.resetFields();
     setDistributionType("incident");
-    setIncidents([]);
     setMaintenances([]);
+    fetchIncidents(); // Reload incidents when opening modal
     setIsModalVisible(true);
+  };
+
+  const handleRecordSelect = (recordId) => {
+    const record =
+      distributionType === "incident"
+        ? incidents.find((i) => i.incidentId === recordId)
+        : maintenances.find((m) => m.incidentId === recordId);
+
+    setSelectedRecord(record);
+
+    // Auto-fill technician name and employee code if available
+    if (record && record.assignedToName) {
+      const technicianDisplay = record.assignedToEmployeeCode
+        ? `${record.assignedToName} (${record.assignedToEmployeeCode})`
+        : record.assignedToName;
+      distributionForm.setFieldsValue({
+        technicianName: technicianDisplay,
+        technicianId: record.assignedTo,
+      });
+    }
   };
 
   const handleAddSparePartToDistribution = () => {
@@ -486,7 +528,7 @@ const IncidentSparePartsDistribution = () => {
         onCancel={() => {
           setIsModalVisible(false);
           setSelectedDistributions([]);
-          setIncidents([]);
+          setSelectedRecord(null);
           setMaintenances([]);
           distributionForm.resetFields();
         }}
@@ -507,128 +549,245 @@ const IncidentSparePartsDistribution = () => {
             style={{ marginBottom: 16 }}
           />
 
-          <Row gutter={16}>
-            <Col span={8}>
-              {/* Distribution Type Selection */}
-              <Form.Item
-                label="Loại cấp phát"
-                name="distributionType"
-                initialValue="incident"
-                rules={[
-                  { required: true, message: "Vui lòng chọn loại cấp phát" },
-                ]}
-              >
-                <Select
-                  placeholder="Chọn loại cấp phát"
-                  size="large"
-                  onChange={(value) => {
-                    setDistributionType(value);
-                    setIncidents([]);
-                    setMaintenances([]);
-                    distributionForm.setFieldsValue({ recordId: undefined });
-                  }}
-                >
-                  <Select.Option value="incident">
-                    <Tag color="red">Sự cố</Tag> Cấp phát cho sự cố
-                  </Select.Option>
-                  <Select.Option value="maintenance">
-                    <Tag color="cyan">Bảo trì</Tag> Cấp phát cho bảo trì
-                  </Select.Option>
-                </Select>
-              </Form.Item>
-            </Col>
-
-            <Col span={8}>
-              {/* Record Selection */}
-              <Form.Item
-                label={
-                  distributionType === "incident" ? "Mã sự cố" : "Mã bảo trì"
+          {/* Distribution Type Selection - Full Width */}
+          <Form.Item
+            label={
+              <span style={{ fontSize: 14, fontWeight: 600 }}>
+                Loại cấp phát
+              </span>
+            }
+            name="distributionType"
+            initialValue="incident"
+            rules={[{ required: true, message: "Vui lòng chọn loại cấp phát" }]}
+          >
+            <Select
+              placeholder="Chọn loại cấp phát"
+              size="large"
+              onChange={(value) => {
+                setDistributionType(value);
+                setSelectedRecord(null);
+                if (value === "incident") {
+                  fetchIncidents();
+                  setMaintenances([]);
+                } else {
+                  setIncidents([]);
+                  // TODO: Fetch maintenances when available
                 }
-                name="recordId"
-                rules={[
-                  {
-                    required: true,
-                    message: `Vui lòng chọn ${
-                      distributionType === "incident" ? "sự cố" : "bảo trì"
-                    }`,
-                  },
-                ]}
-              >
-                <Select
-                  showSearch
-                  size="large"
-                  placeholder={`Tìm và chọn ${
-                    distributionType === "incident" ? "sự cố" : "bảo trì"
-                  }`}
-                  onSearch={(value) => {
-                    if (distributionType === "incident") {
-                      searchIncidents(value);
-                    } else {
-                      searchMaintenances(value);
-                    }
-                  }}
-                  filterOption={false}
-                  loading={searchingIncidents || searchingMaintenances}
-                  notFoundContent={
-                    searchingIncidents || searchingMaintenances ? (
-                      <Spin size="small" />
-                    ) : (
-                      <Empty
-                        description="Nhập mã hoặc tên thiết bị để tìm kiếm"
-                        image={Empty.PRESENTED_IMAGE_SIMPLE}
-                      />
-                    )
-                  }
-                >
-                  {(distributionType === "incident"
-                    ? incidents
-                    : maintenances
-                  ).map((record) => (
-                    <Select.Option
-                      key={record.incidentId}
-                      value={record.incidentId}
-                    >
-                      <div>
-                        <div style={{ fontWeight: 500 }}>
-                          <Tag
-                            color={
-                              distributionType === "incident" ? "red" : "cyan"
-                            }
-                          >
-                            {record.incidentId}
-                          </Tag>
-                          {record.equipmentName}
-                        </div>
-                        <div style={{ fontSize: 12, color: "#999" }}>
-                          {record.equipmentCode} - {record.lineName}
-                        </div>
-                      </div>
-                    </Select.Option>
-                  ))}
-                </Select>
-              </Form.Item>
-            </Col>
+                distributionForm.setFieldsValue({
+                  recordId: undefined,
+                  technicianName: undefined,
+                  technicianId: undefined,
+                });
+              }}
+            >
+              <Select.Option value="incident">
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <Tag color="red" style={{ margin: 0, marginRight: 8 }}>
+                    Sự cố
+                  </Tag>
+                  <span>Cấp phát cho sự cố</span>
+                </div>
+              </Select.Option>
+              <Select.Option value="maintenance">
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <Tag color="cyan" style={{ margin: 0, marginRight: 8 }}>
+                    Bảo trì
+                  </Tag>
+                  <span>Cấp phát cho bảo trì</span>
+                </div>
+              </Select.Option>
+            </Select>
+          </Form.Item>
 
-            <Col span={8}>
-              {/* Technician Name */}
-              <Form.Item
-                label="Tên kỹ thuật viên nhận"
-                name="technicianName"
-                rules={[
-                  {
-                    required: true,
-                    message: "Vui lòng nhập tên kỹ thuật viên",
-                  },
-                ]}
-              >
-                <Input
-                  size="large"
-                  placeholder="Nhập tên kỹ thuật viên"
-                  prefix={<UserOutlined />}
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+          {/* Record Selection - Full Width */}
+          <Form.Item
+            label={
+              <span style={{ fontSize: 14, fontWeight: 600 }}>
+                {distributionType === "incident" ? "Mã sự cố" : "Mã bảo trì"}
+              </span>
+            }
+            name="recordId"
+            rules={[
+              {
+                required: true,
+                message: `Vui lòng chọn ${
+                  distributionType === "incident" ? "sự cố" : "bảo trì"
+                }`,
+              },
+            ]}
+          >
+            <Select
+              showSearch
+              size="large"
+              placeholder={`Tìm kiếm và chọn ${
+                distributionType === "incident" ? "sự cố" : "bảo trì"
+              }...`}
+              onSearch={(value) => {
+                if (distributionType === "incident") {
+                  searchIncidents(value);
+                } else {
+                  searchMaintenances(value);
+                }
+              }}
+              onChange={handleRecordSelect}
+              filterOption={false}
+              loading={searchingIncidents || searchingMaintenances}
+              notFoundContent={
+                searchingIncidents || searchingMaintenances ? (
+                  <Spin size="small" />
+                ) : (
+                  <Empty
+                    description={
+                      distributionType === "incident"
+                        ? "Không có sự cố nào được giao cho kỹ thuật viên"
+                        : "Không có bảo trì nào"
+                    }
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  />
+                )
+              }
+              dropdownStyle={{ maxWidth: "600px" }}
+            >
+              {(distributionType === "incident" ? incidents : maintenances).map(
+                (record) => (
+                  <Select.Option
+                    key={record.incidentId}
+                    value={record.incidentId}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <Tag
+                        color={distributionType === "incident" ? "red" : "cyan"}
+                        style={{ margin: 0, marginRight: 8, flexShrink: 0 }}
+                      >
+                        {record.incidentId}
+                      </Tag>
+                      <span
+                        style={{
+                          fontWeight: 500,
+                          marginRight: 8,
+                          flexShrink: 0,
+                        }}
+                      >
+                        {record.equipmentName}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 12,
+                          color: "#999",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        ({record.equipmentCode} - {record.lineName})
+                      </span>
+                    </div>
+                  </Select.Option>
+                )
+              )}
+            </Select>
+          </Form.Item>
+
+          {/* Technician Information - Full Width */}
+          <Form.Item
+            label={
+              <span style={{ fontSize: 14, fontWeight: 600 }}>
+                Kỹ thuật viên đảm nhiệm
+              </span>
+            }
+            name="technicianName"
+            rules={[
+              {
+                required: true,
+                message: "Vui lòng chọn sự cố để hiển thị kỹ thuật viên",
+              },
+            ]}
+          >
+            <Input
+              size="large"
+              placeholder="Chọn sự cố để xem thông tin kỹ thuật viên"
+              prefix={<UserOutlined />}
+              style={{
+                backgroundColor: "#f5f5f5",
+                color: "#000",
+                cursor: "not-allowed",
+              }}
+            />
+          </Form.Item>
+          <Form.Item name="technicianId" hidden>
+            <Input type="hidden" />
+          </Form.Item>
+
+          {/* Show selected incident info */}
+          {selectedRecord && (
+            <Alert
+              message={
+                <span style={{ fontSize: 14, fontWeight: 600 }}>
+                  Thông tin sự cố đã chọn
+                </span>
+              }
+              description={
+                <div style={{ lineHeight: "1.8" }}>
+                  <Row gutter={[16, 8]}>
+                    <Col span={12}>
+                      <div style={{ display: "flex", flexWrap: "wrap" }}>
+                        <strong style={{ minWidth: 80, flexShrink: 0 }}>
+                          Thiết bị:
+                        </strong>
+                        <span style={{ flex: 1, paddingLeft: 8 }}>
+                          {selectedRecord.equipmentName} (
+                          {selectedRecord.equipmentCode})
+                        </span>
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div style={{ display: "flex", flexWrap: "wrap" }}>
+                        <strong style={{ minWidth: 100, flexShrink: 0 }}>
+                          Kỹ thuật viên:
+                        </strong>
+                        <span style={{ flex: 1, paddingLeft: 8 }}>
+                          {selectedRecord.assignedToName}
+                        </span>
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div style={{ display: "flex", flexWrap: "wrap" }}>
+                        <strong style={{ minWidth: 80, flexShrink: 0 }}>
+                          Dây chuyền:
+                        </strong>
+                        <span style={{ flex: 1, paddingLeft: 8 }}>
+                          {selectedRecord.lineName}
+                        </span>
+                      </div>
+                    </Col>
+                    {selectedRecord.startTime && (
+                      <Col span={12}>
+                        <div style={{ display: "flex", flexWrap: "wrap" }}>
+                          <strong style={{ minWidth: 100, flexShrink: 0 }}>
+                            Thời gian bắt đầu:
+                          </strong>
+                          <span style={{ flex: 1, paddingLeft: 8 }}>
+                            {dayjs(selectedRecord.startTime).format(
+                              "DD/MM/YYYY HH:mm"
+                            )}
+                          </span>
+                        </div>
+                      </Col>
+                    )}
+                  </Row>
+                </div>
+              }
+              type="success"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+          )}
 
           {/* Spare Parts Distribution Table */}
           <Form.Item
@@ -861,7 +1020,7 @@ const IncidentSparePartsDistribution = () => {
                 onClick={() => {
                   setIsModalVisible(false);
                   setSelectedDistributions([]);
-                  setIncidents([]);
+                  setSelectedRecord(null);
                   setMaintenances([]);
                   distributionForm.resetFields();
                 }}
