@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Calendar,
@@ -15,6 +15,9 @@ import {
   Timeline,
   Empty,
   Tooltip,
+  Spin,
+  message,
+  Typography,
 } from "antd";
 import {
   CalendarOutlined,
@@ -23,160 +26,159 @@ import {
   WarningOutlined,
   CheckCircleOutlined,
   InfoCircleOutlined,
+  ReloadOutlined,
+  FilterOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
+import isBetween from "dayjs/plugin/isBetween";
+import localeData from "dayjs/plugin/localeData";
+import "dayjs/locale/vi";
+import { getMyWorkOrders } from "../../services/maintenanceService";
 import styles from "../../styles/pages/MaintenanceSchedule.module.css";
 
+dayjs.extend(isBetween);
+dayjs.extend(localeData);
+dayjs.locale('vi');
+
 const { Option } = Select;
+const { Text } = Typography;
 
 const MaintenanceSchedule = () => {
+  const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState(dayjs());
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedSchedules, setSelectedSchedules] = useState([]);
-  const [viewMode, setViewMode] = useState("month"); // month or week
+  const [loading, setLoading] = useState(false);
+  const [workOrders, setWorkOrders] = useState([]);
+  const [filterStatus, setFilterStatus] = useState("all");
 
-  // Mock schedule data - sẽ thay bằng API call sau
-  const scheduleData = [
-    {
-      date: "2025-10-13",
-      schedules: [
-        {
-          key: 1,
-          planCode: "PM-001",
-          equipmentCode: "EQ-010",
-          equipmentName: "Máy phay CNC",
-          taskType: "Bảo trì định kỳ",
-          time: "14:00",
-          duration: "2 giờ",
-          priority: "Cao",
-          status: "Sắp tới",
-          lineName: "Dây chuyền 1",
-        },
-        {
-          key: 2,
-          planCode: "PM-005",
-          equipmentCode: "EQ-022",
-          equipmentName: "Máy tiện tự động",
-          taskType: "Kiểm tra an toàn",
-          time: "16:00",
-          duration: "1 giờ",
-          priority: "Trung bình",
-          status: "Sắp tới",
-          lineName: "Dây chuyền 2",
-        },
-        {
-          key: 3,
-          planCode: "INC-001",
-          equipmentCode: "EQ-001",
-          equipmentName: "Máy CNC 01",
-          taskType: "Sửa chữa sự cố",
-          time: "08:30",
-          duration: "4 giờ",
-          priority: "Cao",
-          status: "Đang thực hiện",
-          lineName: "Dây chuyền 1",
-        },
-      ],
-    },
-    {
-      date: "2025-10-14",
-      schedules: [
-        {
-          key: 4,
-          planCode: "PM-008",
-          equipmentCode: "EQ-015",
-          equipmentName: "Robot hàn 02",
-          taskType: "Bảo trì định kỳ",
-          time: "10:00",
-          duration: "3 giờ",
-          priority: "Cao",
-          status: "Chưa bắt đầu",
-          lineName: "Dây chuyền 2",
-        },
-        {
-          key: 5,
-          planCode: "INC-002",
-          equipmentCode: "EQ-015",
-          equipmentName: "Robot hàn 03",
-          taskType: "Sửa chữa sự cố",
-          time: "12:00",
-          duration: "2 giờ",
-          priority: "Trung bình",
-          status: "Chưa bắt đầu",
-          lineName: "Dây chuyền 2",
-        },
-      ],
-    },
-    {
-      date: "2025-10-15",
-      schedules: [
-        {
-          key: 6,
-          planCode: "PM-012",
-          equipmentCode: "EQ-030",
-          equipmentName: "Băng chuyền 08",
-          taskType: "Bảo dưỡng",
-          time: "09:00",
-          duration: "1.5 giờ",
-          priority: "Thấp",
-          status: "Chưa bắt đầu",
-          lineName: "Dây chuyền 3",
-        },
-        {
-          key: 7,
-          planCode: "INC-003",
-          equipmentCode: "EQ-025",
-          equipmentName: "Băng chuyền 05",
-          taskType: "Sửa chữa sự cố",
-          time: "17:00",
-          duration: "1 giờ",
-          priority: "Thấp",
-          status: "Chưa bắt đầu",
-          lineName: "Dây chuyền 3",
-        },
-      ],
-    },
-    {
-      date: "2025-10-16",
-      schedules: [
-        {
-          key: 8,
-          planCode: "PM-015",
-          equipmentCode: "EQ-018",
-          equipmentName: "Máy mài tự động",
-          taskType: "Kiểm tra định kỳ",
-          time: "13:00",
-          duration: "1 giờ",
-          priority: "Trung bình",
-          status: "Chưa bắt đầu",
-          lineName: "Dây chuyền 2",
-        },
-      ],
-    },
-    {
-      date: "2025-10-18",
-      schedules: [
-        {
-          key: 9,
-          planCode: "PM-020",
-          equipmentCode: "EQ-012",
-          equipmentName: "Máy dập thủy lực",
-          taskType: "Bảo trì định kỳ",
-          time: "11:00",
-          duration: "2.5 giờ",
-          priority: "Cao",
-          status: "Chưa bắt đầu",
-          lineName: "Dây chuyền 1",
-        },
-      ],
-    },
-  ];
+  useEffect(() => {
+    fetchWorkOrders();
+  }, []);
 
+  const fetchWorkOrders = async () => {
+    setLoading(true);
+    try {
+      const response = await getMyWorkOrders();
+      if (response.success && response.data) {
+        setWorkOrders(response.data);
+      }
+    } catch (error) {
+      console.error("Error fetching work orders:", error);
+      message.error("Không thể tải lịch bảo trì");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Transform work orders to calendar schedule format
+  const transformWorkOrdersToSchedule = () => {
+    const scheduleMap = new Map();
+
+    workOrders.forEach((wo) => {
+      // Determine which date to use for display
+      const displayDate = wo.scheduledDate || wo.dueDate || wo.assignedDate;
+      if (!displayDate) return;
+
+      const dateKey = dayjs(displayDate).format("YYYY-MM-DD");
+
+      const schedule = {
+        key: wo.workOrderId,
+        workOrderId: wo.workOrderId,
+        planCode: wo.workOrderCode,
+        equipmentCode: wo.equipmentCode || "-",
+        equipmentName: wo.equipmentName || "-",
+        lineName: wo.lineName || "-",
+        stageName: wo.stageName || "",
+        taskType: "Bảo trì định kỳ",
+        scheduledTime: wo.scheduledDate ? dayjs(wo.scheduledDate).format("HH:mm") : "-",
+        dueTime: wo.dueDate ? dayjs(wo.dueDate).format("HH:mm") : "-",
+        status: wo.status,
+        assignedDate: wo.assignedDate,
+        scheduledDate: wo.scheduledDate,
+        dueDate: wo.dueDate,
+        completedDate: wo.completedDate,
+        progress: wo.completionPercentage || 0,
+        totalItems: wo.totalChecklistItems || 0,
+        checkedItems: wo.completedChecklistItems || 0,
+        notes: wo.notes,
+        isOverdue: wo.isOverdue || false,
+      };
+
+      if (!scheduleMap.has(dateKey)) {
+        scheduleMap.set(dateKey, []);
+      }
+      scheduleMap.get(dateKey).push(schedule);
+    });
+
+    return Array.from(scheduleMap.entries()).map(([date, schedules]) => ({
+      date,
+      schedules: schedules.sort((a, b) => {
+        if (a.scheduledTime === "-" && b.scheduledTime === "-") return 0;
+        if (a.scheduledTime === "-") return 1;
+        if (b.scheduledTime === "-") return -1;
+        return a.scheduledTime.localeCompare(b.scheduledTime);
+      }),
+    }));
+  };
+
+  const scheduleData = transformWorkOrdersToSchedule();
   // Get schedules for a specific date
   const getSchedulesForDate = (date) => {
     const dateStr = dayjs(date).format("YYYY-MM-DD");
     const found = scheduleData.find((item) => item.date === dateStr);
-    return found ? found.schedules : [];
+    
+    // Apply status filter
+    if (!found) return [];
+    
+    if (filterStatus === "all") return found.schedules;
+    
+    return found.schedules.filter((s) => {
+      switch (filterStatus) {
+        case "pending":
+          return s.status === "Pending" || s.status === "Assigned";
+        case "in-progress":
+          return s.status === "InProgress";
+        case "completed":
+          return s.status === "Completed";
+        case "overdue":
+          return s.status === "Overdue";
+        default:
+          return true;
+      }
+    });
+  };
+
+  // Get status color helper
+  const getStatusColor = (status) => {
+    const statusColors = {
+      Pending: "default",
+      Assigned: "blue",
+      InProgress: "processing",
+      Completed: "success",
+      Postponed: "warning",
+      Cancelled: "error",
+      Overdue: "red",
+      Closed: "default",
+    };
+    return statusColors[status] || "default";
+  };
+
+  // Get status text helper
+  const getStatusText = (status) => {
+    const statusTexts = {
+      Pending: "Chờ xử lý",
+      Assigned: "Đã giao việc",
+      InProgress: "Đang thực hiện",
+      Completed: "Hoàn thành",
+      Postponed: "Đã hoãn",
+      Cancelled: "Đã hủy",
+      Overdue: "Quá hạn",
+      Closed: "Đã đóng",
+    };
+    return statusTexts[status] || status;
   };
 
   // Calendar cell render
@@ -185,50 +187,18 @@ const MaintenanceSchedule = () => {
 
     if (schedules.length === 0) return null;
 
-    const highPriority = schedules.filter((s) => s.priority === "Cao").length;
-    const mediumPriority = schedules.filter(
-      (s) => s.priority === "Trung bình"
-    ).length;
-    const lowPriority = schedules.filter((s) => s.priority === "Thấp").length;
-
     return (
       <div className={styles.dateCell}>
-        {highPriority > 0 && (
-          <Badge
-            count={highPriority}
-            style={{
-              backgroundColor: "#ff4d4f",
-              fontSize: "10px",
-              height: "18px",
-              minWidth: "18px",
-              lineHeight: "18px",
-            }}
-          />
-        )}
-        {mediumPriority > 0 && (
-          <Badge
-            count={mediumPriority}
-            style={{
-              backgroundColor: "#faad14",
-              fontSize: "10px",
-              height: "18px",
-              minWidth: "18px",
-              lineHeight: "18px",
-            }}
-          />
-        )}
-        {lowPriority > 0 && (
-          <Badge
-            count={lowPriority}
-            style={{
-              backgroundColor: "#52c41a",
-              fontSize: "10px",
-              height: "18px",
-              minWidth: "18px",
-              lineHeight: "18px",
-            }}
-          />
-        )}
+        <Badge
+          count={schedules.length}
+          style={{
+            backgroundColor: "#1890ff",
+            fontSize: "10px",
+            height: "18px",
+            minWidth: "18px",
+            lineHeight: "18px",
+          }}
+        />
       </div>
     );
   };
@@ -243,33 +213,36 @@ const MaintenanceSchedule = () => {
     }
   };
 
-  // Get statistics for the current month
+  // Get monthly statistics
   const getMonthStatistics = () => {
-    const currentMonth = dayjs().format("YYYY-MM");
+    const currentMonth = selectedDate.format("YYYY-MM");
     const monthSchedules = scheduleData.filter((item) =>
       item.date.startsWith(currentMonth)
     );
 
     let totalTasks = 0;
-    let highPriority = 0;
-    let mediumPriority = 0;
-    let lowPriority = 0;
+    let completedTasks = 0;
+    let inProgressTasks = 0;
+    let overdueTasks = 0;
 
     monthSchedules.forEach((day) => {
-      totalTasks += day.schedules.length;
-      highPriority += day.schedules.filter((s) => s.priority === "Cao").length;
-      mediumPriority += day.schedules.filter(
-        (s) => s.priority === "Trung bình"
-      ).length;
-      lowPriority += day.schedules.filter((s) => s.priority === "Thấp").length;
+      day.schedules.forEach((s) => {
+        totalTasks++;
+        
+        // Status count
+        if (s.status === "Completed") completedTasks++;
+        else if (s.status === "InProgress") inProgressTasks++;
+        else if (s.status === "Overdue") overdueTasks++;
+      });
     });
 
     return {
       total: totalTasks,
-      high: highPriority,
-      medium: mediumPriority,
-      low: lowPriority,
       days: monthSchedules.length,
+      completed: completedTasks,
+      inProgress: inProgressTasks,
+      overdue: overdueTasks,
+      completionRate: totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0,
     };
   };
 
@@ -282,52 +255,143 @@ const MaintenanceSchedule = () => {
 
   const todaySchedule = getTodaySchedule();
 
+  // Handle refresh
+  const handleRefresh = () => {
+    fetchWorkOrders();
+    message.success("Đã làm mới dữ liệu");
+  };
+
+  // Handle view work order detail
+  const handleViewDetail = (workOrderId) => {
+    navigate("/technician/maintenance-tasks");
+  };
+
   return (
-    <div className={styles.scheduleContainer}>
-      {/* Statistics Row */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
-            <Statistic
-              title="Tổng nhiệm vụ tháng này"
-              value={stats.total}
-              prefix={<CalendarOutlined />}
-              valueStyle={{ color: "#1890ff" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
-            <Statistic
-              title="Ưu tiên cao"
-              value={stats.high}
-              prefix={<WarningOutlined />}
-              valueStyle={{ color: "#ff4d4f" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
-            <Statistic
-              title="Ưu tiên trung bình"
-              value={stats.medium}
-              prefix={<InfoCircleOutlined />}
-              valueStyle={{ color: "#faad14" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
-            <Statistic
-              title="Ngày có lịch"
-              value={stats.days}
-              suffix={`/ ${dayjs().daysInMonth()}`}
-              prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: "#52c41a" }}
-            />
-          </Card>
-        </Col>
-      </Row>
+    <Spin spinning={loading}>
+      <div className={styles.scheduleContainer}>
+        {/* Header with filter */}
+        <Card 
+          bordered={false} 
+          style={{ marginBottom: 16 }}
+          bodyStyle={{ padding: "16px 24px" }}
+        >
+          <Row justify="space-between" align="middle">
+            <Col xs={24} lg={16}>
+              <Row gutter={[16, 16]}>
+                <Col xs={24} sm={8}>
+                  <Card bordered={false} className={styles.statCard}>
+                    <Statistic
+                      title="Tổng nhiệm vụ tháng này"
+                      value={stats.total}
+                      prefix={<CalendarOutlined style={{ color: "#1890ff" }} />}
+                      valueStyle={{ fontSize: "24px", fontWeight: "bold", color: "#1890ff" }}
+                    />
+                  </Card>
+                </Col>
+                <Col xs={24} sm={8}>
+                  <Card bordered={false} className={styles.statCard}>
+                    <Statistic
+                      title="Hoàn thành"
+                      value={stats.completed}
+                      suffix={`/ ${stats.total}`}
+                      prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
+                      valueStyle={{ fontSize: "20px", color: "#52c41a" }}
+                    />
+                  </Card>
+                </Col>
+                <Col xs={24} sm={8}>
+                  <Card bordered={false} className={styles.statCard}>
+                    <Statistic
+                      title="Tỷ lệ hoàn thành"
+                      value={stats.completionRate}
+                      suffix="%"
+                      valueStyle={{ 
+                        fontSize: "20px", 
+                        color: stats.completionRate >= 80 ? "#52c41a" : stats.completionRate >= 50 ? "#faad14" : "#ff4d4f" 
+                      }}
+                    />
+                  </Card>
+                </Col>
+              </Row>
+            </Col>
+            <Col xs={24} lg={8}>
+              <Row justify="end">
+                <Space>
+                  <Select
+                    value={filterStatus}
+                    onChange={setFilterStatus}
+                    style={{ width: 180 }}
+                    prefix={<FilterOutlined />}
+                  >
+                    <Option value="all">
+                      <Space>
+                        {/* <FilterOutlined /> */}
+                        Tất cả trạng thái
+                      </Space>
+                    </Option>
+                    <Option value="pending">Chờ xử lý</Option>
+                    <Option value="in-progress">Đang thực hiện</Option>
+                    <Option value="completed">Hoàn thành</Option>
+                    <Option value="overdue">Quá hạn</Option>
+                  </Select>
+                  <Button 
+                    icon={<ReloadOutlined />} 
+                    onClick={handleRefresh}
+                    type="default"
+                  >
+                    Làm mới
+                  </Button>
+                </Space>
+              </Row>
+            </Col>
+          </Row>
+        </Card>
+
+        {/* Statistics Cards */}
+        <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
+          <Col xs={24} sm={12} lg={8}>
+            <Card bordered={false} className={styles.statCard}>
+              <Statistic
+                title="Đang thực hiện"
+                value={stats.inProgress}
+                prefix={<ClockCircleOutlined />}
+                valueStyle={{ color: "#1890ff" }}
+                suffix={
+                  <span style={{ fontSize: "14px", color: "#888" }}>
+                    nhiệm vụ
+                  </span>
+                }
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={8}>
+            <Card bordered={false} className={styles.statCard}>
+              <Statistic
+                title="Quá hạn"
+                value={stats.overdue}
+                prefix={<WarningOutlined />}
+                valueStyle={{ color: stats.overdue > 0 ? "#ff4d4f" : "#52c41a" }}
+                suffix={
+                  <span style={{ fontSize: "14px", color: "#888" }}>
+                    nhiệm vụ
+                  </span>
+                }
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={8}>
+            <Card bordered={false} className={styles.statCard}>
+              <Statistic
+                title="Ngày có lịch"
+                value={stats.days}
+                suffix={`/ ${selectedDate.daysInMonth()}`}
+                prefix={<CalendarOutlined />}
+                valueStyle={{ color: "#52c41a" }}
+              />
+            </Card>
+          </Col>
+        </Row>
+
 
       <Row gutter={[16, 16]}>
         {/* Calendar */}
@@ -335,33 +399,29 @@ const MaintenanceSchedule = () => {
           <Card
             title={
               <Space>
-                <CalendarOutlined />
-                <span>Lịch bảo trì</span>
-              </Space>
-            }
-            extra={
-              <Space>
-                <span style={{ fontSize: "12px", color: "#888" }}>
-                  <Badge
-                    color="#ff4d4f"
-                    text="Cao"
-                    style={{ marginRight: 8 }}
-                  />
-                  <Badge
-                    color="#faad14"
-                    text="Trung bình"
-                    style={{ marginRight: 8 }}
-                  />
-                  <Badge color="#52c41a" text="Thấp" />
+                <CalendarOutlined style={{ color: "#1890ff" }} />
+                <span style={{ fontSize: "16px", fontWeight: 600 }}>
+                  Lịch bảo trì - {selectedDate.format("MMMM YYYY")}
                 </span>
               </Space>
             }
+            extra={
+              <Space size="small">
+                <Text type="secondary" style={{ fontSize: "12px" }}>
+                  Tổng số nhiệm vụ
+                </Text>
+              </Space>
+            }
             bordered={false}
+            className={styles.calendarCard}
           >
             <Calendar
               cellRender={dateCellRender}
               onSelect={onDateSelect}
               className={styles.calendar}
+              value={selectedDate}
+              onPanelChange={(date) => setSelectedDate(date)}
+              validRange={[dayjs().subtract(5, 'year').startOf('year'), dayjs().endOf('year')]}
             />
           </Card>
         </Col>
@@ -371,79 +431,96 @@ const MaintenanceSchedule = () => {
           <Card
             title={
               <Space>
-                <ClockCircleOutlined />
-                <span>Lịch hôm nay</span>
+                <ClockCircleOutlined style={{ color: "#52c41a" }} />
+                <span style={{ fontSize: "16px", fontWeight: 600 }}>
+                  Lịch hôm nay ({dayjs().format("DD/MM/YYYY")})
+                </span>
               </Space>
             }
+            extra={
+              <Badge 
+                count={todaySchedule.length} 
+                style={{ backgroundColor: "#1890ff" }}
+                overflowCount={99}
+              />
+            }
             bordered={false}
-            bodyStyle={{ maxHeight: "600px", overflowY: "auto" }}
+            bodyStyle={{ maxHeight: "calc(100vh - 400px)", overflowY: "auto", padding: "16px" }}
+            className={styles.todayCard}
           >
             {todaySchedule.length > 0 ? (
               <Timeline
-                items={todaySchedule
-                  .sort((a, b) => a.time.localeCompare(b.time))
-                  .map((schedule) => {
-                    let color = "blue";
-                    if (schedule.priority === "Cao") color = "red";
-                    else if (schedule.priority === "Trung bình")
-                      color = "orange";
-                    else if (schedule.priority === "Thấp") color = "green";
+                items={todaySchedule.map((schedule) => {
+                  let color = "blue";
+                  if (schedule.status === "Overdue") color = "red";
+                  else if (schedule.status === "Completed") color = "green";
+                  else if (schedule.status === "InProgress") color = "orange";
 
-                    let icon = <ToolOutlined />;
-                    if (schedule.status === "Đang thực hiện")
-                      icon = <ClockCircleOutlined spin />;
-                    else if (schedule.status === "Hoàn thành")
-                      icon = <CheckCircleOutlined />;
+                  let icon = <ToolOutlined />;
+                  if (schedule.status === "InProgress")
+                    icon = <ClockCircleOutlined spin />;
+                  else if (schedule.status === "Completed")
+                    icon = <CheckCircleOutlined />;
 
-                    return {
-                      color: color,
-                      dot: icon,
-                      children: (
-                        <div>
-                          <div
-                            style={{
-                              fontWeight: 500,
-                              marginBottom: 4,
-                              fontSize: "13px",
-                            }}
-                          >
+                  return {
+                    color: color,
+                    dot: icon,
+                    children: (
+                      <div className={styles.timelineItem}>
+                        <div style={{ marginBottom: 8 }}>
+                          <Space>
                             <Tag
-                              color={
-                                schedule.taskType.includes("sự cố")
-                                  ? "red"
-                                  : "blue"
-                              }
-                              style={{ fontSize: "11px" }}
+                              color={schedule.status === "Overdue" ? "red" : "blue"}
+                              style={{ fontSize: "11px", fontWeight: 500 }}
                             >
-                              {schedule.time}
+                              {schedule.scheduledTime !== "-" 
+                                ? schedule.scheduledTime 
+                                : schedule.dueTime
+                              }
                             </Tag>
-                            {schedule.planCode}
-                          </div>
-                          <div style={{ fontSize: "12px", marginBottom: 4 }}>
-                            <strong>{schedule.equipmentCode}</strong> -{" "}
-                            {schedule.equipmentName}
-                          </div>
-                          <div
-                            style={{
-                              fontSize: "11px",
-                              color: "#888",
-                              marginBottom: 4,
-                            }}
-                          >
-                            {schedule.taskType} • {schedule.duration}
-                          </div>
-                          <div style={{ fontSize: "11px", color: "#888" }}>
-                            {schedule.lineName}
-                          </div>
+                            <Text strong style={{ fontSize: "13px" }}>
+                              {schedule.planCode}
+                            </Text>
+                            <Tag color={getStatusColor(schedule.status)} style={{ fontSize: "10px" }}>
+                              {getStatusText(schedule.status)}
+                            </Tag>
+                          </Space>
                         </div>
-                      ),
-                    };
-                  })}
+                        <div style={{ fontSize: "12px", marginBottom: 4 }}>
+                          <Text strong>{schedule.equipmentCode}</Text>
+                          <Text type="secondary"> - {schedule.equipmentName}</Text>
+                        </div>
+                        <div style={{ fontSize: "11px", color: "#888", marginBottom: 4 }}>
+                          <Space split="-" size="small">
+                            <span>{schedule.lineName}</span>
+                            {schedule.stageName && <span>{schedule.stageName}</span>}
+                          </Space>
+                        </div>
+                        {schedule.progress !== undefined && (
+                          <div style={{ fontSize: "11px", color: "#888" }}>
+                            Tiến độ: {schedule.checkedItems}/{schedule.totalItems} bước
+                            <span style={{ marginLeft: 4, color: schedule.progress === 100 ? "#52c41a" : "#1890ff" }}>
+                              ({schedule.progress}%)
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ),
+                  };
+                })}
               />
             ) : (
               <Empty
-                description="Không có lịch nào hôm nay"
+                description={
+                  <span style={{ color: "#888" }}>
+                    Không có lịch nào hôm nay<br />
+                    <Text type="secondary" style={{ fontSize: "12px" }}>
+                      Hãy tận hưởng ngày nghỉ ngơi! 🎉
+                    </Text>
+                  </span>
+                }
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ marginTop: 60 }}
               />
             )}
           </Card>
@@ -454,11 +531,15 @@ const MaintenanceSchedule = () => {
       <Modal
         title={
           <Space>
-            <CalendarOutlined />
-            <span>
-              Lịch ngày {selectedDate.format("DD/MM/YYYY")} (
-              {selectedSchedules.length} nhiệm vụ)
+            <CalendarOutlined style={{ color: "#1890ff" }} />
+            <span style={{ fontSize: "16px", fontWeight: 600 }}>
+              Lịch ngày {selectedDate.format("DD/MM/YYYY")}
             </span>
+            <Badge 
+              count={selectedSchedules.length} 
+              style={{ backgroundColor: "#52c41a" }}
+              overflowCount={99}
+            />
           </Space>
         }
         open={modalVisible}
@@ -469,53 +550,64 @@ const MaintenanceSchedule = () => {
             onClick={() => setModalVisible(false)}
             style={{
               height: "40px",
-              fontSize: "16px",
+              fontSize: "15px",
               minWidth: "120px",
+              borderRadius: "6px",
             }}
           >
             Đóng
           </Button>,
         ]}
-        width={800}
+        width={900}
+        className={styles.scheduleModal}
       >
         <List
           itemLayout="horizontal"
-          dataSource={selectedSchedules.sort((a, b) =>
-            a.time.localeCompare(b.time)
-          )}
+          dataSource={selectedSchedules}
           renderItem={(item) => (
             <List.Item
+              className={styles.scheduleListItem}
+              actions={[
+                <Button
+                  key="view"
+                  type="primary"
+                  icon={<EyeOutlined />}
+                  onClick={() => handleViewDetail(item.workOrderId)}
+                  size="small"
+                  style={{ borderRadius: "6px" }}
+                >
+                  Xem chi tiết
+                </Button>,
+              ]}
               extra={
-                <Space direction="vertical" align="end">
+                <Space direction="vertical" align="end" size="small">
                   <Tag
-                    color={
-                      item.priority === "Cao"
-                        ? "red"
-                        : item.priority === "Trung bình"
-                        ? "orange"
-                        : "green"
-                    }
-                  >
-                    {item.priority}
-                  </Tag>
-                  <Tag
-                    color={
-                      item.status === "Đang thực hiện"
-                        ? "processing"
-                        : item.status === "Hoàn thành"
-                        ? "success"
-                        : "default"
-                    }
+                    color={getStatusColor(item.status)}
                     icon={
-                      item.status === "Đang thực hiện" ? (
+                      item.status === "InProgress" ? (
                         <ClockCircleOutlined />
-                      ) : item.status === "Hoàn thành" ? (
+                      ) : item.status === "Completed" ? (
                         <CheckCircleOutlined />
+                      ) : item.status === "Overdue" ? (
+                        <WarningOutlined />
                       ) : null
                     }
+                    style={{ fontSize: "12px" }}
                   >
-                    {item.status}
+                    {getStatusText(item.status)}
                   </Tag>
+                  {item.progress !== undefined && (
+                    <div style={{ fontSize: "11px", color: "#888", textAlign: "right" }}>
+                      {item.checkedItems}/{item.totalItems}
+                      <br />
+                      <Text 
+                        type={item.progress === 100 ? "success" : "secondary"}
+                        style={{ fontSize: "11px" }}
+                      >
+                        {item.progress}%
+                      </Text>
+                    </div>
+                  )}
                 </Space>
               }
             >
@@ -523,47 +615,59 @@ const MaintenanceSchedule = () => {
                 avatar={
                   <div
                     style={{
-                      width: "60px",
+                      minWidth: "70px",
                       textAlign: "center",
-                      padding: "8px",
-                      backgroundColor: "#f0f0f0",
-                      borderRadius: "4px",
+                      padding: "10px 8px",
+                      backgroundColor: item.status === "Overdue" ? "#fff1f0" : "#f0f5ff",
+                      borderRadius: "8px",
+                      border: `1px solid ${item.status === "Overdue" ? "#ffccc7" : "#d6e4ff"}`,
                     }}
                   >
-                    <div style={{ fontSize: "18px", fontWeight: "bold" }}>
-                      {item.time}
+                    <div 
+                      style={{ 
+                        fontSize: "16px", 
+                        fontWeight: "bold",
+                        color: item.status === "Overdue" ? "#ff4d4f" : "#1890ff"
+                      }}
+                    >
+                      {item.scheduledTime !== "-" ? item.scheduledTime : item.dueTime}
                     </div>
-                    <div style={{ fontSize: "11px", color: "#888" }}>
-                      {item.duration}
+                    <div style={{ fontSize: "10px", color: "#888", marginTop: 2 }}>
+                      {item.scheduledTime !== "-" ? "Lên lịch" : "Đến hạn"}
                     </div>
                   </div>
                 }
                 title={
-                  <Space>
-                    <strong>{item.planCode}</strong>
-                    <Tag
-                      color={item.taskType.includes("sự cố") ? "red" : "blue"}
-                      icon={
-                        item.taskType.includes("sự cố") ? (
-                          <WarningOutlined />
-                        ) : (
-                          <ToolOutlined />
-                        )
-                      }
-                    >
+                  <Space size="middle">
+                    <Text strong style={{ fontSize: "14px" }}>
+                      {item.planCode}
+                    </Text>
+                    <Tag color="blue" icon={<ToolOutlined />} style={{ fontSize: "11px" }}>
                       {item.taskType}
                     </Tag>
                   </Space>
                 }
                 description={
-                  <div>
-                    <div style={{ marginBottom: 4 }}>
-                      <strong>{item.equipmentCode}</strong> -{" "}
-                      {item.equipmentName}
+                  <div style={{ marginTop: 4 }}>
+                    <div style={{ marginBottom: 6 }}>
+                      <Text strong style={{ fontSize: "13px" }}>
+                        {item.equipmentCode}
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: "13px", marginLeft: 4 }}>
+                        - {item.equipmentName}
+                      </Text>
                     </div>
                     <div style={{ fontSize: "12px", color: "#888" }}>
-                      {item.lineName}
+                      <Space split="|" size="small">
+                        <span>📍 {item.lineName}</span>
+                        {item.stageName && <span>{item.stageName}</span>}
+                      </Space>
                     </div>
+                    {item.dueDate && (
+                      <div style={{ fontSize: "11px", color: "#888", marginTop: 4 }}>
+                        ⏰ Hạn: {dayjs(item.dueDate).format("DD/MM/YYYY HH:mm")}
+                      </div>
+                    )}
                   </div>
                 }
               />
@@ -572,6 +676,7 @@ const MaintenanceSchedule = () => {
         />
       </Modal>
     </div>
+    </Spin>
   );
 };
 
