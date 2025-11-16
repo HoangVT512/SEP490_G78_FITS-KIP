@@ -34,7 +34,7 @@ namespace FITSKIP.Application.Services
             _notificationService = notificationService;
         }
 
-        // ===== WORK ORDER MANAGEMENT =====
+
         
         public async Task<IEnumerable<MaintenanceWorkOrderDTO>> GetAllWorkOrdersAsync()
         {
@@ -68,8 +68,6 @@ namespace FITSKIP.Application.Services
 
         public async Task<MaintenanceWorkOrderDTO> CreateWorkOrderAsync(CreateMaintenanceWorkOrderRequest request, string userId)
         {
-            // ===== VALIDATION =====
-            
             var plan = await _planRepository.GetByIdAsync(request.PlanId);
             if (plan == null)
                 throw new InvalidOperationException($"Không tìm thấy kế hoạch bảo trì với ID: {request.PlanId}");
@@ -78,21 +76,34 @@ namespace FITSKIP.Application.Services
             if (equipment == null)
                 throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {plan.EquipmentId}");
 
-            // 1. Validate ScheduledDate không được là quá khứ
-            if (request.ScheduledDate.Date < DateTime.Today)
-                throw new InvalidOperationException("Ngày bảo trì không được là ngày trong quá khứ!");
 
-            // 2. Validate ScheduledDate không được sau DueDate của Plan
+            if (userId != "SYSTEM" && request.ScheduledDate.Date < DateTime.Today)
+                throw new InvalidOperationException("❌ Ngày bảo trì không được là ngày trong quá khứ!");
+
+            var allWorkOrders = await _workOrderRepository.GetByPlanIdAsync(request.PlanId);
+            var duplicateCompletedWO = allWorkOrders.FirstOrDefault(wo =>
+                wo.Status == "Completed" &&
+                wo.CompletedDate.HasValue &&
+                wo.CompletedDate.Value.Date == request.ScheduledDate.Date
+            );
+
+            if (duplicateCompletedWO != null)
+            {
+                throw new InvalidOperationException(
+                    $"❌ Thiết bị '{equipment.EquipmentName}' ({equipment.EquipmentCode}) đã được bảo trì xong vào ngày {request.ScheduledDate:dd/MM/yyyy} " +
+                    $"(Phiếu #{duplicateCompletedWO.WorkOrderCode}). Chu kỳ tiếp theo đã được reset. " +
+                    $"Vui lòng kiểm tra lại lịch bảo trì hoặc chọn ngày khác."
+                );
+            }
+
             if (request.ScheduledDate.Date > plan.NextDueDate.Date)
                 throw new InvalidOperationException($"Ngày bảo trì không được sau ngày đến hạn ({plan.NextDueDate:dd/MM/yyyy}). Vui lòng hoãn kế hoạch bảo trì trước!");
 
-            // 3. Validate phải có ít nhất 1 KTV
             if (string.IsNullOrEmpty(request.AssignedToElectrical) && string.IsNullOrEmpty(request.AssignedToMechanical))
                 throw new InvalidOperationException("Phải chọn ít nhất 1 kỹ thuật viên (điện hoặc cơ khí)!");
 
             var dueDate = request.DueDate ?? request.ScheduledDate;
 
-            // 4. Validate KTV điện nếu được chọn
             if (!string.IsNullOrEmpty(request.AssignedToElectrical))
             {
                 var tech = await _userRepository.GetUserByIdAsync(request.AssignedToElectrical);
@@ -102,7 +113,6 @@ namespace FITSKIP.Application.Services
                     throw new InvalidOperationException("Kỹ thuật viên điện phải có mã nhân viên (EmployeeCode)!");
             }
 
-            // 5. Validate KTV cơ khí nếu được chọn
             if (!string.IsNullOrEmpty(request.AssignedToMechanical))
             {
                 var tech = await _userRepository.GetUserByIdAsync(request.AssignedToMechanical);
@@ -112,8 +122,6 @@ namespace FITSKIP.Application.Services
                     throw new InvalidOperationException("Kỹ thuật viên cơ khí phải có mã nhân viên (EmployeeCode)!");
             }
 
-            // ===== CREATE WORKORDER =====
-            
             var workOrderCode = await _workOrderRepository.GenerateWorkOrderCodeAsync();
 
             var workOrder = new MaintenanceWorkOrder
@@ -185,35 +193,49 @@ namespace FITSKIP.Application.Services
             if (workOrder == null)
                 throw new InvalidOperationException($"Không tìm thấy phiếu bảo trì với ID: {workOrderId}");
 
-            // ===== VALIDATION =====
-            
-            // 1. Validate ScheduledDate nếu có
             if (request.ScheduledDate.HasValue)
             {
                 var scheduledDate = request.ScheduledDate.Value.Date;
                 var today = DateTime.Now.Date;
                 
-                // Không được là ngày quá khứ
+
                 if (scheduledDate < today)
                 {
-                    throw new InvalidOperationException("Ngày bảo trì không được là ngày trong quá khứ!");
+                    throw new InvalidOperationException("❌ Ngày bảo trì không được là ngày trong quá khứ!");
+                }
+
+                var plan = await _planRepository.GetByIdAsync(workOrder.PlanId);
+                if (plan != null)
+                {
+                    var allWorkOrders = await _workOrderRepository.GetByPlanIdAsync(workOrder.PlanId);
+                    var duplicateCompletedWO = allWorkOrders.FirstOrDefault(wo =>
+                        wo.WorkOrderId != workOrderId && // Không tính chính WO này
+                        wo.Status == "Completed" &&
+                        wo.CompletedDate.HasValue &&
+                        wo.CompletedDate.Value.Date == scheduledDate
+                    );
+
+                    if (duplicateCompletedWO != null)
+                    {
+                        var equipment = await _equipmentRepository.GetByIdAsync(plan.EquipmentId!.Value);
+                        throw new InvalidOperationException(
+                            $"❌ Thiết bị '{equipment?.EquipmentName}' đã được bảo trì xong vào ngày {scheduledDate:dd/MM/yyyy} " +
+                            $"(Phiếu #{duplicateCompletedWO.WorkOrderCode}). Vui lòng chọn ngày khác."
+                        );
+                    }
                 }
                 
-                // ✅ CHỈ validate DueDate nếu WorkOrder CHƯA quá hạn
-                // WorkOrder quá hạn được phép dời sang ngày bất kỳ
                 if (workOrder.Status != "Overdue" && scheduledDate > workOrder.DueDate.Date)
                 {
                     throw new InvalidOperationException($"Ngày bảo trì không được sau ngày đến hạn ({workOrder.DueDate:dd/MM/yyyy})!");
                 }
             }
             
-            // 2. Validate phải có ít nhất 1 KTV
             if (string.IsNullOrEmpty(request.AssignedToElectrical) && string.IsNullOrEmpty(request.AssignedToMechanical))
             {
                 throw new InvalidOperationException("Phải chọn ít nhất 1 kỹ thuật viên (điện hoặc cơ khí)!");
             }
 
-            // 3. Validate KTV điện nếu được chọn
             if (!string.IsNullOrEmpty(request.AssignedToElectrical))
             {
                 var electricalTech = await _userRepository.GetUserByIdAsync(request.AssignedToElectrical);
@@ -221,7 +243,6 @@ namespace FITSKIP.Application.Services
                     throw new InvalidOperationException($"Không tìm thấy kỹ thuật viên điện với ID: {request.AssignedToElectrical}");
             }
             
-            // 4. Validate KTV cơ khí nếu được chọn
             if (!string.IsNullOrEmpty(request.AssignedToMechanical))
             {
                 var mechanicalTech = await _userRepository.GetUserByIdAsync(request.AssignedToMechanical);
@@ -229,24 +250,22 @@ namespace FITSKIP.Application.Services
                     throw new InvalidOperationException($"Không tìm thấy kỹ thuật viên cơ khí với ID: {request.AssignedToMechanical}");
             }
 
-            // ===== UPDATE WORKORDER =====
-            
             var oldElectrical = workOrder.AssignedToElectrical;
             var oldMechanical = workOrder.AssignedToMechanical;
 
-            // Update các field
+
             if (request.ScheduledDate.HasValue)
             {
                 workOrder.ScheduledDate = request.ScheduledDate.Value.Date;
                 
-                // ✅ Nếu WorkOrder đang Overdue và được cập nhật lại ngày → chuyển về Pending
                 if (workOrder.Status == "Overdue")
                 {
-                    workOrder.Status = "Pending";
+                    bool hasAssigned = !string.IsNullOrEmpty(request.AssignedToElectrical) || 
+                                       !string.IsNullOrEmpty(request.AssignedToMechanical);
+                    workOrder.Status = hasAssigned ? "Assigned" : "Pending";
                     workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Dời lịch bảo trì quá hạn sang {request.ScheduledDate.Value.Date:dd/MM/yyyy}";
                 }
             }
-            
             
             workOrder.AssignedToElectrical = request.AssignedToElectrical;
             workOrder.AssignedToMechanical = request.AssignedToMechanical;
@@ -258,10 +277,10 @@ namespace FITSKIP.Application.Services
             workOrder.UpdatedBy = userId;
             workOrder.UpdatedDate = DateTime.Now;
 
-            // Save changes
+
             await _workOrderRepository.UpdateAsync(workOrder);
 
-            // Update checklist if provided
+
             if (request.ChecklistItems != null && request.ChecklistItems.Any())
             {
                 await _checklistRepository.DeleteByWorkOrderIdAsync(workOrderId);
@@ -282,13 +301,13 @@ namespace FITSKIP.Application.Services
                 }
             }
 
-            // Send notifications if technicians changed
+
             if (oldElectrical != request.AssignedToElectrical || oldMechanical != request.AssignedToMechanical)
             {
                 await SendWorkOrderAssignmentNotifications(workOrder);
             }
 
-            // Reload entity từ database để lấy fresh data
+
             var result = await _workOrderRepository.GetByIdAsync(workOrderId);
             return MapWorkOrderToDTO(result!);
         }
@@ -299,7 +318,7 @@ namespace FITSKIP.Application.Services
             if (workOrder == null)
                 throw new InvalidOperationException($"Work order not found: {workOrderId}");
 
-            // Validate technicians if assigned
+
             if (!string.IsNullOrEmpty(electricalTechId))
             {
                 var tech = await _userRepository.GetUserByIdAsync(electricalTechId);
@@ -337,7 +356,6 @@ namespace FITSKIP.Application.Services
             if (workOrder.AssignedToElectrical != technicianId && workOrder.AssignedToMechanical != technicianId)
                 throw new InvalidOperationException("You are not assigned to this work order");
 
-            // ✅ Validate nếu WorkOrder bị hoãn → phải đợi đến ngày hoãn (PostponedDueDate)
             if (workOrder.PostponedDate.HasValue && workOrder.PostponedDueDate.HasValue)
             {
                 if (DateTime.Today < workOrder.PostponedDueDate.Value.Date)
@@ -349,7 +367,6 @@ namespace FITSKIP.Application.Services
                 }
             }
 
-            // ✅ Validate chỉ được start từ ngày ScheduledDate trở đi
             if (DateTime.Today < workOrder.ScheduledDate.Date)
             {
                 throw new InvalidOperationException(
@@ -376,24 +393,15 @@ namespace FITSKIP.Application.Services
             if (workOrder.AssignedToElectrical != technicianId && workOrder.AssignedToMechanical != technicianId)
                 throw new InvalidOperationException("You are not assigned to this work order");
 
-            // Xác định loại công việc của technician hiện tại
+
             bool isElectrical = workOrder.AssignedToElectrical == technicianId;
             bool isMechanical = workOrder.AssignedToMechanical == technicianId;
             
-            // Kiểm tra xem work order này có 2 KTV hay chỉ 1 KTV
             bool hasBothTechnicians = !string.IsNullOrEmpty(workOrder.AssignedToElectrical) && 
                                       !string.IsNullOrEmpty(workOrder.AssignedToMechanical);
             
-            Console.WriteLine($"[DEBUG] CompleteWorkOrder - WorkOrderId: {workOrderId}");
-            Console.WriteLine($"[DEBUG] TechnicianId: {technicianId}");
-            Console.WriteLine($"[DEBUG] isElectrical: {isElectrical}, isMechanical: {isMechanical}");
-            Console.WriteLine($"[DEBUG] hasBothTechnicians: {hasBothTechnicians}");
-            
-            // ✅ VALIDATION 3: Kiểm tra required items TRƯỚC KHI update
-            // Lấy tất cả checklist items hiện tại
             var allChecklistItems = await _checklistRepository.GetByWorkOrderIdAsync(workOrderId);
             
-            // Lọc required items thuộc category của technician hiện tại
             var myRequiredItems = allChecklistItems.Where(item => {
                 if (isElectrical && item.Category == "Electrical" && item.RequiredRole == "Electrical")
                     return true;
@@ -402,7 +410,6 @@ namespace FITSKIP.Application.Services
                 return false;
             }).ToList();
             
-            // Kiểm tra xem tất cả required items có được check trong request không
             var uncheckedRequiredItems = new List<string>();
             foreach (var requiredItem in myRequiredItems)
             {
@@ -445,14 +452,18 @@ namespace FITSKIP.Application.Services
                         checklistItem.CompletedDate = DateTime.Now;
                         await _checklistRepository.UpdateAsync(checklistItem);
                         
-                        Console.WriteLine($"[DEBUG] Updated checklist item {checklistItem.ChecklistId} - Category: {checklistItem.Category}, IsChecked: {checklistItem.IsChecked}");
                     }
                 }
             }
 
              allChecklistItems = await _checklistRepository.GetByWorkOrderIdAsync(workOrderId);
             
-            Console.WriteLine($"[DEBUG] Total checklist items: {allChecklistItems.Count()}");
+            bool hasAnyCheckedItem = allChecklistItems.Any(i => i.IsChecked);
+            if (hasAnyCheckedItem && (workOrder.Status == "Assigned" || workOrder.Status == "Pending"))
+            {
+                workOrder.Status = "InProgress";
+                await _workOrderRepository.UpdateAsync(workOrder);
+            }
             
             bool shouldCompleteWorkOrder = false;
             
@@ -464,20 +475,15 @@ namespace FITSKIP.Application.Services
                 bool electricalCompleted = electricalItems.Any() && electricalItems.All(i => i.IsChecked);
                 bool mechanicalCompleted = mechanicalItems.Any() && mechanicalItems.All(i => i.IsChecked);
                 
-                Console.WriteLine($"[DEBUG] Electrical items: {electricalItems.Count}, Completed: {electricalItems.Count(i => i.IsChecked)}/{electricalItems.Count}");
-                Console.WriteLine($"[DEBUG] Mechanical items: {mechanicalItems.Count}, Completed: {mechanicalItems.Count(i => i.IsChecked)}/{mechanicalItems.Count}");
-                Console.WriteLine($"[DEBUG] electricalCompleted: {electricalCompleted}, mechanicalCompleted: {mechanicalCompleted}");
                 
                 shouldCompleteWorkOrder = electricalCompleted && mechanicalCompleted;
                 
-                Console.WriteLine($"[DEBUG] Has both technicians - shouldCompleteWorkOrder: {shouldCompleteWorkOrder}");
             }
             else
             {
                 bool allItemsCompleted = allChecklistItems.All(item => item.IsChecked);
                 shouldCompleteWorkOrder = allItemsCompleted;
                 
-                Console.WriteLine($"[DEBUG] Single technician - allItemsCompleted: {allItemsCompleted}");
             }
             
             if (shouldCompleteWorkOrder)
@@ -485,7 +491,6 @@ namespace FITSKIP.Application.Services
                 workOrder.Status = "Completed";
                 workOrder.CompletedDate = DateTime.Now;
                 
-                // ✅ Reset trạng thái hoãn sau khi hoàn thành
                 workOrder.PostponedDate = null;
                 workOrder.PostponedDueDate = null;
                 workOrder.PostponedReason = null;
@@ -497,22 +502,25 @@ namespace FITSKIP.Application.Services
                 
                 await _workOrderRepository.UpdateAsync(workOrder);
                 
-                // ✅ Cập nhật chu kỳ tiếp theo: StartDate + IntervalValue * số chu kỳ
-                var plan = await _planRepository.GetByIdAsync(workOrder.PlanId);
-                if (plan != null)
+                var techManagers = await _userRepository.GetUsersByRoleAsync("Quản lý kỹ thuật");
+                var equipment = await _equipmentRepository.GetByIdAsync(workOrder.EquipmentId);
+                foreach (var manager in techManagers)
                 {
-                    plan.NextDueDate = CalculateNextDueDate(DateTime.Now, plan.IntervalType, plan.IntervalValue);
-                    
-                    await _planRepository.UpdateAsync(plan);
-                    
-                    Console.WriteLine($"[DEBUG] Updated Plan {plan.PlanId} - NextDueDate: {plan.NextDueDate:dd/MM/yyyy}, Plan vẫn Active");
+                    await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+                    {
+                        UserId = manager.Id,
+                        Title = "🔔 Phiếu bảo trì hoàn tất - Cần đóng",
+                        Message = $"Phiếu #{workOrder.WorkOrderCode} cho thiết bị {equipment?.EquipmentName} ({equipment?.EquipmentCode}) đã được KTV hoàn thành. Vui lòng kiểm tra và đóng để kích hoạt chu kỳ tiếp theo."
+                    });
                 }
+                
+
+
                 
                 
             }
             else
             {
-                Console.WriteLine($"[DEBUG] ⏳ Chưa hoàn thành - keeping status as InProgress");
                 
                 if (workOrder.Status != "Completed")
                 {
@@ -541,14 +549,58 @@ namespace FITSKIP.Application.Services
                             Message = $"KTV {techType} đã hoàn thành phần của họ cho phiếu #{workOrder.WorkOrderCode}. Vui lòng hoàn thành phần việc của bạn."
                         });
                         
-                        Console.WriteLine($"[DEBUG] Sent notification to other technician: {otherTechId}");
                         
                         
                     }
                 }
             }
             
-            Console.WriteLine($"[DEBUG] Final WorkOrder.Status: {workOrder.Status}");
+
+            var result = await _workOrderRepository.GetByIdAsync(workOrderId);
+            return MapWorkOrderToDTO(result!);
+        }
+
+        public async Task<MaintenanceWorkOrderDTO> CloseWorkOrderAsync(int workOrderId, string closedBy, string? notes = null)
+        {
+            var workOrder = await _workOrderRepository.GetByIdAsync(workOrderId);
+            if (workOrder == null)
+                throw new InvalidOperationException($"❌ Không tìm thấy phiếu bảo trì với ID: {workOrderId}");
+
+            if (workOrder.Status != "Completed")
+            {
+                throw new InvalidOperationException(
+                    $"❌ Chỉ có thể đóng phiếu bảo trì đã hoàn tất (Status = Completed). " +
+                    $"Trạng thái hiện tại: {workOrder.Status}. " +
+                    $"Vui lòng chờ KTV hoàn thành trước khi đóng."
+                );
+            }
+
+            workOrder.Status = "Closed";
+            
+            if (!string.IsNullOrEmpty(notes))
+            {
+                workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Đóng WO: {notes}";
+            }
+            else
+            {
+                workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Đóng WO - Đã kiểm tra và quyết toán";
+            }
+
+            await _workOrderRepository.UpdateAsync(workOrder);
+
+
+
+
+            var plan = await _planRepository.GetByIdAsync(workOrder.PlanId);
+            if (plan != null && plan.IsActive)
+            {
+                var newNextDueDate = CalculateNextDueDate(workOrder.DueDate, plan.IntervalType, plan.IntervalValue);
+                
+                var oldNextDueDate = plan.NextDueDate;
+                plan.NextDueDate = newNextDueDate;
+                await _planRepository.UpdateAsync(plan);
+                
+            }
 
             var result = await _workOrderRepository.GetByIdAsync(workOrderId);
             return MapWorkOrderToDTO(result!);
@@ -560,36 +612,53 @@ namespace FITSKIP.Application.Services
             if (workOrder == null)
                 throw new InvalidOperationException($"Work order not found: {workOrderId}");
 
-            // ✅ Check nếu WorkOrder chưa hoàn thành (Pending, Assigned, InProgress, Overdue)
-            var shouldUpdateCycle = workOrder.Status != "Completed" && workOrder.Status != "Cancelled";
+
+            if (workOrder.Status == "InProgress")
+            {
+                throw new InvalidOperationException(
+                    $"❌ Không thể hủy phiếu bảo trì đang thực hiện. " +
+                    $"KTV đã bắt đầu làm việc. Vui lòng liên hệ KTV hoặc chờ hoàn thành."
+                );
+            }
+            
+            if (workOrder.Status == "Completed")
+            {
+                throw new InvalidOperationException(
+                    $"❌ Không thể hủy phiếu bảo trì đã hoàn tất. " +
+                    $"Vui lòng đóng (Close)."
+                );
+            }
+            
+            if (workOrder.Status == "Closed")
+            {
+                throw new InvalidOperationException($"❌ Không thể hủy phiếu bảo trì đã đóng.");
+            }
+
+            var shouldUpdateCycle = workOrder.Status != "Cancelled";
             
             workOrder.Status = "Cancelled";
             workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Cancelled: {reason}";
             workOrder.UpdatedDate = DateTime.Now;
             
-            // ✅ Reset trạng thái hoãn khi hủy
+
             workOrder.PostponedDate = null;
             workOrder.PostponedDueDate = null;
             workOrder.PostponedReason = null;
 
             await _workOrderRepository.UpdateAsync(workOrder);
 
-            // ✅ Khi hủy WorkOrder chưa hoàn thành → Tự động cập nhật chu kỳ tiếp theo
+
             if (shouldUpdateCycle)
             {
                 var plan = await _planRepository.GetByIdAsync(workOrder.PlanId);
                 if (plan != null && plan.IsActive)
                 {
-                    // Tính chu kỳ tiếp theo từ DueDate (giữ đúng lịch)
                     var nextDueDate = CalculateNextDueDate(workOrder.DueDate, plan.IntervalType, plan.IntervalValue);
                     plan.NextDueDate = nextDueDate;
-                    
-                    // Reset Plan status về Active
                     plan.Status = "Active";
                     
                     await _planRepository.UpdateAsync(plan);
                     
-                    Console.WriteLine($"✅ [CANCEL] WorkOrder #{workOrder.WorkOrderCode} cancelled - Next due date: {nextDueDate:dd/MM/yyyy}");
                 }
             }
 
@@ -597,29 +666,23 @@ namespace FITSKIP.Application.Services
             return MapWorkOrderToDTO(result!);
         }
 
-        /// <summary>
-        /// ✅ HOÃN WORK ORDER - Chỉ cho phép khi:
-        /// 1. Chưa giao việc (Pending)
-        /// 2. Đã giao việc nhưng chưa ai làm (cả 2 technician đều chưa check item nào)
-        /// </summary>
         public async Task<MaintenanceWorkOrderDTO> PostponeWorkOrderAsync(int workOrderId, PostponeWorkOrderRequest request, string userId)
         {
             var workOrder = await _workOrderRepository.GetByIdAsync(workOrderId);
             if (workOrder == null)
                 throw new InvalidOperationException($"❌ Không tìm thấy phiếu bảo trì #{workOrderId}");
 
-            // ✅ Lấy Plan để validate NewScheduledDate
             var plan = await _planRepository.GetByIdAsync(workOrder.PlanId);
             if (plan == null)
                 throw new InvalidOperationException($"❌ Không tìm thấy kế hoạch bảo trì");
 
-            // ✅ Validate: Không cho hoãn đến sau ngày chu kỳ tiếp theo
+
             if (request.NewScheduledDate.Date >= plan.NextDueDate.Date)
             {
                 throw new InvalidOperationException($"❌ Không thể hoãn đến sau ngày chu kỳ tiếp theo ({plan.NextDueDate:dd/MM/yyyy}). Vui lòng chọn ngày trước đó.");
             }
 
-            // ✅ Validate: Ngày hoãn phải trong tương lai
+
             if (request.NewScheduledDate.Date <= DateTime.Today)
             {
                 throw new InvalidOperationException("❌ Ngày hoãn phải là ngày trong tương lai");
@@ -643,10 +706,10 @@ namespace FITSKIP.Application.Services
                 }
             }
 
-            // ✅ CẬP NHẬT: ScheduledDate = NewScheduledDate, giữ nguyên DueDate
+
             workOrder.ScheduledDate = request.NewScheduledDate;
             
-            // ✅ Cập nhật thông tin hoãn (PostponedDueDate để StartWorkOrderAsync validate)
+
             workOrder.PostponedDueDate = request.NewScheduledDate;
             workOrder.PostponedReason = request.Reason;
             workOrder.PostponedDate = DateTime.Now;
@@ -689,7 +752,7 @@ namespace FITSKIP.Application.Services
             await _workOrderRepository.DeleteAsync(workOrderId);
         }
 
-        // ===== CHECKLIST ITEM MANAGEMENT =====
+
         
         public async Task<MaintenanceChecklistItemDTO> UpdateChecklistItemAsync(int checklistId, UpdateChecklistItemRequest request, string technicianId)
         {
@@ -739,7 +802,7 @@ namespace FITSKIP.Application.Services
             await _checklistRepository.DeleteAsync(checklistId);
         }
 
-        // ===== STATISTICS & REPORTS =====
+
         
         public async Task<MaintenanceStatisticsDTO> GetStatisticsAsync()
         {
@@ -768,7 +831,7 @@ namespace FITSKIP.Application.Services
             return stats;
         }
 
-        // ===== TECHNICIAN MANAGEMENT =====
+
         
         public async Task<IEnumerable<TechnicianDTO>> GetAllTechniciansAsync()
         {
@@ -819,7 +882,7 @@ namespace FITSKIP.Application.Services
             return workloadList;
         }
 
-        // ===== BACKGROUND TASKS =====
+
         
         public async Task GenerateWorkOrdersForDuePlansAsync()
         {
@@ -827,9 +890,11 @@ namespace FITSKIP.Application.Services
             
             foreach (var plan in duePlans.Where(p => p.IsActive))
             {
-                // Check if there's already an active work order
+
                 var existingWorkOrders = await _workOrderRepository.GetByPlanIdAsync(plan.PlanId);
-                var hasActiveWorkOrder = existingWorkOrders.Any(wo => wo.Status != "Completed" && wo.Status != "Cancelled");
+                var hasActiveWorkOrder = existingWorkOrders.Any(wo => 
+                    wo.Status != "Closed" && wo.Status != "Cancelled"
+                );
                 
                 if (!hasActiveWorkOrder)
                 {
@@ -838,7 +903,7 @@ namespace FITSKIP.Application.Services
                         PlanId = plan.PlanId,
                         ScheduledDate = plan.NextDueDate,
                         DueDate = plan.NextDueDate.AddDays(1), // Hạn chót hoàn thành = ScheduledDate + 1 ngày
-                        // TODO: Technician assignment - có thể lấy từ Assignments của Plan
+
                         AssignedToElectrical = null,
                         AssignedToMechanical = null
                     };
@@ -855,9 +920,12 @@ namespace FITSKIP.Application.Services
 
             foreach (var workOrder in allWorkOrders)
             {
-                // ✅ Chỉ mark Overdue, KHÔNG tự động cập nhật chu kỳ
-                // TechManager có thể dời ngày hoặc hủy WorkOrder quá hạn
-                if (workOrder.Status != "Completed" && workOrder.Status != "Cancelled" && workOrder.DueDate.Date < today)
+
+
+                if (workOrder.Status != "Completed" && 
+                    workOrder.Status != "Closed" && 
+                    workOrder.Status != "Cancelled" && 
+                    workOrder.DueDate.Date < today)
                 {
                     if (workOrder.Status != "Overdue")
                     {
@@ -865,43 +933,34 @@ namespace FITSKIP.Application.Services
                         workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động đánh dấu quá hạn";
                         await _workOrderRepository.UpdateAsync(workOrder);
                         
-                        Console.WriteLine($"[INFO] WorkOrder #{workOrder.WorkOrderCode} đã quá hạn - TechManager có thể dời lịch hoặc hủy");
                     }
                 }
                 
-                // ✅ TỰ ĐỘNG HỦY WorkOrder quá hạn nếu đã đến chu kỳ tiếp theo
+
                 if (workOrder.Status == "Overdue")
                 {
                     var plan = await _planRepository.GetByIdAsync(workOrder.PlanId);
                     if (plan != null && plan.IsActive)
                     {
-                        // Nếu đã đến ngày của chu kỳ tiếp theo → Hủy WorkOrder quá hạn
+
                         if (today >= plan.NextDueDate.Date)
                         {
                             workOrder.Status = "Cancelled";
                             workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động hủy - Đã đến chu kỳ tiếp theo ({plan.NextDueDate:dd/MM/yyyy})";
                             await _workOrderRepository.UpdateAsync(workOrder);
                             
-                            Console.WriteLine($"[INFO] Tự động hủy WorkOrder #{workOrder.WorkOrderCode} - Đã đến chu kỳ tiếp theo");
                         }
                     }
                 }
             }
 
-            var allPlans = await _planRepository.GetAllAsync();
-            foreach (var plan in allPlans.Where(p => p.IsActive))
-            {
-                if (plan.NextDueDate.Date < today && plan.Status != "Overdue")
-                {
-                    plan.Status = "Overdue";
-                    await _planRepository.UpdateAsync(plan);
-                }
-            }
+
+
         }
 
         public async Task SendMaintenanceRemindersAsync()
         {
-            // Lấy tất cả plans đang active
+
             var allActivePlans = await _planRepository.GetAllAsync();
             var today = DateTime.Today;
 
@@ -909,9 +968,9 @@ namespace FITSKIP.Application.Services
             {
                 var daysUntilDue = (plan.NextDueDate - today).Days;
 
-                // Chỉ gửi thông báo nếu đang trong khoảng ReminderDaysBefore
-                // VD: ReminderDaysBefore = 4, NextDueDate = 20/11
-                // → Gửi thông báo khi daysUntilDue <= 4 và > 0 (từ 16/11 đến 19/11)
+
+
+
                 if (daysUntilDue <= plan.ReminderDaysBefore && daysUntilDue > 0)
                 {
                     var techManagers = await _userRepository.GetUsersByRoleAsync("TechManager");
@@ -925,13 +984,13 @@ namespace FITSKIP.Application.Services
                         });
                     }
 
-                    // TODO: Gửi notification cho technicians được assign trong WorkOrder hoặc Assignments
-                    // Không còn AssignedToElectrical/Mechanical ở Plan level
+
+
                 }
             }
         }
 
-        // ===== HELPER METHODS =====
+
         
         private MaintenanceWorkOrderDTO MapWorkOrderToDTO(MaintenanceWorkOrder workOrder)
         {
@@ -957,8 +1016,8 @@ namespace FITSKIP.Application.Services
 
             string displayStatus = workOrder.Status;
             
-            // ✅ CHECK OVERDUE: Nếu DueDate < today và status không phải Completed/Cancelled → set Overdue
-            // NHƯNG nếu đã hoãn (có PostponedDate) thì KHÔNG đánh dấu Overdue
+
+
             if (workOrder.DueDate < today && 
                 workOrder.Status != "Completed" && 
                 workOrder.Status != "Cancelled" &&
@@ -995,7 +1054,7 @@ namespace FITSKIP.Application.Services
                 }
                 else
                 {
-                    // Chỉ có 1 KTV
+
                     if (totalItems > 0 && completedItems == totalItems)
                     {
                         displayStatus = "Completed";

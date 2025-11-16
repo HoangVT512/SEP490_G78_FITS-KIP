@@ -108,8 +108,8 @@ namespace FITSKIP.Application.Services
                 ReminderDaysBefore = request.ReminderDaysBefore,
                 CreatedBy = userId,
                 CreatedDate = DateTime.Now,
-                IsActive = true,
-                Status = "Pending"
+                IsActive = true
+                // Status không cần - Plan chỉ có Active/Inactive
             };
 
             var created = await _planRepository.CreateAsync(plan);
@@ -149,7 +149,6 @@ namespace FITSKIP.Application.Services
 
                 // Nếu không có WorkOrder active → Cho phép vô hiệu hóa
                 plan.IsActive = false;
-                plan.Status = "Ngưng hoạt động";
                 
                 Console.WriteLine($"[INFO] Plan {planId} deactivated. No active work orders.");
             }
@@ -167,7 +166,6 @@ namespace FITSKIP.Application.Services
                 }
                 
                 plan.IsActive = true;
-                plan.Status = "Pending";
             }
 
             if (request.TemplateId.HasValue)
@@ -278,15 +276,13 @@ namespace FITSKIP.Application.Services
             
             var workOrders = plan.WorkOrders?.ToList() ?? new List<MaintenanceWorkOrder>();
             
-            // Kiểm tra xem có WorkOrder đang active không (Pending hoặc InProgress)
-            var hasActiveWorkOrder = workOrders.Any(wo => wo.Status == "Pending" || wo.Status == "InProgress");
-            
-            // Tự động set Status
-            string status = plan.Status;
-            if (hasActiveWorkOrder)
-            {
-                status = "InProgress";
-            }
+            // ✅ Plan KHÔNG có status phức tạp - chỉ Active/Inactive
+            // Status của WO (Pending, InProgress, etc.) thuộc về WO, không thuộc Plan
+            var hasActiveWorkOrder = workOrders.Any(wo => 
+                wo.Status != "Closed" && 
+                wo.Status != "Cancelled" &&
+                wo.Status != "Verified"
+            );
 
             return new MaintenancePlanDTO
             {
@@ -304,7 +300,7 @@ namespace FITSKIP.Application.Services
                 NextDueDate = plan.NextDueDate,
                 ReminderDaysBefore = plan.ReminderDaysBefore,
                 IsActive = plan.IsActive,
-                Status = status,
+                Status = plan.IsActive ? "Đang hoạt động" : "Không hoạt động", // ✅ Chỉ 2 trạng thái
                 CreatedDate = plan.CreatedDate,
                 CreatedByName = plan.CreatedByUser?.FullName,
                 DaysUntilDue = daysUntilDue,

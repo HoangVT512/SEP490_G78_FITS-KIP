@@ -45,6 +45,8 @@ import {
   CloseCircleOutlined,
   ExclamationCircleOutlined,
   DownOutlined,
+  SafetyCertificateOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
@@ -55,6 +57,7 @@ import {
   postponeMaintenancePlan,
   postponeWorkOrder,
   cancelWorkOrder,
+  closeWorkOrder,
   getAllTechnicians,
 } from "../../services/maintenanceService";
 import { replacementHistoryService } from "../../services/replacementHistoryService";
@@ -96,10 +99,10 @@ const WorkScheduleManagement = () => {
   // Statistics
   const [stats, setStats] = useState({
     pendingCount: 0,
-    assignedCount: 0,
     inProgressCount: 0,
     overdueCount: 0,
     completedCount: 0,
+    closedCount: 0,
   });
 
   useEffect(() => {
@@ -194,17 +197,19 @@ const WorkScheduleManagement = () => {
       }
     });
 
-    // 2. Thêm WorkOrders (đã giao việc)
+    // 2. Thêm WorkOrders (đã tạo)
     workOrders.forEach((wo) => {
-      let workStatus = "assigned";
+      let workStatus = "pending"; // ✅ Mặc định là pending (dù đã giao việc hay chưa)
       if (wo.status === "InProgress") {
         workStatus = "inProgress";
       } else if (wo.status === "Completed") {
         workStatus = "completed";
+      } else if (wo.status === "Closed") {
+        workStatus = "closed";
       } else if (wo.status === "Cancelled") {
         workStatus = "cancelled";
       } else if (wo.status === "Overdue") {
-        workStatus = "overdue"; // ✅ Thêm trạng thái Overdue
+        workStatus = "overdue";
       }
 
       merged.push({
@@ -222,17 +227,17 @@ const WorkScheduleManagement = () => {
 
     // Calculate stats
     const pendingCount = merged.filter((m) => m.workStatus === "pending").length;
-    const assignedCount = merged.filter((m) => m.workStatus === "assigned").length;
     const inProgressCount = merged.filter((m) => m.workStatus === "inProgress").length;
     const overdueCount = merged.filter((m) => m.workStatus === "overdue").length;
     const completedCount = merged.filter((m) => m.workStatus === "completed").length;
+    const closedCount = merged.filter((m) => m.workStatus === "closed").length;
 
     setStats({
       pendingCount,
-      assignedCount,
       inProgressCount,
       overdueCount,
       completedCount,
+      closedCount,
     });
   }, [upcomingMaintenance, workOrders]);
 
@@ -615,6 +620,37 @@ const WorkScheduleManagement = () => {
     }
   };
 
+  // ✅ Handler đóng phiếu bảo trì (QLKT)
+  const handleCloseWorkOrder = async (workOrderId) => {
+    Modal.confirm({
+      title: "Xác nhận đóng phiếu bảo trì",
+      content: (
+        <div>
+          <p>Bạn có chắc chắn muốn đóng phiếu bảo trì này?</p>
+          <p style={{ color: '#ff4d4f', marginTop: 8 }}>
+            ⚠️ Sau khi đóng, chu kỳ bảo trì tiếp theo sẽ được kích hoạt và không thể hoàn tác.
+          </p>
+        </div>
+      ),
+      okText: "Đồng ý đóng",
+      cancelText: "Hủy",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          setLoading(true);
+          await closeWorkOrder(workOrderId);
+          message.success("✅ Đã đóng phiếu bảo trì và kích hoạt chu kỳ tiếp theo!");
+          setIsDetailModalVisible(false);
+          await loadAllData();
+        } catch (error) {
+          message.error("❌ Đóng phiếu bảo trì thất bại: " + error.message);
+        } finally {
+          setLoading(false);
+        }
+      },
+    });
+  };
+
   const handleRejectSparepart = (record) => {
     Modal.confirm({
       title: "Từ chối yêu cầu linh kiện",
@@ -698,12 +734,7 @@ const WorkScheduleManagement = () => {
       pending: {
         color: "gold",
         icon: <ClockCircleOutlined />,
-        text: "Chờ giao việc",
-      },
-      assigned: {
-        color: "cyan",
-        icon: <UserAddOutlined />,
-        text: "Đã giao việc",
+        text: "Chờ xử lý",
       },
       inProgress: {
         color: "blue",
@@ -713,7 +744,12 @@ const WorkScheduleManagement = () => {
       completed: {
         color: "green",
         icon: <CheckCircleOutlined />,
-        text: "Hoàn thành",
+        text: "Hoàn tất",
+      },
+      closed: {
+        color: "default",
+        icon: <LockOutlined />,
+        text: "Đã đóng",
       },
       cancelled: {
         color: "red",
@@ -726,7 +762,7 @@ const WorkScheduleManagement = () => {
         text: "Quá hạn",
       },
     };
-    const config = statusConfig[record.workStatus] || statusConfig.pending;
+    const config = statusConfig[record.workStatus?.toLowerCase()] || statusConfig.pending;
     
     // ✅ Nếu WorkOrder đã bị hoãn, hiển thị cả status Hoãn
     const isPostponed = record.type === "workOrder" && record.postponedDate;
@@ -779,12 +815,12 @@ const WorkScheduleManagement = () => {
       width: 100,
       render: (_, record) => {
         if (record.type === "plan") {
-          return <Text strong>PLAN{String(record.planId).padStart(3, "0")}</Text>;
+          return <Text strong>PLAN{record.planId}</Text>;
         } else {
           const sparePartCount = workOrderSparePartRequests[record.workOrderId] || 0;
           return (
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <Text strong>WO{String(record.workOrderId).padStart(3, "0")}</Text>
+              <Text strong>{record.workOrderCode || `WO${record.workOrderId}`}</Text>
               {sparePartCount > 0 && (
                 <Tooltip title={`${sparePartCount} yêu cầu linh kiện chờ duyệt`}>
                   <Badge count={sparePartCount} style={{ backgroundColor: "#ff4d4f" }} />
@@ -834,8 +870,9 @@ const WorkScheduleManagement = () => {
               : dayjs(record.nextDueDate)
             : dayjs(record.dueDate);
 
-        const today = dayjs();
-        const daysUntilDue = dueDate.diff(today, "day");
+        const today = dayjs().startOf('day');
+        const dueDateStart = dueDate.startOf('day');
+        const daysUntilDue = dueDateStart.diff(today, "day");
         const isOverdue = daysUntilDue < 0;
         const isUpcomingSoon = daysUntilDue <= 3 && daysUntilDue >= 0;
 
@@ -995,16 +1032,6 @@ const WorkScheduleManagement = () => {
           <Col xs={24} sm={12} lg={6}>
             <Card bordered={false}>
               <Statistic
-                title="Đã giao việc"
-                value={stats.assignedCount}
-                prefix={<UserAddOutlined />}
-                valueStyle={{ color: "#13c2c2" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card bordered={false}>
-              <Statistic
                 title="Đang thực hiện"
                 value={stats.inProgressCount}
                 prefix={<PlayCircleOutlined />}
@@ -1022,8 +1049,6 @@ const WorkScheduleManagement = () => {
               />
             </Card>
           </Col>
-        </Row>
-        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
           <Col xs={24} sm={12} lg={6}>
              <Card bordered={false}>
               <Statistic
@@ -1031,6 +1056,16 @@ const WorkScheduleManagement = () => {
                 value={stats.completedCount}
                 prefix={<CheckCircleOutlined />}
                 valueStyle={{ color: "#52c41a" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+             <Card bordered={false}>
+              <Statistic
+                title="Đã đóng"
+                value={stats.closedCount}
+                prefix={<LockOutlined />}
+                valueStyle={{ color: "#8c8c8c" }}
               />
             </Card>
           </Col>
@@ -1055,10 +1090,7 @@ const WorkScheduleManagement = () => {
               >
                 <Option value="all">Tất cả trạng thái</Option>
                 <Option value="pending">
-                  <ClockCircleOutlined /> Chờ giao việc
-                </Option>
-                <Option value="assigned">
-                  <UserAddOutlined /> Đã giao việc
+                  <ClockCircleOutlined /> Chờ xử lý
                 </Option>
                 <Option value="inProgress">
                   <PlayCircleOutlined /> Đang thực hiện
@@ -1068,6 +1100,9 @@ const WorkScheduleManagement = () => {
                 </Option>
                 <Option value="completed">
                   <CheckCircleOutlined /> Hoàn thành
+                </Option>
+                <Option value="closed">
+                  <LockOutlined /> Đã đóng
                 </Option>
                 <Option value="cancelled">
                   <StopOutlined /> Đã hủy
@@ -1207,7 +1242,8 @@ const WorkScheduleManagement = () => {
         footer={
           selectedRecord && 
           selectedRecord.workStatus !== "completed" && 
-          selectedRecord.workStatus !== "cancelled"
+          selectedRecord.workStatus !== "cancelled" &&
+          selectedRecord.workStatus !== "closed"
             ? isEditMode
               ? [
                   <Button
@@ -1344,7 +1380,7 @@ const WorkScheduleManagement = () => {
                 ].filter(Boolean) // Lọc bỏ các false values
             : [
                 <Button
-                  key="close"
+                  key="close-modal"
                   onClick={() => {
                     setIsDetailModalVisible(false);
                     setIsEditMode(false);
@@ -1357,7 +1393,26 @@ const WorkScheduleManagement = () => {
                 >
                   Đóng
                 </Button>,
-              ]
+                // ✅ NÚT ĐÓNG PHIẾU BẢO TRÌ khi status = Completed
+                selectedRecord?.workStatus === "completed" && selectedRecord?.workOrderId && (
+                  <Button
+                    key="close-workorder"
+                    type="primary"
+                    icon={<LockOutlined />}
+                    loading={loading}
+                    onClick={() => handleCloseWorkOrder(selectedRecord.workOrderId)}
+                    style={{
+                      backgroundColor: "#52c41a",
+                      borderColor: "#52c41a",
+                      height: "40px",
+                      fontSize: "16px",
+                      minWidth: "120px",
+                    }}
+                  >
+                    Đóng phiếu bảo trì
+                  </Button>
+                ),
+              ].filter(Boolean)
         }
         width={900}
       >
@@ -1369,7 +1424,7 @@ const WorkScheduleManagement = () => {
                 <>
                   <Descriptions.Item label="Mã phiếu" span={2}>
                     <Text strong style={{ fontSize: 16 }}>
-                      WO{String(selectedRecord.workOrderId).padStart(3, "0")}
+                      {selectedRecord.workOrderCode || `WO${selectedRecord.workOrderId}`}
                     </Text>
                   </Descriptions.Item>
                   <Descriptions.Item label="Thiết bị" span={2}>
@@ -1430,7 +1485,7 @@ const WorkScheduleManagement = () => {
                 <>
                   <Descriptions.Item label="Mã kế hoạch" span={2}>
                     <Text strong style={{ fontSize: 16 }}>
-                      PLAN{String(selectedRecord.planId).padStart(3, "0")}
+                      PLAN{selectedRecord.planId}
                     </Text>
                   </Descriptions.Item>
                   <Descriptions.Item label="Thiết bị" span={2}>

@@ -61,6 +61,8 @@ import {
   DownOutlined,
   SaveOutlined,
   ExclamationCircleOutlined,
+  SafetyCertificateOutlined,
+  LockOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
@@ -470,7 +472,7 @@ const MaintenanceManagement = () => {
 
     // Reset form fields
     planForm.setFieldsValue({
-      equipmentId: undefined,
+      equipmentIds: undefined,
       templateId: undefined,
     });
 
@@ -588,16 +590,72 @@ const MaintenanceManagement = () => {
         message.success("Cập nhật trạng thái chu kỳ bảo trì thành công!");
       } else {
         // Khi ADD: tạo mới với đầy đủ thông tin
-        const planData = {
-          equipmentId: values.equipmentId,
-          templateId: values.templateId,
-          intervalType: values.intervalType,
-          intervalValue: values.intervalValue,
-          startDate: values.startDate.format('YYYY-MM-DD'), // ✅ Dùng format thay vì toISOString() để tránh lùi giờ
-          reminderDaysBefore: values.reminderDaysBefore ?? 3,
-        };
-        await createMaintenancePlan(planData);
-        message.success("Tạo chu kỳ bảo trì thành công!");
+        const equipmentIds = values.equipmentIds; // Array of equipment IDs
+        const successList = [];
+        const errorList = [];
+
+        // Loop through each equipment and create a plan
+        for (const equipmentId of equipmentIds) {
+          const equipment = filteredEquipments.find(eq => eq.equipmentId === equipmentId);
+          const equipmentName = equipment ? `${equipment.equipmentName} (${equipment.equipmentCode})` : `ID ${equipmentId}`;
+          
+          try {
+            const planData = {
+              equipmentId: equipmentId,
+              templateId: values.templateId,
+              intervalType: values.intervalType,
+              intervalValue: values.intervalValue,
+              startDate: values.startDate.format('YYYY-MM-DD'),
+              reminderDaysBefore: values.reminderDaysBefore ?? 3,
+            };
+            await createMaintenancePlan(planData);
+            successList.push(equipmentName);
+          } catch (error) {
+            let errorMessage = error.message || "Lỗi không xác định";
+            // Loại bỏ phần "Chu kỳ hiện tại: ..." khỏi thông báo lỗi
+            if (errorMessage.includes("Chu kỳ hiện tại:")) {
+              errorMessage = errorMessage.replace(/Chu kỳ hiện tại:.*?\./g, '').trim();
+            }
+            errorList.push(`${equipmentName}: ${errorMessage}`);
+          }
+        }
+
+        // Show summary messages
+        if (successList.length > 0 && errorList.length === 0) {
+          message.success(`Tạo chu kỳ bảo trì thành công cho ${successList.length} thiết bị!`);
+        } else if (successList.length > 0 && errorList.length > 0) {
+          Modal.info({
+            title: "Kết quả tạo chu kỳ bảo trì",
+            width: 600,
+            content: (
+              <div>
+                <div style={{ marginBottom: 16 }}>
+                  <h4 style={{ color: '#52c41a', marginBottom: 8 }}>
+                    ✓ Thành công ({successList.length}):
+                  </h4>
+                  <ul style={{ paddingLeft: 20, margin: 0 }}>
+                    {successList.map((name, idx) => (
+                      <li key={idx} style={{ color: '#52c41a' }}>{name}</li>
+                    ))}
+                  </ul>
+                </div>
+                <div>
+                  <h4 style={{ color: '#ff4d4f', marginBottom: 8 }}>
+                    ✗ Thất bại ({errorList.length}):
+                  </h4>
+                  <ul style={{ paddingLeft: 20, margin: 0, maxHeight: 200, overflowY: 'auto' }}>
+                    {errorList.map((msg, idx) => (
+                      <li key={idx} style={{ color: '#ff4d4f' }}>{msg}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            ),
+            okText: "Đóng",
+          });
+        } else if (errorList.length > 0) {
+          showError("Lỗi khi tạo chu kỳ bảo trì", errorList);
+        }
       }
 
       setIsPlanModalVisible(false);
@@ -1271,7 +1329,12 @@ const MaintenanceManagement = () => {
       Completed: {
         color: "green",
         icon: <CheckCircleOutlined />,
-        text: "Hoàn thành",
+        text: "Hoàn tất",
+      },
+      Closed: {
+        color: "default",
+        icon: <LockOutlined />,
+        text: "Đã đóng",
       },
       Cancelled: { color: "red", icon: <StopOutlined />, text: "Đã hủy" },
       Overdue: { color: "error", icon: <WarningOutlined />, text: "Quá hạn" },
@@ -1285,7 +1348,7 @@ const MaintenanceManagement = () => {
   };
 
   const getPlanStatusTag = (plan) => {
-    // Nếu không hoạt động (đã tắt)
+    // ✅ Plan chỉ có 2 trạng thái: Đang hoạt động / Không hoạt động
     if (!plan.isActive) {
       return (
         <Tag color="default" icon={<StopOutlined />}>
@@ -1294,51 +1357,12 @@ const MaintenanceManagement = () => {
       );
     }
 
-    // Kiểm tra xem plan có bị hoãn không
-    if (plan.status === "Postponed" || plan.postponedReason) {
-      return (
-        <Tag icon={<ClockCircleOutlined />} color="purple">
-          Đã hoãn bảo trì
-        </Tag>
-      );
-    }
-
-    // Kiểm tra xem có WorkOrder active không
-    if (plan.hasActiveWorkOrder || plan.status === "InProgress") {
-      return (
-        <Tag icon={<PlayCircleOutlined />} color="blue">
-          Đang thực hiện
-        </Tag>
-      );
-    }
-
-    const daysUntilDue = plan.daysUntilDue || 0;
-
-    if (daysUntilDue < 0) {
-      return (
-        <Tag icon={<WarningOutlined />} color="error">
-          Quá hạn
-        </Tag>
-      );
-    } else if (daysUntilDue <= 3) {
-      return (
-        <Tag icon={<ClockCircleOutlined />} color="red">
-          Gấp
-        </Tag>
-      );
-    } else if (daysUntilDue <= 7) {
-      return (
-        <Tag icon={<ClockCircleOutlined />} color="orange">
-          Sắp đến hạn
-        </Tag>
-      );
-    } else {
-      return (
-        <Tag icon={<CheckCircleOutlined />} color="green">
-          Đang hoạt động
-        </Tag>
-      );
-    }
+    // Đang hoạt động
+    return (
+      <Tag icon={<CheckCircleOutlined />} color="green">
+        Đang hoạt động
+      </Tag>
+    );
   };
 
   const planColumns = [
@@ -1468,12 +1492,6 @@ const MaintenanceManagement = () => {
                 icon: <EyeOutlined />,
                 label: "Chi tiết",
                 onClick: () => handleViewDetail(record),
-              },
-              {
-                key: "edit",
-                icon: <EditOutlined />,
-                label: "Sửa",
-                onClick: () => handleEditPlan(record),
               },
               {
                 key: "delete",
@@ -2220,7 +2238,7 @@ const MaintenanceManagement = () => {
           >
             {editingPlan
               ? "Cập nhật trạng thái chu kỳ bảo trì"
-              : "Thêm chu kỳ bảo trì mới"}
+              : "Thêm chu kỳ bảo trì mới (Hỗ trợ nhiều thiết bị)"}
           </div>
         }
         open={isPlanModalVisible}
@@ -2398,14 +2416,33 @@ const MaintenanceManagement = () => {
               <Row gutter={16}>
                 <Col span={12}>
                   <Form.Item
-                    name="equipmentId"
-                    label="Thiết bị"
+                    name="equipmentIds"
+                    label={
+                      <Space>
+                        <span>Thiết bị</span>
+                        {selectedStage && filteredEquipments.length > 0 && (
+                          <Button
+                            type="link"
+                            size="small"
+                            onClick={() => {
+                              const allEquipmentIds = filteredEquipments.map(eq => eq.equipmentId);
+                              planForm.setFieldsValue({ equipmentIds: allEquipmentIds });
+                            }}
+                            style={{ padding: 0, height: 'auto' }}
+                          >
+                            Chọn tất cả ({filteredEquipments.length})
+                          </Button>
+                        )}
+                      </Space>
+                    }
                     rules={[
-                      { required: true, message: "Vui lòng chọn thiết bị" },
+                      { required: true, message: "Vui lòng chọn ít nhất một thiết bị" },
                     ]}
+                    tooltip="Có thể chọn nhiều thiết bị để tạo chu kỳ bảo trì cùng lúc"
                   >
                     <Select
-                      placeholder="Chọn thiết bị"
+                      mode="multiple"
+                      placeholder="Chọn một hoặc nhiều thiết bị"
                       disabled={!selectedStage}
                       showSearch
                       filterOption={(input, option) =>
@@ -2414,6 +2451,7 @@ const MaintenanceManagement = () => {
                           .includes(input.toLowerCase())
                       }
                       size="large"
+                      maxTagCount="responsive"
                     >
                       {filteredEquipments.map((equipment) => {
                         const hasMaintenancePlan = maintenancePlans.some(
@@ -3316,7 +3354,7 @@ const MaintenanceManagement = () => {
                           <Space direction="vertical" size="small" style={{ width: '100%' }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                               <Text strong>
-                                WO{String(wo.workOrderId).padStart(4, "0")}
+                                {wo.workOrderCode || `WO${wo.workOrderId}`}
                               </Text>
                               {isCompleted ? (
                                 <Tag color="success" icon={<CheckCircleOutlined />}>
@@ -3361,7 +3399,14 @@ const MaintenanceManagement = () => {
                                   <Tag color="orange" size="small" icon={<ToolOutlined />}>
                                     Cơ khí
                                   </Tag>
-                                  <Text style={{ fontSize: 12 }}>{wo.mechanicalTechnicianName}</Text>
+                                  <Text style={{ fontSize: 12 }}>
+                                    {wo.mechanicalTechnicianName}
+                                    {wo.mechanicalEmployeeCode && (
+                                      <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                                        ({wo.mechanicalEmployeeCode})
+                                      </Text>
+                                    )}
+                                  </Text>
                                 </div>
                               )}
                               {wo.electricalTechnicianName && (
@@ -3369,7 +3414,14 @@ const MaintenanceManagement = () => {
                                   <Tag color="blue" size="small" icon={<ThunderboltOutlined />}>
                                     Điện
                                   </Tag>
-                                  <Text style={{ fontSize: 12 }}>{wo.electricalTechnicianName}</Text>
+                                  <Text style={{ fontSize: 12 }}>
+                                    {wo.electricalTechnicianName}
+                                    {wo.electricalEmployeeCode && (
+                                      <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                                        ({wo.electricalEmployeeCode})
+                                      </Text>
+                                    )}
+                                  </Text>
                                 </div>
                               )}
                             </div>
@@ -3437,7 +3489,7 @@ const MaintenanceManagement = () => {
             <Descriptions bordered column={2} size="small">
               <Descriptions.Item label="Mã Work Order" span={1}>
                 <Tag color="green">
-                  WO{String(viewingWorkOrder.workOrderId).padStart(4, "0")}
+                  {viewingWorkOrder.workOrderCode || `WO${viewingWorkOrder.workOrderId}`}
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Trạng Thái" span={1}>
@@ -3470,7 +3522,7 @@ const MaintenanceManagement = () => {
 
               <Descriptions.Item label="Kế Hoạch" span={2}>
                 <Tag color="blue">
-                  PLAN{String(viewingWorkOrder.planId).padStart(4, "0")}
+                  PLAN{viewingWorkOrder.planId}
                 </Tag>
               </Descriptions.Item>
 
