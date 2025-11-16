@@ -109,6 +109,84 @@ const TransactionHistory = () => {
     setStatistics(stats);
   };
 
+  const groupHistoriesByRecord = (histories) => {
+    // Group by incidentId or workOrderId
+    const grouped = histories.reduce((acc, history) => {
+      const key = history.incidentId
+        ? `incident_${history.incidentId}`
+        : `workorder_${history.workOrderId}`;
+
+      if (!acc[key]) {
+        acc[key] = {
+          recordType: history.incidentId ? "incident" : "workorder",
+          recordId: history.incidentId || history.workOrderId,
+          equipmentName: history.equipmentName,
+          equipmentCode: history.equipmentCode,
+          replacedByFullName: history.replacedByFullName,
+          replacedByUserName: history.replacedByUserName,
+          replacedByEmployeeCode: history.replacedByEmployeeCode,
+          replacedDate: history.replacedDate,
+          items: [],
+          allStatuses: new Set(),
+        };
+      }
+
+      // Add item to the group
+      acc[key].items.push({
+        replacementID: history.replacementID,
+        partName: history.partName,
+        partNumber: history.partNumber,
+        partCode: history.partCode,
+        quantity: history.quantity,
+        actualQuantityUsed: history.actualQuantityUsed,
+        quantityToReturn: history.quantityToReturn,
+        status: history.status,
+        replacedDate: history.replacedDate,
+        returnedDate: history.returnedDate,
+        remarks: history.remarks,
+      });
+
+      // Track all statuses for this record
+      acc[key].allStatuses.add(history.status);
+
+      // Update to latest replacedDate if this is newer
+      if (
+        history.replacedDate &&
+        (!acc[key].replacedDate ||
+          dayjs(history.replacedDate).isAfter(dayjs(acc[key].replacedDate)))
+      ) {
+        acc[key].replacedDate = history.replacedDate;
+      }
+
+      return acc;
+    }, {});
+
+    // Convert to array and determine primary status for each group
+    return Object.values(grouped).map((group) => ({
+      ...group,
+      // Determine primary status (prioritize by order: Chờ duyệt > Đã xuất > Đã trả lại)
+      status: group.allStatuses.has("Chờ duyệt cấp phát")
+        ? "Chờ duyệt cấp phát"
+        : group.allStatuses.has("Đã xuất")
+        ? "Đã xuất"
+        : group.allStatuses.has("Đã trả lại")
+        ? "Đã trả lại"
+        : Array.from(group.allStatuses)[0],
+      totalQuantity: group.items.reduce(
+        (sum, item) => sum + (item.quantity || 0),
+        0
+      ),
+      totalUsed: group.items.reduce(
+        (sum, item) => sum + (item.actualQuantityUsed || 0),
+        0
+      ),
+      totalReturned: group.items.reduce(
+        (sum, item) => sum + (item.quantityToReturn || 0),
+        0
+      ),
+    }));
+  };
+
   const applyFilters = () => {
     let filtered = [...allHistories];
 
@@ -141,11 +219,13 @@ const TransactionHistory = () => {
       );
     }
 
-    setFilteredHistories(filtered);
+    // Group histories by incident/workorder
+    const groupedAll = groupHistoriesByRecord(filtered);
+    setFilteredHistories(groupedAll);
 
     // Update tab-specific data
-    const incidents = filtered.filter((h) => h.incidentId);
-    const workOrders = filtered.filter((h) => h.workOrderId);
+    const incidents = groupedAll.filter((h) => h.recordType === "incident");
+    const workOrders = groupedAll.filter((h) => h.recordType === "workorder");
     setIncidentHistories(incidents);
     setWorkOrderHistories(workOrders);
   };
@@ -198,8 +278,8 @@ const TransactionHistory = () => {
       fixed: "left",
       render: (_, record) =>
         type === "incident"
-          ? `INC-${record.incidentId}`
-          : `WO-${record.workOrderId}`,
+          ? `INC-${record.recordId}`
+          : `WO-${record.recordId}`,
     },
     {
       title: "Thiết bị",
@@ -217,21 +297,6 @@ const TransactionHistory = () => {
       ),
     },
     {
-      title: "Phụ tùng",
-      key: "sparePart",
-      width: 220,
-      render: (_, record) => (
-        <div>
-          <div style={{ fontWeight: 600, fontSize: "13px" }}>
-            {record.partName}
-          </div>
-          <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
-            {record.partCode}
-          </div>
-        </div>
-      ),
-    },
-    {
       title: "Số lượng",
       key: "quantity",
       width: 150,
@@ -239,14 +304,13 @@ const TransactionHistory = () => {
       render: (_, record) => (
         <div>
           <div style={{ fontSize: "14px", fontWeight: 600 }}>
-            {record.quantity} cái
+            {record.totalQuantity} cái
           </div>
-          {record.actualQuantityUsed !== null &&
-            record.actualQuantityUsed !== undefined && (
-              <div style={{ fontSize: "12px", color: "#52c41a" }}>
-                Sử dụng: {record.actualQuantityUsed} cái
-              </div>
-            )}
+          {record.totalUsed > 0 && (
+            <div style={{ fontSize: "12px", color: "#52c41a" }}>
+              Sử dụng: {record.totalUsed} cái
+            </div>
+          )}
         </div>
       ),
     },
@@ -345,10 +409,9 @@ const TransactionHistory = () => {
         { text: "Sự cố", value: "incident" },
         { text: "Bảo trì", value: "workorder" },
       ],
-      onFilter: (value, record) =>
-        value === "incident" ? record.incidentId : record.workOrderId,
+      onFilter: (value, record) => record.recordType === value,
       render: (_, record) =>
-        record.incidentId ? (
+        record.recordType === "incident" ? (
           <Tag color="red" icon={<WarningOutlined />}>
             Sự cố
           </Tag>
@@ -363,9 +426,9 @@ const TransactionHistory = () => {
       key: "refId",
       width: 110,
       render: (_, record) =>
-        record.incidentId
-          ? `INC-${record.incidentId}`
-          : `WO-${record.workOrderId}`,
+        record.recordType === "incident"
+          ? `INC-${record.recordId}`
+          : `WO-${record.recordId}`,
     },
     {
       title: "Thiết bị",
@@ -383,21 +446,6 @@ const TransactionHistory = () => {
       ),
     },
     {
-      title: "Phụ tùng",
-      key: "sparePart",
-      width: 220,
-      render: (_, record) => (
-        <div>
-          <div style={{ fontWeight: 600, fontSize: "13px" }}>
-            {record.partName}
-          </div>
-          <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
-            {record.partCode}
-          </div>
-        </div>
-      ),
-    },
-    {
       title: "Số lượng",
       key: "quantity",
       width: 150,
@@ -405,14 +453,13 @@ const TransactionHistory = () => {
       render: (_, record) => (
         <div>
           <div style={{ fontSize: "14px", fontWeight: 600 }}>
-            {record.quantity} cái
+            {record.totalQuantity} cái
           </div>
-          {record.actualQuantityUsed !== null &&
-            record.actualQuantityUsed !== undefined && (
-              <div style={{ fontSize: "12px", color: "#52c41a" }}>
-                Sử dụng: {record.actualQuantityUsed} cái
-              </div>
-            )}
+          {record.totalUsed > 0 && (
+            <div style={{ fontSize: "12px", color: "#52c41a" }}>
+              Sử dụng: {record.totalUsed} cái
+            </div>
+          )}
         </div>
       ),
     },
@@ -672,7 +719,7 @@ const TransactionHistory = () => {
                 <Table
                   dataSource={filteredHistories}
                   columns={allColumns}
-                  rowKey="replacementID"
+                  rowKey={(record) => `${record.recordType}_${record.recordId}`}
                   loading={loading}
                   pagination={{
                     total: filteredHistories.length,
@@ -713,7 +760,7 @@ const TransactionHistory = () => {
                 <Table
                   dataSource={incidentHistories}
                   columns={getCommonColumns("incident")}
-                  rowKey="replacementID"
+                  rowKey={(record) => `incident_${record.recordId}`}
                   loading={loading}
                   pagination={{
                     total: incidentHistories.length,
@@ -752,7 +799,7 @@ const TransactionHistory = () => {
                 <Table
                   dataSource={workOrderHistories}
                   columns={getCommonColumns("workorder")}
-                  rowKey="replacementID"
+                  rowKey={(record) => `workorder_${record.recordId}`}
                   loading={loading}
                   pagination={{
                     total: workOrderHistories.length,
@@ -826,28 +873,81 @@ const TransactionHistory = () => {
               </div>
             </Descriptions.Item>
 
-            <Descriptions.Item label="Phụ tùng" span={2}>
-              <div>
-                <div style={{ fontWeight: 600 }}>
-                  {selectedHistory.partName}
+            <Descriptions.Item label="Phụ tùng cấp phát" span={2}>
+              {selectedHistory.items ? (
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 12 }}
+                >
+                  {selectedHistory.items.map((item, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        padding: "12px",
+                        backgroundColor: "#f5f5f5",
+                        borderRadius: "6px",
+                        border: "1px solid #d9d9d9",
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                        {item.partName}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          color: "#8c8c8c",
+                          marginBottom: 8,
+                        }}
+                      >
+                        Mã: {item.partNumber || item.partCode}
+                      </div>
+                      <Space size="large">
+                        <span>
+                          <strong>Cấp phát:</strong> {item.quantity} cái
+                        </span>
+                        {item.actualQuantityUsed != null && (
+                          <>
+                            <span style={{ color: "#52c41a" }}>
+                              <strong>Sử dụng:</strong>{" "}
+                              {item.actualQuantityUsed} cái
+                            </span>
+                            {item.quantityToReturn != null && (
+                              <span style={{ color: "#1890ff" }}>
+                                <strong>Trả lại:</strong>{" "}
+                                {item.quantityToReturn} cái
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </Space>
+                    </div>
+                  ))}
                 </div>
-                <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
-                  Mã: {selectedHistory.partCode}
+              ) : (
+                <div>
+                  <div style={{ fontWeight: 600 }}>
+                    {selectedHistory.partName}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                    Mã: {selectedHistory.partCode}
+                  </div>
                 </div>
-              </div>
+              )}
             </Descriptions.Item>
 
-            <Descriptions.Item label="Số lượng cấp phát">
-              <strong>{selectedHistory.quantity} cái</strong>
+            <Descriptions.Item label="Tổng số lượng cấp phát">
+              <strong>
+                {selectedHistory.totalQuantity || selectedHistory.quantity} cái
+              </strong>
             </Descriptions.Item>
 
-            <Descriptions.Item label="Số lượng sử dụng">
-              {selectedHistory.status === "Hoàn thành" ||
-              selectedHistory.status === "Đã trả lại" ||
-              (selectedHistory.actualQuantityUsed !== null &&
-                selectedHistory.actualQuantityUsed !== undefined) ? (
+            <Descriptions.Item label="Tổng số lượng sử dụng">
+              {selectedHistory.totalUsed != null ||
+              selectedHistory.actualQuantityUsed != null ? (
                 <strong style={{ color: "#52c41a" }}>
-                  {selectedHistory.actualQuantityUsed ?? 0} cái
+                  {selectedHistory.totalUsed ??
+                    selectedHistory.actualQuantityUsed ??
+                    0}{" "}
+                  cái
                 </strong>
               ) : (
                 <span style={{ color: "#8c8c8c", fontStyle: "italic" }}>
@@ -856,17 +956,13 @@ const TransactionHistory = () => {
               )}
             </Descriptions.Item>
 
-            {(selectedHistory.status === "Hoàn thành" ||
-              selectedHistory.status === "Đã trả lại" ||
-              (selectedHistory.actualQuantityUsed !== null &&
-                selectedHistory.actualQuantityUsed !== undefined)) && (
-              <Descriptions.Item label="Số lượng trả lại" span={2}>
+            {(selectedHistory.totalReturned != null ||
+              selectedHistory.quantityToReturn != null) && (
+              <Descriptions.Item label="Tổng số lượng trả lại" span={2}>
                 <strong style={{ color: "#1890ff" }}>
-                  {selectedHistory.quantityToReturn !== null &&
-                  selectedHistory.quantityToReturn !== undefined
-                    ? selectedHistory.quantityToReturn
-                    : (selectedHistory.quantity || 0) -
-                      (selectedHistory.actualQuantityUsed ?? 0)}{" "}
+                  {selectedHistory.totalReturned ??
+                    selectedHistory.quantityToReturn ??
+                    0}{" "}
                   cái
                 </strong>
               </Descriptions.Item>
