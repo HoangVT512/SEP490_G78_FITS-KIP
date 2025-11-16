@@ -937,6 +937,39 @@ namespace FITSKIP.API.Controllers
         }
 
         /// <summary>
+        /// Đóng phiếu bảo trì sau khi kiểm tra và quyết toán (TechManager)
+        /// Chỉ khi Close thì mới reset chu kỳ bảo trì tiếp theo
+        /// Completed → Closed
+        /// </summary>
+        [HttpPost("work-orders/{workOrderId}/close")]
+        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
+        public async Task<IActionResult> CloseWorkOrder(int workOrderId, [FromBody] CloseWorkOrderRequest? request)
+        {
+            try
+            {
+                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+                if (string.IsNullOrEmpty(userId))
+                {
+                    return Unauthorized(ApiResponse.ErrorResponse("Không xác định được người dùng"));
+                }
+
+                var workOrder = await _workOrderService.CloseWorkOrderAsync(workOrderId, userId, request?.Notes);
+                return Ok(ApiResponse<MaintenanceWorkOrderDTO>.SuccessResponse(
+                    workOrder, 
+                    "Đóng phiếu bảo trì thành công - Chu kỳ tiếp theo đã được cập nhật"
+                ));
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
         /// Hủy phiếu bảo trì (TechManager)
         /// </summary>
         [HttpPost("work-orders/{workOrderId}/cancel")]

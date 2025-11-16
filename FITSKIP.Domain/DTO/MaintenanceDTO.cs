@@ -240,7 +240,7 @@ namespace FITSKIP.Domain.DTO
         public DateTime ScheduledDate { get; set; } // Ngày dự định bảo trì (ngày máy dừng)
         public DateTime DueDate { get; set; }
         public DateTime? StartedDate { get; set; }
-        public DateTime? CompletedDate { get; set; }
+        public DateTime? CompletedDate { get; set; } // Ngày hoàn thành (Completed hoặc Closed)
         
         // Assignment
         public string? AssignedToElectrical { get; set; }
@@ -252,7 +252,7 @@ namespace FITSKIP.Domain.DTO
         public string? MechanicalEmployeeCode { get; set; }
         
         // Details
-        public string Status { get; set; } = string.Empty; // 'Pending', 'InProgress', 'Completed', 'Cancelled', 'Overdue'
+        public string Status { get; set; } = string.Empty; // 'Pending', 'InProgress', 'Completed', 'Closed', 'Cancelled', 'Overdue'
         public string? Notes { get; set; }
         
         // Postpone info
@@ -498,6 +498,15 @@ namespace FITSKIP.Domain.DTO
         [Required(ErrorMessage = "Lý do hủy là bắt buộc")]
         [MaxLength(500, ErrorMessage = "Lý do hủy không vượt quá 500 ký tự")]
         public string Reason { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Request để đóng (close) work order sau khi kiểm tra và quyết toán
+    /// </summary>
+    public class CloseWorkOrderRequest
+    {
+        [MaxLength(500, ErrorMessage = "Ghi chú không vượt quá 500 ký tự")]
+        public string? Notes { get; set; }
     }
 
     /// <summary>
