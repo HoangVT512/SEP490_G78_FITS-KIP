@@ -202,14 +202,14 @@ namespace FITSKIP.API.Controllers
                     IncidentId = request.IncidentId, // Add IncidentId mapping
                     WorkOrderId = request.WorkOrderId, // Add WorkOrderId mapping
                     Quantity = request.Quantity,
-                    // ⚠️ LƯU Ý: Khi quản lý kho duyệt/xác nhận, vẫn để ReplacedDate = NULL
-                    // ReplacedDate chỉ được ghi nhận khi Hoàn thành việc sử dụng (RecordUsage endpoint)
-                    ReplacedDate = null,
+                    ReplacedDate = request.ReplacedDate, // Use the date from request (not null)
                     ReplacedBy = request.ReplacedBy,
                     Status = request.Status,
                     Remarks = request.Remarks,
                     ActualQuantityUsed = request.ActualQuantityUsed,
                     QuantityToReturn = request.QuantityToReturn,
+                    ReturnedDate = request.ReturnedDate, // Add returned date
+                    ReturnConfirmedBy = request.ReturnConfirmedBy, // Add return confirmed by
                 };
                 if (request.Quantity <= 0)
                 {

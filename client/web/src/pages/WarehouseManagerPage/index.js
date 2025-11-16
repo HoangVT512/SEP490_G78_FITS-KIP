@@ -9,3 +9,4 @@ export { default as InventoryReports } from "./InventoryReports";
 export { default as TransactionHistory } from "./TransactionHistory";
 export { default as NotificationsList } from "./NotificationsList";
 export { default as IncidentSparePartsDistribution } from "./IncidentSparePartsDistribution";
+export { default as IncidentSparePartsReturn } from "./IncidentSparePartsReturn";

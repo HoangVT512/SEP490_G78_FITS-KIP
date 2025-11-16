@@ -41,6 +41,7 @@ import InventoryReports from "./InventoryReports";
 import TransactionHistory from "./TransactionHistory";
 import NotificationsList from "./NotificationsList";
 import IncidentSparePartsDistribution from "./IncidentSparePartsDistribution";
+import IncidentSparePartsReturn from "./IncidentSparePartsReturn";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -123,6 +124,8 @@ const WarehouseManagerLayout = () => {
     const path = location.pathname;
     if (path.includes("/incident-distribution")) {
       setSelectedKey("incident-distribution");
+    } else if (path.includes("/spare-parts-return")) {
+      setSelectedKey("spare-parts-return");
     } else if (path.includes("/inventory")) {
       setSelectedKey("inventory");
     } else if (path.includes("/purchase-requests")) {
@@ -146,6 +149,8 @@ const WarehouseManagerLayout = () => {
 
     if (path.includes("/incident-distribution")) {
       return <IncidentSparePartsDistribution />;
+    } else if (path.includes("/spare-parts-return")) {
+      return <IncidentSparePartsReturn />;
     } else if (path.includes("/inventory")) {
       return <InventoryManagement />;
     } else if (path.includes("/purchase-requests")) {
@@ -178,6 +183,11 @@ const WarehouseManagerLayout = () => {
       label: "Cấp phát vật tư",
     },
     {
+      key: "spare-parts-return",
+      icon: <CheckCircleOutlined />,
+      label: "Trả lại phụ tùng",
+    },
+    {
       key: "inventory",
       icon: <InboxOutlined />,
       label: "Quản lý tồn kho",
@@ -206,7 +216,7 @@ const WarehouseManagerLayout = () => {
     //   key: "reports",
     //   icon: <BarChartOutlined />,
     //   label: "Báo cáo kho",
-    // },
+    //   },
   ];
 
   const handleMenuClick = ({ key }) => {
@@ -217,6 +227,9 @@ const WarehouseManagerLayout = () => {
         break;
       case "incident-distribution":
         navigate("/warehouse-manager/incident-distribution");
+        break;
+      case "spare-parts-return":
+        navigate("/warehouse-manager/spare-parts-return");
         break;
       case "inventory":
         navigate("/warehouse-manager/inventory");

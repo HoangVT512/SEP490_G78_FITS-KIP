@@ -212,12 +212,18 @@ namespace FITSKIP.Infrastructure.Repositories
 
                 // Update history
                 existingHistory.EquipmentId = replacementHistory.EquipmentId;
+                existingHistory.IncidentId = replacementHistory.IncidentId;
+                existingHistory.WorkOrderId = replacementHistory.WorkOrderId;
                 existingHistory.PartId = replacementHistory.PartId;
                 existingHistory.Quantity = replacementHistory.Quantity;
                 existingHistory.ReplacedDate = replacementHistory.ReplacedDate;
                 existingHistory.ReplacedBy = replacementHistory.ReplacedBy;
                 existingHistory.Status = replacementHistory.Status;
                 existingHistory.Remarks = replacementHistory.Remarks;
+                existingHistory.ActualQuantityUsed = replacementHistory.ActualQuantityUsed;
+                existingHistory.QuantityToReturn = replacementHistory.QuantityToReturn;
+                existingHistory.ReturnedDate = replacementHistory.ReturnedDate;
+                existingHistory.ReturnConfirmedBy = replacementHistory.ReturnConfirmedBy;
 
                 _context.ReplacementHistories.Update(existingHistory);
                 await _context.SaveChangesAsync(cancellationToken);
