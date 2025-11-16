@@ -1230,6 +1230,8 @@ const IncidentManagement = () => {
         console.log("Edit payload:", editPayload);
         await incidentService.update(id, editPayload);
         message.success("Cập nhật sự cố thành công!");
+        setFormModalVisible(false);
+        fetchIncidents();
       } else {
         // Create mode - multiple incidents
         const incidentsToCreate = [];

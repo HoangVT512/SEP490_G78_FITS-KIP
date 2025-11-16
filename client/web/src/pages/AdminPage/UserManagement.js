@@ -417,23 +417,6 @@ const UserManagement = ({ showHeader = true }) => {
         }
         break;
       case "lock": {
-        // Prevent locking admin accounts. Roles may be strings (e.g. "Quản trị viên") or objects { name: 'Quản trị viên' }.
-        if (
-          user.roles &&
-          user.roles.some((r) => {
-            const roleName = typeof r === "string" ? r : r && r.name;
-            return (
-              roleName &&
-              ["quản trị viên", "admin", "administrator"].includes(
-                roleName.toLowerCase()
-              )
-            );
-          })
-        ) {
-          message.warning("Không thể khóa tài khoản của quản trị viên");
-          break;
-        }
-
         try {
           await userService.updateUser(user.id, {
             ...user,
@@ -506,6 +489,17 @@ const UserManagement = ({ showHeader = true }) => {
         danger: user.status === "active", // Make deactivate action red
         onClick: () => {
           const isActive = user.status === "active";
+          if (isActive && user.roles && user.roles.includes("Quản trị viên")) {
+            const activeAdminsCount = users.filter(u => u.roles && u.roles.includes("Quản trị viên") && u.status === "active" && u.id !== user.id).length;
+            if (activeAdminsCount === 0) {
+              message.error({
+                content: 'Không thể vô hiệu hóa tài khoản quản trị viên cuối cùng. Phải có ít nhất một quản trị viên hoạt động trong hệ thống.',
+                placement: "topRight",
+                duration: 5,
+              });
+              return;
+            }
+          }
           Modal.confirm({
             title: isActive
               ? "Xác nhận khóa tài khoản"
@@ -845,6 +839,20 @@ const UserManagement = ({ showHeader = true }) => {
       const values = await form.validateFields();
       setLoading(true);
 
+      // Check if trying to deactivate the last active admin
+      if (editingUser && editingUser.roles && editingUser.roles.includes("Quản trị viên") && values.status === "false") {
+        const activeAdminsCount = users.filter(u => u.roles && u.roles.includes("Quản trị viên") && u.status === "active" && u.id !== editingUser.id).length;
+        if (activeAdminsCount === 0) {
+          message.error({
+            content: 'Không thể vô hiệu hóa tài khoản quản trị viên cuối cùng. Phải có ít nhất một quản trị viên hoạt động trong hệ thống.',
+            placement: "topRight",
+            duration: 5,
+          });
+          setLoading(false);
+          return;
+        }
+      }
+
       // Check if selected role is a management role and department is selected
       const selectedRole = roles.find((r) => r.id === values.roleIds);
       const isManagementRole =
@@ -937,13 +945,19 @@ const UserManagement = ({ showHeader = true }) => {
       }));
       setUsers(mappedUsers);
     } catch (error) {
+      const errorMessage = error.response?.data?.message || error.message || (editingUser
+        ? "Cập nhật người dùng thất bại!"
+        : "Tạo người dùng thất bại. Vui lòng xem lại trường thông tin!");
       message.error({
-        content: editingUser
-          ? "Cập nhật người dùng thất bại!"
-          : "Tạo người dùng thất bại. Vui lòng xem lại trường thông tin!",
+        content: errorMessage,
         placement: "topRight",
-        duration: 3,
+        duration: 5,
       });
+      // Modal.error({
+      //   title: editingUser ? 'Lỗi cập nhật người dùng' : 'Lỗi tạo người dùng',
+      //   content: errorMessage,
+      //   okText: 'Đóng',
+      // });
     } finally {
       setLoading(false);
     }

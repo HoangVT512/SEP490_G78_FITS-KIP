@@ -36,5 +36,15 @@ namespace FITSKIP.Domain.DTO
         /// Số lượng thừa cần trả lại kho
         /// </summary>
         public int? QuantityToReturn { get; set; }
+
+        /// <summary>
+        /// Ngày trả lại linh kiện thừa vào kho
+        /// </summary>
+        public DateTime? ReturnedDate { get; set; }
+
+        /// <summary>
+        /// Người xác nhận việc trả lại (thường là nhân viên kho)
+        /// </summary>
+        public string? ReturnConfirmedBy { get; set; }
     }
 }
