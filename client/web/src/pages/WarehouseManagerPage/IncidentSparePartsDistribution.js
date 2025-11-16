@@ -22,6 +22,7 @@ import {
   Select,
   Spin,
   Tabs,
+  Dropdown,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -35,10 +36,12 @@ import {
   DollarOutlined,
   CalendarOutlined,
   UserOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { incidentService } from "../../services/incidentService";
 import { sparePartService } from "../../services/sparePartService";
+import { replacementHistoryService } from "../../services/replacementHistoryService";
 
 const IncidentSparePartsDistribution = () => {
   const [loading, setLoading] = useState(false);
@@ -55,6 +58,9 @@ const IncidentSparePartsDistribution = () => {
   const [activeTab, setActiveTab] = useState("incident");
   const [searchText, setSearchText] = useState("");
   const [selectedRecord, setSelectedRecord] = useState(null);
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedDistributionDetail, setSelectedDistributionDetail] =
+    useState(null);
 
   useEffect(() => {
     fetchSpareParts();
@@ -65,35 +71,48 @@ const IncidentSparePartsDistribution = () => {
   const fetchDistributions = async () => {
     setLoading(true);
     try {
-      // TODO: Replace with actual API call
-      // For now, using mock data
-      const mockDistributions = [
-        {
-          id: 1,
-          distributionType: "incident",
-          recordId: "INC001",
-          recordName: "Máy tiện CNC 01",
-          technicianName: "Nguyễn Văn A",
-          distributedAt: "2025-11-16 10:30:00",
-          distributedBy: "Quản lý kho",
-          items: [{ partId: 1, partName: "Ổ bi SKF", quantity: 2, notes: "" }],
-          notes: "Cấp gấp",
-        },
-        {
-          id: 2,
-          distributionType: "maintenance",
-          recordId: "MNT001",
-          recordName: "Máy phay 02",
-          technicianName: "Trần Văn B",
-          distributedAt: "2025-11-16 14:15:00",
-          distributedBy: "Quản lý kho",
+      // Fetch replacement histories with status "Đã xuất"
+      const allReplacements = await replacementHistoryService.getAll();
+
+      // Filter only "Đã xuất" status
+      const exportedReplacements = (allReplacements || []).filter(
+        (r) => r.status === "Đã xuất"
+      );
+
+      // Transform to distribution format
+      const formattedDistributions = exportedReplacements.map((replacement) => {
+        const distributionType = replacement.incidentId
+          ? "incident"
+          : "maintenance";
+        const recordId = replacement.incidentId || replacement.workOrderId;
+
+        return {
+          id: replacement.replacementID,
+          distributionType: distributionType,
+          recordId: recordId,
+          recordName: replacement.equipmentName || "",
+          technicianName:
+            replacement.replacedByFullName ||
+            replacement.replacedByUserName ||
+            "",
+          distributedAt: replacement.replacedDate,
+          distributedBy:
+            replacement.replacedByFullName ||
+            replacement.replacedByUserName ||
+            "",
           items: [
-            { partId: 2, partName: "Dầu bôi trơn", quantity: 1, notes: "" },
+            {
+              partId: replacement.partID,
+              partName: replacement.partName || "",
+              partNumber: replacement.partNumber || "",
+              quantity: replacement.quantity,
+            },
           ],
-          notes: "",
-        },
-      ];
-      setDistributions(mockDistributions);
+          notes: replacement.remarks || "",
+        };
+      });
+
+      setDistributions(formattedDistributions);
     } catch (error) {
       console.error("Error fetching distributions:", error);
       message.error("Lỗi khi tải danh sách phiếu cấp phát");
@@ -252,55 +271,128 @@ const IncidentSparePartsDistribution = () => {
   };
 
   const handleSaveDistribution = async () => {
+    setLoading(true);
     try {
       const values = await distributionForm.validateFields();
 
       // Validate spare parts
       if (selectedDistributions.length === 0) {
         message.warning("Vui lòng thêm ít nhất một phụ tùng");
+        setLoading(false);
         return;
       }
 
       const invalidParts = selectedDistributions.some((part) => !part.partId);
       if (invalidParts) {
         message.warning("Vui lòng chọn phụ tùng cho tất cả các dòng");
+        setLoading(false);
+        return;
+      }
+
+      // Validate inventory quantities
+      const insufficientStock = selectedDistributions.find((item) => {
+        const part = spareParts.find((p) => p.partId === item.partId);
+        return part && part.quantity < item.quantity;
+      });
+
+      if (insufficientStock) {
+        const part = spareParts.find(
+          (p) => p.partId === insufficientStock.partId
+        );
+        message.error(
+          `Không đủ tồn kho cho phụ tùng "${part?.partName}". Tồn kho: ${part?.quantity}, Yêu cầu: ${insufficientStock.quantity}`
+        );
+        setLoading(false);
         return;
       }
 
       const recordType = distributionType === "incident" ? "sự cố" : "bảo trì";
+      const currentUserId = localStorage.getItem("userId");
+      const currentUserName = localStorage.getItem("userName") || "Quản lý kho";
 
-      // Save distribution data
-      const distributionData = {
+      // Get selected record for equipment info
+      const selectedRecordData =
+        distributionType === "incident"
+          ? incidents.find((i) => i.incidentId === values.recordId)
+          : maintenances.find((m) => m.incidentId === values.recordId);
+
+      // Create replacement histories for each spare part
+      const replacementPromises = selectedDistributions.map(async (item) => {
+        const replacementData = {
+          partId: item.partId,
+          equipmentId: selectedRecordData?.equipmentId || null,
+          incidentId: distributionType === "incident" ? values.recordId : null,
+          workOrderId:
+            distributionType === "maintenance" ? values.recordId : null,
+          quantity: item.quantity,
+          replacedDate: dayjs().format("YYYY-MM-DDTHH:mm:ss"),
+          replacedBy: currentUserId || values.technicianId,
+          status: "Đã xuất",
+          remarks: values.notes || "",
+        };
+
+        console.log("Creating replacement history:", replacementData);
+        return replacementHistoryService.create(replacementData);
+      });
+
+      // Execute all replacement history creations
+      await Promise.all(replacementPromises);
+
+      // Update spare parts inventory and status
+      const updatePromises = selectedDistributions.map(async (item) => {
+        const part = spareParts.find((p) => p.partId === item.partId);
+        if (!part) return;
+
+        const newQuantity = part.quantity - item.quantity;
+        let newStatus = "Đủ hàng";
+
+        // Determine status based on quantity and minQuantity
+        if (newQuantity <= 0) {
+          newStatus = "Hết hàng";
+        } else if (newQuantity <= part.minQuantity) {
+          newStatus = "Sắp hết";
+        }
+
+        // Update spare part
+        const updateData = {
+          partNumber: part.partNumber,
+          partName: part.partName,
+          partType: part.partType,
+          quantity: newQuantity,
+          minQuantity: part.minQuantity,
+          location: part.location,
+          dateAdded: part.dateAdded,
+          status: newStatus,
+        };
+
+        return sparePartService.update(part.partId, updateData);
+      });
+
+      await Promise.all(updatePromises);
+
+      // Refresh spare parts list
+      await fetchSpareParts();
+
+      // Save to local state for display
+      const newDistribution = {
+        id: Date.now(),
         distributionType: distributionType,
         recordId: values.recordId,
-        recordName:
-          distributionType === "incident"
-            ? incidents.find((i) => i.incidentId === values.recordId)
-                ?.equipmentName
-            : maintenances.find((m) => m.incidentId === values.recordId)
-                ?.equipmentName,
-        distributedAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        distributedBy: localStorage.getItem("userName") || "Quản lý kho",
+        recordName: selectedRecordData?.equipmentName || "",
         technicianName: values.technicianName,
+        distributedAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
+        distributedBy: currentUserName,
         items: selectedDistributions,
         notes: values.notes || "",
       };
-
-      console.log("Distribution data:", distributionData);
-
-      // Save to local state (temporary until API is available)
-      const newDistribution = {
-        id: Date.now(),
-        ...distributionData,
-      };
       setDistributions([newDistribution, ...distributions]);
 
-      // Here you would normally call an API to save the distribution
       message.success(`Cấp phát vật tư cho ${recordType} thành công!`);
 
       // Close modal and reset
       setIsModalVisible(false);
       setSelectedDistributions([]);
+      setSelectedRecord(null);
       setIncidents([]);
       setMaintenances([]);
       distributionForm.resetFields();
@@ -309,19 +401,16 @@ const IncidentSparePartsDistribution = () => {
       if (error.errorFields) {
         message.error("Vui lòng điền đầy đủ thông tin bắt buộc");
       } else {
-        message.error("Lỗi khi lưu phiếu cấp phát");
+        message.error(
+          error.message || "Lỗi khi lưu phiếu cấp phát. Vui lòng thử lại."
+        );
       }
+    } finally {
+      setLoading(false);
     }
   };
 
   const distributionColumns = [
-    {
-      title: "Mã phiếu",
-      dataIndex: "id",
-      key: "id",
-      width: 100,
-      render: (id) => <Tag color="blue">#{id}</Tag>,
-    },
     {
       title: "Loại",
       dataIndex: "distributionType",
@@ -352,48 +441,95 @@ const IncidentSparePartsDistribution = () => {
       width: 150,
     },
     {
-      title: "Thời gian cấp phát",
-      dataIndex: "distributedAt",
-      key: "distributedAt",
+      title: "Tổng số loại vật tư",
+      key: "totalItemsCount",
+      width: 130,
+      align: "center",
+      render: (_, record) => {
+        const totalItems = record.allItems?.length || record.items?.length || 0;
+        return <Badge count={totalItems} showZero color="blue" />;
+      },
+    },
+    {
+      title: "Lần xuất gần nhất",
+      dataIndex: "lastDistributedAt",
+      key: "lastDistributedAt",
       width: 150,
       render: (time) => dayjs(time).format("DD/MM/YYYY HH:mm"),
     },
     {
-      title: "Người cấp phát",
-      dataIndex: "distributedBy",
-      key: "distributedBy",
-      width: 150,
-    },
-    {
-      title: "Số loại vật tư",
-      key: "itemsCount",
-      width: 100,
-      render: (_, record) => (
-        <Badge count={record.items?.length || 0} showZero color="blue" />
-      ),
-    },
-    {
       title: "Thao tác",
       key: "action",
-      width: 100,
+      width: 120,
       fixed: "right",
+      align: "center",
       render: (_, record) => (
-        <Button
-          type="link"
-          size="small"
-          icon={<EyeOutlined />}
-          onClick={() => {
-            // TODO: Show detail modal
-            message.info("Xem chi tiết phiếu cấp phát");
+        <Dropdown
+          menu={{
+            items: [
+              {
+                key: "view",
+                label: "Xem chi tiết",
+                icon: <EyeOutlined />,
+                onClick: () => showDistributionDetail(record),
+              },
+            ],
           }}
+          trigger={["click"]}
         >
-          Chi tiết
-        </Button>
+          <Button size="small" icon={<DownOutlined />} />
+        </Dropdown>
       ),
     },
   ];
 
-  const filteredDistributions = distributions.filter((dist) => {
+  // Group distributions by recordId and distributionType
+  const groupedDistributions = distributions.reduce((acc, dist) => {
+    const key = `${dist.distributionType}_${dist.recordId}`;
+    if (!acc[key]) {
+      acc[key] = {
+        distributionType: dist.distributionType,
+        recordId: dist.recordId,
+        recordName: dist.recordName,
+        technicianName: dist.technicianName,
+        lastDistributedAt: dist.distributedAt,
+        distributions: [],
+        allItems: [],
+      };
+    }
+
+    // Update last distributed time if this is newer
+    if (dayjs(dist.distributedAt).isAfter(dayjs(acc[key].lastDistributedAt))) {
+      acc[key].lastDistributedAt = dist.distributedAt;
+    }
+
+    // Add distribution to list
+    acc[key].distributions.push({
+      id: dist.id,
+      distributedAt: dist.distributedAt,
+      distributedBy: dist.distributedBy,
+      items: dist.items,
+      notes: dist.notes,
+    });
+
+    // Merge items - avoid duplicates by partId, sum quantities
+    dist.items?.forEach((item) => {
+      const existingItem = acc[key].allItems.find(
+        (i) => i.partId === item.partId
+      );
+      if (existingItem) {
+        existingItem.quantity += item.quantity;
+      } else {
+        acc[key].allItems.push({ ...item });
+      }
+    });
+
+    return acc;
+  }, {});
+
+  const groupedDistributionsList = Object.values(groupedDistributions);
+
+  const filteredDistributions = groupedDistributionsList.filter((dist) => {
     if (!searchText) return true;
     const searchLower = searchText.toLowerCase();
     return (
@@ -402,6 +538,12 @@ const IncidentSparePartsDistribution = () => {
       dist.technicianName?.toLowerCase().includes(searchLower)
     );
   });
+
+  const showDistributionDetail = React.useCallback((record) => {
+    console.log("Opening detail for:", record);
+    setSelectedDistributionDetail(record);
+    setDetailModalVisible(true);
+  }, []);
 
   const incidentDistributions = filteredDistributions.filter(
     (d) => d.distributionType === "incident"
@@ -469,7 +611,7 @@ const IncidentSparePartsDistribution = () => {
                 <Table
                   dataSource={incidentDistributions}
                   columns={distributionColumns}
-                  rowKey="id"
+                  rowKey="recordId"
                   loading={loading}
                   pagination={{
                     pageSize: 10,
@@ -498,7 +640,7 @@ const IncidentSparePartsDistribution = () => {
                 <Table
                   dataSource={maintenanceDistributions}
                   columns={distributionColumns}
-                  rowKey="id"
+                  rowKey="recordId"
                   loading={loading}
                   pagination={{
                     pageSize: 10,
@@ -808,7 +950,20 @@ const IncidentSparePartsDistribution = () => {
             >
               {selectedDistributions.length > 0 ? (
                 <div style={{ overflowX: "auto" }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      tableLayout: "fixed",
+                    }}
+                  >
+                    <colgroup>
+                      <col style={{ width: "60px" }} />
+                      <col style={{ width: "auto" }} />
+                      <col style={{ width: "120px" }} />
+                      <col style={{ width: "140px" }} />
+                      <col style={{ width: "80px" }} />
+                    </colgroup>
                     <thead>
                       <tr
                         style={{
@@ -839,7 +994,6 @@ const IncidentSparePartsDistribution = () => {
                             padding: "8px",
                             textAlign: "left",
                             fontWeight: 600,
-                            width: "100px",
                           }}
                         >
                           Số lượng
@@ -851,14 +1005,13 @@ const IncidentSparePartsDistribution = () => {
                             fontWeight: 600,
                           }}
                         >
-                          Ghi chú
+                          Số lượng tồn kho
                         </th>
                         <th
                           style={{
                             padding: "8px",
                             textAlign: "center",
                             fontWeight: 600,
-                            width: "60px",
                           }}
                         >
                           Thao tác
@@ -896,21 +1049,7 @@ const IncidentSparePartsDistribution = () => {
                                 <Select.Option
                                   key={part.partId}
                                   value={part.partId}
-                                  label={
-                                    <div>
-                                      <div style={{ fontWeight: 500 }}>
-                                        {part.partName}
-                                      </div>
-                                      <div
-                                        style={{
-                                          fontSize: 12,
-                                          color: "#999",
-                                        }}
-                                      >
-                                        {part.partNumber} - SL: {part.quantity}
-                                      </div>
-                                    </div>
-                                  }
+                                  label={`${part.partName} (${part.partNumber})`}
                                 >
                                   <div>
                                     <div style={{ fontWeight: 500 }}>
@@ -944,17 +1083,24 @@ const IncidentSparePartsDistribution = () => {
                             />
                           </td>
                           <td style={{ padding: "8px" }}>
-                            <Input
-                              placeholder="Ghi chú"
-                              value={item.notes}
-                              onChange={(e) =>
-                                handleUpdateSparePartInDistribution(
-                                  item.id,
-                                  "notes",
-                                  e.target.value
-                                )
-                              }
-                            />
+                            <span
+                              style={{
+                                fontWeight: 500,
+                                color: item.partId
+                                  ? (spareParts.find(
+                                      (p) => p.partId === item.partId
+                                    )?.quantity || 0) < item.quantity
+                                    ? "#ff4d4f"
+                                    : "#52c41a"
+                                  : "#000",
+                              }}
+                            >
+                              {item.partId
+                                ? spareParts.find(
+                                    (p) => p.partId === item.partId
+                                  )?.quantity || 0
+                                : "-"}
+                            </span>
                           </td>
                           <td style={{ padding: "8px", textAlign: "center" }}>
                             <Button
@@ -1033,12 +1179,167 @@ const IncidentSparePartsDistribution = () => {
                 htmlType="submit"
                 icon={<CheckCircleOutlined />}
                 disabled={selectedDistributions.length === 0}
+                loading={loading}
               >
                 Lưu phiếu cấp phát
               </Button>
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Distribution Detail Modal */}
+      <Modal
+        title={
+          <div style={{ fontSize: 18, fontWeight: 600 }}>
+            <FileTextOutlined style={{ marginRight: 8 }} />
+            Chi tiết phiếu cấp phát
+          </div>
+        }
+        visible={detailModalVisible}
+        onCancel={() => {
+          setDetailModalVisible(false);
+          setSelectedDistributionDetail(null);
+        }}
+        width={1000}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => {
+              setDetailModalVisible(false);
+              setSelectedDistributionDetail(null);
+            }}
+          >
+            Đóng
+          </Button>,
+        ]}
+      >
+        {selectedDistributionDetail && (
+          <div>
+            {/* Summary Information */}
+            <Descriptions bordered column={2} style={{ marginBottom: 24 }}>
+              <Descriptions.Item label="Loại">
+                <Tag
+                  color={
+                    selectedDistributionDetail.distributionType === "incident"
+                      ? "red"
+                      : "cyan"
+                  }
+                >
+                  {selectedDistributionDetail.distributionType === "incident"
+                    ? "Sự cố"
+                    : "Bảo trì"}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="Mã SC/BT">
+                <strong>{selectedDistributionDetail.recordId}</strong>
+              </Descriptions.Item>
+              <Descriptions.Item label="Thiết bị" span={2}>
+                {selectedDistributionDetail.recordName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Kỹ thuật viên" span={2}>
+                {selectedDistributionDetail.technicianName}
+              </Descriptions.Item>
+            </Descriptions>
+
+            {/* All Items Summary */}
+            <Card
+              title="Tổng hợp vật tư đã xuất"
+              size="small"
+              style={{ marginBottom: 16 }}
+            >
+              <Table
+                dataSource={selectedDistributionDetail.allItems}
+                rowKey={(record) => record.partId}
+                pagination={false}
+                size="small"
+                columns={[
+                  {
+                    title: "STT",
+                    width: 60,
+                    render: (_, __, index) => index + 1,
+                  },
+                  {
+                    title: "Phụ tùng",
+                    dataIndex: "partName",
+                    key: "partName",
+                  },
+                  {
+                    title: "Tổng số lượng",
+                    dataIndex: "quantity",
+                    key: "quantity",
+                    width: 120,
+                    align: "center",
+                    render: (qty) => (
+                      <Tag color="blue" style={{ fontSize: 14 }}>
+                        {qty}
+                      </Tag>
+                    ),
+                  },
+                ]}
+              />
+            </Card>
+
+            {/* Distribution History */}
+            <Card title="Lịch sử xuất vật tư" size="small">
+              {selectedDistributionDetail.distributions
+                ?.sort(
+                  (a, b) =>
+                    dayjs(b.distributedAt).unix() -
+                    dayjs(a.distributedAt).unix()
+                )
+                .map((dist, index) => (
+                  <Card
+                    key={dist.id}
+                    type="inner"
+                    size="small"
+                    style={{ marginBottom: 12 }}
+                    extra={
+                      <Space>
+                        <CalendarOutlined />
+                        {dayjs(dist.distributedAt).format("DD/MM/YYYY HH:mm")}
+                      </Space>
+                    }
+                  >
+                    <div style={{ marginBottom: 8 }}>
+                      <strong>Người xuất:</strong> {dist.distributedBy}
+                    </div>
+                    {dist.notes && (
+                      <div style={{ marginBottom: 12 }}>
+                        <strong>Ghi chú:</strong> {dist.notes}
+                      </div>
+                    )}
+                    <Table
+                      dataSource={dist.items}
+                      rowKey={(record, idx) => `${record.partId}_${idx}`}
+                      pagination={false}
+                      size="small"
+                      columns={[
+                        {
+                          title: "STT",
+                          width: 60,
+                          render: (_, __, idx) => idx + 1,
+                        },
+                        {
+                          title: "Phụ tùng",
+                          dataIndex: "partName",
+                          key: "partName",
+                        },
+                        {
+                          title: "Số lượng",
+                          dataIndex: "quantity",
+                          key: "quantity",
+                          width: 100,
+                          align: "center",
+                          render: (qty) => <Tag color="blue">{qty}</Tag>,
+                        },
+                      ]}
+                    />
+                  </Card>
+                ))}
+            </Card>
+          </div>
+        )}
       </Modal>
     </div>
   );
