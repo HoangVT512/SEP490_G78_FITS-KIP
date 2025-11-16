@@ -323,7 +323,7 @@ const MaintenanceManagement = () => {
 
   const loadStats = async () => {
     try {
-      const response = await getMaintenanceStats(); 
+      const response = await getMaintenanceStats();
       setStats(response?.data || {});
     } catch (error) {
       console.error("Load stats error:", error);
@@ -1043,10 +1043,8 @@ const MaintenanceManagement = () => {
           // Thêm vào checklistItems
           setChecklistItems([...checklistItems, ...newItems]);
           message.success(
-            `✅ Import thành công ${newItems.length} bước kiểm tra (${
-              newItems.filter((i) => i.category === "Electrical").length
-            } điện + ${
-              newItems.filter((i) => i.category === "Mechanical").length
+            `✅ Import thành công ${newItems.length} bước kiểm tra (${newItems.filter((i) => i.category === "Electrical").length
+            } điện + ${newItems.filter((i) => i.category === "Mechanical").length
             } cơ khí)`
           );
 
@@ -1203,7 +1201,7 @@ const MaintenanceManagement = () => {
     }
   };
 
-  
+
   // ===== RENDERING HELPERS =====
 
   const getStatusTag = (status) => {
@@ -1371,8 +1369,8 @@ const MaintenanceManagement = () => {
                 color: isOverdue
                   ? "#ff4d4f"
                   : isUpcomingSoon
-                  ? "#faad14"
-                  : "inherit",
+                    ? "#faad14"
+                    : "inherit",
                 fontWeight: isOverdue || isUpcomingSoon ? "bold" : "normal",
               }}
             >
@@ -1383,8 +1381,8 @@ const MaintenanceManagement = () => {
                 {record.daysUntilDue > 0
                   ? `Còn ${record.daysUntilDue} ngày`
                   : record.daysUntilDue === 0
-                  ? "Hôm nay"
-                  : `Quá ${Math.abs(record.daysUntilDue)} ngày`}
+                    ? "Hôm nay"
+                    : `Quá ${Math.abs(record.daysUntilDue)} ngày`}
               </Text>
             )}
             {record.postponedDueDate && (
@@ -1408,41 +1406,49 @@ const MaintenanceManagement = () => {
       title: "Thao tác",
       key: "action",
       fixed: "right",
-      width: 150,
+      width: 120,
       render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="Chi tiết">
-            <Button
-              type="link"
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewDetail(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Sửa">
-            <Button
-              type="link"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleEditPlan(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Xác nhận xóa?"
-            onConfirm={() => handleDeletePlan(record)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Tooltip title="Xóa">
-              <Button
-                type="link"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
+        <Dropdown
+          menu={{
+            items: [
+              {
+                key: "view",
+                icon: <EyeOutlined />,
+                label: "Chi tiết",
+                onClick: () => handleViewDetail(record),
+              },
+              {
+                key: "edit",
+                icon: <EditOutlined />,
+                label: "Sửa",
+                onClick: () => handleEditPlan(record),
+              },
+              {
+                key: "delete",
+                icon: <DeleteOutlined />,
+                label: "Xóa",
+                danger: true,
+                onClick: () => {
+                  Modal.confirm({
+                    title: "Xác nhận xóa?",
+                    content: "Bạn có chắc chắn muốn xóa kế hoạch bảo trì này?",
+                    okText: "Xóa",
+                    cancelText: "Hủy",
+                    onOk: () => handleDeletePlan(record),
+                  });
+                },
+              },
+            ],
+          }}
+          placement="bottomRight"
+          trigger={["click"]}
+        >
+          <Button
+            type="text"
+            icon={<DownOutlined style={{ fontSize: 14 }} />}
+            size="small"
+          />
+        </Dropdown>
       ),
     },
   ];
@@ -1461,12 +1467,18 @@ const MaintenanceManagement = () => {
       key: "templateName",
       width: 180,
     },
-    {
-      title: "Mô tả",
-      dataIndex: "description",
-      key: "description",
-      width: 250,
-    },
+    // {
+    //   title: "Mô tả",
+    //   dataIndex: "description",
+    //   key: "description",
+    //   width: 250,
+    //   ellipsis: { showTitle: false },
+    //   render: (desc) => (
+    //     <Tooltip placement="topLeft" title={desc}>
+    //       {desc}
+    //     </Tooltip>
+    //   ),  
+    // },
     {
       title: "Mã kiểm tra",
       dataIndex: "inspectionCode",
@@ -1493,41 +1505,49 @@ const MaintenanceManagement = () => {
       title: "Thao tác",
       key: "action",
       fixed: "right",
-      width: 250,
+      width: 120,
       render: (_, record) => (
-        <Space size="small">
-          <Tooltip title="Import bước kiểm tra">
-            <Button
-              type="link"
-              size="small"
-              icon={<UploadOutlined />}
-              onClick={() => handleOpenItemsImport(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Sửa">
-            <Button
-              type="link"
-              size="small"
-              icon={<EditOutlined />}
-              onClick={() => handleEditTemplate(record)}
-            />
-          </Tooltip>
-          <Popconfirm
-            title="Xác nhận xóa?"
-            onConfirm={() => handleDeleteTemplate(record)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Tooltip title="Xóa">
-              <Button
-                type="link"
-                size="small"
-                danger
-                icon={<DeleteOutlined />}
-              />
-            </Tooltip>
-          </Popconfirm>
-        </Space>
+        <Dropdown
+          menu={{
+            items: [
+              {
+                key: "import",
+                icon: <UploadOutlined />,
+                label: "Import bước kiểm tra",
+                onClick: () => handleOpenItemsImport(record),
+              },
+              {
+                key: "edit",
+                icon: <EditOutlined />,
+                label: "Sửa",
+                onClick: () => handleEditTemplate(record),
+              },
+              {
+                key: "delete",
+                icon: <DeleteOutlined />,
+                label: "Xóa",
+                danger: true,
+                onClick: () => {
+                  Modal.confirm({
+                    title: "Xác nhận xóa?",
+                    content: "Bạn có chắc chắn muốn xóa mẫu bảo trì này?",
+                    okText: "Xóa",
+                    cancelText: "Hủy",
+                    onOk: () => handleDeleteTemplate(record),
+                  });
+                },
+              },
+            ],
+          }}
+          placement="bottomRight"
+          trigger={["click"]}
+        >
+          <Button
+            type="text"
+            icon={<DownOutlined style={{ fontSize: 14 }} />}
+            size="small"
+          />
+        </Dropdown>
       ),
     },
   ];
@@ -1791,7 +1811,16 @@ const MaintenanceManagement = () => {
 
   // Tab: Maintenance Plans
   const MaintenancePlansTab = (
-    <Card title="Chu kỳ bảo trì" bordered={false}>
+    <Card
+      title={
+        <span style={{ fontSize: '18px', fontWeight: 600, color: '#262626' }}>
+          <ToolOutlined style={{ marginRight: 8 }} />
+          Chu kỳ bảo trì
+        </span>
+      }
+      bordered={false}
+      style={{ borderRadius: 8, boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
+    >
       {/* Statistics */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
         <Col xs={24} sm={12} lg={6}>
@@ -1799,8 +1828,8 @@ const MaintenanceManagement = () => {
             <Statistic
               title="Tổng chu kỳ"
               value={stats.totalPlans}
-              prefix={<FileTextOutlined />}
-              valueStyle={{ color: "#1890ff" }}
+              prefix={<FileTextOutlined style={{ color: '#1890ff' }} />}
+              valueStyle={{ color: '#1890ff' }}
             />
           </Card>
         </Col>
@@ -1809,8 +1838,8 @@ const MaintenanceManagement = () => {
             <Statistic
               title="Đang hoạt động"
               value={stats.activePlans}
-              prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: "#52c41a" }}
+              prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
+              valueStyle={{ color: '#52c41a' }}
             />
           </Card>
         </Col>
@@ -1819,8 +1848,8 @@ const MaintenanceManagement = () => {
             <Statistic
               title="Đến hạn tuần này"
               value={stats.dueThisWeek}
-              prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: "#faad14" }}
+              prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />}
+              valueStyle={{ color: '#faad14' }}
             />
           </Card>
         </Col>
@@ -1829,8 +1858,8 @@ const MaintenanceManagement = () => {
             <Statistic
               title="Quá hạn"
               value={stats.overdueWorkOrders}
-              prefix={<WarningOutlined />}
-              valueStyle={{ color: "#ff4d4f" }}
+              prefix={<WarningOutlined style={{ color: '#ff4d4f' }} />}
+              valueStyle={{ color: '#ff4d4f' }}
             />
           </Card>
         </Col>
@@ -1849,14 +1878,12 @@ const MaintenanceManagement = () => {
           <Col xs={24} sm={12} style={{ textAlign: "right" }}>
             <Space>
               <Button
-                type="button"
                 icon={<DownloadOutlined />}
                 onClick={handleDownloadPlanExcel}
               >
                 Tải Excel mẫu
               </Button>
               <Button
-                type="button"
                 icon={<UploadOutlined />}
                 onClick={() => setIsPlanImportModalVisible(true)}
               >
@@ -1866,6 +1893,7 @@ const MaintenanceManagement = () => {
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={handleAddPlan}
+                className={styles.primaryButton}
               >
                 Thêm chu kỳ bảo trì
               </Button>
@@ -1878,7 +1906,7 @@ const MaintenanceManagement = () => {
           dataSource={filteredPlans}
           rowKey="planId"
           loading={loading}
-          scroll={{ x: 1400 }}
+          scroll={{ x: 1100 }}
           pagination={{
             pageSize: 10,
             showSizeChanger: true,
@@ -1889,7 +1917,12 @@ const MaintenanceManagement = () => {
 
       {/* Import Plan Modal */}
       <Modal
-        title="Import Chu kỳ bảo trì từ Excel"
+        title={
+          <span>
+            <UploadOutlined style={{ marginRight: 8 }} />
+            Import Chu kỳ bảo trì từ Excel
+          </span>
+        }
         open={isPlanImportModalVisible}
         onCancel={() => {
           setIsPlanImportModalVisible(false);
@@ -1925,6 +1958,7 @@ const MaintenanceManagement = () => {
             type="primary"
             onClick={handleImportPlanExcel}
             loading={importPlanLoading}
+            className={styles.primaryButton}
           >
             Import
           </Button>
@@ -1935,7 +1969,16 @@ const MaintenanceManagement = () => {
 
   // Tab: Templates
   const TemplatesTab = (
-    <Card title="Mẫu bảo trì" bordered={false}>
+    <Card
+      title={
+        <span style={{ fontSize: '18px', fontWeight: 600, color: '#262626' }}>
+          <FileTextOutlined style={{ marginRight: 8 }} />
+          Mẫu bảo trì
+        </span>
+      }
+      bordered={false}
+      style={{ borderRadius: 8, boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
+    >
       <Space direction="vertical" size="middle" style={{ width: "100%" }}>
         <Row gutter={16}>
           <Col xs={24} sm={12}>
@@ -1949,14 +1992,12 @@ const MaintenanceManagement = () => {
           <Col xs={24} sm={12} style={{ textAlign: "right" }}>
             <Space>
               <Button
-                type="button"
                 icon={<DownloadOutlined />}
                 onClick={handleDownloadTemplateExcel}
               >
                 Tải Excel mẫu
               </Button>
               <Button
-                type="button"
                 icon={<UploadOutlined />}
                 onClick={() => setIsImportModalVisible(true)}
               >
@@ -1966,6 +2007,7 @@ const MaintenanceManagement = () => {
                 type="primary"
                 icon={<PlusOutlined />}
                 onClick={handleAddTemplate}
+                className={styles.primaryButton}
               >
                 Thêm mẫu bảo trì
               </Button>
@@ -1989,14 +2031,41 @@ const MaintenanceManagement = () => {
 
       {/* Import Modal */}
       <Modal
-        title="Import Mẫu Bảo Trì từ Excel"
+        title={
+          <div style={{ fontSize: 20, fontWeight: 600, color: '#283652' }}>
+            Import Mẫu Bảo Trì từ Excel
+          </div>
+        }
         open={isImportModalVisible}
         onCancel={() => {
           setIsImportModalVisible(false);
           setUploadedFile(null);
         }}
-        footer={null}
-        width={600}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setIsImportModalVisible(false);
+              setUploadedFile(null);
+            }}
+            style={{ height: 40, fontSize: 16, minWidth: 120 }}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="import"
+            type="primary"
+            onClick={handleImportExcel}
+            loading={importLoading}
+            style={{ height: 40, fontSize: 16, minWidth: 120, backgroundColor: '#283652' }}
+          >
+            Import
+          </Button>
+        ]}
+        width={1000}
+        centered={true}
+        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
+        className={styles.modal}
       >
         <Upload
           accept=".xlsx"
@@ -2011,37 +2080,47 @@ const MaintenanceManagement = () => {
             <Text strong>File đã chọn:</Text> {uploadedFile.name}
           </div>
         )}
-        <div style={{ marginTop: 24, textAlign: "right" }}>
-          <Button
-            onClick={() => {
-              setIsImportModalVisible(false);
-              setUploadedFile(null);
-            }}
-            style={{ marginRight: 8 }}
-          >
-            Hủy
-          </Button>
-          <Button
-            type="primary"
-            onClick={handleImportExcel}
-            loading={importLoading}
-          >
-            Import
-          </Button>
-        </div>
       </Modal>
 
       {/* Import Template Items Modal */}
       <Modal
-        title={`Import Các Bước Kiểm Tra vào: ${selectedTemplateForImport?.templateName || ''}`}
+        title={
+          <div style={{ fontSize: 20, fontWeight: 600, color: '#283652' }}>
+            Import Các Bước Kiểm Tra vào: {selectedTemplateForImport?.templateName || ''}
+          </div>
+        }
         open={isItemsImportModalVisible}
         onCancel={() => {
           setIsItemsImportModalVisible(false);
           setUploadedItemsFile(null);
           setSelectedTemplateForImport(null);
         }}
-        footer={null}
-        width={600}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setIsItemsImportModalVisible(false);
+              setUploadedItemsFile(null);
+              setSelectedTemplateForImport(null);
+            }}
+            style={{ height: 40, fontSize: 16, minWidth: 120 }}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="import"
+            type="primary"
+            onClick={handleImportItemsExcel}
+            loading={importItemsLoading}
+            style={{ height: 40, fontSize: 16, minWidth: 120, backgroundColor: '#283652' }}
+          >
+            Import
+          </Button>
+        ]}
+        width={1000}
+        centered={true}
+        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
+        className={styles.modal}
       >
         <Alert
           message="Hướng dẫn"
@@ -2082,25 +2161,6 @@ const MaintenanceManagement = () => {
             <Text strong>File đã chọn:</Text> {uploadedItemsFile.name}
           </div>
         )}
-        <div style={{ marginTop: 24, textAlign: "right" }}>
-          <Button
-            onClick={() => {
-              setIsItemsImportModalVisible(false);
-              setUploadedItemsFile(null);
-              setSelectedTemplateForImport(null);
-            }}
-            style={{ marginRight: 8 }}
-          >
-            Hủy
-          </Button>
-          <Button
-            type="primary"
-            onClick={handleImportItemsExcel}
-            loading={importItemsLoading}
-          >
-            Import
-          </Button>
-        </div>
       </Modal>
     </Card>
   );
@@ -2108,17 +2168,32 @@ const MaintenanceManagement = () => {
   const items = [
     {
       key: "plans",
-      label: "Chu kỳ bảo trì",
+      label: (
+        <span style={{ fontSize: 15, fontWeight: 500 }}>
+          <ToolOutlined style={{ marginRight: 6 }} />
+          Chu kỳ bảo trì
+        </span>
+      ),
       children: MaintenancePlansTab,
     },
     {
       key: "workSchedule",
-      label: "Lịch bảo trì & Công việc",
+      label: (
+        <span style={{ fontSize: 15, fontWeight: 500 }}>
+          <CalendarOutlined style={{ marginRight: 6 }} />
+          Lịch bảo trì & Công việc
+        </span>
+      ),
       children: <WorkScheduleManagement />,
     },
     {
       key: "templates",
-      label: "Mẫu hướng dẫn bảo trì",
+      label: (
+        <span style={{ fontSize: 15, fontWeight: 500 }}>
+          <FileTextOutlined style={{ marginRight: 6 }} />
+          Mẫu hướng dẫn bảo trì
+        </span>
+      ),
       children: TemplatesTab,
     },
   ];
@@ -2126,28 +2201,105 @@ const MaintenanceManagement = () => {
 
 
   return (
-    <div className={styles.container}>
-      <Tabs
-        items={items}
-        activeKey={activeTab}
-        onChange={setActiveTab}
-        defaultActiveKey="plans"
-      />
+    <div className={styles.container} style={{ padding: '24px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+      <Card
+        bordered={false}
+        style={{
+          borderRadius: 12,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          marginBottom: 24,
+        }}
+        bodyStyle={{ padding: 0 }}
+      >
+        <Tabs
+          items={items}
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          defaultActiveKey="plans"
+          size="large"
+          style={{ padding: '0 24px' }}
+          tabBarStyle={{
+            marginBottom: 0,
+            borderBottom: '2px solid #f0f0f0',
+          }}
+        />
+      </Card>
 
       {/* Plan Modal */}
       <Modal
         title={
-          editingPlan
-            ? "Cập nhật trạng thái chu kỳ bảo trì"
-            : "Thêm chu kỳ bảo trì mới"
+          <div
+            style={{ fontSize: "20px", fontWeight: "600", color: "#283652" }}
+          >
+            {editingPlan
+              ? "Cập nhật trạng thái chu kỳ bảo trì"
+              : "Thêm chu kỳ bảo trì mới"}
+          </div>
         }
         open={isPlanModalVisible}
         onCancel={() => {
           setIsPlanModalVisible(false);
           planForm.resetFields();
         }}
-        footer={null}
-        width={800}
+        width={1000}
+        centered
+        okText={editingPlan ? "Cập nhật trạng thái" : "Thêm mới"}
+        cancelText="Hủy"
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setIsPlanModalVisible(false);
+              planForm.resetFields();
+            }}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            htmlType="submit"
+            loading={loading}
+            onClick={() => planForm.submit()}
+            style={{
+              backgroundColor: "#283652",
+              borderColor: "#283652",
+              height: "40px",
+              fontSize: "16px",
+              fontWeight: "500",
+              minWidth: "120px",
+            }}
+          >
+            {editingPlan ? "Cập nhật trạng thái" : "Thêm mới"}
+          </Button>,
+        ]}
+        okButtonProps={{
+          style: {
+            backgroundColor: "#283652",
+            borderColor: "#283652",
+            height: "40px",
+            fontSize: "16px",
+            fontWeight: "500",
+            minWidth: "120px",
+          },
+        }}
+        cancelButtonProps={{
+          style: {
+            height: "40px",
+            fontSize: "16px",
+            minWidth: "120px",
+          },
+        }}
+        bodyStyle={{
+          maxHeight: "calc(100vh - 200px)",
+          overflowY: "auto",
+          padding: "24px",
+        }}
       >
         <Form form={planForm} layout="vertical" onFinish={handlePlanSubmit}>
           {editingPlan ? (
@@ -2168,10 +2320,10 @@ const MaintenanceManagement = () => {
                       {editingPlan.intervalType === "Days"
                         ? "ngày"
                         : editingPlan.intervalType === "Months"
-                        ? "tháng"
-                        : editingPlan.intervalType === "Hours"
-                        ? "giờ"
-                        : "chu kỳ"}
+                          ? "tháng"
+                          : editingPlan.intervalType === "Hours"
+                            ? "giờ"
+                            : "chu kỳ"}
                     </Descriptions.Item>
                     <Descriptions.Item label="Ngày bắt đầu">
                       {dayjs(editingPlan.startDate).format("DD/MM/YYYY")}
@@ -2180,7 +2332,7 @@ const MaintenanceManagement = () => {
                 }
                 type="info"
                 showIcon
-                style={{ marginBottom: 16 }}
+                style={{ marginBottom: 16, borderRadius: 6 }}
               />
 
               <Form.Item
@@ -2193,22 +2345,6 @@ const MaintenanceManagement = () => {
                   checkedChildren="Hoạt động"
                   unCheckedChildren="Không hoạt động"
                 />
-              </Form.Item>
-
-              <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
-                <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-                  <Button
-                    onClick={() => {
-                      setIsPlanModalVisible(false);
-                      planForm.resetFields();
-                    }}
-                  >
-                    Hủy
-                  </Button>
-                  <Button type="primary" htmlType="submit" loading={loading}>
-                    Cập nhật trạng thái
-                  </Button>
-                </Space>
               </Form.Item>
             </>
           ) : (
@@ -2232,6 +2368,7 @@ const MaintenanceManagement = () => {
                           .toLowerCase()
                           .includes(input.toLowerCase())
                       }
+                      size="large"
                     >
                       {lines.map((line) => (
                         <Option key={line.lineId} value={line.lineId}>
@@ -2259,6 +2396,7 @@ const MaintenanceManagement = () => {
                           .toLowerCase()
                           .includes(input.toLowerCase())
                       }
+                      size="large"
                     >
                       {filteredStages.map((stage) => (
                         <Option key={stage.stageId} value={stage.stageId}>
@@ -2288,6 +2426,7 @@ const MaintenanceManagement = () => {
                           .toLowerCase()
                           .includes(input.toLowerCase())
                       }
+                      size="large"
                     >
                       {filteredEquipments.map((equipment) => (
                         <Option
@@ -2317,6 +2456,7 @@ const MaintenanceManagement = () => {
                           .toLowerCase()
                           .includes(input.toLowerCase())
                       }
+                      size="large"
                     >
                       {filteredTemplates.map((template) => (
                         <Option
@@ -2332,7 +2472,7 @@ const MaintenanceManagement = () => {
               </Row>
 
               <Row gutter={16}>
-                <Col span={8}>
+                <Col span={12}>
                   <Form.Item
                     name="intervalValue"
                     label="Giá trị chu kỳ"
@@ -2347,18 +2487,20 @@ const MaintenanceManagement = () => {
                       min={1}
                       style={{ width: "100%" }}
                       placeholder="Nhập số"
+                      size="large"
                     />
                   </Form.Item>
                 </Col>
-                <Col span={8}>
+                <Col span={12}>
                   <Form.Item
                     name="intervalType"
                     label="Loại chu kỳ"
                     rules={[
                       { required: true, message: "Vui lòng chọn loại chu kỳ" },
                     ]}
+                    size="large"
                   >
-                    <Select placeholder="Chọn loại chu kỳ">
+                    <Select placeholder="Chọn loại chu kỳ" size="large">
                       <Option value="Days">Ngày</Option>
                       <Option value="Months">Tháng</Option>
                       <Option value="Hours">Giờ</Option>
@@ -2366,7 +2508,10 @@ const MaintenanceManagement = () => {
                     </Select>
                   </Form.Item>
                 </Col>
-                <Col span={8}>
+              </Row>
+
+              <Row gutter={16}>
+                <Col span={12}>
                   <Form.Item
                     name="startDate"
                     label="Ngày bắt đầu"
@@ -2374,12 +2519,9 @@ const MaintenanceManagement = () => {
                       { required: true, message: "Vui lòng chọn ngày bắt đầu" },
                     ]}
                   >
-                    <DatePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
+                    <DatePicker format="DD/MM/YYYY" style={{ width: "100%" }} size="large" />
                   </Form.Item>
                 </Col>
-              </Row>
-
-              <Row gutter={16}>
                 <Col span={12}>
                   <Form.Item
                     name="reminderDaysBefore"
@@ -2404,35 +2546,20 @@ const MaintenanceManagement = () => {
                       max={365}
                       style={{ width: "100%" }}
                       placeholder="Ví dụ: 3 ngày"
+                      size="large"
                     />
                   </Form.Item>
                 </Col>
               </Row>
-
-              <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
-                <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-                  <Button
-                    onClick={() => {
-                      setIsPlanModalVisible(false);
-                      planForm.resetFields();
-                    }}
-                  >
-                    Hủy
-                  </Button>
-                  <Button type="primary" htmlType="submit" loading={loading}>
-                    Thêm mới
-                  </Button>
-                </Space>
-              </Form.Item>
             </>
           )}
         </Form>
       </Modal>
-
-      {/* Template Modal */}
       <Modal
         title={
-          editingTemplate ? "Cập nhật mẫu bảo trì" : "Thêm mẫu bảo trì mới"
+          <div style={{ fontSize: 20, fontWeight: 600, color: '#283652' }}>
+            {editingTemplate ? "Cập nhật mẫu bảo trì" : "Thêm mẫu bảo trì mới"}
+          </div>
         }
         open={isTemplateModalVisible}
         onCancel={() => {
@@ -2440,10 +2567,37 @@ const MaintenanceManagement = () => {
           templateForm.resetFields();
           setChecklistItems([]);
         }}
-        footer={null}
+        footer={[
+          <Button
+            key="cancel"
+            onClick={() => {
+              setIsTemplateModalVisible(false);
+              templateForm.resetFields();
+              setChecklistItems([]);
+            }}
+            style={{ height: 40, fontSize: 16, minWidth: 120 }}
+          >
+            Hủy
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            htmlType="submit"
+            form="templateForm"
+            loading={loading}
+            disabled={checklistItems.length === 0}
+            style={{ height: 40, fontSize: 16, minWidth: 120, backgroundColor: '#283652', color: '#fff' }}
+          >
+            {editingTemplate ? "Cập nhật" : "Thêm mới"}
+          </Button>
+        ]}
         width={1000}
+        centered={true}
+        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
+        className={styles.modal}
       >
         <Form
+          id="templateForm"
           form={templateForm}
           layout="vertical"
           onFinish={handleTemplateSubmit}
@@ -2461,6 +2615,7 @@ const MaintenanceManagement = () => {
                   filterOption={(input, option) =>
                     option.children.toLowerCase().includes(input.toLowerCase())
                   }
+                  size="large"
                 >
                   {stages.map((stage) => (
                     <Option key={stage.stageId} value={stage.stageId}>
@@ -2485,13 +2640,19 @@ const MaintenanceManagement = () => {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="description" label="Mô tả">
-                <TextArea rows={3} placeholder="Nhập mô tả (tùy chọn)" />
+              <Form.Item name="inspectionCode" label="Mã kiểm tra">
+                <Input placeholder="Nhập mã kiểm tra (tùy chọn)" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="inspectionCode" label="Mã kiểm tra">
-                <Input placeholder="Nhập mã kiểm tra (tùy chọn)" />
+              {/* Optional field can be added here if needed */}
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="description" label="Mô tả">
+                <TextArea rows={3} placeholder="Nhập mô tả (tùy chọn)" />
               </Form.Item>
             </Col>
           </Row>
@@ -2544,6 +2705,7 @@ const MaintenanceManagement = () => {
                     })
                   }
                   style={{ width: "100%" }}
+                  size="large"
                 >
                   <Option value="Electrical">
                     <ThunderboltOutlined /> Điện
@@ -2559,6 +2721,8 @@ const MaintenanceManagement = () => {
                   icon={<PlusOutlined />}
                   block
                   onClick={handleAddChecklistItemClick}
+                  className={styles.primaryButton}
+                  size="large"
                 >
                   Thêm
                 </Button>
@@ -2606,6 +2770,7 @@ const MaintenanceManagement = () => {
                           size="small"
                           onClick={handleImportItemsToForm}
                           loading={importLoading}
+                          className={styles.primaryButton}
                         >
                           Import ngay
                         </Button>
@@ -2748,46 +2913,21 @@ const MaintenanceManagement = () => {
           <Divider />
 
           <Alert
-            message={`Tổng cộng: ${checklistItems.length} bước kiểm tra (${
-              checklistItems.filter((i) => i.category === "Electrical").length
-            } điện + ${
-              checklistItems.filter((i) => i.category === "Mechanical").length
-            } cơ khí)`}
+            message={`Tổng cộng: ${checklistItems.length} bước kiểm tra (${checklistItems.filter((i) => i.category === "Electrical").length
+              } điện + ${checklistItems.filter((i) => i.category === "Mechanical").length
+              } cơ khí)`}
             type="info"
             showIcon
             style={{ marginTop: 16 }}
           />
-
-          <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
-            <Space style={{ width: "100%", justifyContent: "flex-end" }}>
-              <Button
-                onClick={() => {
-                  setIsTemplateModalVisible(false);
-                  templateForm.resetFields();
-                  setChecklistItems([]);
-                }}
-              >
-                Hủy
-              </Button>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={loading}
-                disabled={checklistItems.length === 0}
-              >
-                {editingTemplate ? "Cập nhật" : "Thêm mới"}
-              </Button>
-            </Space>
-          </Form.Item>
         </Form>
       </Modal>
 
       {/* Modal Xem Chi Tiết Kế Hoạch Bảo Trì */}
       <Modal
         title={
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <EyeOutlined style={{ color: "#1890ff" }} />
-            <span>Chi Tiết Kế Hoạch Bảo Trì</span>
+          <div style={{ fontSize: 20, fontWeight: 600, color: '#283652' }}>
+            Chi Tiết Kế Hoạch Bảo Trì
           </div>
         }
         open={isViewPlanModalVisible}
@@ -2798,6 +2938,10 @@ const MaintenanceManagement = () => {
           setIsViewPlanEditing(false);
           viewPlanForm.resetFields();
         }}
+        width={1400}
+        centered={true}
+        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
+        className={styles.modal}
         footer={
           isViewPlanEditing ? [
             <Button
@@ -2806,6 +2950,7 @@ const MaintenanceManagement = () => {
                 setIsViewPlanEditing(false);
                 viewPlanForm.resetFields();
               }}
+              style={{ height: 40, fontSize: 16, minWidth: 120 }}
             >
               Hủy
             </Button>,
@@ -2815,6 +2960,7 @@ const MaintenanceManagement = () => {
               icon={<SaveOutlined />}
               loading={loading}
               onClick={() => viewPlanForm.submit()}
+              style={{ height: 40, fontSize: 16, minWidth: 120, backgroundColor: '#283652' }}
             >
               Lưu
             </Button>,
@@ -2826,6 +2972,7 @@ const MaintenanceManagement = () => {
                 setViewingPlan(null);
                 setPlanMaintenanceHistory([]);
               }}
+              style={{ height: 40, fontSize: 16, minWidth: 120 }}
             >
               Đóng
             </Button>,
@@ -2840,12 +2987,12 @@ const MaintenanceManagement = () => {
                   reminderDaysBefore: viewingPlan.reminderDaysBefore || 3,
                 });
               }}
+              style={{ height: 40, fontSize: 16, minWidth: 120, backgroundColor: '#283652' }}
             >
               Cập nhật
             </Button>,
           ]
         }
-        width={800}
       >
         {viewingPlan && (
           <Form
@@ -2854,260 +3001,260 @@ const MaintenanceManagement = () => {
             onFinish={handleUpdatePlanFromView}
           >
             <div>
-            <Descriptions bordered column={2} size="small">
-              <Descriptions.Item label="Mã Kế Hoạch" span={1}>
-                <Tag color="blue">
-                  PLAN{String(viewingPlan.planId).padStart(4, "0")}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Trạng Thái" span={1}>
-                {isViewPlanEditing ? (
-                  <Form.Item
-                    name="isActive"
-                    style={{ marginBottom: 0 }}
-                  >
-                    <Select style={{ width: '100%' }}>
-                      <Option value={true}>
-                        <Tag color="success" icon={<CheckCircleOutlined />}>
-                          Hoạt động
-                        </Tag>
-                      </Option>
-                      <Option value={false}>
-                        <Tag color="default" icon={<CloseOutlined />}>
-                          Không hoạt động
-                        </Tag>
-                      </Option>
-                    </Select>
-                  </Form.Item>
-                ) : (
-                  viewingPlan.isActive ? (
-                    <Tag color="success" icon={<CheckCircleOutlined />}>
-                      Hoạt động
-                    </Tag>
-                  ) : (
-                    <Tag color="default" icon={<CloseOutlined />}>
-                      Không hoạt động
-                    </Tag>
-                  )
-                )}
-              </Descriptions.Item>
-
-              <Descriptions.Item label="Thiết Bị" span={2}>
-                <div>
-                  <div>
-                    <strong>{viewingPlan.equipmentName}</strong>
-                  </div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Mã TB: {viewingPlan.equipmentCode} | Công đoạn:{" "}
-                    {viewingPlan.stageName || "N/A"}
-                  </Text>
-                </div>
-              </Descriptions.Item>
-
-              <Descriptions.Item label="Template Checklist" span={2}>
-                <div>
-                  <div>
-                    <strong>{viewingPlan.templateName}</strong>
-                  </div>
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Mã: TPL{String(viewingPlan.templateId).padStart(3, "0")}
-                  </Text>
-                </div>
-              </Descriptions.Item>
-
-              <Descriptions.Item label="Chu Kỳ Bảo Trì" span={2}>
-                <Tag color="processing">
-                  {viewingPlan.intervalValue}{" "}
-                  {viewingPlan.intervalType === "Days" && "Ngày"}
-                  {viewingPlan.intervalType === "Weeks" && "Tuần"}
-                  {viewingPlan.intervalType === "Months" && "Tháng"}
-                  {viewingPlan.intervalType === "Years" && "Năm"}
-                </Tag>
-              </Descriptions.Item>
-
-              <Descriptions.Item label="Số Ngày Nhắc Nhở" span={2}>
-                {isViewPlanEditing ? (
-                  <Form.Item
-                    name="reminderDaysBefore"
-                    style={{ marginBottom: 0 }}
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng nhập số ngày nhắc nhở",
-                      },
-                      {
-                        type: "number",
-                        min: 0,
-                        max: 365,
-                        message: "Số ngày phải từ 0 đến 365",
-                      },
-                    ]}
-                  >
-                    <InputNumber
-                      min={0}
-                      max={365}
-                      style={{ width: '200px' }}
-                      placeholder="Ví dụ: 3 ngày"
-                      addonAfter="ngày"
-                    />
-                  </Form.Item>
-                ) : (
-                  <>
-                    <Tag color="orange" icon={<BellOutlined />}>
-                      Trước {viewingPlan.reminderDaysBefore || 3} ngày
-                    </Tag>
-                    <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
-                      Hệ thống sẽ gửi thông báo trước {viewingPlan.reminderDaysBefore || 3} ngày đến hạn
-                    </Text>
-                  </>
-                )}
-              </Descriptions.Item>
-
-              <Descriptions.Item label="Ngày Bắt Đầu" span={1}>
-                <Text>
-                  <CalendarOutlined style={{ marginRight: 4 }} />
-                  {dayjs(viewingPlan.startDate).format("DD/MM/YYYY")}
-                </Text>
-              </Descriptions.Item>
-
-              <Descriptions.Item label="Lần Bảo Trì Tiếp Theo" span={1}>
-                {viewingPlan.nextDueDate ? (
-                  <Text>
-                    {dayjs(viewingPlan.nextDueDate).format("DD/MM/YYYY")}
-                  </Text>
-                ) : (
-                  <Text type="secondary">Chưa xác định</Text>
-                )}
-              </Descriptions.Item>
-
-              <Descriptions.Item label="Lần Bảo Trì Cuối" span={1}>
-                {planMaintenanceHistory.length > 0 ? (
-                  <Text type="success">
-                    <CheckOutlined style={{ marginRight: 4 }} />
-                    {dayjs(planMaintenanceHistory[0].completedDate || planMaintenanceHistory[0].scheduledDate).format(
-                      "DD/MM/YYYY"
-                    )}
-                  </Text>
-                ) : (
-                  <Text type="secondary">Chưa có</Text>
-                )}
-              </Descriptions.Item>
-
-              <Descriptions.Item label="Người Tạo" span={1}>
-                <Text>{viewingPlan.createdByName || viewingPlan.createdBy || "N/A"}</Text>
-              </Descriptions.Item>
-
-              <Descriptions.Item label="Ngày Tạo" span={1}>
-                <Text type="secondary">
-                  {viewingPlan.createdAt
-                    ? dayjs(viewingPlan.createdAt).format("DD/MM/YYYY HH:mm")
-                    : "N/A"}
-                </Text>
-              </Descriptions.Item>
-
-              {viewingPlan.hasActiveWorkOrder && (
-                <Descriptions.Item label="Trạng Thái Work Order" span={2}>
-                  <Alert
-                    message="Đang có Work Order đang chạy"
-                    type="info"
-                    showIcon
-                    icon={<PlayCircleOutlined />}
-                  />
+              <Descriptions bordered column={2} size="small">
+                <Descriptions.Item label="Mã Kế Hoạch" span={1}>
+                  <Tag color="blue">
+                    PLAN{String(viewingPlan.planId).padStart(4, "0")}
+                  </Tag>
                 </Descriptions.Item>
-              )}
-            </Descriptions>
-
-            {/* Lịch Sử Bảo Trì */}
-            <Divider orientation="left">
-              <FileTextOutlined /> Lịch Sử Bảo Trì ({planMaintenanceHistory.length})
-            </Divider>
-            
-            {loadingHistory ? (
-              <div style={{ textAlign: 'center', padding: '20px' }}>
-                <ReloadOutlined spin /> Đang tải lịch sử...
-              </div>
-            ) : planMaintenanceHistory.length === 0 ? (
-              <Empty 
-                description="Chưa có lịch sử bảo trì"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-              />
-            ) : (
-              <Timeline mode="left">
-                {planMaintenanceHistory.map((wo) => (
-                  <Timeline.Item
-                    key={wo.workOrderId}
-                    color={wo.status === 'Completed' ? 'green' : 'blue'}
-                    label={
-                      <Text type="secondary" style={{ fontSize: 12 }}>
-                        {dayjs(wo.completedDate || wo.scheduledDate).format("DD/MM/YYYY")}
-                      </Text>
-                    }
-                  >
-                    <Card 
-                      size="small" 
-                      hoverable
-                      onClick={() => handleViewWorkOrderDetail(wo)}
-                      style={{ cursor: 'pointer' }}
+                <Descriptions.Item label="Trạng Thái" span={1}>
+                  {isViewPlanEditing ? (
+                    <Form.Item
+                      name="isActive"
+                      style={{ marginBottom: 0 }}
                     >
-                      <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Text strong>
-                            WO{String(wo.workOrderId).padStart(4, "0")}
-                          </Text>
+                      <Select style={{ width: '100%' }}>
+                        <Option value={true}>
                           <Tag color="success" icon={<CheckCircleOutlined />}>
-                            Hoàn thành
+                            Hoạt động
                           </Tag>
-                        </div>
-                        
-                        {wo.completedDate && (
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            <ClockCircleOutlined /> Hoàn thành: {dayjs(wo.completedDate).format("DD/MM/YYYY HH:mm")}
-                          </Text>
-                        )}
-                        
-                        <div>
-                          {wo.mechanicalTechnicianName && (
-                            <div>
-                              <Tag color="orange" size="small" icon={<ToolOutlined />}>
-                                Cơ khí
-                              </Tag>
-                              <Text style={{ fontSize: 12 }}>{wo.mechanicalTechnicianName}</Text>
-                            </div>
-                          )}
-                          {wo.electricalTechnicianName && (
-                            <div>
-                              <Tag color="blue" size="small" icon={<ThunderboltOutlined />}>
-                                Điện
-                              </Tag>
-                              <Text style={{ fontSize: 12 }}>{wo.electricalTechnicianName}</Text>
-                            </div>
-                          )}
-                        </div>
+                        </Option>
+                        <Option value={false}>
+                          <Tag color="default" icon={<CloseOutlined />}>
+                            Không hoạt động
+                          </Tag>
+                        </Option>
+                      </Select>
+                    </Form.Item>
+                  ) : (
+                    viewingPlan.isActive ? (
+                      <Tag color="success" icon={<CheckCircleOutlined />}>
+                        Hoạt động
+                      </Tag>
+                    ) : (
+                      <Tag color="default" icon={<CloseOutlined />}>
+                        Không hoạt động
+                      </Tag>
+                    )
+                  )}
+                </Descriptions.Item>
 
-                        {wo.completionNotes && (
-                          <Text type="secondary" italic style={{ fontSize: 12 }}>
-                            "{wo.completionNotes}"
-                          </Text>
-                        )}
-                        
-                        <Button 
-                          type="link" 
-                          size="small" 
-                          icon={<EyeOutlined />}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewWorkOrderDetail(wo);
-                          }}
-                        >
-                          Xem chi tiết
-                        </Button>
-                      </Space>
-                    </Card>
-                  </Timeline.Item>
-                ))}
-              </Timeline>
-            )}
-          </div>
+                <Descriptions.Item label="Thiết Bị" span={2}>
+                  <div>
+                    <div>
+                      <strong>{viewingPlan.equipmentName}</strong>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Mã TB: {viewingPlan.equipmentCode} | Công đoạn:{" "}
+                      {viewingPlan.stageName || "N/A"}
+                    </Text>
+                  </div>
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Template Checklist" span={2}>
+                  <div>
+                    <div>
+                      <strong>{viewingPlan.templateName}</strong>
+                    </div>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      Mã: TPL{String(viewingPlan.templateId).padStart(3, "0")}
+                    </Text>
+                  </div>
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Chu Kỳ Bảo Trì" span={2}>
+                  <Tag color="processing">
+                    {viewingPlan.intervalValue}{" "}
+                    {viewingPlan.intervalType === "Days" && "Ngày"}
+                    {viewingPlan.intervalType === "Weeks" && "Tuần"}
+                    {viewingPlan.intervalType === "Months" && "Tháng"}
+                    {viewingPlan.intervalType === "Years" && "Năm"}
+                  </Tag>
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Số Ngày Nhắc Nhở" span={2}>
+                  {isViewPlanEditing ? (
+                    <Form.Item
+                      name="reminderDaysBefore"
+                      style={{ marginBottom: 0 }}
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vui lòng nhập số ngày nhắc nhở",
+                        },
+                        {
+                          type: "number",
+                          min: 0,
+                          max: 365,
+                          message: "Số ngày phải từ 0 đến 365",
+                        },
+                      ]}
+                    >
+                      <InputNumber
+                        min={0}
+                        max={365}
+                        style={{ width: '200px' }}
+                        placeholder="Ví dụ: 3 ngày"
+                        addonAfter="ngày"
+                      />
+                    </Form.Item>
+                  ) : (
+                    <>
+                      <Tag color="orange" icon={<BellOutlined />}>
+                        Trước {viewingPlan.reminderDaysBefore || 3} ngày
+                      </Tag>
+                      <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
+                        Hệ thống sẽ gửi thông báo trước {viewingPlan.reminderDaysBefore || 3} ngày đến hạn
+                      </Text>
+                    </>
+                  )}
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Ngày Bắt Đầu" span={1}>
+                  <Text>
+                    <CalendarOutlined style={{ marginRight: 4 }} />
+                    {dayjs(viewingPlan.startDate).format("DD/MM/YYYY")}
+                  </Text>
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Lần Bảo Trì Tiếp Theo" span={1}>
+                  {viewingPlan.nextDueDate ? (
+                    <Text>
+                      {dayjs(viewingPlan.nextDueDate).format("DD/MM/YYYY")}
+                    </Text>
+                  ) : (
+                    <Text type="secondary">Chưa xác định</Text>
+                  )}
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Lần Bảo Trì Cuối" span={1}>
+                  {planMaintenanceHistory.length > 0 ? (
+                    <Text type="success">
+                      <CheckOutlined style={{ marginRight: 4 }} />
+                      {dayjs(planMaintenanceHistory[0].completedDate || planMaintenanceHistory[0].scheduledDate).format(
+                        "DD/MM/YYYY"
+                      )}
+                    </Text>
+                  ) : (
+                    <Text type="secondary">Chưa có</Text>
+                  )}
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Người Tạo" span={1}>
+                  <Text>{viewingPlan.createdByName || viewingPlan.createdBy || "N/A"}</Text>
+                </Descriptions.Item>
+
+                <Descriptions.Item label="Ngày Tạo" span={1}>
+                  <Text type="secondary">
+                    {viewingPlan.createdAt
+                      ? dayjs(viewingPlan.createdAt).format("DD/MM/YYYY HH:mm")
+                      : "N/A"}
+                  </Text>
+                </Descriptions.Item>
+
+                {viewingPlan.hasActiveWorkOrder && (
+                  <Descriptions.Item label="Trạng Thái Work Order" span={2}>
+                    <Alert
+                      message="Đang có Work Order đang chạy"
+                      type="info"
+                      showIcon
+                      icon={<PlayCircleOutlined />}
+                    />
+                  </Descriptions.Item>
+                )}
+              </Descriptions>
+
+              {/* Lịch Sử Bảo Trì */}
+              <Divider orientation="left">
+                <FileTextOutlined /> Lịch Sử Bảo Trì ({planMaintenanceHistory.length})
+              </Divider>
+
+              {loadingHistory ? (
+                <div style={{ textAlign: 'center', padding: '20px' }}>
+                  <ReloadOutlined spin /> Đang tải lịch sử...
+                </div>
+              ) : planMaintenanceHistory.length === 0 ? (
+                <Empty
+                  description="Chưa có lịch sử bảo trì"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                />
+              ) : (
+                <Timeline mode="left">
+                  {planMaintenanceHistory.map((wo) => (
+                    <Timeline.Item
+                      key={wo.workOrderId}
+                      color={wo.status === 'Completed' ? 'green' : 'blue'}
+                      label={
+                        <Text type="secondary" style={{ fontSize: 12 }}>
+                          {dayjs(wo.completedDate || wo.scheduledDate).format("DD/MM/YYYY")}
+                        </Text>
+                      }
+                    >
+                      <Card
+                        size="small"
+                        hoverable
+                        onClick={() => handleViewWorkOrderDetail(wo)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Text strong>
+                              WO{String(wo.workOrderId).padStart(4, "0")}
+                            </Text>
+                            <Tag color="success" icon={<CheckCircleOutlined />}>
+                              Hoàn thành
+                            </Tag>
+                          </div>
+
+                          {wo.completedDate && (
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              <ClockCircleOutlined /> Hoàn thành: {dayjs(wo.completedDate).format("DD/MM/YYYY HH:mm")}
+                            </Text>
+                          )}
+
+                          <div>
+                            {wo.mechanicalTechnicianName && (
+                              <div>
+                                <Tag color="orange" size="small" icon={<ToolOutlined />}>
+                                  Cơ khí
+                                </Tag>
+                                <Text style={{ fontSize: 12 }}>{wo.mechanicalTechnicianName}</Text>
+                              </div>
+                            )}
+                            {wo.electricalTechnicianName && (
+                              <div>
+                                <Tag color="blue" size="small" icon={<ThunderboltOutlined />}>
+                                  Điện
+                                </Tag>
+                                <Text style={{ fontSize: 12 }}>{wo.electricalTechnicianName}</Text>
+                              </div>
+                            )}
+                          </div>
+
+                          {wo.completionNotes && (
+                            <Text type="secondary" italic style={{ fontSize: 12 }}>
+                              "{wo.completionNotes}"
+                            </Text>
+                          )}
+
+                          <Button
+                            type="link"
+                            size="small"
+                            icon={<EyeOutlined />}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewWorkOrderDetail(wo);
+                            }}
+                          >
+                            Xem chi tiết
+                          </Button>
+                        </Space>
+                      </Card>
+                    </Timeline.Item>
+                  ))}
+                </Timeline>
+              )}
+            </div>
           </Form>
         )}
       </Modal>
@@ -3115,9 +3262,8 @@ const MaintenanceManagement = () => {
       {/* Modal Xem Chi Tiết Work Order */}
       <Modal
         title={
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <FileTextOutlined style={{ color: "#52c41a" }} />
-            <span>Chi Tiết Work Order</span>
+          <div style={{ fontSize: 20, fontWeight: 600, color: '#283652' }}>
+            Chi Tiết Work Order
           </div>
         }
         open={isViewWorkOrderModalVisible}
@@ -3132,11 +3278,15 @@ const MaintenanceManagement = () => {
               setIsViewWorkOrderModalVisible(false);
               setViewingWorkOrder(null);
             }}
+            style={{ height: 40, fontSize: 16, minWidth: 120 }}
           >
             Đóng
           </Button>
         ]}
-        width={900}
+        width={1400}
+        centered={true}
+        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
+        className={styles.modal}
       >
         {viewingWorkOrder && (
           <div>
@@ -3263,8 +3413,8 @@ const MaintenanceManagement = () => {
                           <div>
                             <Text strong>{item.itemDescription}</Text>
                             {item.category && (
-                              <Tag 
-                                color={item.category === 'Mechanical' ? 'orange' : 'blue'} 
+                              <Tag
+                                color={item.category === 'Mechanical' ? 'orange' : 'blue'}
                                 style={{ marginLeft: 8 }}
                               >
                                 {item.category === 'Mechanical' ? 'Cơ khí' : 'Điện'}
@@ -3295,9 +3445,9 @@ const MaintenanceManagement = () => {
         )}
       </Modal>
 
-      
 
-  
+
+
 
       {/* Add CSS animation for pulsing effect */}
       <style>

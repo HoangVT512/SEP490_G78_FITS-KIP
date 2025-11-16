@@ -23,6 +23,7 @@ import {
   Divider,
   List,
   Checkbox,
+  Dropdown,
 } from "antd";
 import {
   EyeOutlined,
@@ -39,6 +40,7 @@ import {
   SearchOutlined,
   PushpinOutlined,
   FileTextOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
@@ -600,7 +602,7 @@ const WorkScheduleManagement = () => {
     {
       title: "Mã",
       key: "code",
-      width: 120,
+      width: 100,
       render: (_, record) => {
         if (record.type === "plan") {
           return <Text strong>PLAN{String(record.planId).padStart(3, "0")}</Text>;
@@ -623,7 +625,7 @@ const WorkScheduleManagement = () => {
       title: "Thiết bị",
       dataIndex: "equipmentName",
       key: "equipmentName",
-      width: 180,
+      width: 160,
       render: (name, record) => (
         <div>
           <div style={{ fontWeight: 500 }}>{name}</div>
@@ -636,7 +638,7 @@ const WorkScheduleManagement = () => {
     {
       title: "Vị trí",
       key: "location",
-      width: 130,
+      width: 120,
       render: (_, record) => (
         <div>
           <div>{record.lineName}</div>
@@ -649,7 +651,7 @@ const WorkScheduleManagement = () => {
     {
       title: "Ngày đến hạn",
       key: "dueDate",
-      width: 120,
+      width: 130,
       render: (_, record) => {
         const dueDate =
           record.type === "plan"
@@ -691,7 +693,7 @@ const WorkScheduleManagement = () => {
     {
       title: "Người phụ trách",
       key: "assignedTechnicians",
-      width: 180,
+      width: 160,
       render: (_, record) => {
         if (
           record.type === "plan" ||
@@ -733,26 +735,71 @@ const WorkScheduleManagement = () => {
     {
       title: "Trạng thái",
       key: "status",
-      width: 140,
+      width: 130,
       render: (_, record) => getStatusTag(record),
     },
     {
       title: "Thao tác",
       key: "action",
       fixed: "right",
-      width: 100,
-      render: (_, record) => (
-        <Tooltip title="Xem chi tiết">
-          <Button
-            type="primary"
-            size="small"
-            icon={<EyeOutlined />}
-            onClick={() => handleViewDetail(record)}
+      width: 120,
+      render: (_, record) => {
+        const actionMenuItems = [
+          {
+            key: "view",
+            label: "Xem chi tiết",
+            icon: <EyeOutlined />,
+            onClick: () => handleViewDetail(record),
+          },
+        ];
+
+        // Add assign action for pending plans
+        if (record.workStatus === "pending") {
+          actionMenuItems.push(
+            {
+              key: "assign",
+              label: "Giao việc",
+              icon: <UserAddOutlined />,
+              onClick: () => handleAssignWork(record),
+            },
+            {
+              key: "postpone",
+              label: "Hoãn",
+              icon: <ClockCircleOutlined />,
+              onClick: () => handlePostpone(record),
+            }
+          );
+        }
+        // Add update action for assigned work orders
+        else if (record.workStatus === "assigned" || record.workStatus === "inProgress") {
+          actionMenuItems.push({
+            key: "update",
+            label: "Cập nhật KTV",
+            icon: <UserAddOutlined />,
+            onClick: () => handleAssignWork(record),
+          });
+
+          // Add postpone action only if not in progress
+          if (record.workStatus !== "inProgress") {
+            actionMenuItems.push({
+              key: "postpone",
+              label: "Hoãn",
+              icon: <ClockCircleOutlined />,
+              onClick: () => handlePostpone(record),
+            });
+          }
+        }
+
+        return (
+          <Dropdown
+            menu={{ items: actionMenuItems }}
+            trigger={["click"]}
+            placement="bottomRight"
           >
-            Xem
-          </Button>
-        </Tooltip>
-      ),
+            <Button type="text" icon={<DownOutlined />} />
+          </Dropdown>
+        );
+      },
     },
   ];
 
@@ -762,13 +809,7 @@ const WorkScheduleManagement = () => {
         {/* Statistics */}
         <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
           <Col xs={24} sm={12} lg={6}>
-            <Card
-              bordered={false}
-              style={{
-                backgroundColor: "#fff7e6",
-                borderLeft: "4px solid #faad14",
-              }}
-            >
+            <Card bordered={false}>
               <Statistic
                 title="Chờ giao việc"
                 value={stats.pendingCount}
@@ -778,45 +819,27 @@ const WorkScheduleManagement = () => {
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={6}>
-            <Card
-              bordered={false}
-              style={{
-                backgroundColor: "#e6f7ff",
-                borderLeft: "4px solid #1890ff",
-              }}
-            >
+            <Card bordered={false}>
               <Statistic
                 title="Đã giao việc"
                 value={stats.assignedCount}
                 prefix={<UserAddOutlined />}
+                valueStyle={{ color: "#13c2c2" }}
+              />
+            </Card>
+          </Col>
+          <Col xs={24} sm={12} lg={6}>
+            <Card bordered={false}>
+              <Statistic
+                title="Đang thực hiện"
+                value={stats.inProgressCount}
+                prefix={<PlayCircleOutlined />}
                 valueStyle={{ color: "#1890ff" }}
               />
             </Card>
           </Col>
           <Col xs={24} sm={12} lg={6}>
-            <Card
-              bordered={false}
-              style={{
-                backgroundColor: "#f0f5ff",
-                borderLeft: "4px solid #597ef7",
-              }}
-            >
-              <Statistic
-                title="Đang thực hiện"
-                value={stats.inProgressCount}
-                prefix={<PlayCircleOutlined />}
-                valueStyle={{ color: "#597ef7" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card
-              bordered={false}
-              style={{
-                backgroundColor: "#f6ffed",
-                borderLeft: "4px solid #52c41a",
-              }}
-            >
+            <Card bordered={false}>
               <Statistic
                 title="Hoàn thành"
                 value={stats.completedCount}
@@ -842,7 +865,7 @@ const WorkScheduleManagement = () => {
                 placeholder="Trạng thái"
                 value={statusFilter}
                 onChange={setStatusFilter}
-                style={{ width: "100%" }}
+                style={{ width: "100%", height: 32 }}
               >
                 <Option value="all">Tất cả trạng thái</Option>
                 <Option value="pending">
@@ -864,7 +887,6 @@ const WorkScheduleManagement = () => {
             </Col>
             <Col xs={24} md={6} style={{ textAlign: "right" }}>
               <Button
-                type="primary"
                 icon={<ReloadOutlined />}
                 onClick={loadAllData}
               >
@@ -882,7 +904,7 @@ const WorkScheduleManagement = () => {
                 : `wo-${record.workOrderId}`
             }
             loading={loading}
-            scroll={{ x: 1300 }}
+            scroll={{ x: 1200 }}
             pagination={{
               pageSize: 15,
               showSizeChanger: true,
