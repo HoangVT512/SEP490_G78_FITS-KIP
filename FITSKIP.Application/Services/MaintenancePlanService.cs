@@ -124,40 +124,44 @@ namespace FITSKIP.Application.Services
             if (plan == null)
                 throw new InvalidOperationException($"Plan not found: {planId}");
 
-            // ✅ VALIDATION 2: Nếu chuyển sang IsActive = false (Ngưng hoạt động)
+            // ✅ VALIDATION: Nếu chuyển sang IsActive = false (Ngưng hoạt động)
             var isBeingDeactivated = (request.IsActive == false && plan.IsActive);
             
             if (isBeingDeactivated)
             {
-                // 1. Hủy tất cả work orders đang chờ xử lý (Pending)
-                var pendingWorkOrders = await _workOrderRepository.GetByPlanIdAsync(planId);
-                var workOrdersToCancel = pendingWorkOrders.Where(wo => wo.Status == "Pending").ToList();
+                // ✅ Kiểm tra xem có WorkOrder đang active không
+                var allWorkOrders = await _workOrderRepository.GetByPlanIdAsync(planId);
+                var activeWorkOrders = allWorkOrders.Where(wo => 
+                    wo.Status == "Pending" || 
+                    wo.Status == "Assigned" || 
+                    wo.Status == "InProgress" ||
+                    wo.Status == "Overdue"
+                ).ToList();
                 
-                foreach (var workOrder in workOrdersToCancel)
+                if (activeWorkOrders.Any())
                 {
-                    workOrder.Status = "Cancelled";
-                    workOrder.UpdatedDate = DateTime.Now;
-                    workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Hủy do kế hoạch bảo trì đã ngưng hoạt động.";
-                    await _workOrderRepository.UpdateAsync(workOrder);
+                    var workOrderCodes = string.Join(", ", activeWorkOrders.Select(wo => wo.WorkOrderCode));
+                    throw new InvalidOperationException(
+                        $"Không thể chuyển trạng thái sang 'Không hoạt động' vì còn phiếu bảo trì đang hoạt động: {workOrderCodes}. " +
+                        $"Vui lòng hoàn thành hoặc hủy các phiếu bảo trì này trước."
+                    );
                 }
 
-                // 2. Dừng việc tạo work order tự động trong tương lai
+                // Nếu không có WorkOrder active → Cho phép vô hiệu hóa
                 plan.IsActive = false;
                 plan.Status = "Ngưng hoạt động";
                 
-                // TODO: Send notifications to assigned work order technicians instead
-                Console.WriteLine($"[INFO] Plan {planId} deactivated. Cancelled {workOrdersToCancel.Count} pending work orders.");
+                Console.WriteLine($"[INFO] Plan {planId} deactivated. No active work orders.");
             }
 
             // ✅ VALIDATION: Không cho phép kích hoạt lại nếu đã quá hạn mà chưa cập nhật NextDueDate
             var isBeingActivated = (request.IsActive == true && !plan.IsActive);
             if (isBeingActivated)
             {
-                var planDueDate = plan.PostponedDueDate ?? plan.NextDueDate;
-                if (planDueDate < DateTime.Today && !request.NextDueDate.HasValue)
+                if (plan.NextDueDate < DateTime.Today && !request.NextDueDate.HasValue)
                 {
                     throw new InvalidOperationException(
-                        $"❌ Không thể kích hoạt lại chu kỳ bảo trì vì đã quá hạn (Hạn: {planDueDate:dd/MM/yyyy}). " +
+                        $"❌ Không thể kích hoạt lại chu kỳ bảo trì vì đã quá hạn (Hạn: {plan.NextDueDate:dd/MM/yyyy}). " +
                         $"Vui lòng cập nhật ngày bảo trì tiếp theo trước khi kích hoạt."
                     );
                 }
@@ -241,118 +245,26 @@ namespace FITSKIP.Application.Services
             await _planRepository.DeleteAsync(planId);
         }
 
-        public async Task<MaintenancePlanDTO> PostponeMaintenancePlanAsync(int planId, PostponeMaintenancePlanRequest request, string userId)
-        {
-            var plan = await _planRepository.GetByIdAsync(planId);
-            if (plan == null)
-                throw new InvalidOperationException($"Plan not found: {planId}");
-
-            // GIỮ NGUYÊN NextDueDate (ngày gốc)
-            // Tính ngày đến hạn mới SAU KHI hoãn
-            var currentDueDate = plan.PostponedDueDate ?? plan.NextDueDate;
-            plan.PostponedDueDate = currentDueDate.AddDays(request.PostponeDays);
-            
-            // Lưu lý do hoãn và ngày hoãn
-            plan.PostponedReason = request.Reason;
-            plan.PostponedDate = DateTime.Now;
-            plan.Status = "Postponed";
-            
-            await _planRepository.UpdateAsync(plan);
-
-            // TODO: Send notification to work order technicians instead
-
-            var result = await _planRepository.GetByIdAsync(planId);
-            return MapPlanToDTO(result!);
-        }
-
-        public async Task<MaintenancePlanDTO> AssignMultipleTechniciansAsync(int planId, AssignMultipleTechniciansRequest request, string userId)
-        {
-            var plan = await _planRepository.GetByIdAsync(planId);
-            if (plan == null)
-                throw new InvalidOperationException($"Plan not found: {planId}");
-
-            // Validate all technicians
-            foreach (var techItem in request.Technicians)
-            {
-                var tech = await _userRepository.GetUserByIdAsync(techItem.TechnicianId);
-                if (tech == null)
-                    throw new InvalidOperationException($"Technician not found: {techItem.TechnicianId}");
-                if (string.IsNullOrEmpty(tech.EmployeeCode))
-                    throw new InvalidOperationException($"Technician {tech.FullName} must have EmployeeCode");
-            }
-
-            // Create assignments
-            foreach (var techItem in request.Technicians)
-            {
-                var assignment = new MaintenancePlanAssignment
-                {
-                    PlanId = planId,
-                    TechnicianId = techItem.TechnicianId,
-                    TechnicianType = techItem.TechnicianType,
-                    AssignedBy = userId,
-                    AssignedDate = DateTime.Now,
-                    IsActive = true
-                };
-                
-                await _planRepository.CreateAssignmentAsync(assignment);
-
-                // Send notification
-                var tech = await _userRepository.GetUserByIdAsync(techItem.TechnicianId);
-                await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
-                {
-                    UserId = techItem.TechnicianId,
-                    Title = "Nhiệm vụ bảo trì mới",
-                    Message = $"Bạn được phân công bảo trì {techItem.TechnicianType} cho thiết bị {plan.Equipment?.EquipmentName}. Hạn: {plan.NextDueDate:dd/MM/yyyy}"
-                });
-            }
-
-            var result = await _planRepository.GetByIdAsync(planId);
-            return MapPlanToDTO(result!);
-        }
-
-        public async Task RemoveTechnicianAssignmentAsync(int assignmentId)
-        {
-            await _planRepository.DeleteAssignmentAsync(assignmentId);
-        }
-
-        public async Task<IEnumerable<MaintenancePlanDTO>> GetUnassignedPlansNeedingAttentionAsync(int daysBeforeDue = 3)
-        {
-            var upcomingPlans = await _planRepository.GetDueWithinDaysAsync(daysBeforeDue);
-            
-            // Filter plans that have no technicians assigned
-            var unassignedPlans = upcomingPlans.Where(p => 
-                p.IsActive && 
-                (p.Assignments == null || !p.Assignments.Any(a => a.IsActive))
-            );
-
-            return unassignedPlans.Select(MapPlanToDTO);
-        }
+        // PostponeMaintenancePlanAsync removed - postpone logic moved to WorkOrder level
 
         public async Task<IEnumerable<MaintenancePlanDTO>> GetUpcomingMaintenanceAsync(int days = 7)
         {
             var plans = await _planRepository.GetDueWithinDaysAsync(days);
             var today = DateTime.Today;
 
-            // Lọc các plans theo logic mới:
-            // - Nếu chưa hoãn: kiểm tra NextDueDate trong vòng 7 ngày
-            // - Nếu đã hoãn: kiểm tra PostponedDueDate trong vòng 7 ngày
+            
             var filteredPlans = plans.Where(p => 
             {
                 if (!p.IsActive) return false;
                 
-                // Kiểm tra đã có WorkOrder active chưa
                 var hasActiveWorkOrder = p.WorkOrders?.Any(wo => wo.Status == "Pending" || wo.Status == "InProgress") ?? false;
                 if (hasActiveWorkOrder) return false;
                 
-                // Xác định ngày đến hạn hiệu lực (PostponedDueDate nếu có, không thì NextDueDate)
-                var effectiveDueDate = p.PostponedDueDate ?? p.NextDueDate;
-                var daysUntil = (effectiveDueDate - today).Days;
+                var daysUntil = (p.NextDueDate - today).Days;
                 
-                // Chỉ hiển thị nếu trong vòng 7 ngày tới
                 return daysUntil >= 0 && daysUntil <= days;
             });
 
-            // Sử dụng MapPlanToDTO để có đầy đủ thông tin chu kỳ, trạng thái, hoãn
             return filteredPlans.Select(MapPlanToDTO);
         }
 
@@ -362,9 +274,7 @@ namespace FITSKIP.Application.Services
         {
             var today = DateTime.Today;
             
-            // Sử dụng PostponedDueDate nếu có, không thì dùng NextDueDate
-            var effectiveDueDate = plan.PostponedDueDate ?? plan.NextDueDate;
-            var daysUntilDue = (effectiveDueDate - today).Days;
+            var daysUntilDue = (plan.NextDueDate - today).Days;
             
             var workOrders = plan.WorkOrders?.ToList() ?? new List<MaintenanceWorkOrder>();
             
@@ -376,10 +286,6 @@ namespace FITSKIP.Application.Services
             if (hasActiveWorkOrder)
             {
                 status = "InProgress";
-            }
-            else if (plan.PostponedDueDate.HasValue)
-            {
-                status = "Postponed"; // Đã hoãn bảo trì
             }
 
             return new MaintenancePlanDTO
@@ -395,20 +301,17 @@ namespace FITSKIP.Application.Services
                 IntervalType = plan.IntervalType,
                 IntervalValue = plan.IntervalValue,
                 StartDate = plan.StartDate,
-                NextDueDate = plan.NextDueDate, // Giữ nguyên ngày gốc
+                NextDueDate = plan.NextDueDate,
                 ReminderDaysBefore = plan.ReminderDaysBefore,
                 IsActive = plan.IsActive,
                 Status = status,
                 CreatedDate = plan.CreatedDate,
                 CreatedByName = plan.CreatedByUser?.FullName,
-                DaysUntilDue = daysUntilDue, // Tính từ effectiveDueDate
-                IsOverdue = effectiveDueDate < today,
+                DaysUntilDue = daysUntilDue,
+                IsOverdue = plan.NextDueDate < today,
                 TotalWorkOrders = workOrders.Count,
                 CompletedWorkOrders = workOrders.Count(wo => wo.Status == "Completed"),
-                HasActiveWorkOrder = hasActiveWorkOrder,
-                PostponedDueDate = plan.PostponedDueDate, // Ngày sau khi hoãn
-                PostponedReason = plan.PostponedReason,
-                PostponedDate = plan.PostponedDate
+                HasActiveWorkOrder = hasActiveWorkOrder
             };
         }
 

@@ -1868,7 +1868,6 @@ namespace FITSKIP.Infrastructure.SeedData
                                 StageId = stage.StageId,
                                 TemplateName = "Bảo trì máy cắt nguyên liệu",
                                 Description = "Template bảo trì định kỳ cho máy cắt nguyên liệu",
-                                InspectionCode = "MT-CB-001",
                                 IsActive = true,
                                 CreatedDate = DateTime.Now.AddMonths(-3),
                                 UpdatedDate = DateTime.Now.AddMonths(-3)
@@ -1883,7 +1882,6 @@ namespace FITSKIP.Infrastructure.SeedData
                                     StageId = stage.StageId,
                                     TemplateName = "Bảo trì máy phay CNC",
                                     Description = "Bảo trì định kỳ máy phay CNC - kiểm tra hệ thống cơ khí và điện",
-                                    InspectionCode = "MT-GC-001",
                                     IsActive = true,
                                     CreatedDate = DateTime.Now.AddMonths(-4),
                                     UpdatedDate = DateTime.Now.AddMonths(-4)
@@ -1893,7 +1891,6 @@ namespace FITSKIP.Infrastructure.SeedData
                                     StageId = stage.StageId,
                                     TemplateName = "Bảo trì máy tiện",
                                     Description = "Template bảo trì cho máy tiện - kiểm tra trục chính và hệ thống dao",
-                                    InspectionCode = "MT-GC-002",
                                     IsActive = true,
                                     CreatedDate = DateTime.Now.AddMonths(-2),
                                     UpdatedDate = DateTime.Now.AddMonths(-2)
@@ -1907,7 +1904,6 @@ namespace FITSKIP.Infrastructure.SeedData
                                 StageId = stage.StageId,
                                 TemplateName = "Bảo trì máy lắp ráp tự động",
                                 Description = "Kiểm tra và bảo trì hệ thống lắp ráp tự động",
-                                InspectionCode = "MT-LR-001",
                                 IsActive = true,
                                 CreatedDate = DateTime.Now.AddMonths(-2),
                                 UpdatedDate = DateTime.Now.AddMonths(-2)
@@ -1921,7 +1917,6 @@ namespace FITSKIP.Infrastructure.SeedData
                                 StageId = stage.StageId,
                                 TemplateName = "Bảo trì thiết bị kiểm tra chất lượng",
                                 Description = "Template bảo trì và hiệu chuẩn thiết bị kiểm tra chất lượng",
-                                InspectionCode = "MT-KT-001",
                                 IsActive = true,
                                 CreatedDate = DateTime.Now.AddMonths(-1),
                                 UpdatedDate = DateTime.Now.AddMonths(-1)
@@ -1934,7 +1929,6 @@ namespace FITSKIP.Infrastructure.SeedData
                                 StageId = stage.StageId,
                                 TemplateName = "Bảo trì máy đóng gói tự động",
                                 Description = "Bảo trì định kỳ hệ thống đóng gói tự động",
-                                InspectionCode = "MT-DG-001",
                                 IsActive = true,
                                 CreatedDate = DateTime.Now.AddMonths(-1),
                                 UpdatedDate = DateTime.Now.AddMonths(-1)
@@ -1947,7 +1941,6 @@ namespace FITSKIP.Infrastructure.SeedData
                                 StageId = stage.StageId,
                                 TemplateName = "Bảo trì máy dán nhãn",
                                 Description = "Template bảo trì cho máy dán nhãn tự động",
-                                InspectionCode = "MT-DN-001",
                                 IsActive = true,
                                 CreatedDate = DateTime.Now.AddMonths(-1),
                                 UpdatedDate = DateTime.Now.AddMonths(-1)

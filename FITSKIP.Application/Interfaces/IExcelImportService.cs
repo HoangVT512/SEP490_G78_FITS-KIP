@@ -25,15 +25,5 @@ namespace FITSKIP.Application.Interfaces
         /// Tạo file Excel mẫu cho Template Items (Các bước kiểm tra)
         /// </summary>
         byte[] GenerateTemplateItemsExcelTemplate();
-        
-        /// <summary>
-        /// Import Maintenance Plans (Chu kỳ bảo trì) từ Excel
-        /// </summary>
-        Task<List<CreateMaintenancePlanRequest>> ImportMaintenancePlansFromExcelAsync(Stream fileStream);
-        
-        /// <summary>
-        /// Tạo file Excel mẫu cho Maintenance Plan (Chu kỳ bảo trì)
-        /// </summary>
-        byte[] GenerateMaintenancePlanExcelTemplate();
     }
 }

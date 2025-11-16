@@ -41,8 +41,6 @@ public partial class FitskipDbContext : IdentityDbContext<User>
 
     public virtual DbSet<MaintenanceWorkOrder> MaintenanceWorkOrders { get; set; }
 
-    public virtual DbSet<MaintenancePlanAssignment> MaintenancePlanAssignments { get; set; }
-
     public virtual DbSet<ProductionOutput> ProductionOutputs { get; set; }
 
     public virtual DbSet<PurchaseRequest> PurchaseRequests { get; set; }
@@ -263,7 +261,6 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.StageId).HasColumnName("StageID");
             entity.Property(e => e.TemplateName).HasMaxLength(200).IsRequired();
             entity.Property(e => e.Description).HasMaxLength(500);
-            entity.Property(e => e.InspectionCode).HasMaxLength(50);
             entity.Property(e => e.CreatedBy).HasMaxLength(450);
             entity.Property(e => e.UpdatedBy).HasMaxLength(450);
             entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
@@ -318,10 +315,14 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.PlanId).HasColumnName("PlanID");
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
             entity.Property(e => e.AssignedDate).HasColumnType("datetime");
+            entity.Property(e => e.ScheduledDate).HasColumnType("datetime");
             entity.Property(e => e.DueDate).HasColumnType("datetime");
             entity.Property(e => e.AssignedToElectrical).HasMaxLength(450);
             entity.Property(e => e.AssignedToMechanical).HasMaxLength(450);
             entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Pending");
+            entity.Property(e => e.PostponedDueDate).HasColumnType("datetime");
+            entity.Property(e => e.PostponedReason).HasMaxLength(500);
+            entity.Property(e => e.PostponedDate).HasColumnType("datetime");
             entity.Property(e => e.StartedDate).HasColumnType("datetime");
             entity.Property(e => e.CompletedDate).HasColumnType("datetime");
             entity.Property(e => e.Notes).HasMaxLength(1000);
@@ -399,37 +400,6 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.PlanId).HasColumnName("PlanID");
             entity.Ignore(e => e.Plan);
 #pragma warning restore CS0618
-        });
-
-        modelBuilder.Entity<MaintenancePlanAssignment>(entity =>
-        {
-            entity.HasKey(e => e.AssignmentId).HasName("PK__MaintenancePlanAssignment__AssignmentID");
-
-            entity.Property(e => e.AssignmentId).HasColumnName("AssignmentID");
-            entity.Property(e => e.PlanId).HasColumnName("PlanID");
-            entity.Property(e => e.TechnicianId).HasMaxLength(450).IsRequired();
-            entity.Property(e => e.TechnicianType).HasMaxLength(50).IsRequired();
-            entity.Property(e => e.AssignedBy).HasMaxLength(450);
-            entity.Property(e => e.AssignedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
-            entity.Property(e => e.IsActive).HasDefaultValue(true);
-
-            // Plan relationship
-            entity.HasOne(d => d.Plan).WithMany(p => p.Assignments)
-                .HasForeignKey(d => d.PlanId)
-                .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK_MaintenancePlanAssignments_Plans");
-
-            // Technician relationship - NO ACTION để tránh multiple cascade paths
-            entity.HasOne(d => d.Technician).WithMany(p => p.MaintenanceAssignments)
-                .HasForeignKey(d => d.TechnicianId)
-                .OnDelete(DeleteBehavior.NoAction)
-                .HasConstraintName("FK_MaintenancePlanAssignments_Technician");
-
-            // AssignedBy relationship - NO ACTION để tránh multiple cascade paths
-            entity.HasOne(d => d.AssignedByUser).WithMany()
-                .HasForeignKey(d => d.AssignedBy)
-                .OnDelete(DeleteBehavior.NoAction)
-                .HasConstraintName("FK_MaintenancePlanAssignments_AssignedBy");
         });
 
         modelBuilder.Entity<ProductionOutput>(entity =>

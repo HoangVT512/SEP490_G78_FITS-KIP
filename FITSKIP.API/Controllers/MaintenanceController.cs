@@ -254,8 +254,7 @@ namespace FITSKIP.API.Controllers
                     if (duplicateItem != null)
                     {
                         validationErrors.Add(
-                            $"[Dòng {rowNumber}] ❌ Bước kiểm tra TRÙNG: '{itemRequest.StepName}' ({itemRequest.Category}) " +
-                            $"đã tồn tại trong mẫu này (ItemId: {duplicateItem.ItemId}). Vui lòng đổi tên hoặc xóa bước cũ."
+                            $"[Dòng {rowNumber}] ❌ Bước kiểm tra TRÙNG: '{itemRequest.StepName}' đã tồn tại trong mẫu này. Vui lòng đổi tên hoặc xóa bước cũ."
                         );
                     }
 
@@ -284,7 +283,8 @@ namespace FITSKIP.API.Controllers
                     }
                     catch (Exception ex)
                     {
-                        importErrors.Add($"[Dòng {rowNumber}] Lỗi khi thêm bước: {ex.Message}");
+                        var errorMessage = ex.InnerException?.Message ?? ex.Message;
+                        importErrors.Add($"[Dòng {rowNumber}] Lỗi khi thêm bước: {errorMessage}");
                     }
                     rowNumber++;
                 }
@@ -454,7 +454,8 @@ namespace FITSKIP.API.Controllers
                     }
                     catch (Exception ex)
                     {
-                        importErrors.Add($"[Dòng {rowNumber}] Lỗi khi tạo template '{templateRequest.TemplateName}': {ex.Message}");
+                        var errorMessage = ex.InnerException?.Message ?? ex.Message;
+                        importErrors.Add($"[Dòng {rowNumber}] Lỗi khi tạo template '{templateRequest.TemplateName}': {errorMessage}");
                     }
                     rowNumber++;
                 }
@@ -674,288 +675,6 @@ namespace FITSKIP.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Tải file Excel mẫu cho Maintenance Plan (Chu kỳ bảo trì)
-        /// </summary>
-        [HttpGet("plans/download-template")]
-        [AllowAnonymous]
-        public IActionResult DownloadMaintenancePlanExcel([FromServices] IExcelImportService excelService)
-        {
-            try
-            {
-                var fileBytes = excelService.GenerateMaintenancePlanExcelTemplate();
-                var fileName = $"ChuKyBaoTri_Template_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-                
-                return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ApiResponse.ErrorResponse($"Lỗi: {ex.Message}"));
-            }
-        }
-
-        /// <summary>
-        /// Import Maintenance Plans (Chu kỳ bảo trì) từ Excel
-        /// </summary>
-        [HttpPost("plans/import")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
-        public async Task<IActionResult> ImportMaintenancePlansFromExcel(
-            IFormFile file,
-            [FromServices] IExcelImportService excelService,
-            [FromServices] IEquipmentService equipmentService)
-        {
-            try
-            {
-                if (file == null || file.Length == 0)
-                {
-                    return BadRequest(ApiResponse.ErrorResponse("Vui lòng chọn file Excel để import"));
-                }
-
-                if (!file.FileName.EndsWith(".xlsx") && !file.FileName.EndsWith(".xls"))
-                {
-                    return BadRequest(ApiResponse.ErrorResponse("File phải có định dạng Excel (.xlsx hoặc .xls)"));
-                }
-
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(ApiResponse.ErrorResponse("Không xác định được người dùng"));
-                }
-
-                // Đọc file Excel
-                using var stream = file.OpenReadStream();
-                var planRequests = await excelService.ImportMaintenancePlansFromExcelAsync(stream);
-
-                if (planRequests == null || !planRequests.Any())
-                {
-                    return BadRequest(ApiResponse.ErrorResponse("Không có dữ liệu hợp lệ trong file Excel"));
-                }
-
-                var allEquipments = await equipmentService.GetEquipmentsAsync();
-                var equipmentDict = allEquipments.ToDictionary(e => e.EquipmentCode.ToLower(), e => e);
-
-                var allTemplates = await _templateService.GetAllTemplatesAsync();
-                var templateDict = allTemplates
-                    .Where(t => !string.IsNullOrEmpty(t.InspectionCode))
-                    .ToDictionary(t => t.InspectionCode!.ToLower(), t => t);
-
-                var allTechnicians = await _workOrderService.GetAllTechniciansAsync();
-                var technicianDict = allTechnicians.ToDictionary(t => t.EmployeeCode.ToLower(), t => t);
-
-                var allExistingPlans = await _planService.GetAllPlansAsync();
-
-                var validationErrors = new List<string>();
-                var rowNumber = 2; // Bắt đầu từ dòng 2
-
-                foreach (var planRequest in planRequests)
-                {
-                    if (!string.IsNullOrEmpty(planRequest.EquipmentCode))
-                    {
-                        var equipmentCodeLower = planRequest.EquipmentCode.ToLower();
-                        if (!equipmentDict.ContainsKey(equipmentCodeLower))
-                        {
-                            validationErrors.Add($"[Dòng {rowNumber}] Không tìm thấy thiết bị '{planRequest.EquipmentCode}'");
-                            rowNumber++;
-                            continue;
-                        }
-
-                        var equipment = equipmentDict[equipmentCodeLower];
-                        planRequest.EquipmentId = equipment.EquipmentId;
-
-                        if (!string.IsNullOrEmpty(planRequest.TemplateCode))
-                        {
-                            var templateCodeLower = planRequest.TemplateCode.ToLower();
-                            if (!templateDict.ContainsKey(templateCodeLower))
-                            {
-                                validationErrors.Add($"[Dòng {rowNumber}] Không tìm thấy mẫu bảo trì '{planRequest.TemplateCode}'");
-                                rowNumber++;
-                                continue;
-                            }
-
-                            var template = templateDict[templateCodeLower];
-                            planRequest.TemplateId = template.TemplateId;
-
-                            var duplicatePlan = allExistingPlans.FirstOrDefault(p =>
-                                p.EquipmentId == equipment.EquipmentId &&
-                                p.TemplateId == template.TemplateId &&
-                                p.IntervalType == planRequest.IntervalType &&
-                                p.IntervalValue == planRequest.IntervalValue &&
-                                p.IsActive
-                            );
-
-                            if (duplicatePlan != null)
-                            {
-                                validationErrors.Add(
-                                    $"[Dòng {rowNumber}] ❌ Chu kỳ TRÙNG: Thiết bị '{equipment.EquipmentCode}' đã có chu kỳ bảo trì " +
-                                    $"{planRequest.IntervalValue} {planRequest.IntervalType} với mẫu '{template.TemplateName}' " +
-                                    $"(PlanId: {duplicatePlan.PlanId}, được tạo lúc {duplicatePlan.CreatedDate:dd/MM/yyyy}). " +
-                                    $"Vui lòng kiểm tra lại hoặc xóa chu kỳ cũ."
-                                );
-                            }
-                        }
-                        else
-                        {
-                            validationErrors.Add($"[Dòng {rowNumber}] Thiết bị '{planRequest.EquipmentCode}' thiếu mã mẫu bảo trì");
-                        }
-
-                        
-                    }
-                    else
-                    {
-                        validationErrors.Add($"[Dòng {rowNumber}] Thiếu mã thiết bị");
-                    }
-
-                    rowNumber++;
-                }
-
-                if (validationErrors.Any())
-                {
-                    var errorMessage = $"⛔ Phát hiện {validationErrors.Count} lỗi trong file Excel. Vui lòng sửa các lỗi sau và import lại:\n\n" +
-                                      string.Join("\n", validationErrors);
-
-                    return BadRequest(ApiResponse<object>.ErrorResponse(errorMessage, validationErrors));
-                }
-
-                var createdPlans = new List<MaintenancePlanDTO>();
-                var importErrors = new List<string>();
-                rowNumber = 2;
-
-                foreach (var planRequest in planRequests)
-                {
-                    try
-                    {
-                        var created = await _planService.CreatePlanAsync(planRequest, userId);
-                        createdPlans.Add(created);
-                    }
-                    catch (Exception ex)
-                    {
-                        importErrors.Add($"[Dòng {rowNumber}] Lỗi khi tạo chu kỳ: {ex.Message}");
-                    }
-                    rowNumber++;
-                }
-
-                var result = new
-                {
-                    SuccessCount = createdPlans.Count,
-                    ErrorCount = importErrors.Count,
-                    CreatedPlans = createdPlans,
-                    Errors = importErrors
-                };
-
-                if (createdPlans.Any())
-                {
-                    return Ok(ApiResponse<object>.SuccessResponse(
-                        result,
-                        $"✅ Import thành công {createdPlans.Count}/{planRequests.Count} chu kỳ bảo trì"
-                    ));
-                }
-                else
-                {
-                    return BadRequest(ApiResponse<object>.ErrorResponse(
-                        "Không thể import chu kỳ nào. Vui lòng kiểm tra lại dữ liệu.",
-                        importErrors
-                    ));
-                }
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ApiResponse.ErrorResponse($"Lỗi: {ex.Message}"));
-            }
-        }
-
-        /// <summary>
-        /// Hoãn bảo trì - cập nhật NextDueDate (TechManager)
-        /// </summary>
-        [HttpPost("plans/{planId}/postpone")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
-        public async Task<IActionResult> PostponeMaintenancePlan(int planId, [FromBody] PostponeMaintenancePlanRequest request)
-        {
-            try
-            {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(ApiResponse.ErrorResponse("Không xác định được người dùng"));
-                }
-
-                var plan = await _planService.PostponeMaintenancePlanAsync(planId, request, userId);
-                return Ok(ApiResponse<MaintenancePlanDTO>.SuccessResponse(plan, "Hoãn bảo trì thành công"));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Lỗi: {ex.Message}"));
-            }
-        }
-
-        /// <summary>
-        /// Assign nhiều kỹ thuật viên vào kế hoạch bảo trì (TechManager)
-        /// Hỗ trợ assign nhiều technicians cùng loại (nhiều điện hoặc nhiều cơ)
-        /// </summary>
-        [HttpPost("plans/{planId}/assign-multiple")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
-        public async Task<IActionResult> AssignMultipleTechnicians(int planId, [FromBody] AssignMultipleTechniciansRequest request)
-        {
-            try
-            {
-                var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (string.IsNullOrEmpty(userId))
-                {
-                    return Unauthorized(ApiResponse.ErrorResponse("Không xác định được người dùng"));
-                }
-
-                var plan = await _planService.AssignMultipleTechniciansAsync(planId, request, userId);
-                return Ok(ApiResponse<MaintenancePlanDTO>.SuccessResponse(plan, "Phân công nhiều kỹ thuật viên thành công"));
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ApiResponse<object>.ErrorResponse(ex.Message));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Lỗi: {ex.Message}"));
-            }
-        }
-
-        /// <summary>
-        /// Xóa assignment của một technician khỏi kế hoạch bảo trì (TechManager)
-        /// </summary>
-        [HttpDelete("plans/assignments/{assignmentId}")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
-        public async Task<IActionResult> RemoveTechnicianAssignment(int assignmentId)
-        {
-            try
-            {
-                await _planService.RemoveTechnicianAssignmentAsync(assignmentId);
-                return Ok(ApiResponse.SuccessResponse("Xóa phân công kỹ thuật viên thành công"));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ApiResponse.ErrorResponse($"Lỗi: {ex.Message}"));
-            }
-        }
-
-        /// <summary>
-        /// Lấy danh sách kế hoạch chưa có kỹ thuật viên và sắp đến hạn (TechManager)
-        /// </summary>
-        [HttpGet("plans/unassigned")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
-        public async Task<IActionResult> GetUnassignedPlansNeedingAttention([FromQuery] int daysBeforeDue = 3)
-        {
-            try
-            {
-                var plans = await _planService.GetUnassignedPlansNeedingAttentionAsync(daysBeforeDue);
-                return Ok(ApiResponse<IEnumerable<MaintenancePlanDTO>>.SuccessResponse(plans, "Lấy danh sách kế hoạch chưa phân công thành công"));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Lỗi: {ex.Message}"));
-            }
-        }
-
         // ===== WORK ORDER MANAGEMENT (TechManager & Technician) =====
 
         /// <summary>
@@ -1122,6 +841,7 @@ namespace FITSKIP.API.Controllers
                 }
 
                 var workOrder = await _workOrderService.UpdateWorkOrderAsync(workOrderId, request, userId);
+                
                 return Ok(ApiResponse<MaintenanceWorkOrderDTO>.SuccessResponse(workOrder, "Cập nhật phiếu bảo trì thành công"));
             }
             catch (InvalidOperationException ex)

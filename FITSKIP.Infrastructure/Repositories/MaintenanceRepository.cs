@@ -262,34 +262,6 @@ namespace FITSKIP.Infrastructure.Repositories
         {
             return await _context.MaintenancePlans.AnyAsync(p => p.PlanId == planId);
         }
-
-        // Assignment methods
-        public async Task<MaintenancePlanAssignment> CreateAssignmentAsync(MaintenancePlanAssignment assignment)
-        {
-            await _context.MaintenancePlanAssignments.AddAsync(assignment);
-            await _context.SaveChangesAsync();
-            return assignment;
-        }
-
-        public async Task DeleteAssignmentAsync(int assignmentId)
-        {
-            var assignment = await _context.MaintenancePlanAssignments.FindAsync(assignmentId);
-            if (assignment != null)
-            {
-                _context.MaintenancePlanAssignments.Remove(assignment);
-                await _context.SaveChangesAsync();
-            }
-        }
-
-        public async Task<IEnumerable<MaintenancePlanAssignment>> GetAssignmentsByPlanIdAsync(int planId)
-        {
-            return await _context.MaintenancePlanAssignments
-                .Include(a => a.Technician)
-                .Include(a => a.AssignedByUser)
-                .Where(a => a.PlanId == planId && a.IsActive)
-                .AsNoTracking()
-                .ToListAsync();
-        }
     }
 
     // ===== MAINTENANCE WORK ORDER REPOSITORY =====
@@ -406,7 +378,20 @@ namespace FITSKIP.Infrastructure.Repositories
 
         public async Task UpdateAsync(MaintenanceWorkOrder workOrder)
         {
-            _context.MaintenanceWorkOrders.Update(workOrder);
+            // Explicitly mark all properties as modified to force update
+            var entry = _context.Entry(workOrder);
+            entry.State = EntityState.Modified;
+            
+            // Force update ScheduledDate even if value is same
+            entry.Property(w => w.ScheduledDate).IsModified = true;
+            entry.Property(w => w.DueDate).IsModified = true;
+            entry.Property(w => w.AssignedToElectrical).IsModified = true;
+            entry.Property(w => w.AssignedToMechanical).IsModified = true;
+            entry.Property(w => w.Status).IsModified = true;
+            entry.Property(w => w.Notes).IsModified = true;
+            entry.Property(w => w.UpdatedBy).IsModified = true;
+            entry.Property(w => w.UpdatedDate).IsModified = true;
+            
             await _context.SaveChangesAsync();
         }
 

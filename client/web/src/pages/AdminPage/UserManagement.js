@@ -667,7 +667,7 @@ const UserManagement = ({ showHeader = true }) => {
       title: "Dây chuyền",
       dataIndex: "lineIds",
       key: "lineIds",
-      width: 180,
+      width: 220,
       filters: Array.isArray(lines)
         ? lines
             .filter((line) => line.lineName)
@@ -676,35 +676,55 @@ const UserManagement = ({ showHeader = true }) => {
               value: line.lineId,
             }))
         : [],
-      onFilter: (value, record) =>
-        record.lineIds && record.lineIds.includes(value),
-      render: (lineIds) => {
-        if (!lineIds || lineIds.length === 0) {
+      onFilter: (value, record) => {
+        let displayLineIds = record.lineIds || [];
+        if (record.roles && record.roles.includes("Quản lý") && record.departmentId) {
+          displayLineIds = lines
+            .filter((line) => line.departmentId === record.departmentId)
+            .map((line) => line.lineId);
+        }
+        return displayLineIds.includes(value);
+      },
+      render: (lineIds, record) => {
+        let displayLineIds = lineIds || [];
+
+        // Nếu user có vai trò "Quản lý", hiển thị tất cả dây chuyền của phòng ban
+        if (record.roles && record.roles.includes("Quản lý") && record.departmentId) {
+          displayLineIds = lines
+            .filter((line) => line.departmentId === record.departmentId)
+            .map((line) => line.lineId);
+        }
+
+        if (!displayLineIds || displayLineIds.length === 0) {
           return <Tag color="default">Chưa có dây chuyền</Tag>;
         }
-        const lineNames = lineIds
+
+        const lineNames = displayLineIds
           .map((lineId) => {
             const line = lines.find((l) => l.lineId === lineId);
             return line ? line.lineName : lineId;
           })
           .filter(Boolean);
+
         return (
           <Tooltip title={lineNames.join(", ")}>
             <div style={{ cursor: "pointer" }}>
-              {lineNames.slice(0, 2).map((name, index) => (
-                <Tag
-                  key={index}
-                  color="blue"
-                  style={{ marginRight: 4, marginBottom: 2 }}
-                >
-                  {name}
-                </Tag>
-              ))}
-              {lineNames.length > 2 && (
-                <Text style={{ color: "#1890ff" }}>
-                  +{lineNames.length - 2}...
-                </Text>
-              )}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {lineNames.slice(0, 2).map((name, index) => (
+                  <Tag
+                    key={index}
+                    color="blue"
+                    style={{ margin: 0, width: 'fit-content', display: 'block' }}
+                  >
+                    {name}
+                  </Tag>
+                ))}
+                {lineNames.length > 2 && (
+                  <Text style={{ color: "#1890ff", fontSize: '12px' }}>
+                    +{lineNames.length - 2} dây chuyền khác...
+                  </Text>
+                )}
+              </div>
             </div>
           </Tooltip>
         );
@@ -1795,39 +1815,51 @@ const UserManagement = ({ showHeader = true }) => {
                     : "-"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Dây chuyền">
-                  {viewingUser.lineIds && viewingUser.lineIds.length > 0
-                    ? (() => {
-                        const userLines = viewingUser.lineIds
-                          .map((lineId) => {
-                            const line = lines.find((l) => l.lineId === lineId);
-                            return line;
-                          })
-                          .filter(Boolean);
-                        return (
-                          <div>
-                            <Text
-                              strong
-                              style={{ marginBottom: 8, display: "block" }}
-                            >
-                              Tổng cộng: {userLines.length} dây chuyền
-                            </Text>
-                            <div
-                              style={{
-                                display: "flex",
-                                flexWrap: "wrap",
-                                gap: "8px",
-                              }}
-                            >
-                              {userLines.map((line) => (
-                                <Tag key={line.lineId} color="blue">
-                                  {line.lineName}
-                                </Tag>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })()
-                    : "-"}
+                  {(() => {
+                    let displayLineIds = viewingUser.lineIds || [];
+
+                    // Nếu user có vai trò "Quản lý", hiển thị tất cả dây chuyền của phòng ban
+                    if (viewingUser.roles && viewingUser.roles.includes("Quản lý") && viewingUser.departmentId) {
+                      displayLineIds = lines
+                        .filter((line) => line.departmentId === viewingUser.departmentId)
+                        .map((line) => line.lineId);
+                    }
+
+                    if (!displayLineIds || displayLineIds.length === 0) {
+                      return "-";
+                    }
+
+                    const userLines = displayLineIds
+                      .map((lineId) => {
+                        const line = lines.find((l) => l.lineId === lineId);
+                        return line;
+                      })
+                      .filter(Boolean);
+
+                    return (
+                      <div>
+                        <Text
+                          strong
+                          style={{ marginBottom: 8, display: "block" }}
+                        >
+                          Tổng cộng: {userLines.length} dây chuyền
+                        </Text>
+                        <div
+                          style={{
+                            display: "flex",
+                            flexWrap: "wrap",
+                            gap: "8px",
+                          }}
+                        >
+                          {userLines.map((line) => (
+                            <Tag key={line.lineId} color="blue">
+                              {line.lineName}
+                            </Tag>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </Descriptions.Item>
               </Descriptions>
             </Card>

@@ -33,6 +33,12 @@ public partial class MaintenanceWorkOrder
 
     public string Status { get; set; } = "Pending";
 
+    public DateTime? PostponedDueDate { get; set; }
+
+    public string? PostponedReason { get; set; }
+
+    public DateTime? PostponedDate { get; set; }
+
     public DateTime? StartedDate { get; set; }
 
     public DateTime? CompletedDate { get; set; }

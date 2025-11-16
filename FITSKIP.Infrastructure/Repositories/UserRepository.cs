@@ -462,6 +462,50 @@ public class UserRepository : IUserRepository
             }
         }
 
+        // Handle department assignment for non-manager roles
+        if (request.DepartmentId.HasValue)
+        {
+            var department = await db.Departments.FirstOrDefaultAsync(d => d.DepartmentId == request.DepartmentId.Value, cancellationToken);
+            if (department == null)
+            {
+                throw new ArgumentException($"Phòng ban với ID '{request.DepartmentId}' không tồn tại.");
+            }
+
+            var currentRoleName = existingUser.RoleId != null
+                ? (await db.Roles.FirstOrDefaultAsync(r => r.Id == existingUser.RoleId, cancellationToken))?.Name
+                : null;
+
+            if (currentRoleName == "Tổ trưởng")
+            {
+                if (request.LineIds == null || request.LineIds.Count == 0)
+                {
+                    throw new ArgumentException("Vai trò 'Tổ trưởng' phải có cả phòng ban và dây chuyền.");
+                }
+                // Nếu có line, set DepartmentId = null
+                existingUser.DepartmentId = null;
+            }
+            else if (currentRoleName != "Quản lý")
+            {
+                // Cho role khác (không phải Quản lý), nếu không có line, set DepartmentId
+                if (request.LineIds == null || request.LineIds.Count == 0)
+                {
+                    existingUser.DepartmentId = request.DepartmentId.Value;
+                }
+                else
+                {
+                    existingUser.DepartmentId = null;
+                }
+            }
+        }
+        else
+        {
+            // Nếu không có DepartmentId, set null (trừ trường hợp Quản lý đã xử lý riêng)
+            if (existingUser.Role == null || existingUser.Role.Name != "Quản lý")
+            {
+                existingUser.DepartmentId = null;
+            }
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
         // Return updated UserDTO
