@@ -40,6 +40,7 @@ import ReturnConfirmation from "./ReturnConfirmation";
 import InventoryReports from "./InventoryReports";
 import TransactionHistory from "./TransactionHistory";
 import NotificationsList from "./NotificationsList";
+import IncidentSparePartsDistribution from "./IncidentSparePartsDistribution";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -120,7 +121,9 @@ const WarehouseManagerLayout = () => {
   // Update selected key based on current route
   useEffect(() => {
     const path = location.pathname;
-    if (path.includes("/inventory")) {
+    if (path.includes("/incident-distribution")) {
+      setSelectedKey("incident-distribution");
+    } else if (path.includes("/inventory")) {
       setSelectedKey("inventory");
     } else if (path.includes("/purchase-requests")) {
       setSelectedKey("purchase-requests");
@@ -141,7 +144,9 @@ const WarehouseManagerLayout = () => {
   const renderContent = () => {
     const path = location.pathname;
 
-    if (path.includes("/inventory")) {
+    if (path.includes("/incident-distribution")) {
+      return <IncidentSparePartsDistribution />;
+    } else if (path.includes("/inventory")) {
       return <InventoryManagement />;
     } else if (path.includes("/purchase-requests")) {
       return <PurchaseRequestManagement />;
@@ -166,6 +171,11 @@ const WarehouseManagerLayout = () => {
       key: "dashboard",
       icon: <DashboardOutlined />,
       label: "Tổng quan",
+    },
+    {
+      key: "incident-distribution",
+      icon: <SwapOutlined />,
+      label: "Cấp phát vật tư",
     },
     {
       key: "inventory",
@@ -204,6 +214,9 @@ const WarehouseManagerLayout = () => {
     switch (key) {
       case "dashboard":
         navigate("/warehouse-manager/dashboard");
+        break;
+      case "incident-distribution":
+        navigate("/warehouse-manager/incident-distribution");
         break;
       case "inventory":
         navigate("/warehouse-manager/inventory");

@@ -8,3 +8,4 @@ export { default as PurchaseRequestManagement } from "./PurchaseRequestManagemen
 export { default as InventoryReports } from "./InventoryReports";
 export { default as TransactionHistory } from "./TransactionHistory";
 export { default as NotificationsList } from "./NotificationsList";
+export { default as IncidentSparePartsDistribution } from "./IncidentSparePartsDistribution";

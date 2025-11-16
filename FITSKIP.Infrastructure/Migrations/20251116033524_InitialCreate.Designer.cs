@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251113061730_MakeReplacedDateNullable")]
-    partial class MakeReplacedDateNullable
+    [Migration("20251116033524_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -888,9 +888,6 @@ namespace FITSKIP.Infrastructure.Migrations
                         .HasColumnType("datetime");
 
                     b.Property<string>("ReturnConfirmedBy")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ReturnRemarks")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime?>("ReturnedDate")

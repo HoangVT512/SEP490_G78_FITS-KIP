@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FITSKIP.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialMigration : Migration
+    public partial class InitialCreate : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -698,15 +698,14 @@ namespace FITSKIP.Infrastructure.Migrations
                     WorkOrderId = table.Column<int>(type: "int", nullable: true),
                     PartID = table.Column<int>(type: "int", nullable: false),
                     Quantity = table.Column<int>(type: "int", nullable: false),
-                    ReplacedDate = table.Column<DateTime>(type: "datetime", nullable: false),
+                    ReplacedDate = table.Column<DateTime>(type: "datetime", nullable: true),
                     ReplacedBy = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: false),
                     Status = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false, defaultValue: "Pending"),
                     Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     ActualQuantityUsed = table.Column<int>(type: "int", nullable: true),
                     QuantityToReturn = table.Column<int>(type: "int", nullable: true),
                     ReturnedDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    ReturnConfirmedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    ReturnRemarks = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    ReturnConfirmedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
