@@ -48,5 +48,15 @@ namespace FITSKIP.Domain.DTO
         /// </summary>
         [Range(0, int.MaxValue, ErrorMessage = "Số lượng cần trả lại phải lớn hơn hoặc bằng 0")]
         public int? QuantityToReturn { get; set; }
+
+        /// <summary>
+        /// Ngày trả lại linh kiện thừa vào kho
+        /// </summary>
+        public DateTime? ReturnedDate { get; set; }
+
+        /// <summary>
+        /// Người xác nhận việc trả lại (thường là nhân viên kho)
+        /// </summary>
+        public string? ReturnConfirmedBy { get; set; }
     }
 }

@@ -29,9 +29,6 @@ public partial class MaintenancePlan
     
     public DateTime NextDueDate { get; set; }
 
-    
-    public DateTime? PostponedDueDate { get; set; }
-
    
     public int ReminderDaysBefore { get; set; } = 3;
 
@@ -46,19 +43,10 @@ public partial class MaintenancePlan
     public string Status { get; set; } = "Pending";
 
     
-    public string? PostponedReason { get; set; }
-
-    
-    public DateTime? PostponedDate { get; set; }
-
-    
     public virtual Equipment? Equipment { get; set; }
     public virtual MaintenanceTemplate? Template { get; set; }
     public virtual User? CreatedByUser { get; set; }
     public virtual ICollection<MaintenanceWorkOrder> WorkOrders { get; set; } = new List<MaintenanceWorkOrder>();
-    
-    
-    public virtual ICollection<MaintenancePlanAssignment> Assignments { get; set; } = new List<MaintenancePlanAssignment>();
 
     [Obsolete("Use WorkOrders instead")]
     public virtual ICollection<MaintenanceChecklistItem> ChecklistItems { get; set; } = new List<MaintenanceChecklistItem>();

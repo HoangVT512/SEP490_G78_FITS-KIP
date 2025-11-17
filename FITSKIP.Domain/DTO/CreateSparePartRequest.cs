@@ -53,7 +53,5 @@ namespace FITSKIP.Domain.DTO
         public string? ReplacementCycle { get; set; }
 
         public DateTime? DateAdded { get; set; }
-
-        public string? DocumentUrl { get; set; }
     }
 }

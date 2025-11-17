@@ -162,7 +162,7 @@ const PurchaseApproval = () => {
         let color = "warning";
         if (status === "Đã duyệt") color = "success";
         if (status === "Từ chối") color = "error";
-        return <Tag color={color}>{status}</Tag>;
+        return <Tag color={color} className={styles.statusTag}>{status}</Tag>;
       },
     },
     {
@@ -383,22 +383,18 @@ const PurchaseApproval = () => {
         }
         bordered={false}
         style={{ borderRadius: "12px", boxShadow: "0 2px 8px rgba(0,0,0,0.1)" }}
+        className={styles.mainCard}
       >
         <Space direction="vertical" size="large" style={{ width: "100%" }}>
-          <Row gutter={16} justify="space-between" align="middle">
+          <Row gutter={16} justify="space-between" align="middle" className={styles.filterSection}>
             <Col xs={24} lg={16} xl={14}>
-              <Space size="middle" wrap>
+              <Space size="large" wrap>
                 <Search
                   placeholder="Tìm theo mã, tên phụ tùng..."
                   prefix={<SearchOutlined />}
                   onChange={(e) => setSearchText(e.target.value)}
                   allowClear
-                  style={{
-                    borderRadius: "8px",
-                    height: "40px",
-                    width: "240px",
-                    maxWidth: "100%"
-                  }}
+                  size="large"
                 />
                 <Select
                   style={{
@@ -410,6 +406,7 @@ const PurchaseApproval = () => {
                   placeholder="Lọc theo trạng thái"
                   value={filterStatus}
                   onChange={setFilterStatus}
+                  size="large"
                 >
                   <Option value="all">Tất cả trạng thái</Option>
                   <Option value="Chờ duyệt">Chờ duyệt</Option>
@@ -429,6 +426,7 @@ const PurchaseApproval = () => {
                   minWidth: "120px",
                   borderRadius: "8px"
                 }}
+                //className={styles.refreshButton}
               >
                 Làm mới
               </Button>
@@ -445,8 +443,10 @@ const PurchaseApproval = () => {
               pageSize: 10,
               showSizeChanger: true,
               showTotal: (total) => `Tổng ${total} yêu cầu`,
+              className: styles.pagination
             }}
             style={{ borderRadius: "8px" }}
+            className={styles.dataTable}
           />
         </Space>
       </Card>
@@ -475,6 +475,7 @@ const PurchaseApproval = () => {
                 fontSize: "16px",
                 minWidth: "120px",
               }}
+              className={styles.cancelButton}
             >
               Đóng
             </Button>
@@ -491,6 +492,7 @@ const PurchaseApproval = () => {
                     fontSize: "16px",
                     minWidth: "120px",
                   }}
+                  className={styles.cancelButton}
                 >
                   Từ chối
                 </Button>
@@ -507,6 +509,7 @@ const PurchaseApproval = () => {
                     setDetailModalVisible(false);
                     handleApproveClick(selectedRequest);
                   }}
+                  className={styles.submitButton}
                 >
                   Duyệt
                 </Button>
@@ -518,6 +521,7 @@ const PurchaseApproval = () => {
         centered
         style={{ top: 20 }}
         bodyStyle={{ padding: "24px" }}
+        className={styles.detailModal}
       >
         {selectedRequest && (
           <div>
@@ -529,6 +533,7 @@ const PurchaseApproval = () => {
                 borderRadius: "8px",
                 background: "#fafafa"
               }}
+              className={styles.infoCard}
             >
               <Row gutter={16}>
                 <Col span={12}>
@@ -549,6 +554,7 @@ const PurchaseApproval = () => {
                             : "error"
                       }
                       style={{ fontSize: "14px", padding: "4px 12px" }}
+                      className={styles.statusTag}
                     >
                       {selectedRequest.status}
                     </Tag>
@@ -590,6 +596,7 @@ const PurchaseApproval = () => {
                 borderRadius: "4px",
                 margin: "4px"
               }}
+              className={styles.descriptionItem}
             >
               <Descriptions.Item label="Mã phụ tùng" span={1}>
                 <span style={{ fontSize: "16px", fontWeight: "600", color: "#283652" }}>
@@ -704,6 +711,7 @@ const PurchaseApproval = () => {
         centered
         style={{ top: 20 }}
         bodyStyle={{ padding: "24px" }}
+        className={styles.approveModal}
       >
         <div style={{ marginBottom: "16px" }}>
           <div style={{ fontSize: "16px", fontWeight: "500", marginBottom: "8px" }}>
@@ -736,6 +744,7 @@ const PurchaseApproval = () => {
           layout="vertical"
           onFinish={handleApprove}
           labelCol={{ style: { fontSize: "15px", fontWeight: 600 } }}
+          className={styles.formItem}
         >
           <Form.Item
             name="notes"
@@ -758,6 +767,7 @@ const PurchaseApproval = () => {
                   fontSize: "16px",
                   minWidth: "120px",
                 }}
+                className={styles.cancelButton}
               >
                 Hủy
               </Button>
@@ -772,6 +782,7 @@ const PurchaseApproval = () => {
                   fontSize: "16px",
                   minWidth: "140px",
                 }}
+                className={styles.submitButton}
               >
                 Xác nhận duyệt
               </Button>
@@ -794,6 +805,7 @@ const PurchaseApproval = () => {
         centered
         style={{ top: 20 }}
         bodyStyle={{ padding: "24px" }}
+        className={styles.rejectModal}
       >
         <div style={{ marginBottom: "16px" }}>
           <div style={{ fontSize: "16px", fontWeight: "500", marginBottom: "8px" }}>
@@ -826,6 +838,7 @@ const PurchaseApproval = () => {
           layout="vertical"
           onFinish={handleReject}
           labelCol={{ style: { fontSize: "15px", fontWeight: 600 } }}
+          className={styles.formItem}
         >
           <Form.Item
             name="reason"
@@ -849,6 +862,7 @@ const PurchaseApproval = () => {
                   fontSize: "16px",
                   minWidth: "120px",
                 }}
+                className={styles.cancelButton}
               >
                 Hủy
               </Button>
@@ -862,6 +876,7 @@ const PurchaseApproval = () => {
                   fontSize: "16px",
                   minWidth: "140px",
                 }}
+                className={styles.submitButton}
               >
                 Xác nhận từ chối
               </Button>

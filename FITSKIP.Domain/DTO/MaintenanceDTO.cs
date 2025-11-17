@@ -15,7 +15,6 @@ namespace FITSKIP.Domain.DTO
         public string LineName { get; set; } = string.Empty;
         public string TemplateName { get; set; } = string.Empty;
         public string? Description { get; set; }
-        public string? InspectionCode { get; set; }
         public bool IsActive { get; set; }
         public DateTime CreatedDate { get; set; }
         public string? CreatedByName { get; set; }
@@ -55,9 +54,6 @@ namespace FITSKIP.Domain.DTO
         [MaxLength(500)]
         public string? Description { get; set; }
 
-        [MaxLength(50)]
-        public string? InspectionCode { get; set; }
-
         public List<CreateTemplateItemRequest> TemplateItems { get; set; } = new();
     }
 
@@ -69,9 +65,6 @@ namespace FITSKIP.Domain.DTO
 
         [MaxLength(500)]
         public string? Description { get; set; }
-
-        [MaxLength(50)]
-        public string? InspectionCode { get; set; }
 
         public bool IsActive { get; set; }
 
@@ -145,11 +138,6 @@ namespace FITSKIP.Domain.DTO
         public int TotalWorkOrders { get; set; }
         public int CompletedWorkOrders { get; set; }
         public bool HasActiveWorkOrder { get; set; }
-        
-        // Postpone info
-        public DateTime? PostponedDueDate { get; set; }
-        public string? PostponedReason { get; set; }
-        public DateTime? PostponedDate { get; set; }
     }
     
     /// <summary>
@@ -252,7 +240,7 @@ namespace FITSKIP.Domain.DTO
         public DateTime ScheduledDate { get; set; } // Ngày dự định bảo trì (ngày máy dừng)
         public DateTime DueDate { get; set; }
         public DateTime? StartedDate { get; set; }
-        public DateTime? CompletedDate { get; set; }
+        public DateTime? CompletedDate { get; set; } // Ngày hoàn thành (Completed hoặc Closed)
         
         // Assignment
         public string? AssignedToElectrical { get; set; }
@@ -264,8 +252,13 @@ namespace FITSKIP.Domain.DTO
         public string? MechanicalEmployeeCode { get; set; }
         
         // Details
-        public string Status { get; set; } = string.Empty; // 'Pending', 'InProgress', 'Completed', 'Cancelled'
+        public string Status { get; set; } = string.Empty; // 'Pending', 'InProgress', 'Completed', 'Closed', 'Cancelled', 'Overdue'
         public string? Notes { get; set; }
+        
+        // Postpone info
+        public DateTime? PostponedDueDate { get; set; }
+        public string? PostponedReason { get; set; }
+        public DateTime? PostponedDate { get; set; }
         
         // Checklist
         public List<MaintenanceChecklistItemDTO> ChecklistItems { get; set; } = new();
@@ -319,6 +312,7 @@ namespace FITSKIP.Domain.DTO
 
     public class UpdateMaintenanceWorkOrderRequest
     {
+        public DateTime? ScheduledDate { get; set; }
         public DateTime? DueDate { get; set; }
         public string? Status { get; set; }
 
@@ -507,8 +501,19 @@ namespace FITSKIP.Domain.DTO
     }
 
     /// <summary>
-    /// Request để hoãn bảo trì (postpone maintenance)
+    /// Request để đóng (close) work order sau khi kiểm tra và quyết toán
     /// </summary>
+    public class CloseWorkOrderRequest
+    {
+        [MaxLength(500, ErrorMessage = "Ghi chú không vượt quá 500 ký tự")]
+        public string? Notes { get; set; }
+    }
+
+    /// <summary>
+    /// [DEPRECATED] Request để hoãn bảo trì Plan - đã chuyển sang hoãn WorkOrder
+    /// Use PostponeWorkOrderRequest instead
+    /// </summary>
+    [Obsolete("Postpone logic moved to WorkOrder level. Use PostponeWorkOrderRequest instead.")]
     public class PostponeMaintenancePlanRequest
     {
         [Required(ErrorMessage = "Số ngày hoãn là bắt buộc")]
@@ -525,9 +530,8 @@ namespace FITSKIP.Domain.DTO
     /// </summary>
     public class PostponeWorkOrderRequest
     {
-        [Required(ErrorMessage = "Số ngày hoãn là bắt buộc")]
-        [Range(1, 365, ErrorMessage = "Số ngày hoãn phải từ 1 đến 365 ngày")]
-        public int PostponeDays { get; set; }
+        [Required(ErrorMessage = "Ngày hoãn mới là bắt buộc")]
+        public DateTime NewScheduledDate { get; set; }
 
         [Required(ErrorMessage = "Lý do hoãn là bắt buộc")]
         [MaxLength(500, ErrorMessage = "Lý do hoãn không vượt quá 500 ký tự")]

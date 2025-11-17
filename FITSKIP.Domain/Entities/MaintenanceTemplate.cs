@@ -23,11 +23,6 @@ public partial class MaintenanceTemplate
 
     public string? Description { get; set; }
 
-    /// <summary>
-    /// Số kiểm kệ: VD "EN12"
-    /// </summary>
-    public string? InspectionCode { get; set; }
-
     public bool IsActive { get; set; } = true;
 
     public DateTime CreatedDate { get; set; } = DateTime.Now;

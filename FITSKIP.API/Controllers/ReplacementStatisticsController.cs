@@ -64,25 +64,12 @@ namespace FITSKIP.API.Controllers
 
                         // Tính tổng số lượng đã sử dụng
                         var totalUsed = g.Sum(r => r.ActualQuantityUsed ?? 0);
-                        
+
                         // Số lần thay thế
                         var replacementCount = g.Count();
-                        
+
                         // Ngày thay gần nhất
                         var lastDate = g.Max(r => r.ReplacedDate);
-
-                        // Parse ReplacementCycle để lấy limit value và unit
-                        var (limitValue, limitUnit) = ParseReplacementCycle(part?.ReplacementCycle);
-
-                        // Tính % sử dụng
-                        decimal? usagePercentage = null;
-                        if (limitValue.HasValue && limitValue.Value > 0)
-                        {
-                            usagePercentage = ((decimal)totalUsed / limitValue.Value) * 100;
-                        }
-
-                        // Xác định status và color
-                        var (statusStr, colorStr) = CalculateStatus(usagePercentage);
 
                         return new ComponentReplacementStatisticsDTO
                         {
@@ -97,15 +84,9 @@ namespace FITSKIP.API.Controllers
                             EquipmentId = equipment?.EquipmentId,
                             EquipmentCode = equipment?.EquipmentCode,
                             EquipmentName = equipment?.EquipmentName,
-                            ReplacementCycle = part?.ReplacementCycle,
-                            LimitValue = limitValue,
-                            LimitUnit = limitUnit,
                             TotalQuantityUsed = totalUsed,
                             ReplacementCount = replacementCount,
-                            LastReplacementDate = lastDate,
-                            UsagePercentage = usagePercentage,
-                            Status = statusStr,
-                            StatusColor = colorStr
+                            LastReplacementDate = lastDate
                         };
                     })
                     .ToList();
@@ -121,13 +102,8 @@ namespace FITSKIP.API.Controllers
                     grouped = grouped.Where(s => s.StageId == stageId.Value).ToList();
                 }
 
-                if (!string.IsNullOrEmpty(status))
-                {
-                    grouped = grouped.Where(s => s.Status == status).ToList();
-                }
-
-                // Sắp xếp theo % sử dụng giảm dần
-                grouped = grouped.OrderByDescending(s => s.UsagePercentage ?? 0).ToList();
+                // Sắp xếp theo tổng số lượng đã sử dụng giảm dần
+                grouped = grouped.OrderByDescending(s => s.TotalQuantityUsed).ToList();
 
                 return Ok(grouped);
             }
@@ -137,50 +113,7 @@ namespace FITSKIP.API.Controllers
             }
         }
 
-        /// <summary>
-        /// Parse ReplacementCycle string để lấy số và đơn vị
-        /// Ví dụ: "50000 PCS" -> (50000, "PCS"), "12 Tháng" -> (12, "Tháng")
-        /// </summary>
-        private (int?, string?) ParseReplacementCycle(string? replacementCycle)
-        {
-            if (string.IsNullOrWhiteSpace(replacementCycle))
-                return (null, null);
 
-            try
-            {
-                // Regex để tìm số và chữ
-                var match = Regex.Match(replacementCycle.Trim(), @"(\d+)\s*(.*)");
-                if (match.Success)
-                {
-                    var value = int.Parse(match.Groups[1].Value);
-                    var unit = match.Groups[2].Value.Trim();
-                    return (value, string.IsNullOrEmpty(unit) ? "PCS" : unit);
-                }
-            }
-            catch
-            {
-                // Ignore parsing errors
-            }
-
-            return (null, null);
-        }
-
-        /// <summary>
-        /// Tính status và color dựa trên % sử dụng
-        /// </summary>
-        private (string status, string color) CalculateStatus(decimal? usagePercentage)
-        {
-            if (!usagePercentage.HasValue)
-                return ("safe", "#2980b9"); // Chưa có dữ liệu
-
-            if (usagePercentage.Value > 100)
-                return ("critical", "#e74c3c"); // Quá hạn
-
-            if (usagePercentage.Value >= 80)
-                return ("warning", "#f39c12"); // Đến hạn
-
-            return ("safe", "#2980b9"); // An toàn
-        }
 
         /// <summary>
         /// Lấy danh sách các dây chuyền có dữ liệu thống kê
@@ -224,13 +157,10 @@ namespace FITSKIP.API.Controllers
                 var stats = (allStats.Result as OkObjectResult)?.Value as IEnumerable<ComponentReplacementStatisticsDTO>;
 
                 if (stats == null)
-                    return Ok(new { safe = 0, warning = 0, critical = 0, total = 0 });
+                    return Ok(new { total = 0 });
 
                 var summary = new
                 {
-                    safe = stats.Count(s => s.Status == "safe"),
-                    warning = stats.Count(s => s.Status == "warning"),
-                    critical = stats.Count(s => s.Status == "critical"),
                     total = stats.Count()
                 };
 

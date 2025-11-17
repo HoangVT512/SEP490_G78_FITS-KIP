@@ -40,6 +40,8 @@ import ReturnConfirmation from "./ReturnConfirmation";
 import InventoryReports from "./InventoryReports";
 import TransactionHistory from "./TransactionHistory";
 import NotificationsList from "./NotificationsList";
+import IncidentSparePartsDistribution from "./IncidentSparePartsDistribution";
+import IncidentSparePartsReturn from "./IncidentSparePartsReturn";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -120,7 +122,11 @@ const WarehouseManagerLayout = () => {
   // Update selected key based on current route
   useEffect(() => {
     const path = location.pathname;
-    if (path.includes("/inventory")) {
+    if (path.includes("/incident-distribution")) {
+      setSelectedKey("incident-distribution");
+    } else if (path.includes("/spare-parts-return")) {
+      setSelectedKey("spare-parts-return");
+    } else if (path.includes("/inventory")) {
       setSelectedKey("inventory");
     } else if (path.includes("/purchase-requests")) {
       setSelectedKey("purchase-requests");
@@ -141,7 +147,11 @@ const WarehouseManagerLayout = () => {
   const renderContent = () => {
     const path = location.pathname;
 
-    if (path.includes("/inventory")) {
+    if (path.includes("/incident-distribution")) {
+      return <IncidentSparePartsDistribution />;
+    } else if (path.includes("/spare-parts-return")) {
+      return <IncidentSparePartsReturn />;
+    } else if (path.includes("/inventory")) {
       return <InventoryManagement />;
     } else if (path.includes("/purchase-requests")) {
       return <PurchaseRequestManagement />;
@@ -172,15 +182,25 @@ const WarehouseManagerLayout = () => {
       icon: <InboxOutlined />,
       label: "Quản lý tồn kho",
     },
+    //{
+    //  key: "spare-parts-requests",
+    //  icon: <SwapOutlined />,
+    //  label: "Duyệt yêu cầu phụ tùng",
+    //},
+    //{
+    //  key: "return-confirmation",
+    //  icon: <CheckCircleOutlined />,
+    //  label: "Xác nhận trả lại",
+    //},
     {
-      key: "spare-parts-requests",
+      key: "incident-distribution",
       icon: <SwapOutlined />,
-      label: "Duyệt yêu cầu phụ tùng",
+      label: "Cấp phát vật tư",
     },
     {
-      key: "return-confirmation",
+      key: "spare-parts-return",
       icon: <CheckCircleOutlined />,
-      label: "Xác nhận trả lại",
+      label: "Trả lại phụ tùng",
     },
     {
       key: "history",
@@ -196,7 +216,7 @@ const WarehouseManagerLayout = () => {
     //   key: "reports",
     //   icon: <BarChartOutlined />,
     //   label: "Báo cáo kho",
-    // },
+    //   },
   ];
 
   const handleMenuClick = ({ key }) => {
@@ -204,6 +224,12 @@ const WarehouseManagerLayout = () => {
     switch (key) {
       case "dashboard":
         navigate("/warehouse-manager/dashboard");
+        break;
+      case "incident-distribution":
+        navigate("/warehouse-manager/incident-distribution");
+        break;
+      case "spare-parts-return":
+        navigate("/warehouse-manager/spare-parts-return");
         break;
       case "inventory":
         navigate("/warehouse-manager/inventory");

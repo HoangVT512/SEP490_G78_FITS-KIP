@@ -18,6 +18,7 @@ namespace FITSKIP.Application.Interfaces
         Task<MaintenanceWorkOrderDTO> AssignTechniciansAsync(int workOrderId, string? electricalTechId, string? mechanicalTechId);
         Task<MaintenanceWorkOrderDTO> StartWorkOrderAsync(int workOrderId, string technicianId);
         Task<MaintenanceWorkOrderDTO> CompleteWorkOrderAsync(int workOrderId, CompleteWorkOrderRequest request, string technicianId);
+        Task<MaintenanceWorkOrderDTO> CloseWorkOrderAsync(int workOrderId, string closedBy, string? notes = null);
         Task<MaintenanceWorkOrderDTO> CancelWorkOrderAsync(int workOrderId, string reason);
         Task<MaintenanceWorkOrderDTO> PostponeWorkOrderAsync(int workOrderId, PostponeWorkOrderRequest request, string userId);
 

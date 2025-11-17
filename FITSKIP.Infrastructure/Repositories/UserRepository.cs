@@ -345,10 +345,18 @@ public class UserRepository : IUserRepository
         // Check if the current role is "Quản trị viên"
         if (existingUser.Role != null && existingUser.Role.Name.Equals("Quản trị viên", StringComparison.OrdinalIgnoreCase))
         {
-            // Prevent role updates for "Quản trị viên"
+            // Prevent role updates for "Quản trị viên" - only block if trying to change to a different role
             if (request.RoleIds != null && request.RoleIds.Length > 0)
             {
-                throw new ArgumentException("Không thể cập nhật role của người dùng có vai trò 'Quản trị viên'.");
+                var requestedRoleId = request.RoleIds[0];
+                var requestedRole = await db.Roles.FirstOrDefaultAsync(
+                    r => r.Id == requestedRoleId || r.Name == requestedRoleId,
+                    cancellationToken);
+
+                if (requestedRole != null && requestedRole.Id != existingUser.RoleId)
+                {
+                    throw new ArgumentException("Không thể cập nhật role của người dùng có vai trò 'Quản trị viên'.");
+                }
             }
         }
 
@@ -432,6 +440,23 @@ public class UserRepository : IUserRepository
         existingUser.Email = normalizedEmail;
         existingUser.PhoneNumber = normalizedPhone;
 
+        // Check if trying to deactivate an admin user
+        if (existingUser.Role != null && existingUser.Role.Name == "Quản trị viên" && !request.IsActive)
+        {
+            // Count active admin users (excluding current user)
+            var activeAdminCount = await db.Users
+                .Include(u => u.Role)
+                .Where(u => u.Role != null && u.Role.Name == "Quản trị viên" && u.IsActive == true && u.Id != id)
+                .CountAsync(cancellationToken);
+
+            if (activeAdminCount == 0)
+            {
+                throw new InvalidOperationException("Không thể vô hiệu hóa tài khoản quản trị viên cuối cùng. Phải có ít nhất một quản trị viên hoạt động trong hệ thống.");
+            }
+        }
+
+        existingUser.IsActive = request.IsActive;
+
         // Remove existing UserLines if LineIds are provided
         if (request.LineIds != null)
         {
@@ -462,6 +487,50 @@ public class UserRepository : IUserRepository
             }
         }
 
+        // Handle department assignment for non-manager roles
+        if (request.DepartmentId.HasValue)
+        {
+            var department = await db.Departments.FirstOrDefaultAsync(d => d.DepartmentId == request.DepartmentId.Value, cancellationToken);
+            if (department == null)
+            {
+                throw new ArgumentException($"Phòng ban với ID '{request.DepartmentId}' không tồn tại.");
+            }
+
+            var currentRoleName = existingUser.RoleId != null
+                ? (await db.Roles.FirstOrDefaultAsync(r => r.Id == existingUser.RoleId, cancellationToken))?.Name
+                : null;
+
+            if (currentRoleName == "Tổ trưởng")
+            {
+                if (request.LineIds == null || request.LineIds.Count == 0)
+                {
+                    throw new ArgumentException("Vai trò 'Tổ trưởng' phải có cả phòng ban và dây chuyền.");
+                }
+                // Nếu có line, set DepartmentId = null
+                existingUser.DepartmentId = null;
+            }
+            else if (currentRoleName != "Quản lý")
+            {
+                // Cho role khác (không phải Quản lý), nếu không có line, set DepartmentId
+                if (request.LineIds == null || request.LineIds.Count == 0)
+                {
+                    existingUser.DepartmentId = request.DepartmentId.Value;
+                }
+                else
+                {
+                    existingUser.DepartmentId = null;
+                }
+            }
+        }
+        else
+        {
+            // Nếu không có DepartmentId, set null (trừ trường hợp Quản lý đã xử lý riêng)
+            if (existingUser.Role == null || existingUser.Role.Name != "Quản lý")
+            {
+                existingUser.DepartmentId = null;
+            }
+        }
+
         await db.SaveChangesAsync(cancellationToken);
 
         // Return updated UserDTO
@@ -483,6 +552,7 @@ public class UserRepository : IUserRepository
             FullName = existingUser.FullName,
             Email = existingUser.Email,
             PhoneNumber = existingUser.PhoneNumber,
+            IsActive = existingUser.IsActive,
             Roles = roleName != null ? new List<string> { roleName } : new List<string>(),
             LineIds = userLineIds
         };

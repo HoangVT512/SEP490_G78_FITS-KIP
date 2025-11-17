@@ -55,7 +55,5 @@ namespace FITSKIP.Domain.DTO
         public DateTime? DateAdded { get; set; }
 
         public string? Status { get; set; }
-
-        public string? DocumentUrl { get; set; }
     }
 }

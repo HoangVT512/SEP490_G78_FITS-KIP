@@ -127,57 +127,26 @@ namespace FITSKIP.API.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                // Validation: Kiểm tra trạng thái incident - không cho phép tạo yêu cầu phụ tùng nếu incident đã hoàn thành
-                if (request.IncidentId.HasValue && request.IncidentId.Value > 0)
+                if (request.Quantity <= 0)
                 {
-                    var incident = await _incidentService.GetIncidentByIdAsync(request.IncidentId.Value, cancellationToken);
-                    if (incident != null && incident.Status == "Hoàn thành")
-                    {
-                        return BadRequest(new { message = "Không thể tạo yêu cầu phụ tùng cho sự cố đã hoàn thành" });
-                    }
+                    return BadRequest(new { message = "Số lượng phụ tùng phải lớn hơn 0" });
                 }
 
-                // Use validation-enabled service method
-                var created = await _service.CreateAsync(request, cancellationToken);
-
-                // ✅ GỬI THÔNG BÁO ĐẾN QUẢN LÝ KHO
-                try
+                // Mapping DTO to Entity
+                var replacementHistory = new ReplacementHistory
                 {
-                    var partInfo = created.Part != null
-                        ? $"{created.Part.PartName} ({created.Part.PartNumber})"
-                        : "Phụ tùng";
+                    PartId = request.PartId,
+                    EquipmentId = request.EquipmentId,
+                    IncidentId = request.IncidentId,
+                    WorkOrderId = request.WorkOrderId,
+                    Quantity = request.Quantity,
+                    ReplacedDate = request.ReplacedDate,
+                    ReplacedBy = request.ReplacedBy,
+                    Status = request.Status ?? "Đã xuất", // Mặc định là "Đã xuất" - Quản lý kho xuất trực tiếp
+                    Remarks = request.Remarks,
+                };
 
-                    var equipmentInfo = created.Equipment != null
-                        ? $"{created.Equipment.EquipmentName} ({created.Equipment.EquipmentCode})"
-                        : "Thiết bị";
-
-                    var requestType = created.IncidentId.HasValue ? "sự cố" : "bảo trì";
-                    var referenceId = created.IncidentId.HasValue
-                        ? $"INC-{created.IncidentId}"
-                        : created.WorkOrderId.HasValue
-                            ? $"WO-{created.WorkOrderId}"
-                            : "";
-
-                    var message = $"Yêu cầu phụ tùng mới từ {requestType} {referenceId}: {partInfo} cho {equipmentInfo} - Số lượng: {created.Quantity}";
-
-                    await _notificationService.SendNotificationToRoleAsync(
-                        "Quản lý kho",
-                        message,
-                        "ReplacementRequest"
-                    );
-
-                    // Broadcast SignalR notification
-                    await _notificationHubContext.Clients.All.SendAsync(
-                        "ReceiveDataUpdate",
-                        new { type = "replacementRequest", action = "created", id = created.ReplacementId },
-                        cancellationToken
-                    );
-                }
-                catch (Exception notificationEx)
-                {
-                    // Log notification error but don't fail the request
-                    Console.WriteLine($"Failed to send notification: {notificationEx.Message}");
-                }
+                var created = await _service.CreateAsync(replacementHistory, cancellationToken);
 
                 // Mapping Entity to DTO
                 var response = new ReplacementHistoryDTO
@@ -235,8 +204,29 @@ namespace FITSKIP.API.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                // Use validation-enabled service method
-                var result = await _service.UpdateAsync(id, request, cancellationToken);
+                // Mapping DTO to Entity
+                var replacementHistory = new ReplacementHistory
+                {
+                    PartId = request.PartId,
+                    EquipmentId = request.EquipmentId,
+                    IncidentId = request.IncidentId, // Add IncidentId mapping
+                    WorkOrderId = request.WorkOrderId, // Add WorkOrderId mapping
+                    Quantity = request.Quantity,
+                    ReplacedDate = request.ReplacedDate, // Use the date from request (not null)
+                    ReplacedBy = request.ReplacedBy,
+                    Status = request.Status,
+                    Remarks = request.Remarks,
+                    ActualQuantityUsed = request.ActualQuantityUsed,
+                    QuantityToReturn = request.QuantityToReturn,
+                    ReturnedDate = request.ReturnedDate, // Add returned date
+                    ReturnConfirmedBy = request.ReturnConfirmedBy, // Add return confirmed by
+                };
+                if (request.Quantity <= 0)
+                {
+                    return BadRequest(new { message = "Số lượng phụ tùng phải lớn hơn 0" });
+                }
+
+                var result = await _service.UpdateAsync(id, replacementHistory, cancellationToken);
 
 
                 return NoContent();

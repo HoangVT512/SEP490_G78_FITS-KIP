@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Form, Input, Select, DatePicker, Button, Table, Modal, Card, Row, Col, Typography, Tabs } from 'antd';
+import { Form, Input, Select, DatePicker, Button, Table, Modal, Card, Row, Col, Typography, Tabs, Divider } from 'antd';
 import { SaveOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
@@ -57,7 +57,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
   const [editValue, setEditValue] = useState('');
   const [activeTab, setActiveTab] = useState('1');
   const [incidentDetails, setIncidentDetails] = useState([]);
-  
+
   // State for incident detail modal
   const [incidentDetailModalVisible, setIncidentDetailModalVisible] = useState(false);
   const [selectedIncidentForDetail, setSelectedIncidentForDetail] = useState(null);
@@ -374,9 +374,9 @@ const calculateAndUpdateOEE = async (record, shift) => {
     // Calculate for shift 1
     shift1Data.forEach(slot => {
       // Only count slots that have target or result data
-      const hasData = (slot.targetAmount && parseInt(slot.targetAmount) > 0) || 
-                      (slot.resultAmount && parseInt(slot.resultAmount) > 0);
-      
+      const hasData = (slot.targetAmount && parseInt(slot.targetAmount) > 0) ||
+        (slot.resultAmount && parseInt(slot.resultAmount) > 0);
+
       if (hasData) {
         const loadingTime = parseInt(slot.loadingTime) || 0;
         totalLoadingTime += loadingTime;
@@ -396,9 +396,9 @@ const calculateAndUpdateOEE = async (record, shift) => {
     // Calculate for shift 2
     shift2Data.forEach(slot => {
       // Only count slots that have target or result data
-      const hasData = (slot.targetAmount && parseInt(slot.targetAmount) > 0) || 
-                      (slot.resultAmount && parseInt(slot.resultAmount) > 0);
-      
+      const hasData = (slot.targetAmount && parseInt(slot.targetAmount) > 0) ||
+        (slot.resultAmount && parseInt(slot.resultAmount) > 0);
+
       if (hasData) {
         const loadingTime = parseInt(slot.loadingTime) || 0;
         totalLoadingTime += loadingTime;
@@ -418,10 +418,10 @@ const calculateAndUpdateOEE = async (record, shift) => {
     // Calculate cycle times
     if (totalResultAmount > 0 && totalTargetAmount > 0) {
       const operatingTime = totalLoadingTime - totalDowntime;
-      
+
       // Actual Cycle Time = Operating Time / Result Amount (thời gian thực tế cho 1 sản phẩm)
       const actualCycleTime = (operatingTime * 60) / totalResultAmount;
-      
+
       // Ideal Cycle Time = Loading Time / Target Amount (thời gian lý tưởng cho 1 sản phẩm)
       const idealCycleTime = (totalLoadingTime * 60) / totalTargetAmount;
 
@@ -765,18 +765,18 @@ const calculateAndUpdateOEE = async (record, shift) => {
       const incidentIds = editValue
         .map(detail => detail?.incidentId)
         .filter(id => id !== null && id !== undefined);
-      
+
       if (incidentIds.length > 0 && incidents.length > 0) {
         console.log('Looking for incidents with IDs:', incidentIds);
         console.log('Available incidents:', incidents);
-        
+
         // Find matching incidents from already loaded incidents state
         // AND attach the slot-specific duration from downDetails
         const matchingIncidents = incidentIds
           .map((id) => {
             const incident = incidents.find(inc => inc.incidentId === id);
             const downDetail = editValue.find(detail => detail.incidentId === id);
-            
+
             if (incident && downDetail) {
               return {
                 ...incident,
@@ -787,7 +787,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
             return incident;
           })
           .filter(inc => inc !== null && inc !== undefined);
-        
+
         // Sort incidents by startTime - latest first (muộn nhất lên đầu)
         // Assign display numbers (newest = highest No., oldest = No.01)
         const sortedIncidents = matchingIncidents.sort((a, b) => {
@@ -1699,16 +1699,26 @@ const calculateAndUpdateOEE = async (record, shift) => {
           </Text>
         </div>
 
-        <div style={{ padding: '40px' }}>
+        <div style={{
+          background: 'linear-gradient(135deg, #CFCCD1 0%, #CFCCD1 100%)',
+          padding: '10px',
+          color: 'white',
+          position: 'relative'
+        }}>
           <Text type="secondary" style={{
             display: 'block',
-            marginBottom: '32px',
             fontSize: '15px',
-            color: '#6b7280'
+            fontWeight: 500,
+            padding: '0px 32px',
+            color: '#000000ff'
           }}>
             Nhập tiêu chí tìm kiếm để tìm biểu mẫu.
           </Text>
+        </div>
 
+        <div style={{
+          padding: '40px'
+        }}>
           <Form
             form={searchForm}
             layout="vertical"
@@ -1805,11 +1815,25 @@ const calculateAndUpdateOEE = async (record, shift) => {
             </Row>
           </Form>
 
+          <Divider
+            style={{
+              //borderColor: '#000',     // đậm hơn (đổi màu đậm)
+              borderWidth: 2,          // đường to hơn
+            }}
+          />
+
           {selectedLine && selectedFormType && selectedDate && (
             <div style={{ marginTop: '40px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
                 <Title level={4} style={{ margin: 0, color: '#283652' }}>
-                  Danh sách biểu mẫu đã lưu - {selectedLine}
+                  Danh sách biểu mẫu đã lưu - {(() => {
+                    const savedCount = savedForms.filter(form =>
+                      form.data.line === selectedLine &&
+                      form.data.date === dayjs(selectedDate).format('DD/MM/YYYY') &&
+                      form.status === 'saved'
+                    ).length;
+                    return savedCount;
+                  })()}
                 </Title>
               </div>
               {(() => {
@@ -1817,6 +1841,13 @@ const calculateAndUpdateOEE = async (record, shift) => {
                   form.data.line === selectedLine &&
                   form.data.date === dayjs(selectedDate).format('DD/MM/YYYY')
                 );
+
+                // Calculate count of saved forms
+                const savedCount = savedForms.filter(form =>
+                  form.data.line === selectedLine &&
+                  form.data.date === dayjs(selectedDate).format('DD/MM/YYYY') &&
+                  form.status === 'saved'
+                ).length;
 
                 // If no forms for this date, create a draft entry for display
                 if (filteredForms.length === 0) {
@@ -1884,6 +1915,35 @@ const calculateAndUpdateOEE = async (record, shift) => {
                             {text}
                           </div>
                         )
+                      },
+                      {
+                        title: 'Số lượng nhập',
+                        key: 'dataCount',
+                        width: 120,
+                        align: 'center',
+                        render: (_, record) => {
+                          //if (record.status !== 'saved') {
+                          //  return <span>-</span>;
+                          //}
+                          const shift1Data = record.data?.shifts?.[1] || [];
+                          const shift2Data = record.data?.shifts?.[2] || [];
+                          const allShiftData = [...shift1Data, ...shift2Data];
+                          const dataCount = allShiftData.filter(slot =>
+                            slot.resultAmount && slot.resultAmount.trim() !== ''
+                          ).length;
+                          return (
+                            <span style={{
+                              padding: '4px 8px',
+                              backgroundColor: '#f0f9ff',
+                              color: '#0369a1',
+                              borderRadius: '4px',
+                              fontSize: '13px',
+                              fontWeight: 600
+                            }}>
+                              {dataCount} nội dung
+                            </span>
+                          );
+                        },
                       },
                       {
                         title: 'Trạng Thái',
@@ -2014,7 +2074,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
                 <Form.Item
                   label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px', textAlign: 'left', display: 'block' }}>Tiêu Đề Biểu Mẫu</span>}
                   colon={false}
-                  labelCol={{ span: 2}}
+                  labelCol={{ span: 2 }}
                   wrapperCol={{ span: 22 }}
                 >
                   <Input
@@ -2035,7 +2095,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
               {/* Second row: Dây chuyền - full width */}
               <Col span={24}>
                 <Form.Item
-                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px', textAlign: 'left', display: 'block', marginRight: '30px' }}>Dây chuyền</span>}
+                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px', textAlign: 'left', display: 'block', marginRight: '38px' }}>Dây chuyền</span>}
                   colon={false}
                   labelCol={{ span: 2 }}
                   wrapperCol={{ span: 22 }}
@@ -2058,7 +2118,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
               {/* Third row: Quy trình - full width */}
               <Col span={24}>
                 <Form.Item
-                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px', textAlign: 'left', display: 'block', marginRight: '42px' }}>Quy Trình</span>}
+                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px', textAlign: 'left', display: 'block', marginRight: '48px' }}>Quy Trình</span>}
                   colon={false}
                   labelCol={{ span: 2 }}
                   wrapperCol={{ span: 22 }}
@@ -2081,7 +2141,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
               {/* Fourth row: Ngày - full width */}
               <Col span={24}>
                 <Form.Item
-                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px', textAlign: 'left', display: 'block', marginRight: '70px' }}>Ngày</span>}
+                  label={<span style={{ fontWeight: 600, color: '#374151', fontSize: '15px', textAlign: 'left', display: 'block', marginRight: '78px' }}>Ngày</span>}
                   colon={false}
                   labelCol={{ span: 2 }}
                   wrapperCol={{ span: 22 }}
@@ -3021,9 +3081,9 @@ const calculateAndUpdateOEE = async (record, shift) => {
       {/* Incident Detail Modal */}
       <Modal
         title={
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
             gap: '12px',
             padding: '8px 0'
           }}>
@@ -3037,8 +3097,8 @@ const calculateAndUpdateOEE = async (record, shift) => {
         onCancel={handleCloseIncidentDetail}
         width={900}
         footer={[
-          <Button 
-            key="close" 
+          <Button
+            key="close"
             onClick={handleCloseIncidentDetail}
             style={{
               borderRadius: '6px',
@@ -3048,8 +3108,8 @@ const calculateAndUpdateOEE = async (record, shift) => {
           >
             Đóng
           </Button>,
-          <Button 
-            key="viewInManagement" 
+          <Button
+            key="viewInManagement"
             type="primary"
             onClick={handleOpenInIncidentManagement}
             style={{
@@ -3064,8 +3124,8 @@ const calculateAndUpdateOEE = async (record, shift) => {
             🔗 Mở trong Quản Lý Sự Cố
           </Button>
         ]}
-        bodyStyle={{ 
-          maxHeight: '70vh', 
+        bodyStyle={{
+          maxHeight: '70vh',
           overflowY: 'auto',
           padding: '24px'
         }}
@@ -3073,26 +3133,26 @@ const calculateAndUpdateOEE = async (record, shift) => {
         {selectedIncidentForDetail && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             {/* Status Badge */}
-            <div style={{ 
-              backgroundColor: selectedIncidentForDetail.status === 'Hoàn thành' ? '#f0f9ff' : 
-                              selectedIncidentForDetail.status === 'Đang xử lý' ? '#fef3c7' : '#fef2f2',
+            <div style={{
+              backgroundColor: selectedIncidentForDetail.status === 'Hoàn thành' ? '#f0f9ff' :
+                selectedIncidentForDetail.status === 'Đang xử lý' ? '#fef3c7' : '#fef2f2',
               padding: '12px 16px',
               borderRadius: '8px',
               borderLeft: `4px solid ${selectedIncidentForDetail.status === 'Hoàn thành' ? '#0369a1' :
-                                                        selectedIncidentForDetail.status === 'Đang xử lý' ? '#d97706' : '#dc2626'}`
+                selectedIncidentForDetail.status === 'Đang xử lý' ? '#d97706' : '#dc2626'}`
             }}>
-              <Text strong style={{ 
+              <Text strong style={{
                 color: selectedIncidentForDetail.status === 'Hoàn thành' ? '#0369a1' :
-                       selectedIncidentForDetail.status === 'Đang xử lý' ? '#d97706' : '#dc2626'
+                  selectedIncidentForDetail.status === 'Đang xử lý' ? '#d97706' : '#dc2626'
               }}>
                 Trạng thái: {selectedIncidentForDetail.status}
               </Text>
             </div>
 
             {/* Equipment & Line Info */}
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr 1fr', 
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
               gap: '16px',
               padding: '16px',
               backgroundColor: '#f9fafb',
@@ -3137,7 +3197,7 @@ const calculateAndUpdateOEE = async (record, shift) => {
             </div>
 
             {/* Time Information */}
-            <div style={{ 
+            <div style={{
               padding: '16px',
               backgroundColor: '#f0f9ff',
               borderRadius: '8px'
@@ -3164,11 +3224,11 @@ const calculateAndUpdateOEE = async (record, shift) => {
                     Thời lượng (phút)
                   </Text>
                   <Text strong style={{ fontSize: '16px', color: '#dc2626' }}>
-                    {selectedIncidentForDetail.duration !== undefined && selectedIncidentForDetail.duration !== null 
-                      ? selectedIncidentForDetail.duration.toFixed(2) 
+                    {selectedIncidentForDetail.duration !== undefined && selectedIncidentForDetail.duration !== null
+                      ? selectedIncidentForDetail.duration.toFixed(2)
                       : (selectedIncidentForDetail.slotDuration !== undefined && selectedIncidentForDetail.slotDuration !== null
-                          ? selectedIncidentForDetail.slotDuration.toFixed(2)
-                          : 'N/A')}
+                        ? selectedIncidentForDetail.slotDuration.toFixed(2)
+                        : 'N/A')}
                   </Text>
                 </div>
               </div>
@@ -3179,9 +3239,9 @@ const calculateAndUpdateOEE = async (record, shift) => {
               <Text strong style={{ fontSize: '14px', display: 'block', marginBottom: '8px', color: '#374151' }}>
                 Mô tả vấn đề
               </Text>
-              <div style={{ 
-                padding: '12px', 
-                backgroundColor: '#f9fafb', 
+              <div style={{
+                padding: '12px',
+                backgroundColor: '#f9fafb',
                 borderRadius: '6px',
                 border: '1px solid #e5e7eb',
                 minHeight: '60px'
@@ -3195,9 +3255,9 @@ const calculateAndUpdateOEE = async (record, shift) => {
               <Text strong style={{ fontSize: '14px', display: 'block', marginBottom: '8px', color: '#374151' }}>
                 Nguyên nhân
               </Text>
-              <div style={{ 
-                padding: '12px', 
-                backgroundColor: '#f9fafb', 
+              <div style={{
+                padding: '12px',
+                backgroundColor: '#f9fafb',
                 borderRadius: '6px',
                 border: '1px solid #e5e7eb',
                 minHeight: '60px'
@@ -3211,9 +3271,9 @@ const calculateAndUpdateOEE = async (record, shift) => {
               <Text strong style={{ fontSize: '14px', display: 'block', marginBottom: '8px', color: '#374151' }}>
                 Giải pháp
               </Text>
-              <div style={{ 
-                padding: '12px', 
-                backgroundColor: '#f9fafb', 
+              <div style={{
+                padding: '12px',
+                backgroundColor: '#f9fafb',
                 borderRadius: '6px',
                 border: '1px solid #e5e7eb',
                 minHeight: '60px'
@@ -3223,9 +3283,9 @@ const calculateAndUpdateOEE = async (record, shift) => {
             </div>
 
             {/* Reporter and Tech Support */}
-            <div style={{ 
-              display: 'grid', 
-              gridTemplateColumns: '1fr auto', 
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr auto',
               gap: '16px',
               padding: '16px',
               backgroundColor: '#f9fafb',

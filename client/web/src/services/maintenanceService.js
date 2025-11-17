@@ -210,6 +210,14 @@ export const completeWorkOrder = async (workOrderId, completionData) => {
   });
 };
 
+// Close work order (TechManager) - Đóng phiếu bảo trì sau khi kiểm tra
+export const closeWorkOrder = async (workOrderId, notes = null) => {
+  return apiRequest(`/maintenance/work-orders/${workOrderId}/close`, {
+    method: "POST",
+    body: JSON.stringify({ notes }),
+  });
+};
+
 // Cancel work order
 export const cancelWorkOrder = async (workOrderId, reason) => {
   return apiRequest(`/maintenance/work-orders/${workOrderId}/cancel`, {

@@ -15,12 +15,6 @@ namespace FITSKIP.Application.Interfaces
         Task<MaintenancePlanDTO> UpdatePlanAsync(int planId, UpdateMaintenancePlanRequest request);
         Task DeletePlanAsync(int planId);
 
-        // Plan Operations
-        Task<MaintenancePlanDTO> PostponeMaintenancePlanAsync(int planId, PostponeMaintenancePlanRequest request, string userId);
-        Task<MaintenancePlanDTO> AssignMultipleTechniciansAsync(int planId, AssignMultipleTechniciansRequest request, string userId);
-        Task RemoveTechnicianAssignmentAsync(int assignmentId);
-        Task<IEnumerable<MaintenancePlanDTO>> GetUnassignedPlansNeedingAttentionAsync(int daysBeforeDue = 3);
-
         // Statistics
         Task<IEnumerable<MaintenancePlanDTO>> GetUpcomingMaintenanceAsync(int days = 7);
     }
