@@ -2,6 +2,7 @@ using FITSKIP.Application.Interfaces;
 using FITSKIP.Application.Services;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using FITSKIP.Domain.Exceptions;
 using FITSKIP.Domain.Interfaces;
 using Moq;
 
@@ -229,6 +230,11 @@ public class PurchaseRequestServiceManualTest
         _mockUserRepository.Setup(x => x.GetUserByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
+        // Setup mock for spare part validation
+        var sparePart = _sparePartTestData.FirstOrDefault(p => p.PartId == request.PartId);
+        _mockSparePartRepository.Setup(x => x.ExistsAsync(request.PartId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(sparePart != null);
+
         // Setup mock for duplicate check
         _mockPurchaseRequestRepository.Setup(x => x.GetByPartIdAndStatusAsync(request.PartId, "Chờ duyệt", It.IsAny<CancellationToken>()))
             .ReturnsAsync((PurchaseRequest?)null);
@@ -246,15 +252,29 @@ public class PurchaseRequestServiceManualTest
             Quantity = request.Quantity,
             Reason = request.Reason,
             Status = "Chờ duyệt",
-            Part = _sparePartTestData.FirstOrDefault(p => p.PartId == request.PartId),
+            Part = sparePart,
             RequestedByNavigation = user
         };
 
         _mockPurchaseRequestRepository.Setup(x => x.CreateAsync(It.IsAny<PurchaseRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(newRequest);
 
-        var result = await _service.CreatePurchaseRequestAsync(request, userId);
-        return result;
+        try
+        {
+            var result = await _service.CreatePurchaseRequestAsync(request, userId);
+            Console.WriteLine("[SUCCESS] Purchase request created successfully");
+            return result;
+        }
+        catch (PurchaseRequestValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
+        }
     }
 
     private async Task<PurchaseRequestDTO?> TestUpdatePurchaseRequestAsync(int id, UpdatePurchaseRequestRequest request, string userId)
@@ -262,9 +282,21 @@ public class PurchaseRequestServiceManualTest
         var existingRequest = _testData.FirstOrDefault(r => r.RequestId == id);
         if (existingRequest == null) return null;
 
-        // Setup mock
+        // Setup mock for request retrieval
         _mockPurchaseRequestRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingRequest);
+
+        // Setup mock for spare part validation
+        var sparePart = _sparePartTestData.FirstOrDefault(p => p.PartId == request.PartId);
+        _mockSparePartRepository.Setup(x => x.ExistsAsync(request.PartId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(sparePart != null);
+
+        // Setup mock for duplicate check if PartId is being changed
+        if (existingRequest.PartId != request.PartId)
+        {
+            _mockPurchaseRequestRepository.Setup(x => x.GetByPartIdAndStatusAsync(request.PartId, "Chờ duyệt", It.IsAny<CancellationToken>()))
+                .ReturnsAsync((PurchaseRequest?)null);
+        }
 
         var updatedRequest = new PurchaseRequest
         {
@@ -274,15 +306,36 @@ public class PurchaseRequestServiceManualTest
             Quantity = request.Quantity,
             Reason = request.Reason,
             Status = existingRequest.Status,
-            Part = _sparePartTestData.FirstOrDefault(p => p.PartId == request.PartId),
+            Part = sparePart,
             RequestedByNavigation = _userTestData.FirstOrDefault(u => u.Id == userId)
         };
 
         _mockPurchaseRequestRepository.Setup(x => x.UpdateAsync(It.IsAny<PurchaseRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(updatedRequest);
 
-        var result = await _service.UpdatePurchaseRequestAsync(id, request, userId);
-        return result;
+        try
+        {
+            var result = await _service.UpdatePurchaseRequestAsync(id, request, userId);
+            if (result != null)
+            {
+                Console.WriteLine("[SUCCESS] Purchase request updated successfully");
+            }
+            else
+            {
+                Console.WriteLine("[WARNING] Update returned null");
+            }
+            return result;
+        }
+        catch (PurchaseRequestValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
+        }
     }
 
     private async Task<bool> TestDeletePurchaseRequestAsync(int id, string userId)
@@ -290,14 +343,48 @@ public class PurchaseRequestServiceManualTest
         var existingRequest = _testData.FirstOrDefault(r => r.RequestId == id);
         if (existingRequest == null) return false;
 
-        // Setup mock
+        // Setup mock for request retrieval
         _mockPurchaseRequestRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingRequest);
+
+        // Setup mock for deletion
         _mockPurchaseRequestRepository.Setup(x => x.DeleteAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        var result = await _service.DeletePurchaseRequestAsync(id, userId);
-        return result;
+        try
+        {
+            var result = await _service.DeletePurchaseRequestAsync(id, userId);
+
+            if (result)
+            {
+                Console.WriteLine("[SUCCESS] Purchase request deleted successfully");
+            }
+            else
+            {
+                Console.WriteLine("[FAILED] Failed to delete purchase request");
+            }
+            return result;
+        }
+        catch (PurchaseRequestValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return false;
+        }
+        catch (UnauthorizedAccessException ex)
+        {
+            Console.WriteLine($"[UNAUTHORIZED] {ex.Message}");
+            return false;
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"[INVALID OPERATION] {ex.Message}");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return false;
+        }
     }
 
     private async Task<PurchaseRequestDTO?> TestApprovePurchaseRequestAsync(int id, string managerId)

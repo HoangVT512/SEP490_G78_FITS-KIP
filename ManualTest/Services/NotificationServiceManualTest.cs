@@ -2,6 +2,7 @@ using FITSKIP.Application.Services;
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using FITSKIP.Domain.Exceptions;
 using FITSKIP.Domain.Interfaces;
 using Moq;
 
@@ -164,13 +165,21 @@ public class NotificationServiceManualTest
             Message = message
         };
 
-        // Setup mock
+        // Setup mock for user validation if userId is provided
+        if (!string.IsNullOrWhiteSpace(request.UserId))
+        {
+            var user = _testUsers.FirstOrDefault(u => u.Id == request.UserId);
+            _mockUserRepository.Setup(x => x.GetUserByIdAsync(request.UserId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(user);
+        }
+
+        // Create notification with trimmed values and UTC time as done in service
         var newNotification = new Notification
         {
             NotificationId = _testNotifications.Max(n => n.NotificationId) + 1,
             UserId = request.UserId,
-            Title = request.Title,
-            Message = request.Message,
+            Title = request.Title?.Trim(),
+            Message = request.Message.Trim(),
             IsRead = false,
             CreatedDate = DateTime.UtcNow
         };
@@ -183,6 +192,11 @@ public class NotificationServiceManualTest
             var result = await _service.CreateNotificationAsync(request);
             Console.WriteLine("[SUCCESS] Notification created successfully");
             return result;
+        }
+        catch (NotificationValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return null;
         }
         catch (Exception ex)
         {
@@ -316,11 +330,15 @@ public class NotificationServiceManualTest
             return false;
         }
 
-        var notification = _testNotifications.FirstOrDefault(n => n.NotificationId == id && n.UserId == userId);
+        var notification = _testNotifications.FirstOrDefault(n => n.NotificationId == id);
 
-        // Setup mock
+        // Setup mock for notification retrieval
+        _mockRepository.Setup(x => x.GetByIdAsync(id))
+            .ReturnsAsync(notification);
+
+        // Setup mock for marking as read
         _mockRepository.Setup(x => x.MarkAsReadAsync(id, userId))
-            .ReturnsAsync(notification != null);
+            .ReturnsAsync(notification != null && notification.UserId == userId);
 
         try
         {
@@ -335,6 +353,11 @@ public class NotificationServiceManualTest
                 Console.WriteLine("[FAILED] Failed to mark notification as read");
             }
             return result;
+        }
+        catch (NotificationValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return false;
         }
         catch (Exception ex)
         {
@@ -408,7 +431,11 @@ public class NotificationServiceManualTest
             return false;
         }
 
-        // Setup mock
+        // Setup mock for notification retrieval
+        _mockRepository.Setup(x => x.GetByIdAsync(id))
+            .ReturnsAsync(notification);
+
+        // Setup mock for deletion
         _mockRepository.Setup(x => x.DeleteAsync(id))
             .ReturnsAsync(true);
 
@@ -425,6 +452,11 @@ public class NotificationServiceManualTest
                 Console.WriteLine("[FAILED] Failed to delete notification");
             }
             return result;
+        }
+        catch (NotificationValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return false;
         }
         catch (Exception ex)
         {

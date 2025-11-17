@@ -2,6 +2,7 @@ using FITSKIP.Application.Services;
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using FITSKIP.Domain.Exceptions;
 using FITSKIP.Domain.Interfaces;
 using Moq;
 
@@ -228,10 +229,13 @@ public class StageServiceManualTest
         _mockStageRepository.Setup(x => x.GetByLineIdAsync(lineId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingStagesInLine);
 
+        // Normalize stage name as done in the service
+        var normalizedStageName = System.Text.RegularExpressions.Regex.Replace(request.StageName.Trim(), @"\s+", " ");
+
         var newStage = new Stage
         {
             StageId = _testStages.Max(s => s.StageId) + 1,
-            StageName = request.StageName.Trim(),
+            StageName = normalizedStageName,
             LineId = request.LineId,
             IsActive = true
         };
@@ -244,6 +248,11 @@ public class StageServiceManualTest
             var result = await _service.CreateStageAsync(request);
             Console.WriteLine("[SUCCESS] Stage created successfully");
             return result;
+        }
+        catch (StageValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return null;
         }
         catch (Exception ex)
         {
@@ -292,10 +301,13 @@ public class StageServiceManualTest
         _mockStageRepository.Setup(x => x.GetByLineIdAsync(lineId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingStagesInLine);
 
+        // Normalize stage name as done in the service
+        var normalizedStageName = System.Text.RegularExpressions.Regex.Replace(request.StageName.Trim(), @"\s+", " ");
+
         var updatedStage = new Stage
         {
             StageId = id,
-            StageName = request.StageName.Trim(),
+            StageName = normalizedStageName,
             LineId = request.LineId,
             IsActive = request.IsActive
         };
@@ -316,6 +328,11 @@ public class StageServiceManualTest
                 Console.WriteLine("[WARNING] Update returned null");
             }
             return result;
+        }
+        catch (StageValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return null;
         }
         catch (Exception ex)
         {

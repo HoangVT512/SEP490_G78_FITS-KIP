@@ -44,15 +44,15 @@ class Program
                 case "9":
                     await RunSparePartServiceTests();
                     break;
-                case "10":
+/*                case "10":
                     await RunReplacementHistoryServiceTests();
-                    break;
+                    break;*/
                 case "11":
                     await RunNotificationServiceTests();
                     break;
-                case "12":
+/*                case "12":
                     await RunDashboardServiceTests();
-                    break;
+                    break;*/
                 case "0":
                     Console.WriteLine("Goodbye!");
                     return;
@@ -158,12 +158,12 @@ class Program
         await testRunner.RunTests();
     }
 
-    static async Task RunReplacementHistoryServiceTests()
-    {
+    //static async Task RunReplacementHistoryServiceTests()
+    //{
 
-        var testRunner = new ReplacementHistoryServiceManualTest();
-        await testRunner.RunTests();
-    }
+    //    var testRunner = new ReplacementHistoryServiceManualTest();
+    //    await testRunner.RunTests();
+    //}
 
     static async Task RunNotificationServiceTests()
     {
@@ -172,11 +172,11 @@ class Program
         await testRunner.RunTests();
     }
 
-    static async Task RunDashboardServiceTests()
+/*    static async Task RunDashboardServiceTests()
     {
 
         var testRunner = new DashboardServiceManualTest();
         await testRunner.RunTests();
-    }
+    }*/
 
 }

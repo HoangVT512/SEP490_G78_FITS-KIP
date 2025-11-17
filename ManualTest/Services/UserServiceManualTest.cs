@@ -2,6 +2,7 @@ using FITSKIP.Application.Services;
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using FITSKIP.Domain.Exceptions;
 using FITSKIP.Domain.Interfaces;
 using Moq;
 
@@ -259,7 +260,23 @@ public class UserServiceManualTest
 
     private async Task<User> TestCreateUserWithAssignmentsAsync(CreateUserRequest request)
     {
-        // Setup mock
+        // Setup mocks for validation
+        // Mock email check (no existing user with this email)
+        _mockRepository.Setup(x => x.GetByEmailAsync(It.Is<string>(email => email == request.Email.Trim().ToLower()), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+
+        // Mock employee code check if provided (no existing user with this employee code)
+        if (!string.IsNullOrWhiteSpace(request.EmployeeCode))
+        {
+            _mockRepository.Setup(x => x.GetByEmployeeCodeAsync(It.Is<string>(code => code == request.EmployeeCode.Trim().ToUpper()), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((User?)null);
+        }
+
+        // Mock departments list for department validation
+        _mockRepository.Setup(x => x.GetDepartmentsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testDepartments);
+
+        // Setup mock for successful creation
         var newUser = new User
         {
             Id = Guid.NewGuid().ToString(),
@@ -274,8 +291,22 @@ public class UserServiceManualTest
         _mockRepository.Setup(x => x.CreateUserWithAssignmentsAsync(It.IsAny<CreateUserRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(newUser);
 
-        var result = await _service.CreateUserWithAssignmentsAsync(request);
-        return result;
+        try
+        {
+            var result = await _service.CreateUserWithAssignmentsAsync(request);
+            Console.WriteLine("[SUCCESS] User created with assignments successfully");
+            return result;
+        }
+        catch (UserValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            throw;
+        }
     }
 
     private async Task<UserDTO?> TestUpdateUserAsync(string id, UpdateUserRequest request)
@@ -283,7 +314,31 @@ public class UserServiceManualTest
         var existingUser = _testUsers.FirstOrDefault(u => u.Id == id);
         if (existingUser == null) return null;
 
-        // Setup mock
+        // Setup mocks for validation
+        // Mock user existence check
+        _mockRepository.Setup(x => x.GetUserByIdAsync(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingUser);
+
+        // Mock email check (no existing user with this email except current user)
+        _mockRepository.Setup(x => x.GetUsersWithRolesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testUsers.Select(u => new UserDTO
+            {
+                Id = u.Id,
+                Email = u.Email,
+                EmployeeCode = u.EmployeeCode,
+                FullName = u.FullName,
+                PhoneNumber = u.PhoneNumber,
+                IsActive = u.IsActive,
+                DepartmentId = u.DepartmentId,
+                Roles = new List<string>(),
+                LineIds = new List<int>()
+            }).ToList());
+
+        // Mock departments list for department validation
+        _mockRepository.Setup(x => x.GetDepartmentsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(_testDepartments);
+
+        // Setup mock for successful update
         var updatedUserDTO = new UserDTO
         {
             Id = id,
@@ -300,8 +355,30 @@ public class UserServiceManualTest
         _mockRepository.Setup(x => x.UpdateUserAsync(id, It.IsAny<UpdateUserRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(updatedUserDTO);
 
-        var result = await _service.UpdateUserAsync(id, request);
-        return result;
+        try
+        {
+            var result = await _service.UpdateUserAsync(id, request);
+
+            if (result != null)
+            {
+                Console.WriteLine("[SUCCESS] User updated successfully");
+            }
+            else
+            {
+                Console.WriteLine("[WARNING] Update returned null");
+            }
+            return result;
+        }
+        catch (UserValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
+        }
     }
 
     private async Task<User?> TestDeleteUserAsync(string id)

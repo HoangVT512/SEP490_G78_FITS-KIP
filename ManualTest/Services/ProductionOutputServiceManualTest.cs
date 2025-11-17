@@ -2,6 +2,7 @@ using FITSKIP.Application.Services;
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using FITSKIP.Domain.Exceptions;
 using FITSKIP.Domain.Interfaces;
 using Moq;
 
@@ -285,8 +286,22 @@ public class ProductionOutputServiceManualTest
         _mockRepository.Setup(x => x.CreateAsync(It.IsAny<ProductionOutput>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(newOutput);
 
-        var result = await _service.CreateProductionOutputAsync(request);
-        return result;
+        try
+        {
+            var result = await _service.CreateProductionOutputAsync(request);
+            Console.WriteLine("[SUCCESS] Production output created successfully");
+            return result;
+        }
+        catch (ProductionOutputValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
+        }
     }
 
     private async Task<ProductionOutputDTO?> TestUpdateProductionOutputAsync(int id, UpdateProductionOutputRequest request)
@@ -316,9 +331,9 @@ public class ProductionOutputServiceManualTest
             TargetAmount = request.TargetAmount,
             ResultAmount = request.ResultAmount,
             LoadingTime = existingOutput.LoadingTime,
-            OEE = request.ResultAmount.HasValue && request.TargetAmount.HasValue
+            OEE = request.ResultAmount.HasValue && request.TargetAmount.HasValue && request.TargetAmount.Value > 0 && request.ResultAmount.Value > 0
                 ? (decimal)(request.ResultAmount.Value) / request.TargetAmount.Value
-                : 0,
+                : null,
             CreatedAt = existingOutput.CreatedAt,
             UpdatedAt = DateTime.UtcNow,
             Line = existingOutput.Line,
@@ -328,8 +343,30 @@ public class ProductionOutputServiceManualTest
         _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<ProductionOutput>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(updatedOutput);
 
-        var result = await _service.UpdateProductionOutputAsync(id, request);
-        return result;
+        try
+        {
+            var result = await _service.UpdateProductionOutputAsync(id, request);
+
+            if (result != null)
+            {
+                Console.WriteLine("[SUCCESS] Production output updated successfully");
+            }
+            else
+            {
+                Console.WriteLine("[WARNING] Update returned null");
+            }
+            return result;
+        }
+        catch (ProductionOutputValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return null;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
+        }
     }
 
     private async Task<bool> TestDeleteProductionOutputAsync(int id)
@@ -337,12 +374,38 @@ public class ProductionOutputServiceManualTest
         var existingOutput = _testData.FirstOrDefault(o => o.OutputId == id);
         if (existingOutput == null) return false;
 
-        // Setup mock
+        // Setup mock for output retrieval
+        _mockRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existingOutput);
+
+        // Setup mock for deletion
         _mockRepository.Setup(x => x.DeleteAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
-        var result = await _service.DeleteProductionOutputAsync(id);
-        return result;
+        try
+        {
+            var result = await _service.DeleteProductionOutputAsync(id);
+
+            if (result)
+            {
+                Console.WriteLine("[SUCCESS] Production output deleted successfully");
+            }
+            else
+            {
+                Console.WriteLine("[FAILED] Failed to delete production output");
+            }
+            return result;
+        }
+        catch (ProductionOutputValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return false;
+        }
     }
 
     private async Task<IReadOnlyList<ProductionOutputDTO>> TestGetProductionOutputsByLineAsync(int lineId)

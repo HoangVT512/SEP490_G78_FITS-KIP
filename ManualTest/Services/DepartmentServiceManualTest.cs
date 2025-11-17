@@ -2,6 +2,7 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using FITSKIP.Domain.Exceptions;
 using FITSKIP.Domain.Interfaces;
 using Moq;
 
@@ -9,14 +10,18 @@ namespace FITSKIP.Application.Tests.ManualTests;
 
 public class DepartmentServiceManualTest
 {
-    private readonly Mock<IDepartmentRepository> _mockRepository;
+    private readonly Mock<IDepartmentRepository> _mockDepartmentRepository;
+    private readonly Mock<IUserRepository> _mockUserRepository;
+    private readonly Mock<IRoleRepository> _mockRoleRepository;
     private readonly DepartmentService _service;
     private readonly List<Department> _testData;
 
     public DepartmentServiceManualTest()
     {
-        _mockRepository = new Mock<IDepartmentRepository>();
-        _service = new DepartmentService(_mockRepository.Object);
+        _mockDepartmentRepository = new Mock<IDepartmentRepository>();
+        _mockUserRepository = new Mock<IUserRepository>();
+        _mockRoleRepository = new Mock<IRoleRepository>();
+        _service = new DepartmentService(_mockDepartmentRepository.Object, _mockUserRepository.Object, _mockRoleRepository.Object);
         _testData = InitializeTestData();
     }
 
@@ -124,14 +129,14 @@ public class DepartmentServiceManualTest
         Console.WriteLine("TEST: GetAllAsync");
 
         // Setup mock
-        _mockRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockDepartmentRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testData);
 
         // Execute
         var result = await _service.GetAllAsync();
 
         // Verify
-        _mockRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _mockDepartmentRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
 
         Console.WriteLine($"[SUCCESS] Found {result.Count} departments");
         return result;
@@ -142,7 +147,7 @@ public class DepartmentServiceManualTest
         Console.WriteLine("TEST: GetActiveAsync");
 
         // Setup mock
-        _mockRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockDepartmentRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testData);
 
         // Execute
@@ -164,7 +169,7 @@ public class DepartmentServiceManualTest
 
         var dept = _testData.FirstOrDefault(d => d.DepartmentId == id);
 
-        _mockRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+        _mockDepartmentRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(dept);
 
         try
@@ -196,35 +201,62 @@ public class DepartmentServiceManualTest
         Console.Write("[INPUT] Enter Department Name: ");
         var name = Console.ReadLine();
 
-        Console.Write("[INPUT] Enter Description: ");
+        Console.Write("[INPUT] Enter Description (optional): ");
         var description = Console.ReadLine();
+
+        Console.Write("[INPUT] Enter Manager ID (optional): ");
+        var managerId = Console.ReadLine();
 
         var request = new CreateDepartmentRequest
         {
             DepartmentName = name ?? "",
-            Description = description
+            Description = string.IsNullOrWhiteSpace(description) ? null : description,
+            ManagerId = string.IsNullOrWhiteSpace(managerId) ? null : managerId
         };
 
-        // Setup mock
-        _mockRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+        // Setup repository mocks
+        _mockDepartmentRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testData);
 
         var newDept = new Department
         {
             DepartmentId = _testData.Max(d => d.DepartmentId) + 1,
-            DepartmentName = request.DepartmentName,
-            Description = request.Description,
+            DepartmentName = request.DepartmentName.Trim(),
+            Description = request.Description?.Trim(),
+            ManagerId = request.ManagerId,
             IsActive = true
         };
 
-        _mockRepository.Setup(x => x.CreateAsync(It.IsAny<Department>(), It.IsAny<CancellationToken>()))
+        _mockDepartmentRepository.Setup(x => x.CreateAsync(It.IsAny<Department>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(newDept);
+
+        // Setup user repository mock for manager validation
+        if (!string.IsNullOrWhiteSpace(request.ManagerId))
+        {
+            var manager = new User
+            {
+                Id = request.ManagerId,
+                FullName = "Test Manager",
+                Email = "test@manager.com"
+            };
+            _mockUserRepository.Setup(x => x.GetUserByIdAsync(request.ManagerId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(manager);
+
+            var managers = new List<User> { manager };
+            _mockUserRepository.Setup(x => x.GetUsersByRoleAsync("Quản lý", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(managers);
+        }
 
         try
         {
             var result = await _service.CreateAsync(request);
             Console.WriteLine("[SUCCESS] Department created successfully");
             return result;
+        }
+        catch (DepartmentValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return null!;
         }
         catch (Exception ex)
         {
@@ -252,7 +284,7 @@ public class DepartmentServiceManualTest
         Console.Write("[INPUT] Enter new Department Name: ");
         var name = Console.ReadLine();
 
-        Console.Write("[INPUT] Enter new Description: ");
+        Console.Write("[INPUT] Enter new Description (optional): ");
         var description = Console.ReadLine();
 
         Console.Write("[INPUT] Enter new Active status (true/false): ");
@@ -266,25 +298,26 @@ public class DepartmentServiceManualTest
         var request = new UpdateDepartmentRequest
         {
             DepartmentName = name ?? existingDept.DepartmentName,
-            Description = description ?? existingDept.Description,
+            Description = string.IsNullOrWhiteSpace(description) ? existingDept.Description : description,
             IsActive = isActive
         };
 
-        // Setup mock
-        _mockRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+        // Setup repository mocks
+        _mockDepartmentRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingDept);
-        _mockRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+        _mockDepartmentRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(_testData);
 
         var updatedDept = new Department
         {
             DepartmentId = id,
-            DepartmentName = request.DepartmentName,
-            Description = request.Description,
+            DepartmentName = request.DepartmentName.Trim(),
+            Description = request.Description?.Trim(),
+            ManagerId = existingDept.ManagerId,
             IsActive = request.IsActive
         };
 
-        _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Department>(), It.IsAny<CancellationToken>()))
+        _mockDepartmentRepository.Setup(x => x.UpdateAsync(It.IsAny<Department>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(updatedDept);
 
         try
@@ -300,6 +333,11 @@ public class DepartmentServiceManualTest
                 Console.WriteLine("[WARNING] Update returned null");
             }
             return result;
+        }
+        catch (DepartmentValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return null;
         }
         catch (Exception ex)
         {
@@ -327,7 +365,7 @@ public class DepartmentServiceManualTest
         Console.WriteLine($"[STATUS] Will toggle from {existingDept.IsActive} to {!existingDept.IsActive}");
 
         // Setup mock
-        _mockRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
+        _mockDepartmentRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingDept);
 
         var toggledDept = new Department
@@ -339,7 +377,7 @@ public class DepartmentServiceManualTest
             IsActive = !existingDept.IsActive
         };
 
-        _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<Department>(), It.IsAny<CancellationToken>()))
+        _mockDepartmentRepository.Setup(x => x.UpdateAsync(It.IsAny<Department>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(toggledDept);
 
         try
@@ -388,7 +426,7 @@ public class DepartmentServiceManualTest
         }
 
         // Setup mock
-        _mockRepository.Setup(x => x.DeleteAsync(id, It.IsAny<CancellationToken>()))
+        _mockDepartmentRepository.Setup(x => x.DeleteAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         try

@@ -2,6 +2,7 @@ using FITSKIP.Application.Services;
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using FITSKIP.Domain.Exceptions;
 using FITSKIP.Domain.Interfaces;
 using Moq;
 
@@ -234,16 +235,15 @@ public class LineServiceManualTest
         _mockLineRepository.Setup(x => x.GetByDepartmentIdAsync(deptId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingLinesInDept);
 
-        var normalizedCode = lineCode?.Trim().ToUpper();
-        var existingLineByCode = _testLines.FirstOrDefault(l => l.LineCode?.ToUpper() == normalizedCode);
-        _mockLineRepository.Setup(x => x.GetByLineCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingLineByCode);
+        // Normalize line name and line code as done in the service
+        var normalizedLineName = System.Text.RegularExpressions.Regex.Replace(request.LineName.Trim(), @"\s+", " ");
+        var normalizedLineCode = request.LineCode.Trim().ToUpper();
 
         var newLine = new Line
         {
             LineId = _testLines.Max(l => l.LineId) + 1,
-            LineName = request.LineName.Trim(),
-            LineCode = request.LineCode.Trim().ToUpper(),
+            LineName = normalizedLineName,
+            LineCode = normalizedLineCode,
             DepartmentId = request.DepartmentId,
             IsActive = true
         };
@@ -256,6 +256,11 @@ public class LineServiceManualTest
             var result = await _service.CreateLineAsync(request);
             Console.WriteLine("[SUCCESS] Line created successfully");
             return result;
+        }
+        catch (LineValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return null;
         }
         catch (Exception ex)
         {
@@ -308,17 +313,22 @@ public class LineServiceManualTest
         _mockLineRepository.Setup(x => x.GetByDepartmentIdAsync(deptId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(existingLinesInDept);
 
-        var normalizedCode = lineCode?.Trim().ToUpper();
-        var existingLineByCode = _testLines.FirstOrDefault(l =>
-            l.LineCode?.ToUpper() == normalizedCode && l.LineId != id);
-        _mockLineRepository.Setup(x => x.GetByLineCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(existingLineByCode);
+        // Normalize line name and line code as done in the service
+        var normalizedLineName = System.Text.RegularExpressions.Regex.Replace(request.LineName.Trim(), @"\s+", " ");
+        var normalizedLineCode = request.LineCode.Trim().ToUpper();
+
+        // Setup mock for UserLine removal if department changes
+        if (existingLine.DepartmentId != request.DepartmentId)
+        {
+            _mockLineRepository.Setup(x => x.RemoveUserLinesForLineAsync(id, It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
+        }
 
         var updatedLine = new Line
         {
             LineId = id,
-            LineName = request.LineName.Trim(),
-            LineCode = request.LineCode.Trim().ToUpper(),
+            LineName = normalizedLineName,
+            LineCode = normalizedLineCode,
             DepartmentId = request.DepartmentId,
             IsActive = request.IsActive
         };
@@ -339,6 +349,11 @@ public class LineServiceManualTest
                 Console.WriteLine("[WARNING] Update returned null");
             }
             return result;
+        }
+        catch (LineValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return null;
         }
         catch (Exception ex)
         {
@@ -440,8 +455,33 @@ public class LineServiceManualTest
             return new List<Line>();
         }
 
-        // For testing, simulate some lines assigned to the user
-        var userLines = _testLines.Take(2).ToList();
+        // Validate userId format
+        if (userId.Length < 3)
+        {
+            Console.WriteLine("[ERROR] User ID must be at least 3 characters long.");
+            return new List<Line>();
+        }
+
+        // Simulate user validation - check if user exists
+        var validUserIds = new[] { "USER001", "USER002", "USER003", "TECH001", "TECH002" };
+        var userExists = validUserIds.Contains(userId.ToUpper());
+
+        if (!userExists)
+        {
+            Console.WriteLine($"[ERROR] User '{userId}' not found or access denied.");
+            return new List<Line>();
+        }
+
+        // For testing, simulate different scenarios based on userId
+        var userLines = userId.ToUpper() switch
+        {
+            "USER001" => _testLines.Where(l => l.DepartmentId == 1).ToList(), // Production dept lines
+            "USER002" => _testLines.Where(l => l.DepartmentId == 2).ToList(), // Single line
+            "USER003" => _testLines.Where(l => l.DepartmentId == 3).ToList(), // QC dept lines
+            "TECH001" => _testLines.Where(l => l.IsActive).Take(3).ToList(), // Active lines
+            "TECH002" => new List<Line>(), // No lines assigned
+            _ => _testLines.Take(2).ToList() // Default fallback
+        };
 
         // Setup mock
         _mockLineRepository.Setup(x => x.GetLinesByUserAsync(userId, It.IsAny<CancellationToken>()))
@@ -544,7 +584,7 @@ public class LineServiceManualTest
     private string FormatLine(Line line)
     {
         if (line == null) return "[NULL]";
-        
+
         return $"{{ID:{line.LineId}, Name:\"{line.LineName}\", Code:\"{line.LineCode}\", DeptID:{line.DepartmentId}, Active:{line.IsActive}}}";
     }
 }

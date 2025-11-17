@@ -3,6 +3,8 @@ using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Internal;
 using Moq;
 
 namespace FITSKIP.Application.Tests.ManualTests;
@@ -111,6 +113,58 @@ public class IncidentServiceManualTest
                         Console.WriteLine(FormatIncident(incident));
                     }
                     break;
+                case "9":
+                    var bulkResult = await TestCreateBulkIncidentsAsync();
+                    Console.WriteLine($"Bulk operation completed:");
+                    Console.WriteLine($"  Success: {bulkResult.SuccessCount}");
+                    Console.WriteLine($"  Failed: {bulkResult.FailureCount}");
+                    Console.WriteLine($"  Total: {bulkResult.TotalRequested}");
+                    if (bulkResult.Errors.Count > 0)
+                    {
+                        Console.WriteLine("Errors:");
+                        foreach (var error in bulkResult.Errors)
+                        {
+                            Console.WriteLine($"  Index {error.Index}: {error.ErrorMessage}");
+                        }
+                    }
+                    break;
+                case "10":
+                    var stopTypesResult = await TestGetStopTypesAsync();
+                    Console.WriteLine($"Found {stopTypesResult.Count} stop types");
+                    foreach (var stopType in stopTypesResult)
+                    {
+                        Console.WriteLine($"  - {stopType}");
+                    }
+                    break;
+                case "11":
+                    var downtimeStatsResult = await TestGetDowntimeStatsAsync();
+                    Console.WriteLine($"Downtime Statistics:");
+                    Console.WriteLine($"  Period: {downtimeStatsResult.Period}");
+                    Console.WriteLine($"  Total Downtime: {downtimeStatsResult.TotalDowntime}h");
+                    Console.WriteLine($"  Total Incidents: {downtimeStatsResult.TotalIncidents}");
+                    break;
+                case "12":
+                    Console.Write("[INPUT] Enter Incident ID: ");
+                    int.TryParse(Console.ReadLine(), out int incidentShiftsId);
+                    var incidentShiftsResult = await TestGetIncidentShiftsAsync(incidentShiftsId);
+                    Console.WriteLine($"Found {incidentShiftsResult.Count} incident shifts");
+                    foreach (var shift in incidentShiftsResult)
+                    {
+                        Console.WriteLine($"  Shift {shift.ShiftId}: {shift.StartTime} - {shift.EndTime}");
+                    }
+                    break;
+                case "13":
+                    var imageUrl = await TestUploadIncidentImageAsync();
+                    Console.WriteLine($"Image uploaded: {imageUrl}");
+                    break;
+                case "14":
+                    Console.Write("[INPUT] Enter Incident ID: ");
+                    int.TryParse(Console.ReadLine(), out int sparePartsId);
+                    var sparePartsStatus = await TestGetSparePartsStatusAsync(sparePartsId);
+                    Console.WriteLine($"Spare Parts Status for incident {sparePartsId}:");
+                    Console.WriteLine($"  Has Pending Requests: {sparePartsStatus.HasPendingRequests}");
+                    Console.WriteLine($"  Has Return Requests: {sparePartsStatus.HasReturnRequests}");
+                    break;
                 case "0":
                     Console.WriteLine("Goodbye!");
                     return;
@@ -137,6 +191,12 @@ public class IncidentServiceManualTest
         Console.WriteLine("6. Test AssignTechnicianAsync");
         Console.WriteLine("7. Test GetIncidentsByUserLinesAsync");
         Console.WriteLine("8. Test GetIncidentsAssignedToTechnicianAsync");
+        Console.WriteLine("9. Test CreateBulkIncidentsAsync");
+        Console.WriteLine("10. Test GetStopTypesAsync");
+        Console.WriteLine("11. Test GetDowntimeStatsAsync");
+        Console.WriteLine("12. Test GetIncidentShiftsAsync");
+        Console.WriteLine("13. Test UploadIncidentImageAsync");
+        Console.WriteLine("14. Test GetSparePartsStatusAsync");
         Console.WriteLine("0. Exit");
         Console.WriteLine();
         Console.Write("Enter your choice: ");
@@ -232,6 +292,11 @@ public class IncidentServiceManualTest
         _mockLineRepository.Setup(x => x.GetByIdAsync(lineId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(line);
 
+        // Setup notification service mocks for technical support notifications
+        var technicalManagers = _testUsers.Where(u => u.Id.StartsWith("TECH")).ToList();
+        _mockUserService.Setup(x => x.GetUsersByRoleAsync("Quản lý kỹ thuật", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(technicalManagers);
+
         var newIncident = new IncidentHistory
         {
             IncidentId = _testIncidents.Max(i => i.IncidentId) + 1,
@@ -256,6 +321,11 @@ public class IncidentServiceManualTest
             var result = await _service.CreateIncidentAsync(request);
             Console.WriteLine("[SUCCESS] Incident created successfully");
             return result;
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] Invalid operation: {ex.Message}");
+            throw;
         }
         catch (Exception ex)
         {
@@ -315,6 +385,11 @@ public class IncidentServiceManualTest
         _mockLineRepository.Setup(x => x.GetByIdAsync(lineId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(line);
 
+        // Setup notification service mocks for technical support notifications
+        var technicalManagers = _testUsers.Where(u => u.Id.StartsWith("TECH")).ToList();
+        _mockUserService.Setup(x => x.GetUsersByRoleAsync("Quản lý kỹ thuật", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(technicalManagers);
+
         _mockReplacementHistoryRepository.Setup(x => x.GetByIncidentIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<ReplacementHistory>());
 
@@ -349,6 +424,11 @@ public class IncidentServiceManualTest
                 Console.WriteLine("[WARNING] Update returned null");
             }
             return result;
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] Invalid operation: {ex.Message}");
+            throw;
         }
         catch (Exception ex)
         {
@@ -519,6 +599,394 @@ public class IncidentServiceManualTest
         {
             Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
             return new List<IncidentHistory>();
+        }
+    }
+
+    private async Task<BulkIncidentResponse> TestCreateBulkIncidentsAsync()
+    {
+        Console.WriteLine("TEST: CreateBulkIncidentsAsync");
+
+        // Create a sample bulk request with multiple incidents
+        var bulkRequest = new CreateBulkIncidentRequest
+        {
+            Incidents = new List<CreateIncidentRequest>
+            {
+                // Valid incident
+                new CreateIncidentRequest
+                {
+                    EquipmentId = 1,
+                    LineId = 1,
+                    Issue = "Machine overheating test",
+                    TypeId = 1,
+                    StartTime = DateTime.Now.AddHours(-1),
+                    EndTime = DateTime.Now,
+                    ReportedByUserId = "USER001",
+                    IsTechSupport = false,
+                    ImageUrls = new List<string> { "test_image_1.jpg" }
+                },
+                // Invalid incident - equipment not found
+                new CreateIncidentRequest
+                {
+                    EquipmentId = 999, // Non-existent equipment
+                    LineId = 1,
+                    Issue = "Invalid equipment test",
+                    TypeId = 1,
+                    StartTime = DateTime.Now.AddHours(-1),
+                    ReportedByUserId = "USER001",
+                    IsTechSupport = false
+                },
+                // Valid incident with technical support
+                new CreateIncidentRequest
+                {
+                    EquipmentId = 2,
+                    LineId = 2,
+                    Issue = "Robot arm malfunction - needs tech support",
+                    TypeId = 2,
+                    StartTime = DateTime.Now.AddMinutes(-30),
+                    ReportedByUserId = "USER001",
+                    IsTechSupport = true,
+                    ImageUrls = new List<string> { "test_image_2.jpg", "test_image_3.jpg" }
+                }
+            }
+        };
+
+        // Setup mocks for equipment validation
+        foreach (var incident in bulkRequest.Incidents)
+        {
+            var equipment = _testEquipments.FirstOrDefault(e => e.EquipmentId == incident.EquipmentId);
+            _mockEquipmentRepository.Setup(x => x.GetByIdAsync(incident.EquipmentId ?? 0, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(equipment);
+
+            var line = _testLines.FirstOrDefault(l => l.LineId == incident.LineId);
+            _mockLineRepository.Setup(x => x.GetByIdAsync(incident.LineId ?? 0, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(line);
+        }
+
+        // Setup mock for technical managers (for notifications)
+        var technicalManagers = _testUsers.Where(u => u.Id.StartsWith("TECH")).ToList();
+        _mockUserService.Setup(x => x.GetUsersByRoleAsync("Quản lý kỹ thuật", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(technicalManagers);
+
+        // Setup mock for creating incidents - will return different incidents based on validation
+        var incidentCounter = _testIncidents.Max(i => i.IncidentId);
+        _mockIncidentRepository.Setup(x => x.CreateAsync(It.IsAny<IncidentHistory>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IncidentHistory incident) =>
+            {
+                incident.IncidentId = ++incidentCounter;
+                incident.CreatedDate = DateTime.Now;
+                return incident;
+            });
+
+        // Setup mock for updating incidents (for image saving)
+        _mockIncidentRepository.Setup(x => x.UpdateAsync(It.IsAny<IncidentHistory>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IncidentHistory incident) => incident);
+
+        try
+        {
+            var result = await _service.CreateBulkIncidentsAsync(bulkRequest);
+
+            Console.WriteLine($"[SUCCESS] Bulk incident creation completed");
+            Console.WriteLine($"  Total requested: {result.TotalRequested}");
+            Console.WriteLine($"  Success count: {result.SuccessCount}");
+            Console.WriteLine($"  Failure count: {result.FailureCount}");
+
+            if (result.SuccessfulIncidents.Count > 0)
+            {
+                Console.WriteLine("Successful incidents:");
+                foreach (var incident in result.SuccessfulIncidents)
+                {
+                    Console.WriteLine($"  - Incident {incident.IncidentId}: {incident.Issue}");
+                }
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return new BulkIncidentResponse
+            {
+                TotalRequested = bulkRequest.Incidents.Count,
+                SuccessCount = 0,
+                FailureCount = bulkRequest.Incidents.Count,
+                Errors = new List<BulkIncidentError>
+                {
+                    new BulkIncidentError
+                    {
+                        Index = 0,
+                        ErrorMessage = ex.Message,
+                        FailedRequest = bulkRequest.Incidents.First()
+                    }
+                },
+                SuccessfulIncidents = new List<IncidentHistoryDTO>()
+            };
+        }
+    }
+
+    private async Task<IReadOnlyList<dynamic>> TestGetStopTypesAsync()
+    {
+        Console.WriteLine("TEST: GetStopTypesAsync");
+
+        // Setup mock with sample stop types
+        var mockStopTypes = new List<dynamic>
+        {
+            new { TypeId = 1, TypeName = "Machine Breakdown" },
+            new { TypeId = 2, TypeName = "Material Shortage" },
+            new { TypeId = 3, TypeName = "Operator Error" },
+            new { TypeId = 4, TypeName = "Maintenance" },
+            new { TypeId = 5, TypeName = "Quality Issue" }
+        };
+
+        _mockIncidentRepository.Setup(x => x.GetStopTypesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mockStopTypes);
+
+        try
+        {
+            var result = await _service.GetStopTypesAsync();
+            Console.WriteLine($"[SUCCESS] Retrieved {result.Count} stop types");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return new List<dynamic>();
+        }
+    }
+
+    private async Task<DowntimeStatsDTO> TestGetDowntimeStatsAsync()
+    {
+        Console.WriteLine("TEST: GetDowntimeStatsAsync");
+
+        Console.Write("[INPUT] Enter period (day/week/month): ");
+        var period = Console.ReadLine() ?? "day";
+
+        Console.Write("[INPUT] Enter line ID (optional, press Enter for all): ");
+        var lineIdInput = Console.ReadLine();
+        int? lineId = string.IsNullOrEmpty(lineIdInput) ? null : int.Parse(lineIdInput);
+
+        // Setup mock shifts
+        var mockShifts = new List<Shift>
+        {
+            new Shift { ShiftId = 1, ShiftName = "Morning", StartTime = TimeOnly.Parse("06:00"), EndTime = TimeOnly.Parse("14:00") },
+            new Shift { ShiftId = 2, ShiftName = "Afternoon", StartTime = TimeOnly.Parse("14:00"), EndTime = TimeOnly.Parse("22:00") },
+            new Shift { ShiftId = 3, ShiftName = "Night", StartTime = TimeOnly.Parse("22:00"), EndTime = TimeOnly.Parse("06:00") }
+        };
+
+        _mockShiftRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mockShifts);
+
+        // Setup mock incidents with durations
+        var today = DateTime.Now.Date;
+        var mockIncidents = new List<IncidentHistory>
+        {
+            new IncidentHistory
+            {
+                IncidentId = 1,
+                EquipmentId = 1,
+                LineId = 1,
+                StartTime = today.AddHours(8),
+                EndTime = today.AddHours(10),
+                Duration = 2.0m,
+                TypeId = 1,
+                Type = new StopType { TypeId = 1, TypeName = "Machine Breakdown" }
+            },
+            new IncidentHistory
+            {
+                IncidentId = 2,
+                EquipmentId = 2,
+                LineId = 1,
+                StartTime = today.AddHours(15),
+                EndTime = today.AddHours(16.5),
+                Duration = 1.5m,
+                TypeId = 2,
+                Type = new StopType { TypeId = 2, TypeName = "Material Shortage" }
+            },
+            new IncidentHistory
+            {
+                IncidentId = 3,
+                EquipmentId = 3,
+                LineId = 2,
+                StartTime = today.AddHours(9),
+                EndTime = today.AddHours(11),
+                Duration = 2.0m,
+                TypeId = 1,
+                Type = new StopType { TypeId = 1, TypeName = "Machine Breakdown" }
+            }
+        };
+
+        if (lineId.HasValue)
+        {
+            var lineIncidents = mockIncidents.Where(i => i.LineId == lineId.Value).ToList();
+            _mockIncidentRepository.Setup(x => x.GetByLineIdAsync(lineId.Value, It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(lineIncidents);
+        }
+        else
+        {
+            _mockIncidentRepository.Setup(x => x.GetByDateRangeAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(mockIncidents);
+        }
+
+        // Setup line validation if lineId is provided
+        if (lineId.HasValue)
+        {
+            var line = _testLines.FirstOrDefault(l => l.LineId == lineId.Value);
+            _mockLineRepository.Setup(x => x.GetByIdAsync(lineId.Value, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(line);
+        }
+
+        try
+        {
+            var result = await _service.GetDowntimeStatsAsync(period, lineId: lineId);
+            Console.WriteLine($"[SUCCESS] Retrieved downtime statistics");
+            return result;
+        }
+        catch (InvalidOperationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message}");
+            throw;
+        }
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine($"[ARGUMENT ERROR] {ex.Message}");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            throw;
+        }
+    }
+
+    private async Task<IReadOnlyList<IncidentShift>> TestGetIncidentShiftsAsync(int incidentId)
+    {
+        Console.WriteLine($"TEST: GetIncidentShiftsAsync for incident {incidentId}");
+
+        // Setup mock incident shifts
+        var mockIncidentShifts = new List<IncidentShift>
+        {
+            new IncidentShift
+            {
+                IncidentId = incidentId,
+                ShiftId = 1,
+                StartTime = DateTime.Now.AddHours(-4),
+                EndTime = DateTime.Now.AddHours(-2)
+            },
+            new IncidentShift
+            {
+                IncidentId = incidentId,
+                ShiftId = 2,
+                StartTime = DateTime.Now.AddHours(-2),
+                EndTime = DateTime.Now
+            }
+        };
+
+        _mockIncidentRepository.Setup(x => x.GetIncidentShiftsAsync(incidentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mockIncidentShifts);
+
+        try
+        {
+            var result = await _service.GetIncidentShiftsAsync(incidentId);
+            Console.WriteLine($"[SUCCESS] Retrieved {result.Count} incident shifts");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return new List<IncidentShift>();
+        }
+    }
+
+    private async Task<string> TestUploadIncidentImageAsync()
+    {
+        Console.WriteLine("TEST: UploadIncidentImageAsync");
+
+        Console.Write("[INPUT] Enter image file path: ");
+        var filePath = Console.ReadLine();
+
+        if (string.IsNullOrEmpty(filePath))
+        {
+            Console.WriteLine("[CANCELLED] No file path provided");
+            return string.Empty;
+        }
+
+        try
+        {
+            // Create a mock IFormFile from file path
+            using var stream = File.OpenRead(filePath);
+            var mockFile = new FormFile(stream, 0, stream.Length, "image", Path.GetFileName(filePath))
+            {
+                Headers = new HeaderDictionary(),
+                ContentType = "image/jpeg"
+            };
+
+            // Setup mock Azure storage service
+            var mockUrl = $"https://storage.example.com/incidents/images/{Guid.NewGuid()}.jpg";
+            _mockAzureStorageService.Setup(x => x.UploadFileAsync(mockFile, "incidents", "images", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(mockUrl);
+
+            var result = await _service.UploadIncidentImageAsync(mockFile);
+            Console.WriteLine($"[SUCCESS] Image uploaded successfully");
+            return result;
+        }
+        catch (ArgumentException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message}");
+            return string.Empty;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return string.Empty;
+        }
+    }
+
+    private async Task<SparePartsStatus> TestGetSparePartsStatusAsync(int incidentId)
+    {
+        Console.WriteLine($"TEST: GetSparePartsStatusAsync for incident {incidentId}");
+
+        // Setup mock replacement histories
+        var mockReplacements = new List<ReplacementHistory>
+        {
+            new ReplacementHistory
+            {
+                ReplacementId = 1,
+                IncidentId = incidentId,
+                EquipmentId = 1,
+                Status = "Chờ duyệt cấp phát",
+                Part = new SparePart { PartId = 1, PartNumber = "SP001", PartName = "Test Part" },
+                Quantity = 5
+            },
+            new ReplacementHistory
+            {
+                ReplacementId = 2,
+                IncidentId = incidentId,
+                EquipmentId = 1,
+                Status = "Đã giao kho",
+                Part = new SparePart { PartId = 2, PartNumber = "SP002", PartName = "Test Part 2" },
+                Quantity = 3
+            }
+        };
+
+        var incident = _testIncidents.FirstOrDefault(i => i.IncidentId == incidentId);
+        _mockIncidentRepository.Setup(x => x.GetByIdAsync(incidentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(incident);
+
+        _mockReplacementHistoryRepository.Setup(x => x.GetByIncidentIdAsync(incidentId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mockReplacements.Where(r => r.IncidentId == incidentId).ToList());
+
+        _mockReplacementHistoryRepository.Setup(x => x.GetByEquipmentIdAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(mockReplacements.Where(r => r.EquipmentId == incident?.EquipmentId).ToList());
+
+        try
+        {
+            var result = await _service.GetSparePartsStatusAsync(incidentId);
+            Console.WriteLine($"[SUCCESS] Retrieved spare parts status");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return new SparePartsStatus { HasPendingRequests = false, HasReturnRequests = false };
         }
     }
 

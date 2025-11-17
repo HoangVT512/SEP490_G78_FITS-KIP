@@ -1,6 +1,7 @@
 using FITSKIP.Application.Services;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using FITSKIP.Domain.Exceptions;
 using FITSKIP.Domain.Interfaces;
 using Moq;
 
@@ -86,8 +87,22 @@ public class EquipmentServiceManualTest
                     }
                     break;
                 case "9":
+                    var qrCodeResult = await TestGenerateQRCodeByCodeAsync();
+                    if (qrCodeResult != null)
+                    {
+                        Console.WriteLine($"QR Code: {qrCodeResult}");
+                    }
+                    break;
+                case "10":
                     var teamLeaderEquipmentsResult = await TestGetEquipmentsByTeamLeaderAsync();
                     foreach (var equipment in teamLeaderEquipmentsResult)
+                    {
+                        Console.WriteLine(FormatEquipment(equipment));
+                    }
+                    break;
+                case "11":
+                    var lineEquipmentsResult = await TestGetEquipmentsByLineAsync();
+                    foreach (var equipment in lineEquipmentsResult)
                     {
                         Console.WriteLine(FormatEquipment(equipment));
                     }
@@ -111,14 +126,16 @@ public class EquipmentServiceManualTest
         Console.WriteLine("EQUIPMENT SERVICE TEST MENU");
         Console.WriteLine("===========================");
         Console.WriteLine("1. Test GetEquipmentsAsync");
-        Console.WriteLine("2. Test GetEquipmentByIdAsync ()");
-        Console.WriteLine("3. Test CreateEquipmentAsync ()");
-        Console.WriteLine("4. Test UpdateEquipmentAsync ()");
-        Console.WriteLine("5. Test ToggleEquipmentStatusAsync ()");
-        Console.WriteLine("6. Test DeleteEquipmentAsync ()");
-        Console.WriteLine("7. Test GetEquipmentsByStageAsync ()");
-        Console.WriteLine("8. Test GenerateQRCodeAsync ()");
-        Console.WriteLine("9. Test GetEquipmentsByTeamLeaderAsync ()");
+        Console.WriteLine("2. Test GetEquipmentByIdAsync");
+        Console.WriteLine("3. Test CreateEquipmentAsync");
+        Console.WriteLine("4. Test UpdateEquipmentAsync");
+        Console.WriteLine("5. Test ToggleEquipmentStatusAsync");
+        Console.WriteLine("6. Test DeleteEquipmentAsync");
+        Console.WriteLine("7. Test GetEquipmentsByStageAsync");
+        Console.WriteLine("8. Test GenerateQRCodeAsync (by ID)");
+        Console.WriteLine("9. Test GenerateQRCodeAsync (by Code)");
+        Console.WriteLine("10. Test GetEquipmentsByTeamLeaderAsync");
+        Console.WriteLine("11. Test GetEquipmentsByLineAsync");
         Console.WriteLine("0. Exit");
         Console.WriteLine();
         Console.Write("Enter your choice: ");
@@ -226,16 +243,19 @@ public class EquipmentServiceManualTest
         _mockEquipmentRepository.Setup(x => x.GetByCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Equipment?)null);
 
+        // Normalize equipment code as done in the service
+        var normalizedCode = request.EquipmentCode.Trim().ToUpper();
+
         var newEquipment = new Equipment
         {
             EquipmentId = _testData.Max(e => e.EquipmentId) + 1,
-            EquipmentCode = request.EquipmentCode.ToUpper(),
-            EquipmentName = request.EquipmentName,
-            Origin = request.Origin,
+            EquipmentCode = normalizedCode,
+            EquipmentName = request.EquipmentName.Trim(),
+            Origin = request.Origin?.Trim(),
             Yom = request.Yom,
             StageId = request.StageId,
             IsActive = request.IsActive,
-            Qrcode = "{\"equipmentCode\":\"" + request.EquipmentCode.ToUpper() + "\"}"
+            Qrcode = $"{{\"equipmentCode\":\"{normalizedCode}\"}}"
         };
 
         _mockEquipmentRepository.Setup(x => x.CreateAsync(It.IsAny<Equipment>(), It.IsAny<CancellationToken>()))
@@ -246,6 +266,11 @@ public class EquipmentServiceManualTest
             var result = await _service.CreateEquipmentAsync(request);
             Console.WriteLine("[SUCCESS] Equipment created successfully");
             return result;
+        }
+        catch (EquipmentValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return null;
         }
         catch (Exception ex)
         {
@@ -300,14 +325,20 @@ public class EquipmentServiceManualTest
         _mockEquipmentRepository.Setup(x => x.GetByCodeAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((Equipment?)null);
 
+        // Normalize equipment code as done in the service
+        var normalizedCode = request.EquipmentCode.Trim().ToUpper();
+
         var updatedEquipment = new Equipment
         {
             EquipmentId = id,
-            EquipmentCode = request.EquipmentCode.ToUpper(),
-            EquipmentName = request.EquipmentName,
-            Origin = request.Origin,
+            EquipmentCode = normalizedCode,
+            EquipmentName = request.EquipmentName.Trim(),
+            Origin = request.Origin?.Trim(),
+            Yom = request.Yom,
+            DateUse = existingEquipment.DateUse,
+            StageId = request.StageId,
             IsActive = request.IsActive,
-            Qrcode = "{\"equipmentCode\":\"" + request.EquipmentCode.ToUpper() + "\"}"
+            Qrcode = $"{{\"equipmentCode\":\"{normalizedCode}\"}}"
         };
 
         _mockEquipmentRepository.Setup(x => x.UpdateAsync(It.IsAny<Equipment>(), It.IsAny<CancellationToken>()))
@@ -326,6 +357,11 @@ public class EquipmentServiceManualTest
                 Console.WriteLine("[WARNING] Update returned null");
             }
             return result;
+        }
+        catch (EquipmentValidationException ex)
+        {
+            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            return null;
         }
         catch (Exception ex)
         {
@@ -466,7 +502,7 @@ public class EquipmentServiceManualTest
 
     private async Task<string> TestGenerateQRCodeAsync()
     {
-        Console.WriteLine("TEST: GenerateQRCodeAsync");
+        Console.WriteLine("TEST: GenerateQRCodeAsync (by Equipment ID)");
 
         Console.Write("[INPUT] Enter Equipment ID: ");
         int.TryParse(Console.ReadLine(), out int id);
@@ -506,6 +542,41 @@ public class EquipmentServiceManualTest
         }
     }
 
+    private async Task<string> TestGenerateQRCodeByCodeAsync()
+    {
+        Console.WriteLine("TEST: GenerateQRCodeAsync (by Equipment Code)");
+
+        Console.Write("[INPUT] Enter Equipment Code: ");
+        var equipmentCode = Console.ReadLine();
+
+        if (string.IsNullOrWhiteSpace(equipmentCode))
+        {
+            Console.WriteLine("[ERROR] Equipment code cannot be empty");
+            return null;
+        }
+
+        try
+        {
+            var result = await _service.GenerateQRCodeAsync(equipmentCode);
+
+            if (result != null)
+            {
+                Console.WriteLine("[SUCCESS] QR Code generated successfully");
+                Console.WriteLine($"Generated QR Code: {result}");
+            }
+            else
+            {
+                Console.WriteLine("[WARNING] QR Code generation returned null");
+            }
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return null;
+        }
+    }
+
     private async Task<IReadOnlyList<EquipmentDTO>> TestGetEquipmentsByTeamLeaderAsync()
     {
         Console.WriteLine("TEST: GetEquipmentsByTeamLeaderAsync");
@@ -513,14 +584,27 @@ public class EquipmentServiceManualTest
         Console.Write("[INPUT] Enter User ID (Team Leader): ");
         var userId = Console.ReadLine();
 
-        var equipmentsByTeamLeader = _testData.Where(e => e.Stage?.LineId != null).ToList();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            Console.WriteLine("[ERROR] User ID cannot be empty");
+            return new List<EquipmentDTO>();
+        }
 
-        _mockEquipmentRepository.Setup(x => x.GetEquipmentsByTeamLeaderAsync(userId ?? "", It.IsAny<CancellationToken>()))
+        // For demo purposes, return equipments based on userId
+        // In real implementation, this would be based on team leader's assigned lines/equipments
+        var equipmentsByTeamLeader = userId.ToLower() switch
+        {
+            "tl001" => _testData.Where(e => e.StageId == 1 || e.StageId == 2).ToList(), // Team leader for Line 1
+            "tl002" => _testData.Where(e => e.StageId == 3 || e.StageId == 4).ToList(), // Team leader for Line 2
+            _ => _testData.Where(e => e.Stage?.LineId != null).ToList() // Default: all equipments with lines
+        };
+
+        _mockEquipmentRepository.Setup(x => x.GetEquipmentsByTeamLeaderAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(equipmentsByTeamLeader);
 
         try
         {
-            var result = await _service.GetEquipmentsByUserLinesAsync(userId ?? "");
+            var result = await _service.GetEquipmentsByUserLinesAsync(userId);
             Console.WriteLine($"[SUCCESS] Found {result.Count} equipments for team leader {userId}");
             return result;
         }
@@ -640,6 +724,37 @@ public class EquipmentServiceManualTest
                 Line = new Line { LineId = 2, LineName = "Production Line B" }
             }
         };
+    }
+
+    private async Task<IReadOnlyList<EquipmentDTO>> TestGetEquipmentsByLineAsync()
+    {
+        Console.WriteLine("TEST: GetEquipmentsByLineAsync");
+
+        Console.Write("[INPUT] Enter Line ID: ");
+        var lineIdInput = Console.ReadLine();
+        if (!int.TryParse(lineIdInput, out var lineId))
+        {
+            Console.WriteLine("[ERROR] Invalid Line ID");
+            return new List<EquipmentDTO>();
+        }
+
+        // Mock data: equipments with stages that belong to the line
+        var equipmentsByLine = _testData.Where(e => e.Stage?.LineId == lineId).ToList();
+
+        _mockEquipmentRepository.Setup(x => x.GetByLineIdAsync(lineId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(equipmentsByLine);
+
+        try
+        {
+            var result = await _service.GetEquipmentsByLineAsync(lineId);
+            Console.WriteLine($"[SUCCESS] Found {result.Count} equipments for line {lineId}");
+            return result;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            return new List<EquipmentDTO>();
+        }
     }
 
     private string FormatEquipment(EquipmentDTO eq)
