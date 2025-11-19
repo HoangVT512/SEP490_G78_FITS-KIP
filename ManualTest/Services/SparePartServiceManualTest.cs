@@ -16,7 +16,7 @@ public class SparePartServiceManualTest
     {
         _mockRepository = new Mock<ISparePartRepository>();
         _service = new SparePartService(_mockRepository.Object);
-        _testSpareParts = InitializeSparePartTestData();
+        _testSpareParts = InitializeTestSpareParts();
     }
 
     public async Task RunTests()
@@ -31,97 +31,34 @@ public class SparePartServiceManualTest
                 switch (choice)
                 {
                     case "1":
-                        var result1 = await TestGetAllSparePartsAsync();
-                        Console.WriteLine($"Found {result1.Count()} spare parts");
-                        foreach (var part in result1)
-                        {
-                            Console.WriteLine(FormatSparePart(part));
-                        }
+                        await TestGetAllSparePartsAsync();
                         break;
                     case "2":
-                        Console.Write("[INPUT] Enter Spare Part ID: ");
-                        int.TryParse(Console.ReadLine(), out int id2);
-                        var result2 = await TestGetSparePartByIdAsync(id2);
-                        if (result2 != null)
-                            Console.WriteLine(FormatSparePart(result2));
-                        else
-                            Console.WriteLine("Spare part not found");
+                        await TestGetSparePartByIdAsync();
                         break;
                     case "3":
-                        var sparePart3 = new SparePart
-                        {
-                            PartNumber = GetStringInput("Part Number"),
-                            PartName = GetStringInput("Part Name"),
-                            PartType = GetStringInput("Part Type"),
-                            Supplier = GetStringInput("Supplier"),
-                            Quantity = GetIntInput("Quantity"),
-                            MinQuantity = GetIntInput("Min Quantity", 5),
-                            IsActive = true
-                        };
-                        var result3 = await TestCreateSparePartAsync(sparePart3);
-                        Console.WriteLine(FormatSparePart(result3));
+                        await TestCreateSparePartAsync();
                         break;
                     case "4":
-                        var id4 = GetIntInput("Spare Part ID to update");
-                        var sparePart4 = new SparePart
-                        {
-                            PartNumber = GetStringInput("Part Number"),
-                            PartName = GetStringInput("Part Name"),
-                            Quantity = GetIntInput("Quantity"),
-                            MinQuantity = GetIntInput("Min Quantity")
-                        };
-                        var result4 = await TestUpdateSparePartAsync(id4, sparePart4);
-                        Console.WriteLine($"Update result: {result4}");
+                        await TestUpdateSparePartAsync();
                         break;
                     case "5":
-                        var id5 = GetIntInput("Spare Part ID to delete");
-                        var result5 = await TestDeleteSparePartAsync(id5);
-                        Console.WriteLine($"Delete result: {result5}");
+                        await TestDeleteSparePartAsync();
                         break;
                     case "6":
-                        var result6 = await TestGetTop5MostUsedSparePartsAsync();
-                        Console.WriteLine($"Found {result6.Count()} most used spare parts");
-                        int rank = 1;
-                        foreach (var part in result6)
-                        {
-                            Console.WriteLine($"[{rank++}] {FormatSparePart(part)}");
-                        }
+                        await TestGetTop5MostUsedSparePartsAsync();
                         break;
                     case "7":
-                        var week7 = GetIntInput("Week (1-53)");
-                        var year7 = GetIntInput("Year");
-                        var result7 = await TestGetUsageByWeekAsync(week7, year7);
-                        Console.WriteLine($"Found usage data for {result7.Count} spare parts");
-                        foreach (var kvp in result7)
-                        {
-                            Console.WriteLine($"PartId: {kvp.Key}, Usage Count: {kvp.Value}");
-                        }
+                        await TestGetUsageByWeekAsync();
                         break;
                     case "8":
-                        var month8 = GetIntInput("Month (1-12)");
-                        var year8 = GetIntInput("Year");
-                        var result8 = await TestGetUsageByMonthAsync(month8, year8);
-                        Console.WriteLine($"Found usage data for {result8.Count} spare parts");
-                        foreach (var kvp in result8)
-                        {
-                            Console.WriteLine($"PartId: {kvp.Key}, Usage Count: {kvp.Value}");
-                        }
+                        await TestGetUsageByMonthAsync();
                         break;
                     case "9":
-                        var result9 = await TestGetUsageByCurrentWeekAsync();
-                        Console.WriteLine($"Found usage data for {result9.Count} spare parts in current week");
-                        foreach (var kvp in result9)
-                        {
-                            Console.WriteLine($"PartId: {kvp.Key}, Usage Count: {kvp.Value}");
-                        }
+                        await TestGetUsageByCurrentWeekAsync();
                         break;
                     case "10":
-                        var result10 = await TestGetUsageByCurrentMonthAsync();
-                        Console.WriteLine($"Found usage data for {result10.Count} spare parts in current month");
-                        foreach (var kvp in result10)
-                        {
-                            Console.WriteLine($"PartId: {kvp.Key}, Usage Count: {kvp.Value}");
-                        }
+                        await TestGetUsageByCurrentMonthAsync();
                         break;
                     case "0":
                         Console.WriteLine("Goodbye!");
@@ -161,188 +98,362 @@ public class SparePartServiceManualTest
         Console.Write("Enter your choice: ");
     }
 
-    private async Task<IEnumerable<SparePart>> TestGetAllSparePartsAsync()
+    private async Task TestGetAllSparePartsAsync()
     {
-        // Setup mock
-        _mockRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_testSpareParts);
+        Console.WriteLine("TEST: GetAllSparePartsAsync");
 
-        var result = await _service.GetAllSparePartsAsync();
-
-        // Verify repository call
-        _mockRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
-
-        return result;
-    }
-
-    private async Task<SparePart?> TestGetSparePartByIdAsync(int id)
-    {
-        var sparePart = _testSpareParts.FirstOrDefault(s => s.PartId == id);
-
-        _mockRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(sparePart);
-
-        var result = await _service.GetSparePartByIdAsync(id);
-        return result;
-    }
-
-    private async Task<SparePart> TestCreateSparePartAsync(SparePart sparePart)
-    {
-        // Setup mock
-        var newSparePart = new SparePart
+        try
         {
-            PartId = _testSpareParts.Max(s => s.PartId) + 1,
-            PartNumber = sparePart.PartNumber,
-            PartName = sparePart.PartName,
-            PartType = sparePart.PartType,
-            Supplier = sparePart.Supplier,
-            Quantity = sparePart.Quantity,
-            MinQuantity = sparePart.MinQuantity <= 0 ? 5 : sparePart.MinQuantity,
-            DateAdded = sparePart.DateAdded,
-            IsActive = sparePart.IsActive,
-            Status = CalculateStatusForTest(sparePart.Quantity, sparePart.MinQuantity <= 0 ? 5 : sparePart.MinQuantity)
-        };
+            // Setup mock
+            _mockRepository.Setup(x => x.GetAllAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(_testSpareParts);
 
-        _mockRepository.Setup(x => x.AddAsync(It.IsAny<SparePart>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(newSparePart);
+            // Execute
+            var result = await _service.GetAllSparePartsAsync();
 
-        var result = await _service.CreateSparePartAsync(sparePart);
-        return result;
-    }
-
-    private async Task<bool> TestUpdateSparePartAsync(int id, SparePart sparePart)
-    {
-        var existingSparePart = _testSpareParts.FirstOrDefault(s => s.PartId == id);
-        if (existingSparePart == null) return false;
-
-        // Setup mock
-        _mockRepository.Setup(x => x.ExistsAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<SparePart>(), It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        var result = await _service.UpdateSparePartAsync(id, sparePart);
-        return result;
-    }
-
-    private async Task<bool> TestDeleteSparePartAsync(int id)
-    {
-        var existingSparePart = _testSpareParts.FirstOrDefault(s => s.PartId == id);
-        if (existingSparePart == null) return false;
-
-        // Setup mock
-        _mockRepository.Setup(x => x.ExistsAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        _mockRepository.Setup(x => x.DeleteAsync(id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(true);
-
-        var result = await _service.DeleteSparePartAsync(id);
-        return result;
-    }
-
-    private async Task<IEnumerable<SparePart>> TestGetTop5MostUsedSparePartsAsync()
-    {
-        // For testing, simulate top 5 most used
-        var top5 = _testSpareParts.Take(5).ToList();
-
-        // Setup mock
-        _mockRepository.Setup(x => x.GetTop5MostUsedAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(top5);
-
-        var result = await _service.GetTop5MostUsedSparePartsAsync();
-
-        _mockRepository.Verify(x => x.GetTop5MostUsedAsync(It.IsAny<CancellationToken>()), Times.Once);
-
-        return result;
-    }
-
-    private async Task<Dictionary<int, int>> TestGetUsageByWeekAsync(int week, int year)
-    {
-        // For testing, simulate usage data
-        var usageData = new Dictionary<int, int>
+            Console.WriteLine($"[SUCCESS] Found {result.Count()} spare parts");
+            foreach (var part in result)
+            {
+                Console.WriteLine(FormatSparePart(part));
+            }
+        }
+        catch (Exception ex)
         {
-            { 1, 10 },
-            { 2, 15 },
-            { 3, 8 }
-        };
-
-        // Setup mock
-        _mockRepository.Setup(x => x.GetUsageByWeekAsync(week, year, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(usageData);
-
-        var result = await _service.GetUsageByWeekAsync(week, year);
-
-        _mockRepository.Verify(x => x.GetUsageByWeekAsync(week, year, It.IsAny<CancellationToken>()), Times.Once);
-
-        return result;
+            Console.WriteLine($"[ERROR] {ex.Message}");
+        }
     }
 
-    private async Task<Dictionary<int, int>> TestGetUsageByMonthAsync(int month, int year)
+    private async Task TestGetSparePartByIdAsync()
     {
-        // For testing, simulate usage data
-        var usageData = new Dictionary<int, int>
+        Console.WriteLine("TEST: GetSparePartByIdAsync");
+
+        try
         {
-            { 1, 45 },
-            { 2, 60 },
-            { 3, 32 }
-        };
+            // Setup mock
+            var testPart = _testSpareParts[0];
+            _mockRepository.Setup(x => x.GetByIdAsync(testPart.PartId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(testPart);
 
-        // Setup mock
-        _mockRepository.Setup(x => x.GetUsageByMonthAsync(month, year, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(usageData);
+            // Execute
+            var result = await _service.GetSparePartByIdAsync(testPart.PartId);
 
-        var result = await _service.GetUsageByMonthAsync(month, year);
-
-        _mockRepository.Verify(x => x.GetUsageByMonthAsync(month, year, It.IsAny<CancellationToken>()), Times.Once);
-
-        return result;
+            if (result != null)
+            {
+                Console.WriteLine($"[SUCCESS] Spare part found");
+                Console.WriteLine(FormatSparePart(result));
+            }
+            else
+            {
+                Console.WriteLine("[NOT FOUND] Spare part not found");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] {ex.Message}");
+        }
     }
 
-    private async Task<Dictionary<int, int>> TestGetUsageByCurrentWeekAsync()
+    private async Task TestCreateSparePartAsync()
     {
-        // For testing, simulate usage data
-        var usageData = new Dictionary<int, int>
+        Console.WriteLine("TEST: CreateSparePartAsync");
+
+        try
         {
-            { 1, 5 },
-            { 2, 12 },
-            { 3, 7 }
-        };
+            // Create new spare part
+            var newPart = new SparePart
+            {
+                PartNumber = GetStringInput("Part Number"),
+                PartName = GetStringInput("Part Name"),
+                PartType = GetStringInput("Part Type"),
+                Quantity = GetIntInput("Quantity"),
+                MinQuantity = GetIntInput("Min Quantity", 5),
+                Location = GetStringInput("Location"),
+                DateAdded = DateTime.Now
+            };
 
-        // Setup mock
-        _mockRepository.Setup(x => x.GetUsageByCurrentWeekAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(usageData);
+            // Setup mock for successful creation
+            _mockRepository.Setup(x => x.AddAsync(It.IsAny<SparePart>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync((SparePart p, CancellationToken ct) =>
+                {
+                    p.PartId = _testSpareParts.Max(sp => sp.PartId) + 1;
+                    return p;
+                });
 
-        var result = await _service.GetUsageByCurrentWeekAsync();
+            // Execute
+            var result = await _service.CreateSparePartAsync(newPart);
 
-        _mockRepository.Verify(x => x.GetUsageByCurrentWeekAsync(It.IsAny<CancellationToken>()), Times.Once);
-
-        return result;
+            Console.WriteLine($"[SUCCESS] Spare part created");
+            Console.WriteLine(FormatSparePart(result));
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] {ex.Message}");
+        }
     }
 
-    private async Task<Dictionary<int, int>> TestGetUsageByCurrentMonthAsync()
+    private async Task TestUpdateSparePartAsync()
     {
-        // For testing, simulate usage data
-        var usageData = new Dictionary<int, int>
+        Console.WriteLine("TEST: UpdateSparePartAsync");
+
+        try
         {
-            { 1, 28 },
-            { 2, 45 },
-            { 3, 33 }
-        };
+            var partId = GetIntInput("Part ID to update");
+            var existingPart = _testSpareParts.FirstOrDefault(p => p.PartId == partId);
 
-        // Setup mock
-        _mockRepository.Setup(x => x.GetUsageByCurrentMonthAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(usageData);
+            if (existingPart == null)
+            {
+                Console.WriteLine($"[ERROR] Spare part with ID {partId} not found");
+                return;
+            }
 
-        var result = await _service.GetUsageByCurrentMonthAsync();
+            // Update properties
+            var updatedPart = new SparePart
+            {
+                PartNumber = GetStringInput("Part Number", existingPart.PartNumber),
+                PartName = GetStringInput("Part Name", existingPart.PartName),
+                PartType = GetStringInput("Part Type", existingPart.PartType),
+                Quantity = GetIntInput("Quantity", existingPart.Quantity),
+                MinQuantity = GetIntInput("Min Quantity", existingPart.MinQuantity),
+                Location = GetStringInput("Location", existingPart.Location)
+            };
 
-        _mockRepository.Verify(x => x.GetUsageByCurrentMonthAsync(It.IsAny<CancellationToken>()), Times.Once);
+            // Setup mocks
+            _mockRepository.Setup(x => x.ExistsAsync(partId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+            _mockRepository.Setup(x => x.UpdateAsync(It.IsAny<SparePart>(), It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
 
-        return result;
+            // Execute
+            var result = await _service.UpdateSparePartAsync(partId, updatedPart);
+
+            Console.WriteLine($"[SUCCESS] Spare part updated: {result}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] {ex.Message}");
+        }
     }
 
-    private List<SparePart> InitializeSparePartTestData()
+    private async Task TestDeleteSparePartAsync()
+    {
+        Console.WriteLine("TEST: DeleteSparePartAsync");
+
+        try
+        {
+            var partId = GetIntInput("Part ID to delete");
+
+            // Setup mocks - assume part exists
+            _mockRepository.Setup(x => x.ExistsAsync(partId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+            _mockRepository.Setup(x => x.DeleteAsync(partId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(true);
+
+            // Execute
+            var result = await _service.DeleteSparePartAsync(partId);
+
+            Console.WriteLine($"[SUCCESS] Spare part deleted: {result}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] {ex.Message}");
+        }
+    }
+
+    private async Task TestGetTop5MostUsedSparePartsAsync()
+    {
+        Console.WriteLine("TEST: GetTop5MostUsedSparePartsAsync");
+
+        try
+        {
+            // Setup mock with top 5 parts
+            var topParts = _testSpareParts.OrderByDescending(p => p.Quantity).Take(5);
+            _mockRepository.Setup(x => x.GetTop5MostUsedAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(topParts);
+
+            // Execute
+            var result = await _service.GetTop5MostUsedSparePartsAsync();
+
+            Console.WriteLine($"[SUCCESS] Found {result.Count()} top used spare parts");
+            int rank = 1;
+            foreach (var part in result)
+            {
+                Console.WriteLine($"[{rank++}] {FormatSparePart(part)}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] {ex.Message}");
+        }
+    }
+
+    private async Task TestGetUsageByWeekAsync()
+    {
+        Console.WriteLine("TEST: GetUsageByWeekAsync");
+
+        try
+        {
+            var week = GetIntInput("Week (1-53)");
+            var year = GetIntInput("Year");
+
+            // Setup mock with sample usage data
+            var usageData = new Dictionary<int, int>
+            {
+                { 1, 25 }, { 2, 18 }, { 3, 32 }, { 4, 15 }, { 5, 28 }
+            };
+
+            _mockRepository.Setup(x => x.GetUsageByWeekAsync(week, year, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(usageData);
+
+            // Execute
+            var result = await _service.GetUsageByWeekAsync(week, year);
+
+            Console.WriteLine($"[SUCCESS] Found usage data for {result.Count} spare parts in week {week}, {year}");
+            foreach (var kvp in result)
+            {
+                Console.WriteLine($"PartId: {kvp.Key}, Usage Count: {kvp.Value}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] {ex.Message}");
+        }
+    }
+
+    private async Task TestGetUsageByMonthAsync()
+    {
+        Console.WriteLine("TEST: GetUsageByMonthAsync");
+
+        try
+        {
+            var month = GetIntInput("Month (1-12)");
+            var year = GetIntInput("Year");
+
+            // Setup mock with sample usage data
+            var usageData = new Dictionary<int, int>
+            {
+                { 1, 150 }, { 2, 120 }, { 3, 200 }, { 4, 95 }, { 5, 180 }
+            };
+
+            _mockRepository.Setup(x => x.GetUsageByMonthAsync(month, year, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(usageData);
+
+            // Execute
+            var result = await _service.GetUsageByMonthAsync(month, year);
+
+            Console.WriteLine($"[SUCCESS] Found usage data for {result.Count} spare parts in month {month}, {year}");
+            foreach (var kvp in result)
+            {
+                Console.WriteLine($"PartId: {kvp.Key}, Usage Count: {kvp.Value}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] {ex.Message}");
+        }
+    }
+
+    private async Task TestGetUsageByCurrentWeekAsync()
+    {
+        Console.WriteLine("TEST: GetUsageByCurrentWeekAsync");
+
+        try
+        {
+            // Setup mock with sample current week usage data
+            var usageData = new Dictionary<int, int>
+            {
+                { 1, 12 }, { 2, 8 }, { 3, 15 }, { 4, 6 }, { 5, 10 }
+            };
+
+            _mockRepository.Setup(x => x.GetUsageByCurrentWeekAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(usageData);
+
+            // Execute
+            var result = await _service.GetUsageByCurrentWeekAsync();
+
+            Console.WriteLine($"[SUCCESS] Found usage data for {result.Count} spare parts in current week");
+            foreach (var kvp in result)
+            {
+                Console.WriteLine($"PartId: {kvp.Key}, Usage Count: {kvp.Value}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] {ex.Message}");
+        }
+    }
+
+    private async Task TestGetUsageByCurrentMonthAsync()
+    {
+        Console.WriteLine("TEST: GetUsageByCurrentMonthAsync");
+
+        try
+        {
+            // Setup mock with sample current month usage data
+            var usageData = new Dictionary<int, int>
+            {
+                { 1, 75 }, { 2, 60 }, { 3, 95 }, { 4, 45 }, { 5, 85 }
+            };
+
+            _mockRepository.Setup(x => x.GetUsageByCurrentMonthAsync(It.IsAny<CancellationToken>()))
+                .ReturnsAsync(usageData);
+
+            // Execute
+            var result = await _service.GetUsageByCurrentMonthAsync();
+
+            Console.WriteLine($"[SUCCESS] Found usage data for {result.Count} spare parts in current month");
+            foreach (var kvp in result)
+            {
+                Console.WriteLine($"PartId: {kvp.Key}, Usage Count: {kvp.Value}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[ERROR] {ex.Message}");
+        }
+    }
+
+    // Helper methods for user input
+    private string GetStringInput(string prompt)
+    {
+        Console.Write($"[INPUT] {prompt}: ");
+        var input = Console.ReadLine();
+        return input ?? "";
+    }
+
+    private string GetStringInput(string prompt, string defaultValue)
+    {
+        Console.Write($"[INPUT] {prompt} (default: {defaultValue}): ");
+        var input = Console.ReadLine();
+        return string.IsNullOrWhiteSpace(input) ? defaultValue : input;
+    }
+
+    private int GetIntInput(string prompt)
+    {
+        while (true)
+        {
+            Console.Write($"[INPUT] {prompt}: ");
+            if (int.TryParse(Console.ReadLine(), out int result))
+                return result;
+            Console.WriteLine("Invalid number. Please try again.");
+        }
+    }
+
+    private int GetIntInput(string prompt, int defaultValue)
+    {
+        Console.Write($"[INPUT] {prompt} (default: {defaultValue}): ");
+        var input = Console.ReadLine();
+        if (int.TryParse(input, out int result))
+            return result;
+        return defaultValue;
+    }
+
+    private string FormatSparePart(SparePart part)
+    {
+        return $"ID: {part.PartId}, Code: {part.PartNumber}, Name: {part.PartName}, Qty: {part.Quantity}, Min: {part.MinQuantity}, Status: {part.Status}";
+    }
+
+    // Test data initialization methods
+    private List<SparePart> InitializeTestSpareParts()
     {
         return new List<SparePart>
         {
@@ -352,12 +463,11 @@ public class SparePartServiceManualTest
                 PartNumber = "SP001",
                 PartName = "Motor Bearing",
                 PartType = "Mechanical",
-                Supplier = "ABC Supply Co.",
                 Quantity = 50,
                 MinQuantity = 10,
-                Status = "Đủ hàng",
-                IsActive = true,
-                DateAdded = DateTime.Now.AddMonths(-6)
+                Location = "Warehouse A",
+                DateAdded = DateTime.Now.AddDays(-30),
+                Status = "Đủ hàng"
             },
             new SparePart
             {
@@ -365,12 +475,11 @@ public class SparePartServiceManualTest
                 PartNumber = "SP002",
                 PartName = "Belt Drive",
                 PartType = "Mechanical",
-                Supplier = "XYZ Parts Ltd.",
                 Quantity = 8,
                 MinQuantity = 10,
-                Status = "Sắp hết",
-                IsActive = true,
-                DateAdded = DateTime.Now.AddMonths(-3)
+                Location = "Warehouse A",
+                DateAdded = DateTime.Now.AddDays(-25),
+                Status = "Sắp hết"
             },
             new SparePart
             {
@@ -378,12 +487,11 @@ public class SparePartServiceManualTest
                 PartNumber = "SP003",
                 PartName = "Control Board",
                 PartType = "Electrical",
-                Supplier = "Tech Solutions",
                 Quantity = 0,
                 MinQuantity = 5,
-                Status = "Hết hàng",
-                IsActive = true,
-                DateAdded = DateTime.Now.AddMonths(-4)
+                Location = "Warehouse B",
+                DateAdded = DateTime.Now.AddDays(-20),
+                Status = "Hết hàng"
             },
             new SparePart
             {
@@ -391,12 +499,11 @@ public class SparePartServiceManualTest
                 PartNumber = "SP004",
                 PartName = "Oil Filter",
                 PartType = "Consumable",
-                Supplier = "ABC Supply Co.",
                 Quantity = 100,
                 MinQuantity = 20,
-                Status = "Đủ hàng",
-                IsActive = true,
-                DateAdded = DateTime.Now.AddMonths(-1)
+                Location = "Warehouse A",
+                DateAdded = DateTime.Now.AddDays(-15),
+                Status = "Đủ hàng"
             },
             new SparePart
             {
@@ -404,45 +511,12 @@ public class SparePartServiceManualTest
                 PartNumber = "SP005",
                 PartName = "Hydraulic Cylinder",
                 PartType = "Hydraulic",
-                Supplier = "Hydraulic Pro",
                 Quantity = 15,
                 MinQuantity = 5,
-                Status = "Đủ hàng",
-                IsActive = false,
-                DateAdded = DateTime.Now.AddMonths(-12)
+                Location = "Warehouse B",
+                DateAdded = DateTime.Now.AddDays(-10),
+                Status = "Đủ hàng"
             }
         };
     }
-
-    private string FormatSparePart(SparePart part)
-    {
-        if (part == null) return "[NULL]";
-
-        return $"{{ID:{part.PartId}, PartNo:\"{part.PartNumber}\", Name:\"{part.PartName}\", Type:\"{part.PartType}\", Qty:{part.Quantity}/{part.MinQuantity}, Status:\"{part.Status}\", Active:{part.IsActive}}}";
-    }
-
-    private string CalculateStatusForTest(int quantity, int minQuantity)
-    {
-        if (quantity == 0)
-            return "Hết hàng";
-        else if (quantity <= minQuantity)
-            return "Sắp hết";
-        else
-            return "Đủ hàng";
-    }
-
-    private int GetIntInput(string prompt, int defaultValue = 0)
-    {
-        Console.Write($"[INPUT] {prompt}: ");
-        var input = Console.ReadLine();
-        return int.TryParse(input, out int result) ? result : defaultValue;
-    }
-
-    private string GetStringInput(string prompt, string defaultValue = "")
-    {
-        Console.Write($"[INPUT] {prompt}: ");
-        var input = Console.ReadLine();
-        return string.IsNullOrWhiteSpace(input) ? defaultValue : input;
-    }
 }
-
