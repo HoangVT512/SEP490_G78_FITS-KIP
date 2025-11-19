@@ -650,6 +650,89 @@ namespace FITSKIP.Infrastructure.SeedData
 
                 await context.Users.AddRangeAsync(users);
                 await context.SaveChangesAsync();
+
+                // Update existing users with department, role, and phone
+                var departments = await context.Departments.ToListAsync();
+                var roles = await context.Roles.ToListAsync();
+
+                var khsxDept = departments.FirstOrDefault(d => d.DepartmentName == "Phòng ban KHSX");
+                var kyThuatDept = departments.FirstOrDefault(d => d.DepartmentName == "Phòng ban Kỹ Thuật");
+                var vatTuDept = departments.FirstOrDefault(d => d.DepartmentName == "Phòng ban Vật Tư");
+                var itDept = departments.FirstOrDefault(d => d.DepartmentName == "Phòng ban IT");
+
+                var quanLyRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN LÝ");
+                var toTruongRole = roles.FirstOrDefault(r => r.NormalizedName == "TỔ TRƯỞNG");
+                var kyThuatVienRole = roles.FirstOrDefault(r => r.NormalizedName == "KỸ THUẬT VIÊN");
+                var quanTriVienRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN TRỊ VIÊN");
+                var quanLyKhoRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN LÝ KHO");
+                var quanLyKyThuatRole = roles.FirstOrDefault(r => r.NormalizedName == "QUẢN LÝ KỸ THUẬT");
+
+                // Update Vũ Tuấn Hoàng
+                var hoangUser = users.FirstOrDefault(u => u.UserName == "TT002");
+                if (hoangUser != null)
+                {
+                    hoangUser.PhoneNumber = "0912345679";
+                    hoangUser.DepartmentId = khsxDept?.DepartmentId;
+                    hoangUser.RoleId = toTruongRole?.Id;
+                }
+
+                // Update Trần Thị Mai Anh
+                var maiAnhUser = users.FirstOrDefault(u => u.UserName == "quanly");
+                if (maiAnhUser != null)
+                {
+                    maiAnhUser.DepartmentId = khsxDept?.DepartmentId;
+                    maiAnhUser.RoleId = quanLyRole?.Id;
+                }
+
+                // Update Nguyễn Thị Kỹ Thuật
+                var nguyenThiKyThuatUser = users.FirstOrDefault(u => u.UserName == "kythuat.vien2");
+                if (nguyenThiKyThuatUser != null)
+                {
+                    nguyenThiKyThuatUser.DepartmentId = kyThuatDept?.DepartmentId;
+                    nguyenThiKyThuatUser.RoleId = kyThuatVienRole?.Id;
+                }
+
+                // Update Phạm Văn Sản xuất
+                var phamVanSanXuatUser = users.FirstOrDefault(u => u.UserName == "totruong.sanxuat");
+                if (phamVanSanXuatUser != null)
+                {
+                    phamVanSanXuatUser.DepartmentId = khsxDept?.DepartmentId;
+                    phamVanSanXuatUser.RoleId = toTruongRole?.Id;
+                }
+
+                // Update Nguyễn Văn Kho
+                var nguyenVanKhoUser = users.FirstOrDefault(u => u.UserName == "quanly.kho");
+                if (nguyenVanKhoUser != null)
+                {
+                    nguyenVanKhoUser.DepartmentId = vatTuDept?.DepartmentId;
+                    nguyenVanKhoUser.RoleId = quanLyKhoRole?.Id;
+                }
+
+                // Update Nguyễn Văn Quản trị
+                var nguyenVanQuanTriUser = users.FirstOrDefault(u => u.UserName == "admin.dev");
+                if (nguyenVanQuanTriUser != null)
+                {
+                    nguyenVanQuanTriUser.DepartmentId = itDept?.DepartmentId;
+                    nguyenVanQuanTriUser.RoleId = quanTriVienRole?.Id;
+                }
+
+                // Update Đặng Văn Kỹ thuật
+                var dangVanKyThuatUser = users.FirstOrDefault(u => u.UserName == "kythuat.vien1");
+                if (dangVanKyThuatUser != null)
+                {
+                    dangVanKyThuatUser.DepartmentId = kyThuatDept?.DepartmentId;
+                    dangVanKyThuatUser.RoleId = kyThuatVienRole?.Id;
+                }
+
+                // Update Lê Văn Kỹ thuật
+                var leVanKyThuatUser = users.FirstOrDefault(u => u.UserName == "quanly.kythuat");
+                if (leVanKyThuatUser != null)
+                {
+                    leVanKyThuatUser.DepartmentId = kyThuatDept?.DepartmentId;
+                    leVanKyThuatUser.RoleId = quanLyKyThuatRole?.Id;
+                }
+
+                await context.SaveChangesAsync();
             }
         }
 
@@ -1939,6 +2022,46 @@ namespace FITSKIP.Infrastructure.SeedData
             }
         }
 
+        public static async Task SeedUserLines(FitskipDbContext context)
+        {
+            if (!await context.UserLines.AnyAsync())
+            {
+                var users = await context.Users.ToListAsync();
+                var lines = await context.Lines.ToListAsync();
+
+                var userLines = new List<UserLine>();
+
+                // Vũ Tuấn Hoàng - Dập / uốn / cắt tôn (CK-C02)
+                var hoangUser = users.FirstOrDefault(u => u.UserName == "TT002");
+                var ckC02 = lines.FirstOrDefault(l => l.LineCode == "CK-C02");
+                if (hoangUser != null && ckC02 != null)
+                {
+                    userLines.Add(new UserLine
+                    {
+                        UserId = hoangUser.Id,
+                        LineId = ckC02.LineId,
+                        CreatedAt = DateTime.Now
+                    });
+                }
+
+                // Phạm Văn Sản xuất - Gia công tiện / khoan / phay (CK-C01)
+                var phamUser = users.FirstOrDefault(u => u.UserName == "totruong.sanxuat");
+                var ckC01 = lines.FirstOrDefault(l => l.LineCode == "CK-C01");
+                if (phamUser != null && ckC01 != null)
+                {
+                    userLines.Add(new UserLine
+                    {
+                        UserId = phamUser.Id,
+                        LineId = ckC01.LineId,
+                        CreatedAt = DateTime.Now
+                    });
+                }
+
+                await context.UserLines.AddRangeAsync(userLines);
+                await context.SaveChangesAsync();
+            }
+        }
+
         public static async Task UpdateUserRole(FitskipDbContext context, string userId, string roleName)
         {
             var user = await context.Users.FindAsync(userId);
@@ -1974,6 +2097,7 @@ namespace FITSKIP.Infrastructure.SeedData
 
             await SeedStopTypes(context);
             await SeedLines(context);
+            await SeedUserLines(context);
             await SeedStages(context);
             await SeedEquipment(context);
             await SeedShifts(context);

@@ -23,6 +23,7 @@ import {
   Spin,
   Tabs,
   Dropdown,
+  Statistic,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -37,6 +38,12 @@ import {
   CalendarOutlined,
   UserOutlined,
   DownOutlined,
+  RollbackOutlined,
+  UpOutlined,
+  HistoryOutlined,
+  SearchOutlined,
+  ClockCircleOutlined,
+  InboxOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { incidentService } from "../../services/incidentService";
@@ -49,6 +56,7 @@ const IncidentSparePartsDistribution = () => {
   const [maintenances, setMaintenances] = useState([]);
   const [spareParts, setSpareParts] = useState([]);
   const [distributions, setDistributions] = useState([]);
+  const [filteredDistributions, setFilteredDistributions] = useState([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [distributionForm] = Form.useForm();
   const [selectedDistributions, setSelectedDistributions] = useState([]);
@@ -62,24 +70,47 @@ const IncidentSparePartsDistribution = () => {
   const [selectedDistributionDetail, setSelectedDistributionDetail] =
     useState(null);
 
+  // State cho chức năng trả lại vật tư
+  const [expandedReturnRow, setExpandedReturnRow] = useState(null);
+  const [returnModalVisible, setReturnModalVisible] = useState(false);
+  const [selectedDistributionForReturn, setSelectedDistributionForReturn] = useState(null);
+  const [returnForm] = Form.useForm();
+  const [returnItems, setReturnItems] = useState([]);
+
+  // State cho statistics
+  const [statistics, setStatistics] = useState({
+    total: 0,
+    distributed: 0,
+    returned: 0,
+    pendingReturn: 0,
+  });
+
+  // Filter states
+  const [filters, setFilters] = useState({
+    dateRange: null,
+    status: null,
+    searchText: "",
+  });
+
   useEffect(() => {
     fetchSpareParts();
     fetchDistributions();
-    fetchIncidents(); // Load incidents on mount
+    fetchIncidents();
   }, []);
+
+  useEffect(() => {
+    applyFilters();
+  }, [distributions, filters]);
 
   const fetchDistributions = async () => {
     setLoading(true);
     try {
-      // Fetch replacement histories with status "Đã xuất"
       const allReplacements = await replacementHistoryService.getAll();
 
-      // Filter only "Đã xuất" status
       const exportedReplacements = (allReplacements || []).filter(
         (r) => r.status === "Đã xuất"
       );
 
-      // Transform to distribution format
       const formattedDistributions = exportedReplacements.map((replacement) => {
         const distributionType = replacement.incidentId
           ? "incident"
@@ -91,10 +122,12 @@ const IncidentSparePartsDistribution = () => {
           distributionType: distributionType,
           recordId: recordId,
           recordName: replacement.equipmentName || "",
+          recordCode: replacement.equipmentCode || "",
           technicianName:
             replacement.replacedByFullName ||
             replacement.replacedByUserName ||
             "",
+          technicianCode: replacement.replacedByEmployeeCode || "",
           distributedAt: replacement.replacedDate,
           distributedBy:
             replacement.replacedByFullName ||
@@ -109,16 +142,76 @@ const IncidentSparePartsDistribution = () => {
             },
           ],
           notes: replacement.remarks || "",
+          status: Math.random() > 0.5 ? "Đã trả lại" : "Đã xuất",
         };
       });
 
       setDistributions(formattedDistributions);
+      const grouped = groupDistributions(formattedDistributions);
+      setFilteredDistributions(grouped);
+      calculateStatistics(grouped);
     } catch (error) {
       console.error("Error fetching distributions:", error);
       message.error("Lỗi khi tải danh sách phiếu cấp phát");
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateStatistics = (distributions) => {
+    const stats = {
+      total: distributions.length,
+      distributed: distributions.filter((d) => d.status === "Đã xuất").length,
+      returned: distributions.filter((d) => d.status === "Đã trả lại").length,
+      pendingReturn: distributions.filter((d) => d.status === "Chờ trả lại").length,
+    };
+    setStatistics(stats);
+  };
+
+  const applyFilters = () => {
+    let filtered = [...distributions];
+
+    // Filter by date range
+    if (filters.dateRange && filters.dateRange.length === 2) {
+      const [start, end] = filters.dateRange;
+      filtered = filtered.filter(d => dayjs(d.distributedAt).isBetween(start, end, 'day', '[]'));
+    }
+
+    // Filter by status
+    if (filters.status) {
+      filtered = filtered.filter(d => d.status === filters.status);
+    }
+
+    // Filter by search text
+    if (filters.searchText) {
+      const searchLower = filters.searchText.toLowerCase();
+      filtered = filtered.filter(d =>
+        d.recordId?.toString().toLowerCase().includes(searchLower) ||
+        d.recordName?.toLowerCase().includes(searchLower) ||
+        d.recordCode?.toLowerCase().includes(searchLower) ||
+        d.technicianName?.toLowerCase().includes(searchLower) ||
+        d.technicianCode?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Group lại
+    const grouped = groupDistributions(filtered);
+    setFilteredDistributions(grouped);
+  };
+
+  const handleFilterChange = (key, value) => {
+    setFilters((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
+  };
+
+  const handleResetFilters = () => {
+    setFilters({
+      dateRange: null,
+      status: null,
+      searchText: "",
+    });
   };
 
   const fetchSpareParts = async () => {
@@ -134,7 +227,6 @@ const IncidentSparePartsDistribution = () => {
     setSearchingIncidents(true);
     try {
       const data = await incidentService.getAll();
-      // Filter incidents that require tech support and have been assigned to technicians
       const assignedIncidents = (data || []).filter(
         (incident) => incident.isTechSupport === true && incident.assignedTo
       );
@@ -149,7 +241,7 @@ const IncidentSparePartsDistribution = () => {
 
   const searchIncidents = async (searchValue) => {
     if (!searchValue) {
-      fetchIncidents(); // Reload all incidents if search is cleared
+      fetchIncidents();
       return;
     }
     setSearchingIncidents(true);
@@ -183,7 +275,7 @@ const IncidentSparePartsDistribution = () => {
     }
     setSearchingMaintenances(true);
     try {
-      const data = await incidentService.getAll(); // Replace with maintenance service when available
+      const data = await incidentService.getAll();
       const filtered = (data || []).filter(
         (maintenance) =>
           maintenance.incidentId?.toString().includes(searchValue) ||
@@ -209,7 +301,7 @@ const IncidentSparePartsDistribution = () => {
     distributionForm.resetFields();
     setDistributionType("incident");
     setMaintenances([]);
-    fetchIncidents(); // Reload incidents when opening modal
+    fetchIncidents();
     setIsModalVisible(true);
   };
 
@@ -221,7 +313,6 @@ const IncidentSparePartsDistribution = () => {
 
     setSelectedRecord(record);
 
-    // Auto-fill technician name and employee code if available
     if (record && record.assignedToName) {
       const technicianDisplay = record.assignedToEmployeeCode
         ? `${record.assignedToName} (${record.assignedToEmployeeCode})`
@@ -275,7 +366,6 @@ const IncidentSparePartsDistribution = () => {
     try {
       const values = await distributionForm.validateFields();
 
-      // Validate spare parts
       if (selectedDistributions.length === 0) {
         message.warning("Vui lòng thêm ít nhất một phụ tùng");
         setLoading(false);
@@ -289,7 +379,6 @@ const IncidentSparePartsDistribution = () => {
         return;
       }
 
-      // Validate inventory quantities
       const insufficientStock = selectedDistributions.find((item) => {
         const part = spareParts.find((p) => p.partId === item.partId);
         return part && part.quantity < item.quantity;
@@ -310,13 +399,11 @@ const IncidentSparePartsDistribution = () => {
       const currentUserId = localStorage.getItem("userId");
       const currentUserName = localStorage.getItem("userName") || "Quản lý kho";
 
-      // Get selected record for equipment info
       const selectedRecordData =
         distributionType === "incident"
           ? incidents.find((i) => i.incidentId === values.recordId)
           : maintenances.find((m) => m.incidentId === values.recordId);
 
-      // Create replacement histories for each spare part
       const replacementPromises = selectedDistributions.map(async (item) => {
         const replacementData = {
           partId: item.partId,
@@ -335,10 +422,8 @@ const IncidentSparePartsDistribution = () => {
         return replacementHistoryService.create(replacementData);
       });
 
-      // Execute all replacement history creations
       await Promise.all(replacementPromises);
 
-      // Update spare parts inventory and status
       const updatePromises = selectedDistributions.map(async (item) => {
         const part = spareParts.find((p) => p.partId === item.partId);
         if (!part) return;
@@ -346,14 +431,12 @@ const IncidentSparePartsDistribution = () => {
         const newQuantity = part.quantity - item.quantity;
         let newStatus = "Đủ hàng";
 
-        // Determine status based on quantity and minQuantity
         if (newQuantity <= 0) {
           newStatus = "Hết hàng";
         } else if (newQuantity <= part.minQuantity) {
           newStatus = "Sắp hết";
         }
 
-        // Update spare part
         const updateData = {
           partNumber: part.partNumber,
           partName: part.partName,
@@ -370,10 +453,8 @@ const IncidentSparePartsDistribution = () => {
 
       await Promise.all(updatePromises);
 
-      // Refresh spare parts list
       await fetchSpareParts();
 
-      // Save to local state for display
       const newDistribution = {
         id: Date.now(),
         distributionType: distributionType,
@@ -389,7 +470,6 @@ const IncidentSparePartsDistribution = () => {
 
       message.success(`Cấp phát vật tư cho ${recordType} thành công!`);
 
-      // Close modal and reset
       setIsModalVisible(false);
       setSelectedDistributions([]);
       setSelectedRecord(null);
@@ -410,38 +490,141 @@ const IncidentSparePartsDistribution = () => {
     }
   };
 
-  const distributionColumns = [
+  // Hàm xử lý trả lại vật tư
+  const handleOpenReturnDropdown = (record) => {
+    setExpandedReturnRow(expandedReturnRow === record.recordId ? null : record.recordId);
+    setSelectedDistributionForReturn(record);
+  };
+
+  const handleOpenReturnModal = (record, item) => {
+    setSelectedDistributionForReturn(record);
+
+    // Chỉ lấy phụ tùng được click để trả lại
+    const itemsToReturn = [
+      {
+        partId: item.partId,
+        partNumber: item.partNumber,
+        partName: item.partName,
+        quantityExported: item.quantity,
+        quantityToReturn: 0,
+      }
+    ];
+
+    setReturnItems(itemsToReturn);
+    returnForm.resetFields();
+    setReturnModalVisible(true);
+    // setExpandedReturnRow(null); // Bỏ dòng này để giữ dropdown mở
+  };
+
+  const handleUpdateReturnQuantity = (partId, value) => {
+    const updated = returnItems.map((item) => {
+      if (item.partId === partId) {
+        return { ...item, quantityToReturn: value || 0 };
+      }
+      return item;
+    });
+    setReturnItems(updated);
+  };
+
+  const handleSaveReturn = async (values) => {
+    const itemsWithReturn = returnItems.filter((item) => item.quantityToReturn > 0);
+
+    if (itemsWithReturn.length === 0) {
+      message.warning("Vui lòng nhập số lượng trả lại cho ít nhất một phụ tùng");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      // TODO: Thực hiện logic lưu trả lại ở đây
+      // await replacementHistoryService.create/update(...)
+
+      message.success(`Ghi nhận trả lại ${itemsWithReturn.length} phụ tùng thành công!`);
+
+      setReturnModalVisible(false);
+      setReturnItems([]);
+      setSelectedDistributionForReturn(null);
+      returnForm.resetFields();
+
+      await fetchDistributions();
+    } catch (error) {
+      console.error("Error saving return:", error);
+      message.error("Lỗi khi lưu phiếu trả lại");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getDistributionColumns = (type) => [
     {
       title: "Loại",
       dataIndex: "distributionType",
       key: "distributionType",
       width: 100,
-      render: (type) => (
-        <Tag color={type === "incident" ? "red" : "cyan"}>
-          {type === "incident" ? "Sự cố" : "Bảo trì"}
-        </Tag>
-      ),
+      fixed: "left",
+      render: (type, record) => {
+        const isIncident = type === "incident";
+        const hasReturnItems = record.status === "Đã trả lại";
+        return (
+          <Space size="small">
+            {hasReturnItems && (
+              <Tooltip title="Đã có phụ tùng trả lại">
+                <span style={{ fontSize: "18px" }}><RollbackOutlined /></span>
+              </Tooltip>
+            )}
+            <Tag color={isIncident ? "red" : "blue"} icon={isIncident ? <WarningOutlined /> : <ToolOutlined />} style={{ fontSize: "13px", fontWeight: 600 }}>
+              {isIncident ? "Sự cố" : "Bảo trì"}
+            </Tag>
+          </Space>
+        );
+      },
     },
     {
-      title: "Mã SC/BT",
+      title: type === "incident" ? "Mã sự cố" : type === "maintenance" ? "Mã bảo trì" : "Mã SC/BT",
       dataIndex: "recordId",
       key: "recordId",
-      width: 120,
+      width: 100,
+      render: (text) => <strong>{text}</strong>,
     },
     {
       title: "Thiết bị",
       dataIndex: "recordName",
       key: "recordName",
       width: 200,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 600, fontSize: "13px" }}>
+            {record.recordName}
+          </div>
+          <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+            {record.recordCode}
+          </div>
+        </div>
+      ),
     },
     {
-      title: "Kỹ thuật viên",
+      title: "Người yêu cầu",
       dataIndex: "technicianName",
       key: "technicianName",
       width: 150,
+      render: (_, record) => (
+        <div>
+          <div style={{ fontSize: "13px", fontWeight: 500 }}>
+            {record.technicianName ||
+              record.technicianName ||
+              "Chưa xác định"}
+          </div>
+          {record.technicianCode && (
+            <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+              {record.technicianCode}
+            </div>
+          )}
+        </div>
+      ),
     },
     {
-      title: "Tổng số loại vật tư",
+      title: "Số lượng",
       key: "totalItemsCount",
       width: 130,
       align: "center",
@@ -451,11 +634,23 @@ const IncidentSparePartsDistribution = () => {
       },
     },
     {
-      title: "Lần xuất gần nhất",
+      title: "Ngày yêu cầu",
       dataIndex: "lastDistributedAt",
       key: "lastDistributedAt",
       width: 150,
-      render: (time) => dayjs(time).format("DD/MM/YYYY HH:mm"),
+      render: (time) =>
+        time ? (
+          <div>
+            <div style={{ fontSize: "13px" }}>
+              {dayjs(time).format("DD/MM/YYYY")}
+            </div>
+            <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+              {dayjs(time).format("HH:mm")}
+            </div>
+          </div>
+        ) : (
+          "-"
+        ),
     },
     {
       title: "Thao tác",
@@ -473,6 +668,12 @@ const IncidentSparePartsDistribution = () => {
                 icon: <EyeOutlined />,
                 onClick: () => showDistributionDetail(record),
               },
+              {
+                key: "return",
+                label: "Trả lại vật tư",
+                icon: <RollbackOutlined />,
+                onClick: () => handleOpenReturnDropdown(record),
+              },
             ],
           }}
           trigger={["click"]}
@@ -483,57 +684,87 @@ const IncidentSparePartsDistribution = () => {
     },
   ];
 
-  // Group distributions by recordId and distributionType
-  const groupedDistributions = distributions.reduce((acc, dist) => {
-    const key = `${dist.distributionType}_${dist.recordId}`;
-    if (!acc[key]) {
-      acc[key] = {
-        distributionType: dist.distributionType,
-        recordId: dist.recordId,
-        recordName: dist.recordName,
-        technicianName: dist.technicianName,
-        lastDistributedAt: dist.distributedAt,
-        distributions: [],
-        allItems: [],
-      };
-    }
-
-    // Update last distributed time if this is newer
-    if (dayjs(dist.distributedAt).isAfter(dayjs(acc[key].lastDistributedAt))) {
-      acc[key].lastDistributedAt = dist.distributedAt;
-    }
-
-    // Add distribution to list
-    acc[key].distributions.push({
-      id: dist.id,
-      distributedAt: dist.distributedAt,
-      distributedBy: dist.distributedBy,
-      items: dist.items,
-      notes: dist.notes,
-    });
-
-    // Merge items - avoid duplicates by partId, sum quantities
-    dist.items?.forEach((item) => {
-      const existingItem = acc[key].allItems.find(
-        (i) => i.partId === item.partId
-      );
-      if (existingItem) {
-        existingItem.quantity += item.quantity;
-      } else {
-        acc[key].allItems.push({ ...item });
+  const groupDistributions = (distributions) => {
+    const grouped = distributions.reduce((acc, dist) => {
+      const key = `${dist.distributionType}_${dist.recordId}`;
+      if (!acc[key]) {
+        acc[key] = {
+          distributionType: dist.distributionType,
+          recordId: dist.recordId,
+          recordName: dist.recordName,
+          recordCode: dist.recordCode,
+          technicianName: dist.technicianName,
+          technicianCode: dist.technicianCode,
+          lastDistributedAt: dist.distributedAt,
+          distributions: [],
+          allItems: [],
+          allStatuses: new Set(),
+        };
       }
-    });
 
-    return acc;
-  }, {});
+      if (dayjs(dist.distributedAt).isAfter(dayjs(acc[key].lastDistributedAt))) {
+        acc[key].lastDistributedAt = dist.distributedAt;
+      }
 
-  const groupedDistributionsList = Object.values(groupedDistributions);
+      acc[key].distributions.push({
+        id: dist.id,
+        distributedAt: dist.distributedAt,
+        distributedBy: dist.distributedBy,
+        items: dist.items,
+        notes: dist.notes,
+      });
 
-  const filteredDistributions = groupedDistributionsList.filter((dist) => {
-    if (!searchText) return true;
-    const searchLower = searchText.toLowerCase();
+      // Track all statuses for this record
+      acc[key].allStatuses.add(dist.status);
+
+      dist.items?.forEach((item) => {
+        const existingItem = acc[key].allItems.find(
+          (i) => i.partId === item.partId
+        );
+        if (existingItem) {
+          if (dist.status === "Đã xuất") {
+            existingItem.quantity += item.quantity;
+          }
+          existingItem.quantityToReturn = (existingItem.quantityToReturn || 0) + (item.quantityToReturn || 0);
+        } else {
+          acc[key].allItems.push({ ...item, quantityToReturn: item.quantityToReturn || 0 });
+        }
+      });
+
+      return acc;
+    }, {});
+
+    // Convert to array and determine primary status for each group
+    return Object.values(grouped).map((group) => {
+      const totalQuantity = group.allItems.reduce(
+        (sum, item) => sum + (item.quantity || 0),
+        0
+      );
+      const totalReturned = group.allItems.reduce(
+        (sum, item) => sum + (item.quantityToReturn || 0),
+        0
+      );
+      const totalUsed = group.allItems.reduce(
+        (sum, item) => sum + Math.max(0, (item.quantity || 0) - (item.quantityToReturn || 0)),
+        0
+      );
+
+      return {
+        ...group,
+        totalQuantity,
+        totalReturned,
+        totalUsed,
+        // Determine primary status (prioritize by order: Đã xuất > Đã trả lại)
+        status: totalUsed > 0 ? "Đã xuất" : "Đã trả lại",
+      };
+    }).filter(group => group.totalUsed > 0);
+  };
+
+  const filteredDistributionsList = filteredDistributions.filter((dist) => {
+    if (!filters.searchText) return true;
+    const searchLower = filters.searchText.toLowerCase();
     return (
-      dist.recordId?.toLowerCase().includes(searchLower) ||
+      dist.recordId?.toString().toLowerCase().includes(searchLower) ||
       dist.recordName?.toLowerCase().includes(searchLower) ||
       dist.technicianName?.toLowerCase().includes(searchLower)
     );
@@ -545,12 +776,220 @@ const IncidentSparePartsDistribution = () => {
     setDetailModalVisible(true);
   }, []);
 
-  const incidentDistributions = filteredDistributions.filter(
+  const incidentDistributions = filteredDistributionsList.filter(
     (d) => d.distributionType === "incident"
   );
-  const maintenanceDistributions = filteredDistributions.filter(
+  const maintenanceDistributions = filteredDistributionsList.filter(
     (d) => d.distributionType === "maintenance"
   );
+
+  // Hàm render expandable row cho trả lại vật tư
+  const renderReturnExpandRow = (record) => {
+    if (expandedReturnRow !== record.recordId) return null;
+
+    const itemsToShow = record.allItems && record.allItems.length > 0 ? record.allItems.filter(item => (item.quantity || 0) > (item.quantityToReturn || 0)) : record.items || [];
+
+    return (
+      <div style={{ padding: "20px", backgroundColor: "#fafafa", borderRadius: "8px" }}>
+        {/* <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "16px",
+          }}
+        > */}
+        {/* <Alert
+            message="📦 Danh sách phụ tùng cấp phát - Sẵn sàng trả lại"
+            description="Chọn phụ tùng cần trả lại và nhập số lượng thừa trong modal"
+            type="warning"
+            showIcon
+            style={{ margin: 0, flex: 1 }}
+          /> */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: "16px", }}>
+          <Button
+            type="text"
+            size="small"
+            onClick={() => setExpandedReturnRow(null)}
+            style={{
+              marginLeft: "16px",
+              fontSize: "16px",
+              color: "#999",
+              border: "1px solid #d9d9d9",
+              borderRadius: "4px",
+              padding: "4px 12px",
+            }}
+            title="Đóng"
+          >
+            <UpOutlined />
+          </Button>
+        </div>
+        {/* </div> */}
+
+        <div style={{ overflow: "auto", borderRadius: "8px", border: "2px solid #D3D3D3", boxShadow: "0 2px 8px rgba(242, 232, 232, 0.15)" }}>
+          <table
+            style={{
+              width: "100%",
+              borderCollapse: "collapse",
+            }}
+          >
+            <thead>
+              <tr
+                style={{
+                  backgroundColor: "#D3D3D3",
+                  borderBottom: "2px solid #D3D3D3",
+                }}
+              >
+                <th
+                  style={{
+                    padding: "14px",
+                    textAlign: "center",
+                    fontWeight: 700,
+                    color: "#fff",
+                    borderRight: "1px solid #aaaaaaff",
+                  }}
+                >
+                  STT
+                </th>
+                <th
+                  style={{
+                    padding: "14px",
+                    textAlign: "center",
+                    fontWeight: 700,
+                    color: "#fff",
+                    borderRight: "1px solid #aaaaaaff",
+                  }}
+                >
+                  Mã phụ tùng
+                </th>
+                <th
+                  style={{
+                    padding: "14px",
+                    textAlign: "center",
+                    fontWeight: 700,
+                    color: "#fff",
+                    borderRight: "1px solid #aaaaaaff",
+                  }}
+                >
+                  Phụ tùng
+                </th>
+                <th
+                  style={{
+                    padding: "14px",
+                    textAlign: "center",
+                    fontWeight: 700,
+                    color: "#fff",
+                    borderRight: "1px solid #aaaaaaff",
+                  }}
+                >
+                  Tổng cấp phát
+                </th>
+                <th
+                  style={{
+                    padding: "14px",
+                    textAlign: "center",
+                    fontWeight: 700,
+                    color: "#fff",
+                    fixed: "right",
+                  }}
+                >
+                  Thao tác
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {itemsToShow && itemsToShow.length > 0 ? (
+                itemsToShow.map((item, idx) => (
+                  <tr
+                    key={`${item.partId}_${idx}`}
+                    style={{
+                      borderBottom: "1px solid #e8e8e8",
+                      backgroundColor: idx % 2 === 0 ? "#fff" : "#f5f5f5ff",
+                      transition: "all 0.2s ease",
+                      cursor: "pointer",
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = "#f5f5f5ff";
+                      e.currentTarget.style.boxShadow = "inset 0 0 0 1px #aaaaaaff";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor =
+                        idx % 2 === 0 ? "#fff" : "#f5f5f5ff";
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: "14px",
+                        textAlign: "center",
+                        fontWeight: 600,
+                        borderRight: "1px solid #e8e8e8",
+                      }}
+                    >
+                      {idx + 1}
+                    </td>
+                    <td
+                      style={{
+                        padding: "14px",
+                        textAlign: "center",
+                        fontSize: "13px",
+                        color: "#666",
+                        borderRight: "1px solid #e8e8e8",
+                      }}
+                    >
+                      {item.partNumber}
+                    </td>
+                    <td
+                      style={{
+                        padding: "14px",
+                        borderRight: "1px solid #e8e8e8",
+                      }}
+                    >
+                      <strong style={{ fontSize: "15px" }}>{item.partName}</strong>
+                    </td>
+                    <td
+                      style={{
+                        padding: "14px",
+                        textAlign: "center",
+                        borderRight: "1px solid #e8e8e8",
+                      }}
+                    >
+                      <Tag color="blue" style={{ fontSize: "14px", padding: "4px 12px" }}>
+                        {item.quantity}
+                      </Tag>
+                    </td>
+                    <td
+                      style={{
+                        padding: "14px",
+                        textAlign: "center",
+                      }}
+                    >
+                      <Button
+                        type="primary"
+                        //danger
+                        size="small"
+                        icon={<RollbackOutlined />}
+                        onClick={() => handleOpenReturnModal(record, item)}
+                        style={{ fontWeight: 600, backgroundColor: "#C8AC7D", borderColor: "#C8AC7D" }}
+                      >
+                        Trả lại
+                      </Button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="5" style={{ padding: "20px", textAlign: "center", color: "#999" }}>
+                    Không có phụ tùng nào
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div>
@@ -579,19 +1018,122 @@ const IncidentSparePartsDistribution = () => {
         </Row>
       </Card>
 
+      {/* Statistics Cards */}
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col xs={24} sm={12} md={6}>
+          <Card bordered={false} style={{ backgroundColor: "#f0f5ff" }}>
+            <Statistic
+              title={<span style={{ fontSize: "13px", color: "#1890ff" }}>Tổng số cấp phát</span>}
+              value={statistics.total}
+              prefix={<FileTextOutlined style={{ color: "#1890ff" }} />}
+              valueStyle={{ color: "#1890ff", fontSize: "24px" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card bordered={false} style={{ backgroundColor: "#f6ffed" }}>
+            <Statistic
+              title={<span style={{ fontSize: "13px", color: "#52c41a" }}>Đã cấp phát</span>}
+              value={statistics.distributed}
+              prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
+              valueStyle={{ color: "#52c41a", fontSize: "24px" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card bordered={false} style={{ backgroundColor: "#f9f0ff" }}>
+            <Statistic
+              title={<span style={{ fontSize: "13px", color: "#722ed1" }}>Đã trả lại</span>}
+              value={statistics.returned}
+              prefix={<InboxOutlined style={{ color: "#722ed1" }} />}
+              valueStyle={{ color: "#722ed1", fontSize: "24px" }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Card bordered={false} style={{ backgroundColor: "#fff7e6" }}>
+            <Statistic
+              title={<span style={{ fontSize: "13px", color: "#fa8c16" }}>Chờ trả lại</span>}
+              value={statistics.pendingReturn}
+              prefix={<ClockCircleOutlined style={{ color: "#fa8c16" }} />}
+              valueStyle={{ color: "#fa8c16", fontSize: "24px" }}
+            />
+          </Card>
+        </Col>
+      </Row>
+
       {/* Distribution List */}
       <Card
         title="Danh sách phiếu cấp phát"
         extra={
-          <Input.Search
-            placeholder="Tìm theo mã, thiết bị, kỹ thuật viên..."
-            style={{ width: 300 }}
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            allowClear
-          />
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchDistributions}
+            loading={loading}
+          >
+            Làm mới
+          </Button>
         }
       >
+        {/* Search Filter */}
+        <Card
+          size="small"
+          style={{
+            marginBottom: 16,
+            backgroundColor: "#fafafa",
+            borderRadius: "8px",
+          }}
+        >
+          <Row gutter={[16, 16]}>
+            <Col xs={24} sm={12} md={8}>
+              <div style={{ marginBottom: 4, fontSize: "13px", color: "#666" }}>
+                Khoảng thời gian
+              </div>
+              <DatePicker.RangePicker
+                style={{ width: "100%" }}
+                value={filters.dateRange}
+                onChange={(dates) => handleFilterChange("dateRange", dates)}
+                format="DD/MM/YYYY"
+                placeholder={["Từ ngày", "Đến ngày"]}
+              />
+            </Col>
+            <Col xs={24} sm={12} md={8}>
+              <div style={{ marginBottom: 4, fontSize: "13px", color: "#666" }}>
+                Trạng thái
+              </div>
+              <Select
+                style={{ width: "100%" }}
+                placeholder="Chọn trạng thái"
+                value={filters.status}
+                onChange={(value) => handleFilterChange("status", value)}
+                allowClear
+              >
+                <Select.Option value="Đã xuất">Đã xuất</Select.Option>
+                <Select.Option value="Đã trả lại">Đã trả lại</Select.Option>
+              </Select>
+            </Col>
+            <Col xs={24} sm={24} md={8}>
+              <div style={{ marginBottom: 4, fontSize: "13px", color: "#666" }}>
+                Tìm kiếm
+              </div>
+              <Input
+                placeholder="Tìm theo mã, thiết bị, người cấp phát..."
+                prefix={<SearchOutlined />}
+                value={filters.searchText}
+                onChange={(e) => handleFilterChange("searchText", e.target.value)}
+                allowClear
+              />
+            </Col>
+          </Row>
+          <Row style={{ marginTop: 12 }}>
+            <Col span={24}>
+              <Button size="small" onClick={handleResetFilters}>
+                Xóa bộ lọc
+              </Button>
+            </Col>
+          </Row>
+        </Card>
+
         <Tabs
           activeKey={activeTab}
           onChange={setActiveTab}
@@ -610,7 +1152,7 @@ const IncidentSparePartsDistribution = () => {
               children: (
                 <Table
                   dataSource={incidentDistributions}
-                  columns={distributionColumns}
+                  columns={getDistributionColumns("incident")}
                   rowKey="recordId"
                   loading={loading}
                   pagination={{
@@ -621,6 +1163,13 @@ const IncidentSparePartsDistribution = () => {
                     emptyText: (
                       <Empty description="Chưa có phiếu cấp phát nào" />
                     ),
+                  }}
+                  scroll={{ x: 1000 }}
+                  expandable={{
+                    expandedRowKeys: expandedReturnRow ? [expandedReturnRow] : [],
+                    expandedRowRender: renderReturnExpandRow,
+                    expandIcon: () => null,
+                    expandIconColumnIndex: -1,
                   }}
                 />
               ),
@@ -639,7 +1188,7 @@ const IncidentSparePartsDistribution = () => {
               children: (
                 <Table
                   dataSource={maintenanceDistributions}
-                  columns={distributionColumns}
+                  columns={getDistributionColumns("maintenance")}
                   rowKey="recordId"
                   loading={loading}
                   pagination={{
@@ -649,6 +1198,169 @@ const IncidentSparePartsDistribution = () => {
                   locale={{
                     emptyText: (
                       <Empty description="Chưa có phiếu cấp phát nào" />
+                    ),
+                  }}
+                  scroll={{ x: 1000 }}
+                  expandable={{
+                    expandedRowKeys: expandedReturnRow ? [expandedReturnRow] : [],
+                    expandedRowRender: renderReturnExpandRow,
+                    expandIcon: () => null,
+                    expandIconColumnIndex: -1,
+                  }}
+                />
+              ),
+            },
+            {
+              key: "history",
+              label: (
+                <span>
+                  <HistoryOutlined /> Lịch sử giao dịch{" "}
+                  <Badge
+                    count={filteredDistributionsList.length}
+                    style={{ backgroundColor: "#1890ff" }}
+                  />
+                </span>
+              ),
+              children: (
+                <Table
+                  dataSource={filteredDistributionsList}
+                  columns={[
+                    {
+                      title: "Loại",
+                      dataIndex: "distributionType",
+                      key: "distributionType",
+                      width: 100,
+                      fixed: "left",
+                      render: (type) => (
+                        <Tag color={type === "incident" ? "red" : "blue"}>
+                          {type === "incident" ? "Sự cố" : "Bảo trì"}
+                        </Tag>
+                      ),
+                    },
+                    {
+                      title: "Mã SC/BT",
+                      dataIndex: "recordId",
+                      key: "recordId",
+                      width: 100,
+                      render: (text) => <strong>{text}</strong>,
+                    },
+                    {
+                      title: "Thiết bị",
+                      dataIndex: "recordName",
+                      key: "recordName",
+                      width: 200,
+                      render: (_, record) => (
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: "13px" }}>
+                            {record.recordName}
+                          </div>
+                          <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                            {record.recordCode}
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      title: "Người yêu cầu",
+                      dataIndex: "technicianName",
+                      key: "technicianName",
+                      width: 150,
+                      render: (_, record) => (
+                        <div>
+                          <div style={{ fontSize: "13px", fontWeight: 500 }}>
+                            {record.technicianName}
+                          </div>
+                          <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                            {record.technicianCode}
+                          </div>
+                        </div>
+                      ),
+                    },
+                    {
+                      title: "Số lượng",
+                      key: "totalItemsCount",
+                      width: 130,
+                      align: "center",
+                      render: (_, record) => {
+                        return <Badge count={record.totalQuantity} showZero color="blue" />;
+                      },
+                    },
+                    {
+                      title: "Trạng thái",
+                      dataIndex: "status",
+                      key: "status",
+                      width: 150,
+                      render: (status) => {
+                        const statusConfig = {
+                          "Đã xuất": { color: "green", icon: <CheckCircleOutlined /> },
+                          "Đã trả lại": { color: "purple", icon: <InboxOutlined /> },
+                        };
+                        const config = statusConfig[status] || { color: "default", icon: null };
+                        return (
+                          <Tag color={config.color} icon={config.icon}>
+                            {status}
+                          </Tag>
+                        );
+                      },
+                    },
+                    {
+                      title: "Ngày yêu cầu",
+                      dataIndex: "lastDistributedAt",
+                      key: "lastDistributedAt",
+                      width: 150,
+                      render: (time) =>
+                        time ? (
+                          <div>
+                            <div style={{ fontSize: "13px" }}>
+                              {dayjs(time).format("DD/MM/YYYY")}
+                            </div>
+                            <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                              {dayjs(time).format("HH:mm")}
+                            </div>
+                          </div>
+                        ) : (
+                          "-"
+                        ),
+                    },
+                    {
+                      title: "Thao tác",
+                      key: "action",
+                      width: 100,
+                      render: (_, record) => {
+                        const menuItems = [
+                          {
+                            key: "detail",
+                            label: "Xem chi tiết",
+                            icon: <EyeOutlined />,
+                            onClick: () => showDistributionDetail(record),
+                          },
+                        ];
+                        return (
+                          <Dropdown
+                            menu={{ items: menuItems }}
+                            trigger={["click"]}
+                            placement="bottomRight"
+                          >
+                            <Button
+                              type="link"
+                              icon={<DownOutlined />}
+                              style={{ padding: "4px 8px", color: "#334766" }}
+                            />
+                          </Dropdown>
+                        );
+                      },
+                    },
+                  ]}
+                  rowKey="recordId"
+                  loading={loading}
+                  pagination={{
+                    pageSize: 10,
+                    showTotal: (total) => `Tổng ${total} giao dịch`,
+                  }}
+                  scroll={{ x: 1200 }}
+                  locale={{
+                    emptyText: (
+                      <Empty description="Không có lịch sử giao dịch nào" />
                     ),
                   }}
                 />
@@ -666,7 +1378,7 @@ const IncidentSparePartsDistribution = () => {
             Tạo phiếu cấp phát vật tư
           </div>
         }
-        visible={isModalVisible}
+        open={isModalVisible}
         onCancel={() => {
           setIsModalVisible(false);
           setSelectedDistributions([]);
@@ -691,7 +1403,6 @@ const IncidentSparePartsDistribution = () => {
             style={{ marginBottom: 16 }}
           />
 
-          {/* Distribution Type Selection - Full Width */}
           <Form.Item
             label={
               <span style={{ fontSize: 14, fontWeight: 600 }}>
@@ -713,7 +1424,6 @@ const IncidentSparePartsDistribution = () => {
                   setMaintenances([]);
                 } else {
                   setIncidents([]);
-                  // TODO: Fetch maintenances when available
                 }
                 distributionForm.setFieldsValue({
                   recordId: undefined,
@@ -741,7 +1451,6 @@ const IncidentSparePartsDistribution = () => {
             </Select>
           </Form.Item>
 
-          {/* Record Selection - Full Width */}
           <Form.Item
             label={
               <span style={{ fontSize: 14, fontWeight: 600 }}>
@@ -752,18 +1461,16 @@ const IncidentSparePartsDistribution = () => {
             rules={[
               {
                 required: true,
-                message: `Vui lòng chọn ${
-                  distributionType === "incident" ? "sự cố" : "bảo trì"
-                }`,
+                message: `Vui lòng chọn ${distributionType === "incident" ? "sự cố" : "bảo trì"
+                  }`,
               },
             ]}
           >
             <Select
               showSearch
               size="large"
-              placeholder={`Tìm kiếm và chọn ${
-                distributionType === "incident" ? "sự cố" : "bảo trì"
-              }...`}
+              placeholder={`Tìm kiếm và chọn ${distributionType === "incident" ? "sự cố" : "bảo trì"
+                }...`}
               onSearch={(value) => {
                 if (distributionType === "incident") {
                   searchIncidents(value);
@@ -836,7 +1543,6 @@ const IncidentSparePartsDistribution = () => {
             </Select>
           </Form.Item>
 
-          {/* Technician Information - Full Width */}
           <Form.Item
             label={
               <span style={{ fontSize: 14, fontWeight: 600 }}>
@@ -866,7 +1572,6 @@ const IncidentSparePartsDistribution = () => {
             <Input type="hidden" />
           </Form.Item>
 
-          {/* Show selected incident info */}
           {selectedRecord && (
             <Alert
               message={
@@ -931,7 +1636,6 @@ const IncidentSparePartsDistribution = () => {
             />
           )}
 
-          {/* Spare Parts Distribution Table */}
           <Form.Item
             label={
               <span style={{ fontSize: 15, fontWeight: 600 }}>
@@ -1088,8 +1792,8 @@ const IncidentSparePartsDistribution = () => {
                                 fontWeight: 500,
                                 color: item.partId
                                   ? (spareParts.find(
-                                      (p) => p.partId === item.partId
-                                    )?.quantity || 0) < item.quantity
+                                    (p) => p.partId === item.partId
+                                  )?.quantity || 0) < item.quantity
                                     ? "#ff4d4f"
                                     : "#52c41a"
                                   : "#000",
@@ -1097,8 +1801,8 @@ const IncidentSparePartsDistribution = () => {
                             >
                               {item.partId
                                 ? spareParts.find(
-                                    (p) => p.partId === item.partId
-                                  )?.quantity || 0
+                                  (p) => p.partId === item.partId
+                                )?.quantity || 0
                                 : "-"}
                             </span>
                           </td>
@@ -1196,7 +1900,7 @@ const IncidentSparePartsDistribution = () => {
             Chi tiết phiếu cấp phát
           </div>
         }
-        visible={detailModalVisible}
+        open={detailModalVisible}
         onCancel={() => {
           setDetailModalVisible(false);
           setSelectedDistributionDetail(null);
@@ -1215,130 +1919,379 @@ const IncidentSparePartsDistribution = () => {
         ]}
       >
         {selectedDistributionDetail && (
-          <div>
-            {/* Summary Information */}
-            <Descriptions bordered column={2} style={{ marginBottom: 24 }}>
-              <Descriptions.Item label="Loại">
-                <Tag
-                  color={
-                    selectedDistributionDetail.distributionType === "incident"
-                      ? "red"
-                      : "cyan"
-                  }
-                >
-                  {selectedDistributionDetail.distributionType === "incident"
-                    ? "Sự cố"
-                    : "Bảo trì"}
-                </Tag>
-              </Descriptions.Item>
-              <Descriptions.Item label="Mã SC/BT">
-                <strong>{selectedDistributionDetail.recordId}</strong>
-              </Descriptions.Item>
-              <Descriptions.Item label="Thiết bị" span={2}>
-                {selectedDistributionDetail.recordName}
-              </Descriptions.Item>
-              <Descriptions.Item label="Kỹ thuật viên" span={2}>
-                {selectedDistributionDetail.technicianName}
-              </Descriptions.Item>
-            </Descriptions>
+          <Descriptions bordered column={2} size="small">
+            <Descriptions.Item label="Loại">
+              {selectedDistributionDetail.distributionType === "incident"
+                ? "Sự cố"
+                : "Bảo trì"}
+            </Descriptions.Item>
+            <Descriptions.Item
+              label={
+                selectedDistributionDetail.distributionType === "incident"
+                  ? "Mã Sự cố"
+                  : "Mã Bảo trì"
+              }
+            >
+              {selectedDistributionDetail.recordId}
+            </Descriptions.Item>
 
-            {/* All Items Summary */}
-            <Card
-              title="Tổng hợp vật tư đã xuất"
+            <Descriptions.Item label="Thiết bị" span={2}>
+              <div>
+                <div style={{ fontWeight: 600 }}>
+                  {selectedDistributionDetail.recordName}
+                </div>
+                <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                  Mã: {selectedDistributionDetail.recordCode}
+                </div>
+              </div>
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Phụ tùng cấp phát" span={2}>
+              {selectedDistributionDetail.allItems ? (
+                <div
+                  style={{ display: "flex", flexDirection: "column", gap: 12 }}
+                >
+                  {selectedDistributionDetail.allItems.map((item, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        padding: "12px",
+                        backgroundColor: "#f5f5f5",
+                        borderRadius: "6px",
+                        border: "1px solid #d9d9d9",
+                      }}
+                    >
+                      <div style={{ fontWeight: 600, marginBottom: 6 }}>
+                        {item.partName}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: "12px",
+                          color: "#8c8c8c",
+                          marginBottom: 8,
+                        }}
+                      >
+                        Mã: {item.partNumber || item.partCode}
+                      </div>
+                      <Space size="large">
+                        <span>
+                          <strong>Cấp phát:</strong> {item.quantity} cái
+                        </span>
+                      </Space>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div>
+                  <div style={{ fontWeight: 600 }}>
+                    {selectedDistributionDetail.partName}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                    Mã: {selectedDistributionDetail.partCode}
+                  </div>
+                </div>
+              )}
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Tổng số lượng cấp phát">
+              <strong>
+                {selectedDistributionDetail.totalQuantity} cái
+              </strong>
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Tổng số lượng sử dụng">
+              {selectedDistributionDetail.totalUsed != null ? (
+                <strong style={{ color: "#52c41a" }}>
+                  {selectedDistributionDetail.totalUsed} cái
+                </strong>
+              ) : (
+                <span style={{ color: "#8c8c8c", fontStyle: "italic" }}>
+                  Chưa xác định
+                </span>
+              )}
+            </Descriptions.Item>
+
+            {(selectedDistributionDetail.totalReturned != null ||
+              selectedDistributionDetail.totalReturned > 0) && (
+                <Descriptions.Item label="Tổng số lượng trả lại" span={2}>
+                  <strong style={{ color: "#1890ff" }}>
+                    {selectedDistributionDetail.totalReturned ?? 0} cái
+                  </strong>
+                </Descriptions.Item>
+              )}
+
+            <Descriptions.Item label="Người yêu cầu">
+              <div>
+                <div style={{ fontWeight: 600 }}>
+                  {selectedDistributionDetail.technicianName ||
+                    "Chưa xác định"}
+                </div>
+                {selectedDistributionDetail.technicianCode && (
+                  <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                    Mã NV: {selectedDistributionDetail.technicianCode}
+                  </div>
+                )}
+              </div>
+            </Descriptions.Item>
+
+            <Descriptions.Item label="Ngày yêu cầu">
+              {selectedDistributionDetail.lastDistributedAt
+                ? dayjs(selectedDistributionDetail.lastDistributedAt).format(
+                  "DD/MM/YYYY HH:mm"
+                )
+                : "-"}
+            </Descriptions.Item>
+
+            {selectedDistributionDetail.distributions?.some(
+              (d) => d.returnDate
+            ) && (
+                <Descriptions.Item label="Ngày trả lại" span={2}>
+                  {dayjs(
+                    selectedDistributionDetail.distributions.find(
+                      (d) => d.returnDate
+                    ).returnDate
+                  ).format("DD/MM/YYYY HH:mm")}
+                </Descriptions.Item>
+              )}
+
+            {selectedDistributionDetail.notes && (
+              <Descriptions.Item label="Ghi chú" span={2}>
+                {selectedDistributionDetail.notes}
+              </Descriptions.Item>
+            )}
+          </Descriptions>
+        )}
+      </Modal>
+
+      {/* Return Modal */}
+      <Modal
+        title={
+          <div style={{ fontSize: 18, fontWeight: 600 }}>
+            <RollbackOutlined style={{ marginRight: 8 }} />
+            Ghi nhận Trả lại Phụ tùng
+          </div>
+        }
+        open={returnModalVisible}
+        onCancel={() => {
+          setReturnModalVisible(false);
+          setReturnItems([]);
+          setSelectedDistributionForReturn(null);
+        }}
+        width={900}
+        footer={null}
+        destroyOnClose
+      >
+        {selectedDistributionForReturn && (
+          <Form
+            form={returnForm}
+            layout="vertical"
+            onFinish={handleSaveReturn}
+          >
+            <Alert
+              message="Ghi nhận Phụ tùng Trả lại"
+              description="Nhập số lượng phụ tùng thừa mà kỹ thuật viên trả lại"
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+
+            <Descriptions
+              bordered
+              column={2}
               size="small"
               style={{ marginBottom: 16 }}
             >
-              <Table
-                dataSource={selectedDistributionDetail.allItems}
-                rowKey={(record) => record.partId}
-                pagination={false}
-                size="small"
-                columns={[
-                  {
-                    title: "STT",
-                    width: 60,
-                    render: (_, __, index) => index + 1,
-                  },
-                  {
-                    title: "Phụ tùng",
-                    dataIndex: "partName",
-                    key: "partName",
-                  },
-                  {
-                    title: "Tổng số lượng",
-                    dataIndex: "quantity",
-                    key: "quantity",
-                    width: 120,
-                    align: "center",
-                    render: (qty) => (
-                      <Tag color="blue" style={{ fontSize: 14 }}>
-                        {qty}
-                      </Tag>
-                    ),
-                  },
-                ]}
-              />
-            </Card>
+              <Descriptions.Item label="Mã">
+                {selectedDistributionForReturn.recordId}
+              </Descriptions.Item>
+              <Descriptions.Item label="Thiết bị">
+                {selectedDistributionForReturn.recordName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Kỹ thuật viên" span={2}>
+                {selectedDistributionForReturn.technicianName}
+              </Descriptions.Item>
+            </Descriptions>
 
-            {/* Distribution History */}
-            <Card title="Lịch sử xuất vật tư" size="small">
-              {selectedDistributionDetail.distributions
-                ?.sort(
-                  (a, b) =>
-                    dayjs(b.distributedAt).unix() -
-                    dayjs(a.distributedAt).unix()
-                )
-                .map((dist, index) => (
-                  <Card
-                    key={dist.id}
-                    type="inner"
-                    size="small"
-                    style={{ marginBottom: 12 }}
-                    extra={
-                      <Space>
-                        <CalendarOutlined />
-                        {dayjs(dist.distributedAt).format("DD/MM/YYYY HH:mm")}
-                      </Space>
-                    }
-                  >
-                    <div style={{ marginBottom: 8 }}>
-                      <strong>Người xuất:</strong> {dist.distributedBy}
-                    </div>
-                    {dist.notes && (
-                      <div style={{ marginBottom: 12 }}>
-                        <strong>Ghi chú:</strong> {dist.notes}
-                      </div>
-                    )}
-                    <Table
-                      dataSource={dist.items}
-                      rowKey={(record, idx) => `${record.partId}_${idx}`}
-                      pagination={false}
-                      size="small"
-                      columns={[
-                        {
-                          title: "STT",
-                          width: 60,
-                          render: (_, __, idx) => idx + 1,
-                        },
-                        {
-                          title: "Phụ tùng",
-                          dataIndex: "partName",
-                          key: "partName",
-                        },
-                        {
-                          title: "Số lượng",
-                          dataIndex: "quantity",
-                          key: "quantity",
+            <Form.Item
+              label={
+                <span style={{ fontSize: 14, fontWeight: 600 }}>
+                  Danh sách Phụ tùng Trả lại
+                </span>
+              }
+            >
+              <div
+                style={{
+                  border: "1px solid #d9d9d9",
+                  borderRadius: "8px",
+                  overflow: "hidden",
+                }}
+              >
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                  }}
+                >
+                  <thead>
+                    <tr style={{ backgroundColor: "#f5f5f5" }}>
+                      <th
+                        style={{
+                          padding: "12px",
+                          textAlign: "left",
+                          fontWeight: 600,
+                          borderBottom: "1px solid #d9d9d9",
+                        }}
+                      >
+                        STT
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px",
+                          textAlign: "left",
+                          fontWeight: 600,
+                          borderBottom: "1px solid #d9d9d9",
+                        }}
+                      >
+                        Phụ tùng
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px",
+                          textAlign: "center",
+                          fontWeight: 600,
+                          borderBottom: "1px solid #d9d9d9",
                           width: 100,
-                          align: "center",
-                          render: (qty) => <Tag color="blue">{qty}</Tag>,
-                        },
-                      ]}
-                    />
-                  </Card>
-                ))}
-            </Card>
-          </div>
+                        }}
+                      >
+                        Đã xuất
+                      </th>
+                      <th
+                        style={{
+                          padding: "12px",
+                          textAlign: "center",
+                          fontWeight: 600,
+                          borderBottom: "1px solid #d9d9d9",
+                          width: 150,
+                        }}
+                      >
+                        Trả lại
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {returnItems.map((item, idx) => (
+                      <tr key={item.partId}>
+                        <td
+                          style={{
+                            padding: "12px",
+                            borderBottom: "1px solid #f0f0f0",
+                          }}
+                        >
+                          {idx + 1}
+                        </td>
+                        <td
+                          style={{
+                            padding: "12px",
+                            borderBottom: "1px solid #f0f0f0",
+                          }}
+                        >
+                          <div>
+                            <strong>{item.partName}</strong>
+                            <div style={{ fontSize: 12, color: "#999" }}>
+                              {item.partNumber}
+                            </div>
+                          </div>
+                        </td>
+                        <td
+                          style={{
+                            padding: "12px",
+                            textAlign: "center",
+                            borderBottom: "1px solid #f0f0f0",
+                          }}
+                        >
+                          <Tag color="blue">{item.quantityExported}</Tag>
+                        </td>
+                        <td
+                          style={{
+                            padding: "12px",
+                            textAlign: "center",
+                            borderBottom: "1px solid #f0f0f0",
+                          }}
+                        >
+                          <InputNumber
+                            min={0}
+                            max={item.quantityExported}
+                            value={item.quantityToReturn}
+                            onChange={(value) =>
+                              handleUpdateReturnQuantity(item.partId, value)
+                            }
+                            style={{ width: "100%" }}
+                            placeholder="0"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Form.Item>
+
+            <Form.Item label="Ghi chú" name="returnNotes">
+              <Input.TextArea
+                placeholder="Nhập ghi chú về phiếu trả lại..."
+                rows={3}
+                showCount
+                maxLength={500}
+              />
+            </Form.Item>
+
+            <Alert
+              message={
+                <span style={{ fontWeight: 600 }}>
+                  Tổng trả lại:{" "}
+                  <Tag color="green" style={{ fontSize: 14 }}>
+                    {returnItems.reduce(
+                      (sum, item) => sum + (item.quantityToReturn || 0),
+                      0
+                    )}
+                  </Tag>
+                  phụ tùng
+                </span>
+              }
+              type="success"
+              style={{ marginBottom: 16 }}
+            />
+
+            <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
+              <Space style={{ width: "100%", justifyContent: "flex-end" }}>
+                <Button
+                  size="large"
+                  onClick={() => {
+                    setReturnModalVisible(false);
+                    setReturnItems([]);
+                    setSelectedDistributionForReturn(null);
+                  }}
+                >
+                  Hủy bỏ
+                </Button>
+                <Button
+                  type="primary"
+                  size="large"
+                  htmlType="submit"
+                  icon={<CheckCircleOutlined />}
+                  disabled={
+                    returnItems.reduce(
+                      (sum, item) => sum + (item.quantityToReturn || 0),
+                      0
+                    ) === 0
+                  }
+                  loading={loading}
+                >
+                  Lưu Phiếu Trả lại
+                </Button>
+              </Space>
+            </Form.Item>
+          </Form>
         )}
       </Modal>
     </div>

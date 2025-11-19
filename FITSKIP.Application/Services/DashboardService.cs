@@ -233,10 +233,33 @@ public class DashboardService : IDashboardService
                     doiMa = GetTypeDetailsFromDict(downtimeByType, 5, totalPlannedProductionTime)
                 };
 
+                // Calculate achievement percentage
+                double achievement = totalTargetAmount > 0 ? (totalResultAmount / totalTargetAmount) * 100 : 0;
+                
+                // Calculate total downtime (sum of all downtime types)
+                double totalDowntime = downtimeByType.Sum(kvp => kvp.Value.Duration);
+                
+                // Extract individual downtime durations for frontend (based on TypeId mapping)
+                // TypeId 1 = Dừng ngắn, TypeId 2 = Dừng dài, TypeId 3 = Phế phẩm, TypeId 4 = Vệ sinh đầu cuối ca, TypeId 5 = Đổi mã
+                double setupDowntime = downtimeByType.ContainsKey(5) ? downtimeByType[5].Duration : 0; // Đổi mã (setup/adjustment)
+                double breakdownDowntime = downtimeByType.ContainsKey(2) ? downtimeByType[2].Duration : 0; // Dừng dài (breakdown)
+                double defectsDuration = downtimeByType.ContainsKey(3) ? downtimeByType[3].Duration : 0; // Phế phẩm (defects)
+                
                 dailyStats.Add(new
                 {
                     date = currentDate.ToString("yyyy-MM-dd"),
+                    targetAmount = Math.Round(totalTargetAmount, 2),
+                    resultAmount = Math.Round(totalResultAmount, 2),
+                    achievement = Math.Round(achievement, 2),
+                    plannedProductionTime = Math.Round(totalPlannedProductionTime, 2),
+                    totalDowntime = Math.Round(totalDowntime, 2),
+                    setupAdjustmentDowntime = new { duration = Math.Round(setupDowntime, 2) },
+                    breakdownDowntime = new { duration = Math.Round(breakdownDowntime, 2) },
+                    defects = new { duration = Math.Round(defectsDuration, 2) },
                     oee = Math.Round(oee * 100, 2),
+                    availability = Math.Round(availability * 100, 2),
+                    performance = Math.Round(performance * 100, 2),
+                    quality = Math.Round(quality * 100, 2),
                     aLoss = Math.Round(aLoss, 2),
                     pLoss = Math.Round(pLoss, 2),
                     qLoss = Math.Round(qLoss, 2),
