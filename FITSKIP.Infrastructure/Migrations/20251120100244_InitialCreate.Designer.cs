@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251120025729_Initial")]
-    partial class Initial
+    [Migration("20251120100244_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -822,10 +822,6 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     b.Property<int?>("QuantityToReturn")
                         .HasColumnType("int");
-
-                    b.Property<string>("Remarks")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("ReplacedBy")
                         .IsRequired()

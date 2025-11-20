@@ -1228,5 +1228,64 @@ namespace FITSKIP.API.Controllers
                 return StatusCode(500, ApiResponse<object>.ErrorResponse($"Lỗi: {ex.Message}"));
             }
         }
+
+        // ===== BACKGROUND TASKS / SCHEDULED JOBS =====
+
+        /// <summary>
+        /// [BACKGROUND JOB] Gửi thông báo nhắc QLKT đóng phiếu bảo trì đã hoàn thành quá 24h
+        /// Chạy định kỳ mỗi 6 giờ
+        /// </summary>
+        [HttpPost("background/send-completed-reminders")]
+        [Authorize(Roles = "Quản trị viên")]
+        public async Task<IActionResult> SendCompletedWorkOrderReminders()
+        {
+            try
+            {
+                await _workOrderService.SendCompletedWorkOrderRemindersAsync();
+                return Ok(ApiResponse<object>.SuccessResponse(new { }, "Đã gửi thông báo nhắc đóng phiếu bảo trì thành công"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// [BACKGROUND JOB] Cập nhật trạng thái quá hạn cho các công việc
+        /// Chạy định kỳ mỗi ngày
+        /// </summary>
+        [HttpPost("background/update-overdue-status")]
+        [Authorize(Roles = "Quản trị viên")]
+        public async Task<IActionResult> UpdateOverdueStatus()
+        {
+            try
+            {
+                await _workOrderService.UpdateOverdueStatusAsync();
+                return Ok(ApiResponse<object>.SuccessResponse(new { }, "Đã cập nhật trạng thái quá hạn thành công"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// [BACKGROUND JOB] Gửi thông báo nhắc bảo trì sắp đến hạn
+        /// Chạy định kỳ mỗi ngày
+        /// </summary>
+        [HttpPost("background/send-maintenance-reminders")]
+        [Authorize(Roles = "Quản trị viên")]
+        public async Task<IActionResult> SendMaintenanceReminders()
+        {
+            try
+            {
+                await _workOrderService.SendMaintenanceRemindersAsync();
+                return Ok(ApiResponse<object>.SuccessResponse(new { }, "Đã gửi thông báo nhắc bảo trì thành công"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Lỗi: {ex.Message}"));
+            }
+        }
     }
 }
