@@ -131,27 +131,27 @@ const MaintenanceTasks = () => {
     return null;
   };
 
-  // ✅ THÊM: Lấy trạng thái riêng của KTV hiện tại
+  // ✅ Lấy trạng thái của work order
   const getMyStatus = (workOrder) => {
-    if (!workOrder) return "Pending";
+    if (!workOrder) return "Chờ xử lý";
     const taskType = getMyTaskType(workOrder);
     
     // Nếu là Electrical, lấy electricalStatus
     if (taskType === "Electrical") {
-      return workOrder.electricalStatus || "Pending";
+      return workOrder.electricalStatus || "Chờ xử lý";
     }
     
     // Nếu là Mechanical, lấy mechanicalStatus
     if (taskType === "Mechanical") {
-      return workOrder.mechanicalStatus || "Pending";
+      return workOrder.mechanicalStatus || "Chờ xử lý";
     }
     
     // Nếu làm cả 2, lấy status chung
     if (taskType === "Both") {
-      return workOrder.status || "Pending";
+      return workOrder.status || "Chờ xử lý";
     }
     
-    return "Pending";
+    return "Chờ xử lý";
   };
 
   const getMyChecklistItems = (workOrder) => {
@@ -235,27 +235,27 @@ const MaintenanceTasks = () => {
       },
     },
     {
-      title: "Ngày đến hạn",
-      dataIndex: "dueDate",
-      key: "dueDate",
+      title: "Ngày thực hiện",
+      dataIndex: "scheduledDate",
+      key: "scheduledDate",
       width: 130,
       render: (text, record) => {
         if (!text) return "-";
-        const dueDate = dayjs(text);
+        const scheduledDate = dayjs(text);
         const today = dayjs();
-        const isOverdue =
-          dueDate.isBefore(today, "day") && record?.status !== "Completed";
-        const isToday = dueDate.isSame(today, "day");
+        const isPast =
+          scheduledDate.isBefore(today, "day") && record?.status !== "Hoàn thành";
+        const isToday = scheduledDate.isSame(today, "day");
         return (
           <div
             style={{
               fontSize: "12px",
-              color: isOverdue ? "#ff4d4f" : isToday ? "#faad14" : "inherit",
-              fontWeight: isOverdue || isToday ? 500 : "normal",
+              color: isPast ? "#ff4d4f" : isToday ? "#faad14" : "inherit",
+              fontWeight: isPast || isToday ? 500 : "normal",
             }}
           >
-            {dueDate.format("DD/MM/YYYY")}
-            {isOverdue && <Badge status="error" style={{ marginLeft: 8 }} />}
+            {scheduledDate.format("DD/MM/YYYY")}
+            {isPast && <Badge status="error" style={{ marginLeft: 8 }} />}
             {isToday && <Badge status="processing" style={{ marginLeft: 8 }} />}
           </div>
         );
@@ -295,19 +295,19 @@ const MaintenanceTasks = () => {
         let icon = null;
         let text = myStatus || "-";
         
-        if (myStatus === "InProgress") {
+        if (myStatus === "Đang thực hiện") {
           color = "processing";
           icon = <PlayCircleOutlined />;
           text = "Đang thực hiện";
-        } else if (myStatus === "Pending") {
+        } else if (myStatus === "Chờ xử lý") {
           color = "warning";
           icon = <ClockCircleOutlined />;
           text = "Chờ xử lý";
-        } else if (myStatus === "Completed") {
+        } else if (myStatus === "Hoàn thành") {
           color = "success";
           icon = <CheckCircleOutlined />;
           text = "Đã hoàn thành";
-        } else if (myStatus === "Cancelled") {
+        } else if (myStatus === "Đã hủy") {
           color = "error";
           icon = <StopOutlined />;
           text = "Đã hủy";
@@ -331,6 +331,12 @@ const MaintenanceTasks = () => {
       render: (_, record) => {
         if (!record) return null;
 
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const scheduledDate = new Date(record.scheduledDate);
+        scheduledDate.setHours(0, 0, 0, 0);
+        const isScheduledDateReached = scheduledDate <= today;
+
         const items = [
           {
             key: "view",
@@ -338,13 +344,13 @@ const MaintenanceTasks = () => {
             label: "Chi tiết",
             onClick: () => handleViewDetail(record),
           },
-          {
+          isScheduledDateReached && {
             key: "history",
             icon: <FileTextOutlined />,
             label: "Lịch sử linh kiện",
             onClick: () => handleViewSparePartsHistory(record),
           },
-          (record.status === "Pending" || record.status === "InProgress") && {
+          isScheduledDateReached && (record.status === "Chờ xử lý" || record.status === "Đang thực hiện") && {
             key: "execute",
             icon: <CheckCircleOutlined />,
             label: "Thực hiện",
@@ -575,7 +581,7 @@ const MaintenanceTasks = () => {
       setUpdatingChecklist(true);
 
       // Nếu đang tick item và work order đang Pending → Tự động chuyển sang InProgress
-      if (checked && selectedWorkOrder.status === "Pending") {
+      if (checked && selectedWorkOrder.status === "Chờ xử lý") {
         await startWorkOrder(selectedWorkOrder.workOrderId);
         message.success("Đã bắt đầu thực hiện công việc!");
       }
@@ -665,7 +671,7 @@ const MaintenanceTasks = () => {
 
   const getTaskProgress = () => {
     // ✅ Tính tiến độ theo trạng thái riêng của KTV hiện tại
-    const completed = workOrders.filter((t) => getMyStatus(t) === "Completed").length;
+    const completed = workOrders.filter((t) => getMyStatus(t) === "Hoàn thành").length;
     const total = workOrders.length;
     return total > 0 ? Math.round((completed / total) * 100) : 0;
   };
@@ -701,7 +707,7 @@ const MaintenanceTasks = () => {
                   color: "#52c41a",
                 }}
               >
-                {getStatusCount("Completed")}
+                {getStatusCount("Hoàn thành")}
               </div>
               <div style={{ fontSize: "14px", color: "#888", marginTop: 8 }}>
                 Đã hoàn thành
@@ -719,7 +725,7 @@ const MaintenanceTasks = () => {
                   color: "#faad14",
                 }}
               >
-                {getStatusCount("InProgress")}
+                {getStatusCount("Đang thực hiện")}
               </div>
               <div style={{ fontSize: "14px", color: "#888", marginTop: 8 }}>
                 Đang thực hiện
@@ -768,26 +774,26 @@ const MaintenanceTasks = () => {
             >
               Tất cả ({getStatusCount("all")})
             </Button>
-            <Badge count={getStatusCount("Pending")} color="orange">
+            <Badge count={getStatusCount("Chờ xử lý")} color="orange">
               <Button
-                type={filterStatus === "Pending" ? "primary" : "default"}
-                onClick={() => setFilterStatus("Pending")}
+                type={filterStatus === "Chờ xử lý" ? "primary" : "default"}
+                onClick={() => setFilterStatus("Chờ xử lý")}
               >
                 Chờ xử lý
               </Button>
             </Badge>
-            <Badge count={getStatusCount("InProgress")} color="blue">
+            <Badge count={getStatusCount("Đang thực hiện")} color="blue">
               <Button
-                type={filterStatus === "InProgress" ? "primary" : "default"}
-                onClick={() => setFilterStatus("InProgress")}
+                type={filterStatus === "Đang thực hiện" ? "primary" : "default"}
+                onClick={() => setFilterStatus("Đang thực hiện")}
               >
                 Đang thực hiện
               </Button>
             </Badge>
-            <Badge count={getStatusCount("Completed")} color="green">
+            <Badge count={getStatusCount("Hoàn thành")} color="green">
               <Button
-                type={filterStatus === "Completed" ? "primary" : "default"}
-                onClick={() => setFilterStatus("Completed")}
+                type={filterStatus === "Hoàn thành" ? "primary" : "default"}
+                onClick={() => setFilterStatus("Hoàn thành")}
               >
                 Hoàn thành
               </Button>
@@ -897,8 +903,8 @@ const MaintenanceTasks = () => {
                         )}
                       </div>
                       <div>
-                        <strong>Ngày đến hạn:</strong>{" "}
-                        {dayjs(selectedWorkOrder.dueDate).format("DD/MM/YYYY")}
+                        <strong>Ngày thực hiện:</strong>{" "}
+                        {dayjs(selectedWorkOrder.scheduledDate).format("DD/MM/YYYY")}
                       </div>
                     </Col>
                   </Row>
@@ -1448,15 +1454,15 @@ const MaintenanceTasks = () => {
                 </strong>
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái" span={1}>
-                {selectedWorkOrder.status === "InProgress" ? (
+                {selectedWorkOrder.status === "Đang thực hiện" ? (
                   <Tag icon={<PlayCircleOutlined />} color="processing">
                     Đang thực hiện
                   </Tag>
-                ) : selectedWorkOrder.status === "Pending" ? (
+                ) : selectedWorkOrder.status === "Chờ xử lý" ? (
                   <Tag icon={<ClockCircleOutlined />} color="warning">
                     Chờ xử lý
                   </Tag>
-                ) : selectedWorkOrder.status === "Completed" ? (
+                ) : selectedWorkOrder.status === "Hoàn thành" ? (
                   <Tag icon={<CheckCircleOutlined />} color="success">
                     Hoàn thành
                   </Tag>
@@ -1489,8 +1495,8 @@ const MaintenanceTasks = () => {
                   ? dayjs(selectedWorkOrder.assignedDate).format("DD/MM/YYYY")
                   : "-"}
               </Descriptions.Item>
-              <Descriptions.Item label="Ngày đến hạn" span={1}>
-                {dayjs(selectedWorkOrder.dueDate).format("DD/MM/YYYY")}
+              <Descriptions.Item label="Ngày thực hiện" span={1}>
+                {dayjs(selectedWorkOrder.scheduledDate).format("DD/MM/YYYY")}
               </Descriptions.Item>
               {selectedWorkOrder.startedDate && (
                 <Descriptions.Item label="Bắt đầu lúc" span={1}>

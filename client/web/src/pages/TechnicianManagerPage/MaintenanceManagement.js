@@ -229,9 +229,10 @@ const MaintenanceManagement = () => {
         setLoadingHistory(true);
         try {
           const allWorkOrders = await getAllWorkOrders();
-          // ✅ Hiển thị cả Completed và Cancelled trong lịch sử
+          // ✅ Hiển thị WorkOrders đã đóng và đã hủy trong lịch sử
           const history = allWorkOrders.data?.filter(
-            wo => wo.planId === viewingPlan.planId && (wo.status === 'Completed' || wo.status === 'Cancelled')
+            wo => wo.planId === viewingPlan.planId && 
+            (wo.status === 'Đã đóng' || wo.status === 'Đã hủy' || wo.status === 'Closed' || wo.status === 'Cancelled')
           ).sort((a, b) => new Date(b.completedDate || b.scheduledDate) - new Date(a.completedDate || a.scheduledDate)) || [];
           setPlanMaintenanceHistory(history);
 
@@ -3330,10 +3331,11 @@ const MaintenanceManagement = () => {
               ) : (
                 <Timeline mode="left">
                   {planMaintenanceHistory.map((wo) => {
-                    const isCompleted = wo.status === 'Completed';
-                    const isCancelled = wo.status === 'Cancelled';
-                    const isOverdue = wo.status === 'Overdue';
-                    const color = isCompleted ? 'green' : isCancelled ? 'red' : isOverdue ? 'orange' : 'blue';
+                    const isClosed = wo.status === 'Đã đóng' || wo.status === 'Closed';
+                    const isCancelled = wo.status === 'Đã hủy' || wo.status === 'Cancelled';
+                    const isCompleted = wo.status === 'Hoàn thành' || wo.status === 'Completed';
+                    const isOverdue = wo.status === 'Quá hạn' || wo.status === 'Overdue';
+                    const color = isClosed ? 'gray' : isCompleted ? 'green' : isCancelled ? 'red' : isOverdue ? 'orange' : 'blue';
 
                     return (
                       <Timeline.Item
@@ -3356,7 +3358,11 @@ const MaintenanceManagement = () => {
                               <Text strong>
                                 {wo.workOrderCode || `WO${wo.workOrderId}`}
                               </Text>
-                              {isCompleted ? (
+                              {isClosed ? (
+                                <Tag color="default" icon={<LockOutlined />}>
+                                  Đã đóng
+                                </Tag>
+                              ) : isCompleted ? (
                                 <Tag color="success" icon={<CheckCircleOutlined />}>
                                   Hoàn thành
                                 </Tag>
@@ -3374,6 +3380,12 @@ const MaintenanceManagement = () => {
                                 </Tag>
                               )}
                             </div>
+
+                            {isClosed && wo.completedDate && (
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                <LockOutlined /> Đã đóng: {dayjs(wo.updatedDate || wo.completedDate).format("DD/MM/YYYY HH:mm")}
+                              </Text>
+                            )}
 
                             {isCompleted && wo.completedDate && (
                               <Text type="secondary" style={{ fontSize: 12 }}>
@@ -3493,27 +3505,32 @@ const MaintenanceManagement = () => {
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Trạng Thái" span={1}>
-                {viewingWorkOrder.status === 'Completed' && (
+                {(viewingWorkOrder.status === 'Đã đóng' || viewingWorkOrder.status === 'Closed') && (
+                  <Tag color="default" icon={<LockOutlined />}>
+                    Đã đóng
+                  </Tag>
+                )}
+                {(viewingWorkOrder.status === 'Hoàn thành' || viewingWorkOrder.status === 'Completed') && (
                   <Tag color="success" icon={<CheckCircleOutlined />}>
                     Hoàn thành
                   </Tag>
                 )}
-                {viewingWorkOrder.status === 'Cancelled' && (
+                {(viewingWorkOrder.status === 'Đã hủy' || viewingWorkOrder.status === 'Cancelled') && (
                   <Tag color="error" icon={<CloseCircleOutlined />}>
                     Đã hủy
                   </Tag>
                 )}
-                {viewingWorkOrder.status === 'Overdue' && (
+                {(viewingWorkOrder.status === 'Quá hạn' || viewingWorkOrder.status === 'Overdue') && (
                   <Tag color="warning" icon={<ExclamationCircleOutlined />}>
                     Quá hạn
                   </Tag>
                 )}
-                {viewingWorkOrder.status === 'InProgress' && (
+                {(viewingWorkOrder.status === 'Đang thực hiện' || viewingWorkOrder.status === 'InProgress') && (
                   <Tag color="processing" icon={<PlayCircleOutlined />}>
                     Đang thực hiện
                   </Tag>
                 )}
-                {viewingWorkOrder.status === 'Pending' && (
+                {(viewingWorkOrder.status === 'Chờ xử lý' || viewingWorkOrder.status === 'Pending') && (
                   <Tag color="default" icon={<ClockCircleOutlined />}>
                     Chờ xử lý
                   </Tag>
@@ -3563,7 +3580,7 @@ const MaintenanceManagement = () => {
                     <Text>{viewingWorkOrder.mechanicalTechnicianName}</Text>
                     <br />
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      Mã NV: {viewingWorkOrder.mechanicalTechnicianEmployeeCode}
+                      Mã NV: {viewingWorkOrder.mechanicalEmployeeCode}
                     </Text>
                   </div>
                 ) : (
@@ -3580,7 +3597,7 @@ const MaintenanceManagement = () => {
                     <Text>{viewingWorkOrder.electricalTechnicianName}</Text>
                     <br />
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      Mã NV: {viewingWorkOrder.electricalTechnicianEmployeeCode}
+                      Mã NV: {viewingWorkOrder.electricalEmployeeCode}
                     </Text>
                   </div>
                 ) : (
