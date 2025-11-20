@@ -73,7 +73,8 @@ const IncidentSparePartsDistribution = () => {
   // State cho chức năng trả lại vật tư
   const [expandedReturnRow, setExpandedReturnRow] = useState(null);
   const [returnModalVisible, setReturnModalVisible] = useState(false);
-  const [selectedDistributionForReturn, setSelectedDistributionForReturn] = useState(null);
+  const [selectedDistributionForReturn, setSelectedDistributionForReturn] =
+    useState(null);
   const [returnForm] = Form.useForm();
   const [returnItems, setReturnItems] = useState([]);
 
@@ -163,7 +164,8 @@ const IncidentSparePartsDistribution = () => {
       total: distributions.length,
       distributed: distributions.filter((d) => d.status === "Đã xuất").length,
       returned: distributions.filter((d) => d.status === "Đã trả lại").length,
-      pendingReturn: distributions.filter((d) => d.status === "Chờ trả lại").length,
+      pendingReturn: distributions.filter((d) => d.status === "Chờ trả lại")
+        .length,
     };
     setStatistics(stats);
   };
@@ -174,23 +176,26 @@ const IncidentSparePartsDistribution = () => {
     // Filter by date range
     if (filters.dateRange && filters.dateRange.length === 2) {
       const [start, end] = filters.dateRange;
-      filtered = filtered.filter(d => dayjs(d.distributedAt).isBetween(start, end, 'day', '[]'));
+      filtered = filtered.filter((d) =>
+        dayjs(d.distributedAt).isBetween(start, end, "day", "[]")
+      );
     }
 
     // Filter by status
     if (filters.status) {
-      filtered = filtered.filter(d => d.status === filters.status);
+      filtered = filtered.filter((d) => d.status === filters.status);
     }
 
     // Filter by search text
     if (filters.searchText) {
       const searchLower = filters.searchText.toLowerCase();
-      filtered = filtered.filter(d =>
-        d.recordId?.toString().toLowerCase().includes(searchLower) ||
-        d.recordName?.toLowerCase().includes(searchLower) ||
-        d.recordCode?.toLowerCase().includes(searchLower) ||
-        d.technicianName?.toLowerCase().includes(searchLower) ||
-        d.technicianCode?.toLowerCase().includes(searchLower)
+      filtered = filtered.filter(
+        (d) =>
+          d.recordId?.toString().toLowerCase().includes(searchLower) ||
+          d.recordName?.toLowerCase().includes(searchLower) ||
+          d.recordCode?.toLowerCase().includes(searchLower) ||
+          d.technicianName?.toLowerCase().includes(searchLower) ||
+          d.technicianCode?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -227,10 +232,15 @@ const IncidentSparePartsDistribution = () => {
     setSearchingIncidents(true);
     try {
       const data = await incidentService.getAll();
-      const assignedIncidents = (data || []).filter(
-        (incident) => incident.isTechSupport === true && incident.assignedTo
+      const filteredIncidents = (data || []).filter(
+        (incident) =>
+          incident.isTechSupport === true && incident.status === "Đang xử lý"
       );
-      setIncidents(assignedIncidents);
+      // Sắp xếp giảm dần theo IncidentID
+      const sortedIncidents = filteredIncidents.sort(
+        (a, b) => b.incidentId - a.incidentId
+      );
+      setIncidents(sortedIncidents);
     } catch (error) {
       console.error("Error fetching incidents:", error);
       message.error("Lỗi khi tải danh sách sự cố");
@@ -250,7 +260,7 @@ const IncidentSparePartsDistribution = () => {
       const filtered = (data || []).filter(
         (incident) =>
           incident.isTechSupport === true &&
-          incident.assignedTo &&
+          incident.status === "Đang xử lý" &&
           (incident.incidentId?.toString().includes(searchValue) ||
             incident.equipmentName
               ?.toLowerCase()
@@ -259,7 +269,11 @@ const IncidentSparePartsDistribution = () => {
               ?.toLowerCase()
               .includes(searchValue.toLowerCase()))
       );
-      setIncidents(filtered);
+      // Sắp xếp giảm dần theo IncidentID
+      const sortedFiltered = filtered.sort(
+        (a, b) => b.incidentId - a.incidentId
+      );
+      setIncidents(sortedFiltered);
     } catch (error) {
       console.error("Error searching incidents:", error);
       message.error("Lỗi khi tìm kiếm sự cố");
@@ -492,7 +506,9 @@ const IncidentSparePartsDistribution = () => {
 
   // Hàm xử lý trả lại vật tư
   const handleOpenReturnDropdown = (record) => {
-    setExpandedReturnRow(expandedReturnRow === record.recordId ? null : record.recordId);
+    setExpandedReturnRow(
+      expandedReturnRow === record.recordId ? null : record.recordId
+    );
     setSelectedDistributionForReturn(record);
   };
 
@@ -507,7 +523,7 @@ const IncidentSparePartsDistribution = () => {
         partName: item.partName,
         quantityExported: item.quantity,
         quantityToReturn: 0,
-      }
+      },
     ];
 
     setReturnItems(itemsToReturn);
@@ -527,10 +543,14 @@ const IncidentSparePartsDistribution = () => {
   };
 
   const handleSaveReturn = async (values) => {
-    const itemsWithReturn = returnItems.filter((item) => item.quantityToReturn > 0);
+    const itemsWithReturn = returnItems.filter(
+      (item) => item.quantityToReturn > 0
+    );
 
     if (itemsWithReturn.length === 0) {
-      message.warning("Vui lòng nhập số lượng trả lại cho ít nhất một phụ tùng");
+      message.warning(
+        "Vui lòng nhập số lượng trả lại cho ít nhất một phụ tùng"
+      );
       return;
     }
 
@@ -540,7 +560,9 @@ const IncidentSparePartsDistribution = () => {
       // TODO: Thực hiện logic lưu trả lại ở đây
       // await replacementHistoryService.create/update(...)
 
-      message.success(`Ghi nhận trả lại ${itemsWithReturn.length} phụ tùng thành công!`);
+      message.success(
+        `Ghi nhận trả lại ${itemsWithReturn.length} phụ tùng thành công!`
+      );
 
       setReturnModalVisible(false);
       setReturnItems([]);
@@ -570,10 +592,16 @@ const IncidentSparePartsDistribution = () => {
           <Space size="small">
             {hasReturnItems && (
               <Tooltip title="Đã có phụ tùng trả lại">
-                <span style={{ fontSize: "18px" }}><RollbackOutlined /></span>
+                <span style={{ fontSize: "18px" }}>
+                  <RollbackOutlined />
+                </span>
               </Tooltip>
             )}
-            <Tag color={isIncident ? "red" : "blue"} icon={isIncident ? <WarningOutlined /> : <ToolOutlined />} style={{ fontSize: "13px", fontWeight: 600 }}>
+            <Tag
+              color={isIncident ? "red" : "blue"}
+              icon={isIncident ? <WarningOutlined /> : <ToolOutlined />}
+              style={{ fontSize: "13px", fontWeight: 600 }}
+            >
               {isIncident ? "Sự cố" : "Bảo trì"}
             </Tag>
           </Space>
@@ -581,7 +609,12 @@ const IncidentSparePartsDistribution = () => {
       },
     },
     {
-      title: type === "incident" ? "Mã sự cố" : type === "maintenance" ? "Mã bảo trì" : "Mã SC/BT",
+      title:
+        type === "incident"
+          ? "Mã sự cố"
+          : type === "maintenance"
+          ? "Mã bảo trì"
+          : "Mã SC/BT",
       dataIndex: "recordId",
       key: "recordId",
       width: 100,
@@ -611,9 +644,7 @@ const IncidentSparePartsDistribution = () => {
       render: (_, record) => (
         <div>
           <div style={{ fontSize: "13px", fontWeight: 500 }}>
-            {record.technicianName ||
-              record.technicianName ||
-              "Chưa xác định"}
+            {record.technicianName || record.technicianName || "Chưa xác định"}
           </div>
           {record.technicianCode && (
             <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
@@ -702,7 +733,9 @@ const IncidentSparePartsDistribution = () => {
         };
       }
 
-      if (dayjs(dist.distributedAt).isAfter(dayjs(acc[key].lastDistributedAt))) {
+      if (
+        dayjs(dist.distributedAt).isAfter(dayjs(acc[key].lastDistributedAt))
+      ) {
         acc[key].lastDistributedAt = dist.distributedAt;
       }
 
@@ -725,9 +758,13 @@ const IncidentSparePartsDistribution = () => {
           if (dist.status === "Đã xuất") {
             existingItem.quantity += item.quantity;
           }
-          existingItem.quantityToReturn = (existingItem.quantityToReturn || 0) + (item.quantityToReturn || 0);
+          existingItem.quantityToReturn =
+            (existingItem.quantityToReturn || 0) + (item.quantityToReturn || 0);
         } else {
-          acc[key].allItems.push({ ...item, quantityToReturn: item.quantityToReturn || 0 });
+          acc[key].allItems.push({
+            ...item,
+            quantityToReturn: item.quantityToReturn || 0,
+          });
         }
       });
 
@@ -735,29 +772,33 @@ const IncidentSparePartsDistribution = () => {
     }, {});
 
     // Convert to array and determine primary status for each group
-    return Object.values(grouped).map((group) => {
-      const totalQuantity = group.allItems.reduce(
-        (sum, item) => sum + (item.quantity || 0),
-        0
-      );
-      const totalReturned = group.allItems.reduce(
-        (sum, item) => sum + (item.quantityToReturn || 0),
-        0
-      );
-      const totalUsed = group.allItems.reduce(
-        (sum, item) => sum + Math.max(0, (item.quantity || 0) - (item.quantityToReturn || 0)),
-        0
-      );
+    return Object.values(grouped)
+      .map((group) => {
+        const totalQuantity = group.allItems.reduce(
+          (sum, item) => sum + (item.quantity || 0),
+          0
+        );
+        const totalReturned = group.allItems.reduce(
+          (sum, item) => sum + (item.quantityToReturn || 0),
+          0
+        );
+        const totalUsed = group.allItems.reduce(
+          (sum, item) =>
+            sum +
+            Math.max(0, (item.quantity || 0) - (item.quantityToReturn || 0)),
+          0
+        );
 
-      return {
-        ...group,
-        totalQuantity,
-        totalReturned,
-        totalUsed,
-        // Determine primary status (prioritize by order: Đã xuất > Đã trả lại)
-        status: totalUsed > 0 ? "Đã xuất" : "Đã trả lại",
-      };
-    }).filter(group => group.totalUsed > 0);
+        return {
+          ...group,
+          totalQuantity,
+          totalReturned,
+          totalUsed,
+          // Determine primary status (prioritize by order: Đã xuất > Đã trả lại)
+          status: totalUsed > 0 ? "Đã xuất" : "Đã trả lại",
+        };
+      })
+      .filter((group) => group.totalUsed > 0);
   };
 
   const filteredDistributionsList = filteredDistributions.filter((dist) => {
@@ -787,10 +828,21 @@ const IncidentSparePartsDistribution = () => {
   const renderReturnExpandRow = (record) => {
     if (expandedReturnRow !== record.recordId) return null;
 
-    const itemsToShow = record.allItems && record.allItems.length > 0 ? record.allItems.filter(item => (item.quantity || 0) > (item.quantityToReturn || 0)) : record.items || [];
+    const itemsToShow =
+      record.allItems && record.allItems.length > 0
+        ? record.allItems.filter(
+            (item) => (item.quantity || 0) > (item.quantityToReturn || 0)
+          )
+        : record.items || [];
 
     return (
-      <div style={{ padding: "20px", backgroundColor: "#fafafa", borderRadius: "8px" }}>
+      <div
+        style={{
+          padding: "20px",
+          backgroundColor: "#fafafa",
+          borderRadius: "8px",
+        }}
+      >
         {/* <div
           style={{
             display: "flex",
@@ -806,7 +858,14 @@ const IncidentSparePartsDistribution = () => {
             showIcon
             style={{ margin: 0, flex: 1 }}
           /> */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', marginBottom: "16px", }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            marginBottom: "16px",
+          }}
+        >
           <Button
             type="text"
             size="small"
@@ -826,7 +885,14 @@ const IncidentSparePartsDistribution = () => {
         </div>
         {/* </div> */}
 
-        <div style={{ overflow: "auto", borderRadius: "8px", border: "2px solid #D3D3D3", boxShadow: "0 2px 8px rgba(242, 232, 232, 0.15)" }}>
+        <div
+          style={{
+            overflow: "auto",
+            borderRadius: "8px",
+            border: "2px solid #D3D3D3",
+            boxShadow: "0 2px 8px rgba(242, 232, 232, 0.15)",
+          }}
+        >
           <table
             style={{
               width: "100%",
@@ -910,7 +976,8 @@ const IncidentSparePartsDistribution = () => {
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.backgroundColor = "#f5f5f5ff";
-                      e.currentTarget.style.boxShadow = "inset 0 0 0 1px #aaaaaaff";
+                      e.currentTarget.style.boxShadow =
+                        "inset 0 0 0 1px #aaaaaaff";
                     }}
                     onMouseLeave={(e) => {
                       e.currentTarget.style.backgroundColor =
@@ -945,7 +1012,9 @@ const IncidentSparePartsDistribution = () => {
                         borderRight: "1px solid #e8e8e8",
                       }}
                     >
-                      <strong style={{ fontSize: "15px" }}>{item.partName}</strong>
+                      <strong style={{ fontSize: "15px" }}>
+                        {item.partName}
+                      </strong>
                     </td>
                     <td
                       style={{
@@ -954,7 +1023,10 @@ const IncidentSparePartsDistribution = () => {
                         borderRight: "1px solid #e8e8e8",
                       }}
                     >
-                      <Tag color="blue" style={{ fontSize: "14px", padding: "4px 12px" }}>
+                      <Tag
+                        color="blue"
+                        style={{ fontSize: "14px", padding: "4px 12px" }}
+                      >
                         {item.quantity}
                       </Tag>
                     </td>
@@ -970,7 +1042,11 @@ const IncidentSparePartsDistribution = () => {
                         size="small"
                         icon={<RollbackOutlined />}
                         onClick={() => handleOpenReturnModal(record, item)}
-                        style={{ fontWeight: 600, backgroundColor: "#C8AC7D", borderColor: "#C8AC7D" }}
+                        style={{
+                          fontWeight: 600,
+                          backgroundColor: "#C8AC7D",
+                          borderColor: "#C8AC7D",
+                        }}
                       >
                         Trả lại
                       </Button>
@@ -979,7 +1055,14 @@ const IncidentSparePartsDistribution = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan="5" style={{ padding: "20px", textAlign: "center", color: "#999" }}>
+                  <td
+                    colSpan="5"
+                    style={{
+                      padding: "20px",
+                      textAlign: "center",
+                      color: "#999",
+                    }}
+                  >
                     Không có phụ tùng nào
                   </td>
                 </tr>
@@ -1023,7 +1106,11 @@ const IncidentSparePartsDistribution = () => {
         <Col xs={24} sm={12} md={6}>
           <Card bordered={false} style={{ backgroundColor: "#f0f5ff" }}>
             <Statistic
-              title={<span style={{ fontSize: "13px", color: "#1890ff" }}>Tổng số cấp phát</span>}
+              title={
+                <span style={{ fontSize: "13px", color: "#1890ff" }}>
+                  Tổng số cấp phát
+                </span>
+              }
               value={statistics.total}
               prefix={<FileTextOutlined style={{ color: "#1890ff" }} />}
               valueStyle={{ color: "#1890ff", fontSize: "24px" }}
@@ -1033,7 +1120,11 @@ const IncidentSparePartsDistribution = () => {
         <Col xs={24} sm={12} md={6}>
           <Card bordered={false} style={{ backgroundColor: "#f6ffed" }}>
             <Statistic
-              title={<span style={{ fontSize: "13px", color: "#52c41a" }}>Đã cấp phát</span>}
+              title={
+                <span style={{ fontSize: "13px", color: "#52c41a" }}>
+                  Đã cấp phát
+                </span>
+              }
               value={statistics.distributed}
               prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
               valueStyle={{ color: "#52c41a", fontSize: "24px" }}
@@ -1043,7 +1134,11 @@ const IncidentSparePartsDistribution = () => {
         <Col xs={24} sm={12} md={6}>
           <Card bordered={false} style={{ backgroundColor: "#f9f0ff" }}>
             <Statistic
-              title={<span style={{ fontSize: "13px", color: "#722ed1" }}>Đã trả lại</span>}
+              title={
+                <span style={{ fontSize: "13px", color: "#722ed1" }}>
+                  Đã trả lại
+                </span>
+              }
               value={statistics.returned}
               prefix={<InboxOutlined style={{ color: "#722ed1" }} />}
               valueStyle={{ color: "#722ed1", fontSize: "24px" }}
@@ -1053,7 +1148,11 @@ const IncidentSparePartsDistribution = () => {
         <Col xs={24} sm={12} md={6}>
           <Card bordered={false} style={{ backgroundColor: "#fff7e6" }}>
             <Statistic
-              title={<span style={{ fontSize: "13px", color: "#fa8c16" }}>Chờ trả lại</span>}
+              title={
+                <span style={{ fontSize: "13px", color: "#fa8c16" }}>
+                  Chờ trả lại
+                </span>
+              }
               value={statistics.pendingReturn}
               prefix={<ClockCircleOutlined style={{ color: "#fa8c16" }} />}
               valueStyle={{ color: "#fa8c16", fontSize: "24px" }}
@@ -1120,7 +1219,9 @@ const IncidentSparePartsDistribution = () => {
                 placeholder="Tìm theo mã, thiết bị, người cấp phát..."
                 prefix={<SearchOutlined />}
                 value={filters.searchText}
-                onChange={(e) => handleFilterChange("searchText", e.target.value)}
+                onChange={(e) =>
+                  handleFilterChange("searchText", e.target.value)
+                }
                 allowClear
               />
             </Col>
@@ -1166,7 +1267,9 @@ const IncidentSparePartsDistribution = () => {
                   }}
                   scroll={{ x: 1000 }}
                   expandable={{
-                    expandedRowKeys: expandedReturnRow ? [expandedReturnRow] : [],
+                    expandedRowKeys: expandedReturnRow
+                      ? [expandedReturnRow]
+                      : [],
                     expandedRowRender: renderReturnExpandRow,
                     expandIcon: () => null,
                     expandIconColumnIndex: -1,
@@ -1202,7 +1305,9 @@ const IncidentSparePartsDistribution = () => {
                   }}
                   scroll={{ x: 1000 }}
                   expandable={{
-                    expandedRowKeys: expandedReturnRow ? [expandedReturnRow] : [],
+                    expandedRowKeys: expandedReturnRow
+                      ? [expandedReturnRow]
+                      : [],
                     expandedRowRender: renderReturnExpandRow,
                     expandIcon: () => null,
                     expandIconColumnIndex: -1,
@@ -1282,7 +1387,13 @@ const IncidentSparePartsDistribution = () => {
                       width: 130,
                       align: "center",
                       render: (_, record) => {
-                        return <Badge count={record.totalQuantity} showZero color="blue" />;
+                        return (
+                          <Badge
+                            count={record.totalQuantity}
+                            showZero
+                            color="blue"
+                          />
+                        );
                       },
                     },
                     {
@@ -1292,10 +1403,19 @@ const IncidentSparePartsDistribution = () => {
                       width: 150,
                       render: (status) => {
                         const statusConfig = {
-                          "Đã xuất": { color: "green", icon: <CheckCircleOutlined /> },
-                          "Đã trả lại": { color: "purple", icon: <InboxOutlined /> },
+                          "Đã xuất": {
+                            color: "green",
+                            icon: <CheckCircleOutlined />,
+                          },
+                          "Đã trả lại": {
+                            color: "purple",
+                            icon: <InboxOutlined />,
+                          },
                         };
-                        const config = statusConfig[status] || { color: "default", icon: null };
+                        const config = statusConfig[status] || {
+                          color: "default",
+                          icon: null,
+                        };
                         return (
                           <Tag color={config.color} icon={config.icon}>
                             {status}
@@ -1461,16 +1581,18 @@ const IncidentSparePartsDistribution = () => {
             rules={[
               {
                 required: true,
-                message: `Vui lòng chọn ${distributionType === "incident" ? "sự cố" : "bảo trì"
-                  }`,
+                message: `Vui lòng chọn ${
+                  distributionType === "incident" ? "sự cố" : "bảo trì"
+                }`,
               },
             ]}
           >
             <Select
               showSearch
               size="large"
-              placeholder={`Tìm kiếm và chọn ${distributionType === "incident" ? "sự cố" : "bảo trì"
-                }...`}
+              placeholder={`Tìm kiếm và chọn ${
+                distributionType === "incident" ? "sự cố" : "bảo trì"
+              }...`}
               onSearch={(value) => {
                 if (distributionType === "incident") {
                   searchIncidents(value);
@@ -1792,8 +1914,8 @@ const IncidentSparePartsDistribution = () => {
                                 fontWeight: 500,
                                 color: item.partId
                                   ? (spareParts.find(
-                                    (p) => p.partId === item.partId
-                                  )?.quantity || 0) < item.quantity
+                                      (p) => p.partId === item.partId
+                                    )?.quantity || 0) < item.quantity
                                     ? "#ff4d4f"
                                     : "#52c41a"
                                   : "#000",
@@ -1801,8 +1923,8 @@ const IncidentSparePartsDistribution = () => {
                             >
                               {item.partId
                                 ? spareParts.find(
-                                  (p) => p.partId === item.partId
-                                )?.quantity || 0
+                                    (p) => p.partId === item.partId
+                                  )?.quantity || 0
                                 : "-"}
                             </span>
                           </td>
@@ -1994,9 +2116,7 @@ const IncidentSparePartsDistribution = () => {
             </Descriptions.Item>
 
             <Descriptions.Item label="Tổng số lượng cấp phát">
-              <strong>
-                {selectedDistributionDetail.totalQuantity} cái
-              </strong>
+              <strong>{selectedDistributionDetail.totalQuantity} cái</strong>
             </Descriptions.Item>
 
             <Descriptions.Item label="Tổng số lượng sử dụng">
@@ -2013,18 +2133,17 @@ const IncidentSparePartsDistribution = () => {
 
             {(selectedDistributionDetail.totalReturned != null ||
               selectedDistributionDetail.totalReturned > 0) && (
-                <Descriptions.Item label="Tổng số lượng trả lại" span={2}>
-                  <strong style={{ color: "#1890ff" }}>
-                    {selectedDistributionDetail.totalReturned ?? 0} cái
-                  </strong>
-                </Descriptions.Item>
-              )}
+              <Descriptions.Item label="Tổng số lượng trả lại" span={2}>
+                <strong style={{ color: "#1890ff" }}>
+                  {selectedDistributionDetail.totalReturned ?? 0} cái
+                </strong>
+              </Descriptions.Item>
+            )}
 
             <Descriptions.Item label="Người yêu cầu">
               <div>
                 <div style={{ fontWeight: 600 }}>
-                  {selectedDistributionDetail.technicianName ||
-                    "Chưa xác định"}
+                  {selectedDistributionDetail.technicianName || "Chưa xác định"}
                 </div>
                 {selectedDistributionDetail.technicianCode && (
                   <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
@@ -2037,22 +2156,22 @@ const IncidentSparePartsDistribution = () => {
             <Descriptions.Item label="Ngày yêu cầu">
               {selectedDistributionDetail.lastDistributedAt
                 ? dayjs(selectedDistributionDetail.lastDistributedAt).format(
-                  "DD/MM/YYYY HH:mm"
-                )
+                    "DD/MM/YYYY HH:mm"
+                  )
                 : "-"}
             </Descriptions.Item>
 
             {selectedDistributionDetail.distributions?.some(
               (d) => d.returnDate
             ) && (
-                <Descriptions.Item label="Ngày trả lại" span={2}>
-                  {dayjs(
-                    selectedDistributionDetail.distributions.find(
-                      (d) => d.returnDate
-                    ).returnDate
-                  ).format("DD/MM/YYYY HH:mm")}
-                </Descriptions.Item>
-              )}
+              <Descriptions.Item label="Ngày trả lại" span={2}>
+                {dayjs(
+                  selectedDistributionDetail.distributions.find(
+                    (d) => d.returnDate
+                  ).returnDate
+                ).format("DD/MM/YYYY HH:mm")}
+              </Descriptions.Item>
+            )}
 
             {selectedDistributionDetail.notes && (
               <Descriptions.Item label="Ghi chú" span={2}>
@@ -2082,11 +2201,7 @@ const IncidentSparePartsDistribution = () => {
         destroyOnClose
       >
         {selectedDistributionForReturn && (
-          <Form
-            form={returnForm}
-            layout="vertical"
-            onFinish={handleSaveReturn}
-          >
+          <Form form={returnForm} layout="vertical" onFinish={handleSaveReturn}>
             <Alert
               message="Ghi nhận Phụ tùng Trả lại"
               description="Nhập số lượng phụ tùng thừa mà kỹ thuật viên trả lại"
