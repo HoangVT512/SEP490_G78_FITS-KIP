@@ -44,11 +44,13 @@ import {
   SearchOutlined,
   ClockCircleOutlined,
   InboxOutlined,
+  ToolOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { incidentService } from "../../services/incidentService";
 import { sparePartService } from "../../services/sparePartService";
 import { replacementHistoryService } from "../../services/replacementHistoryService";
+import { getAllWorkOrders } from "../../services/maintenanceService";
 
 const IncidentSparePartsDistribution = () => {
   const [loading, setLoading] = useState(false);
@@ -285,26 +287,96 @@ const IncidentSparePartsDistribution = () => {
 
   const searchMaintenances = async (searchValue) => {
     if (!searchValue) {
-      setMaintenances([]);
+      fetchMaintenances();
       return;
     }
     setSearchingMaintenances(true);
     try {
-      const data = await incidentService.getAll();
-      const filtered = (data || []).filter(
-        (maintenance) =>
-          maintenance.incidentId?.toString().includes(searchValue) ||
-          maintenance.equipmentName
+      const response = await getAllWorkOrders();
+      const workOrders = response?.data || [];
+
+      const filtered = workOrders.filter((workOrder) => {
+        const statusMatch =
+          workOrder.status === "Pending" ||
+          workOrder.status === "In Progress" ||
+          workOrder.status === "Chờ xử lý" ||
+          workOrder.status === "Đang xử lý";
+
+        const searchMatch =
+          workOrder.workOrderId?.toString().includes(searchValue) ||
+          workOrder.equipmentName
             ?.toLowerCase()
             .includes(searchValue.toLowerCase()) ||
-          maintenance.equipmentCode
+          workOrder.equipmentCode
             ?.toLowerCase()
-            .includes(searchValue.toLowerCase())
-      );
+            .includes(searchValue.toLowerCase());
+
+        // Show all pending/in-progress work orders regardless of technician assignment
+        return statusMatch && searchMatch;
+      });
+
       setMaintenances(filtered);
     } catch (error) {
       console.error("Error searching maintenances:", error);
       message.error("Lỗi khi tìm kiếm bảo trì");
+    } finally {
+      setSearchingMaintenances(false);
+    }
+  };
+
+  const fetchMaintenances = async () => {
+    setSearchingMaintenances(true);
+    try {
+      const response = await getAllWorkOrders();
+      const workOrders = response?.data || [];
+
+      console.log("All work orders:", workOrders);
+      console.log("First work order full object:", workOrders[0]);
+
+      // Filter: status must be "Pending" or "In Progress" (English status from backend)
+      // Also accept Vietnamese: "Chờ xử lý" or "Đang xử lý"
+      const filteredMaintenances = workOrders.filter((workOrder) => {
+        const statusMatch =
+          workOrder.status === "Pending" ||
+          workOrder.status === "In Progress" ||
+          workOrder.status === "Chờ xử lý" ||
+          workOrder.status === "Đang xử lý";
+
+        // Check all possible technician field variations
+        const hasTechnician =
+          workOrder.mechanicalTechnicianId ||
+          workOrder.electricalTechnicianId ||
+          workOrder.mechanicalTechnician ||
+          workOrder.electricalTechnician ||
+          workOrder.assignedTechnicians?.length > 0;
+
+        console.log(`WorkOrder ${workOrder.workOrderId}:`, {
+          status: workOrder.status,
+          statusMatch,
+          mechanicalTechnicianId: workOrder.mechanicalTechnicianId,
+          electricalTechnicianId: workOrder.electricalTechnicianId,
+          mechanicalTechnician: workOrder.mechanicalTechnician,
+          electricalTechnician: workOrder.electricalTechnician,
+          assignedTechnicians: workOrder.assignedTechnicians,
+          hasTechnician,
+        });
+
+        // For warehouse distribution, we should show ALL pending/in-progress work orders
+        // even if technician is not assigned yet (warehouse can prepare parts in advance)
+        return statusMatch;
+      });
+
+      console.log("Filtered maintenances:", filteredMaintenances);
+
+      // Sort by workOrderId descending
+      const sortedMaintenances = filteredMaintenances.sort(
+        (a, b) => b.workOrderId - a.workOrderId
+      );
+
+      setMaintenances(sortedMaintenances);
+    } catch (error) {
+      console.error("Error fetching maintenances:", error);
+      message.error("Lỗi khi tải danh sách bảo trì");
     } finally {
       setSearchingMaintenances(false);
     }
@@ -324,18 +396,79 @@ const IncidentSparePartsDistribution = () => {
     const record =
       distributionType === "incident"
         ? incidents.find((i) => i.incidentId === recordId)
-        : maintenances.find((m) => m.incidentId === recordId);
+        : maintenances.find((m) => m.workOrderId === recordId);
 
+    console.log("Selected record:", record);
     setSelectedRecord(record);
 
-    if (record && record.assignedToName) {
-      const technicianDisplay = record.assignedToEmployeeCode
-        ? `${record.assignedToName} (${record.assignedToEmployeeCode})`
-        : record.assignedToName;
-      distributionForm.setFieldsValue({
-        technicianName: technicianDisplay,
-        technicianId: record.assignedTo,
-      });
+    if (record) {
+      if (distributionType === "maintenance") {
+        // For maintenance work orders, show both mechanical and electrical technicians
+        const mechanicalName =
+          record.mechanicalTechnicianName ||
+          record.mechanicalTechnician?.fullName ||
+          record.mechanicalTechnician?.name;
+        const mechanicalCode =
+          record.mechanicalTechnicianCode ||
+          record.mechanicalTechnician?.employeeCode;
+        const electricalName =
+          record.electricalTechnicianName ||
+          record.electricalTechnician?.fullName ||
+          record.electricalTechnician?.name;
+        const electricalCode =
+          record.electricalTechnicianCode ||
+          record.electricalTechnician?.employeeCode;
+
+        console.log("Technician data:", {
+          mechanicalName,
+          mechanicalCode,
+          electricalName,
+          electricalCode,
+        });
+
+        const technicians = [];
+        if (mechanicalName) {
+          const mech = mechanicalCode
+            ? `KTV Cơ: ${mechanicalName} (${mechanicalCode})`
+            : `KTV Cơ: ${mechanicalName}`;
+          technicians.push(mech);
+        }
+        if (electricalName) {
+          const elec = electricalCode
+            ? `KTV Điện: ${electricalName} (${electricalCode})`
+            : `KTV Điện: ${electricalName}`;
+          technicians.push(elec);
+        }
+
+        const technicianDisplay =
+          technicians.length > 0
+            ? technicians.join(" | ")
+            : "Chưa phân công kỹ thuật viên";
+
+        console.log("Final technician display:", technicianDisplay);
+
+        const technicianId =
+          record.mechanicalTechnicianId || record.electricalTechnicianId;
+
+        distributionForm.setFieldsValue({
+          technicianName: technicianDisplay,
+          technicianId: technicianId,
+        });
+      } else {
+        // For incidents
+        const technicianName = record.assignedToName;
+        const technicianCode = record.assignedToEmployeeCode;
+
+        if (technicianName) {
+          const technicianDisplay = technicianCode
+            ? `${technicianName} (${technicianCode})`
+            : technicianName;
+          distributionForm.setFieldsValue({
+            technicianName: technicianDisplay,
+            technicianId: record.assignedTo,
+          });
+        }
+      }
     }
   };
 
@@ -414,26 +547,62 @@ const IncidentSparePartsDistribution = () => {
       const currentUserId = localStorage.getItem("userId");
       const currentUserName = localStorage.getItem("userName") || "Quản lý kho";
 
+      console.log("Current user info:", { currentUserId, currentUserName });
+
       const selectedRecordData =
         distributionType === "incident"
           ? incidents.find((i) => i.incidentId === values.recordId)
-          : maintenances.find((m) => m.incidentId === values.recordId);
+          : maintenances.find((m) => m.workOrderId === values.recordId);
+
+      if (!selectedRecordData) {
+        message.error("Không tìm thấy dữ liệu sự cố/bảo trì");
+        setLoading(false);
+        return;
+      }
+
+      const equipmentId =
+        selectedRecordData.equipmentId || selectedRecordData.equipmentID;
+      if (!equipmentId) {
+        message.error("Không tìm thấy thiết bị");
+        setLoading(false);
+        return;
+      }
+
+      // Get replacedBy: priority is currentUserId > technicianId > assignedTo
+      const replacedBy =
+        currentUserId ||
+        values.technicianId ||
+        selectedRecordData.assignedToMechanical ||
+        selectedRecordData.assignedToElectrical ||
+        selectedRecordData.assignedTo;
+
+      if (!replacedBy) {
+        message.error("Không xác định được người phân phối. Vui lòng thử lại.");
+        setLoading(false);
+        return;
+      }
+
+      console.log("ReplacedBy will be:", replacedBy);
 
       const replacementPromises = selectedDistributions.map(async (item) => {
         const replacementData = {
           partId: item.partId,
-          equipmentId: selectedRecordData?.equipmentId || null,
+          equipmentId: equipmentId,
+          // Use correct ID based on distribution type
           incidentId: distributionType === "incident" ? values.recordId : null,
           workOrderId:
             distributionType === "maintenance" ? values.recordId : null,
           quantity: item.quantity,
           replacedDate: dayjs().format("YYYY-MM-DDTHH:mm:ss"),
-          replacedBy: currentUserId || values.technicianId,
+          replacedBy: replacedBy,
           status: "Đã xuất",
           remarks: values.notes || "",
         };
 
         console.log("Creating replacement history:", replacementData);
+        console.log("Selected record data:", selectedRecordData);
+        console.log("Distribution type:", distributionType);
+        console.log("Record ID:", values.recordId);
         return replacementHistoryService.create(replacementData);
       });
 
@@ -505,12 +674,26 @@ const IncidentSparePartsDistribution = () => {
   const handleOpenReturnModal = (record, item) => {
     setSelectedDistributionForReturn(record);
 
+    console.log("Opening return modal for record:", record);
+    console.log("Item to return:", item);
+
     // Find the replacement ID for this specific item
     const replacementRecord = record.distributions?.find((dist) =>
       dist.items?.some((i) => i.partId === item.partId)
     );
 
     const replacementId = replacementRecord?.id || Date.now();
+
+    // Get workOrderId and incidentId from the record
+    // Record has distributionType to determine which ID to use
+    const workOrderId =
+      record.distributionType === "maintenance" ? record.recordId : null;
+    const incidentId =
+      record.distributionType === "incident" ? record.recordId : null;
+
+    console.log("Distribution type:", record.distributionType);
+    console.log("WorkOrderId for return:", workOrderId);
+    console.log("IncidentId for return:", incidentId);
 
     // Chỉ lấy phụ tùng được click để trả lại
     const itemsToReturn = [
@@ -521,6 +704,8 @@ const IncidentSparePartsDistribution = () => {
         partName: item.partName,
         quantityExported: item.quantity,
         quantityToReturn: 0,
+        workOrderId: workOrderId, // Add workOrderId for maintenance
+        incidentId: incidentId, // Add incidentId for incident
       },
     ];
 
@@ -579,12 +764,21 @@ const IncidentSparePartsDistribution = () => {
         const actualQuantityUsed =
           item.quantityExported - item.quantityToReturn;
 
+        console.log("Return item data:", item);
+        console.log("Existing record before update:", existingRecord);
+        console.log("Existing workOrderId:", existingRecord.workOrderId);
+        console.log("Existing incidentId:", existingRecord.incidentId);
+        console.log("Item workOrderId from returnItems:", item.workOrderId);
+        console.log("Item incidentId from returnItems:", item.incidentId);
+
         // Update only the return-related fields, keep everything else
+        // IMPORTANT: Use workOrderId and incidentId from item (stored when opening return modal)
+        // because backend API doesn't return these fields in getById
         const updateData = {
           partId: existingRecord.partID || existingRecord.partId,
           equipmentId: existingRecord.equipmentID || existingRecord.equipmentId,
-          incidentId: existingRecord.incidentId,
-          workOrderId: existingRecord.workOrderId,
+          incidentId: item.incidentId || existingRecord.incidentId || null,
+          workOrderId: item.workOrderId || existingRecord.workOrderId || null,
           quantity: existingRecord.quantity, // Keep original exported quantity
           replacedDate: existingRecord.replacedDate, // Keep original date
           replacedBy: existingRecord.replacedBy, // Keep original technician
@@ -599,12 +793,9 @@ const IncidentSparePartsDistribution = () => {
           returnConfirmedBy: currentUserId, // Warehouse manager who confirmed (người xác nhận)
         };
 
-        console.log(
-          "Updating replacement history:",
-          item.replacementId,
-          updateData
-        );
-        console.log("Existing record:", existingRecord);
+        console.log("Update data being sent:", updateData);
+        console.log("WorkOrderId in update:", updateData.workOrderId);
+        console.log("IncidentId in update:", updateData.incidentId);
         return replacementHistoryService.update(item.replacementId, updateData);
       });
 
@@ -1634,6 +1825,7 @@ const IncidentSparePartsDistribution = () => {
                   setMaintenances([]);
                 } else {
                   setIncidents([]);
+                  fetchMaintenances();
                 }
                 distributionForm.setFieldsValue({
                   recordId: undefined,
@@ -1710,47 +1902,57 @@ const IncidentSparePartsDistribution = () => {
               dropdownStyle={{ maxWidth: "600px" }}
             >
               {(distributionType === "incident" ? incidents : maintenances).map(
-                (record) => (
-                  <Select.Option
-                    key={record.incidentId}
-                    value={record.incidentId}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <Tag
-                        color={distributionType === "incident" ? "red" : "cyan"}
-                        style={{ margin: 0, marginRight: 8, flexShrink: 0 }}
-                      >
-                        {record.incidentId}
-                      </Tag>
-                      <span
+                (record) => {
+                  const recordId =
+                    distributionType === "incident"
+                      ? record.incidentId
+                      : record.workOrderId;
+                  const displayId =
+                    distributionType === "incident"
+                      ? record.incidentId
+                      : record.workOrderId;
+                  return (
+                    <Select.Option key={recordId} value={recordId}>
+                      <div
                         style={{
-                          fontWeight: 500,
-                          marginRight: 8,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {record.equipmentName}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 12,
-                          color: "#999",
+                          display: "flex",
+                          alignItems: "center",
                           overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
                         }}
                       >
-                        ({record.equipmentCode} - {record.lineName})
-                      </span>
-                    </div>
-                  </Select.Option>
-                )
+                        <Tag
+                          color={
+                            distributionType === "incident" ? "red" : "cyan"
+                          }
+                          style={{ margin: 0, marginRight: 8, flexShrink: 0 }}
+                        >
+                          {displayId}
+                        </Tag>
+                        <span
+                          style={{
+                            fontWeight: 500,
+                            marginRight: 8,
+                            flexShrink: 0,
+                          }}
+                        >
+                          {record.equipmentName}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 12,
+                            color: "#999",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          ({record.equipmentCode} -{" "}
+                          {record.lineName || record.equipment?.line?.lineName})
+                        </span>
+                      </div>
+                    </Select.Option>
+                  );
+                }
               )}
             </Select>
           </Form.Item>
@@ -1788,7 +1990,9 @@ const IncidentSparePartsDistribution = () => {
             <Alert
               message={
                 <span style={{ fontSize: 14, fontWeight: 600 }}>
-                  Thông tin sự cố đã chọn
+                  {distributionType === "incident"
+                    ? "Thông tin sự cố đã chọn"
+                    : "Thông tin bảo trì đã chọn"}
                 </span>
               }
               description={
@@ -1800,41 +2004,88 @@ const IncidentSparePartsDistribution = () => {
                           Thiết bị:
                         </strong>
                         <span style={{ flex: 1, paddingLeft: 8 }}>
-                          {selectedRecord.equipmentName} (
-                          {selectedRecord.equipmentCode})
+                          {selectedRecord.equipmentName ||
+                            selectedRecord.equipment?.equipmentName}{" "}
+                          (
+                          {selectedRecord.equipmentCode ||
+                            selectedRecord.equipment?.equipmentCode}
+                          )
                         </span>
                       </div>
                     </Col>
-                    <Col span={12}>
-                      <div style={{ display: "flex", flexWrap: "wrap" }}>
-                        <strong style={{ minWidth: 100, flexShrink: 0 }}>
-                          Kỹ thuật viên:
-                        </strong>
-                        <span style={{ flex: 1, paddingLeft: 8 }}>
-                          {selectedRecord.assignedToName}
-                        </span>
-                      </div>
-                    </Col>
+                    {distributionType === "maintenance" ? (
+                      <>
+                        <Col span={12}>
+                          <div style={{ display: "flex", flexWrap: "wrap" }}>
+                            <strong style={{ minWidth: 120, flexShrink: 0 }}>
+                              KTV Cơ khí:
+                            </strong>
+                            <span style={{ flex: 1, paddingLeft: 8 }}>
+                              {selectedRecord.mechanicalTechnicianName ||
+                                selectedRecord.mechanicalTechnician?.fullName ||
+                                selectedRecord.mechanicalTechnician?.name || (
+                                  <span style={{ color: "#999" }}>
+                                    Chưa phân công
+                                  </span>
+                                )}
+                            </span>
+                          </div>
+                        </Col>
+                        <Col span={12}>
+                          <div style={{ display: "flex", flexWrap: "wrap" }}>
+                            <strong style={{ minWidth: 120, flexShrink: 0 }}>
+                              KTV Điện:
+                            </strong>
+                            <span style={{ flex: 1, paddingLeft: 8 }}>
+                              {selectedRecord.electricalTechnicianName ||
+                                selectedRecord.electricalTechnician?.fullName ||
+                                selectedRecord.electricalTechnician?.name || (
+                                  <span style={{ color: "#999" }}>
+                                    Chưa phân công
+                                  </span>
+                                )}
+                            </span>
+                          </div>
+                        </Col>
+                      </>
+                    ) : (
+                      <Col span={12}>
+                        <div style={{ display: "flex", flexWrap: "wrap" }}>
+                          <strong style={{ minWidth: 100, flexShrink: 0 }}>
+                            Kỹ thuật viên:
+                          </strong>
+                          <span style={{ flex: 1, paddingLeft: 8 }}>
+                            {selectedRecord.assignedToName || "Chưa phân công"}
+                          </span>
+                        </div>
+                      </Col>
+                    )}
                     <Col span={12}>
                       <div style={{ display: "flex", flexWrap: "wrap" }}>
                         <strong style={{ minWidth: 80, flexShrink: 0 }}>
                           Dây chuyền:
                         </strong>
                         <span style={{ flex: 1, paddingLeft: 8 }}>
-                          {selectedRecord.lineName}
+                          {selectedRecord.lineName ||
+                            selectedRecord.equipment?.line?.lineName ||
+                            "N/A"}
                         </span>
                       </div>
                     </Col>
-                    {selectedRecord.startTime && (
+                    {(selectedRecord.startTime ||
+                      selectedRecord.scheduledDate) && (
                       <Col span={12}>
                         <div style={{ display: "flex", flexWrap: "wrap" }}>
                           <strong style={{ minWidth: 100, flexShrink: 0 }}>
-                            Thời gian bắt đầu:
+                            {distributionType === "incident"
+                              ? "Thời gian bắt đầu:"
+                              : "Ngày lên kế hoạch:"}
                           </strong>
                           <span style={{ flex: 1, paddingLeft: 8 }}>
-                            {dayjs(selectedRecord.startTime).format(
-                              "DD/MM/YYYY HH:mm"
-                            )}
+                            {dayjs(
+                              selectedRecord.startTime ||
+                                selectedRecord.scheduledDate
+                            ).format("DD/MM/YYYY HH:mm")}
                           </span>
                         </div>
                       </Col>
