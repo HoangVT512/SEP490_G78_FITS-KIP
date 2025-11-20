@@ -21,6 +21,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FITSKIP.Domain.Tests", "FIT
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FITSKIP.Application.Tests", "FITSKIP.Application.Tests\FITSKIP.Application.Tests.csproj", "{EAC7E8B4-B6B0-427D-A8CD-B0B3A87F50D0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ManualTest", "ManualTest\ManualTest.csproj", "{A6088097-392D-4CE8-8CFF-EEBAFE834E6A}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,10 @@ Global
 		{EAC7E8B4-B6B0-427D-A8CD-B0B3A87F50D0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{EAC7E8B4-B6B0-427D-A8CD-B0B3A87F50D0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{EAC7E8B4-B6B0-427D-A8CD-B0B3A87F50D0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A6088097-392D-4CE8-8CFF-EEBAFE834E6A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A6088097-392D-4CE8-8CFF-EEBAFE834E6A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A6088097-392D-4CE8-8CFF-EEBAFE834E6A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A6088097-392D-4CE8-8CFF-EEBAFE834E6A}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -62,6 +68,7 @@ Global
 		{AC23FF71-77EC-45C8-BFA1-A0A4ACB14C42} = {1381B6D6-08E5-4232-AC9C-3BB152355864}
 		{E79332E9-FCFF-4BDA-A6A0-71C5361708AB} = {D63EF02B-9898-4D68-B8F4-EF0077A36BCB}
 		{EAC7E8B4-B6B0-427D-A8CD-B0B3A87F50D0} = {D63EF02B-9898-4D68-B8F4-EF0077A36BCB}
+		{A6088097-392D-4CE8-8CFF-EEBAFE834E6A} = {D63EF02B-9898-4D68-B8F4-EF0077A36BCB}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5A7099F8-EF82-409C-8A3E-169458172576}

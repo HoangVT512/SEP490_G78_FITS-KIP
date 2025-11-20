@@ -2,6 +2,8 @@ using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using FITSKIP.Domain.Exceptions;
+using System.Text.RegularExpressions;
 
 namespace FITSKIP.Application.Services;
 
@@ -39,38 +41,58 @@ public class ProductionOutputService : IProductionOutputService
         return output != null ? ProductionOutputDTO.FromEntity(output) : null;
     }
 
-    // Cập nhật CreateProductionOutputAsync
+    // Validation-enabled method
     public async Task<ProductionOutputDTO> CreateProductionOutputAsync(CreateProductionOutputRequest request, CancellationToken cancellationToken = default)
     {
-        // Validate line exists
-        var line = await _lineRepository.GetByIdAsync(request.LineId, cancellationToken);
-        if (line == null)
-            throw new ArgumentException($"Không tìm thấy chuyền sản xuất với ID {request.LineId}");
+        // Validate line ID existence
+        await ValidateLineIdAsync(request.LineId, cancellationToken);
 
-        // Validate shift exists
-        var shift = await _shiftRepository.GetByIdAsync(request.ShiftId, cancellationToken);
-        if (shift == null)
-            throw new ArgumentException($"Không tìm thấy ca làm việc với ID {request.ShiftId}");
+        // Validate shift ID existence
+        await ValidateShiftIdAsync(request.ShiftId, cancellationToken);
+
+        // Validate date
+        ValidateDate(request.Date);
+
+        // Validate slot time format
+        ValidateSlotTime(request.SlotTime);
 
         // Check if slot time already exists for this line, date, shift
         var exists = await _productionOutputRepository.ExistsAsync(request.LineId, request.Date, request.ShiftId, request.SlotTime, cancellationToken);
         if (exists)
-            throw new InvalidOperationException($"Sản lượng sản xuất đã tồn tại cho Chuyền {request.LineId}, Ngày {request.Date:yyyy-MM-dd}, Ca {request.ShiftId}, Slot {request.SlotTime}");
+        {
+            throw new ProductionOutputValidationException(
+                $"Sản lượng sản xuất đã tồn tại cho Chuyền {request.LineId}, Ngày {request.Date:yyyy-MM-dd}, Ca {request.ShiftId}, Slot {request.SlotTime}",
+                "PRODUCTION_OUTPUT_DUPLICATE_SLOT",
+                new {
+                    LineId = request.LineId,
+                    Date = request.Date,
+                    ShiftId = request.ShiftId,
+                    SlotTime = request.SlotTime
+                });
+        }
 
-        // ✅ VALIDATION: Kiểm tra targetAmount và resultAmount phải >0
-        if (request.TargetAmount.HasValue && request.TargetAmount.Value <= 0)
-            throw new ArgumentException("Số lượng mục tiêu phải là số dương (>0).");
-        if (request.ResultAmount.HasValue && request.ResultAmount.Value <= 0)
-            throw new ArgumentException("Số lượng thực tế phải là số dương (>0).");
+        // Validate target amount if provided
+        if (request.TargetAmount.HasValue)
+        {
+            ValidateTargetAmount(request.TargetAmount.Value);
+        }
 
-        // ✅ VALIDATION: Kiểm tra Loading Time không vượt quá thời gian slot
+        // Validate result amount if provided
+        if (request.ResultAmount.HasValue)
+        {
+            ValidateResultAmount(request.ResultAmount.Value);
+        }
+
+        // Validate loading time if provided
         if (request.LoadingTime.HasValue)
         {
-            int maxLoadingTime = CalculateMaxLoadingTime(request.SlotTime);
-            if (request.LoadingTime.Value > maxLoadingTime)
-                throw new ArgumentException($"Thời gian tải không được vượt quá {maxLoadingTime} phút cho slot {request.SlotTime}.");
-            if (request.LoadingTime.Value <= 0)
-                throw new ArgumentException("Thời gian tải phải là số dương (>0).");
+            ValidateLoadingTime(request.LoadingTime.Value, request.SlotTime);
+        }
+
+        // Business rule: Result amount should not exceed target amount significantly
+        if (request.TargetAmount.HasValue && request.ResultAmount.HasValue)
+        {
+            ValidateProductionAmounts(request.TargetAmount.Value, request.ResultAmount.Value);
         }
 
         // Tính Run Time = Loading Time nhập - downtime
@@ -104,11 +126,14 @@ public class ProductionOutputService : IProductionOutputService
         // Broadcast to Managers group for OEE Dashboard realtime updates
         try
         {
+            var line = await _lineRepository.GetByIdAsync(request.LineId, cancellationToken);
+            var shift = await _shiftRepository.GetByIdAsync(request.ShiftId, cancellationToken);
+
             Console.WriteLine($"📡 Broadcasting production output creation to Managers group for OEE Dashboard");
             await _notificationService.SendNotificationToGroupAsync(
                 "Managers",
                 "Thêm sản lượng mới",
-                $"Sản lượng mới được thêm cho chuyền {line.LineName} - Ca {shift.ShiftName}",
+                $"Sản lượng mới được thêm cho chuyền {line?.LineName} - Ca {shift?.ShiftName}",
                 "production"
             );
             Console.WriteLine($"✅ Broadcast to Managers group completed for production output creation");
@@ -159,22 +184,44 @@ public class ProductionOutputService : IProductionOutputService
     public async Task<ProductionOutputDTO?> UpdateProductionOutputAsync(int id, UpdateProductionOutputRequest request, CancellationToken cancellationToken = default)
     {
         var output = await _productionOutputRepository.GetByIdAsync(id, cancellationToken);
-        if (output == null) return null;
+        if (output == null)
+        {
+            throw new ProductionOutputValidationException(
+                $"Không tìm thấy sản lượng sản xuất với ID {id}",
+                "PRODUCTION_OUTPUT_NOT_FOUND",
+                new { OutputId = id });
+        }
 
-        // ✅ VALIDATION: Kiểm tra targetAmount và resultAmount phải >0 nếu có giá trị
-        if (request.TargetAmount.HasValue && request.TargetAmount.Value <= 0)
-            throw new ArgumentException("Số lượng mục tiêu phải là số dương (>0).");
-        if (request.ResultAmount.HasValue && request.ResultAmount.Value <= 0)
-            throw new ArgumentException("Số lượng thực tế phải là số dương (>0).");
+        // Validate target amount if provided
+        if (request.TargetAmount.HasValue)
+        {
+            ValidateTargetAmount(request.TargetAmount.Value);
+        }
 
-        // ✅ VALIDATION: Kiểm tra Loading Time không vượt quá thời gian slot
+        // Validate result amount if provided
+        if (request.ResultAmount.HasValue)
+        {
+            ValidateResultAmount(request.ResultAmount.Value);
+        }
+
+        // Validate loading time if provided
         if (request.LoadingTime.HasValue)
         {
-            int maxLoadingTime = CalculateMaxLoadingTime(output.SlotTime);
-            if (request.LoadingTime.Value > maxLoadingTime)
-                throw new ArgumentException($"Thời gian tải không được vượt quá {maxLoadingTime} phút cho slot {output.SlotTime}.");
-            if (request.LoadingTime.Value <= 0)
-                throw new ArgumentException("Thời gian tải phải là số dương (>0).");
+            ValidateLoadingTime(request.LoadingTime.Value, output.SlotTime);
+        }
+
+        // Business rule: Result amount should not exceed target amount significantly
+        if (request.TargetAmount.HasValue && request.ResultAmount.HasValue)
+        {
+            ValidateProductionAmounts(request.TargetAmount.Value, request.ResultAmount.Value);
+        }
+        else if (request.TargetAmount.HasValue && output.ResultAmount.HasValue)
+        {
+            ValidateProductionAmounts(request.TargetAmount.Value, output.ResultAmount.Value);
+        }
+        else if (output.TargetAmount.HasValue && request.ResultAmount.HasValue)
+        {
+            ValidateProductionAmounts(output.TargetAmount.Value, request.ResultAmount.Value);
         }
 
         // ✅ SỬA: Update fields - cho phép set thành null để xóa dữ liệu
@@ -557,5 +604,166 @@ public class ProductionOutputService : IProductionOutputService
             }
         }
         return totalDowntime;
+    }
+
+    private async Task ValidateLineIdAsync(int lineId, CancellationToken cancellationToken)
+    {
+        var line = await _lineRepository.GetByIdAsync(lineId, cancellationToken);
+        if (line == null)
+        {
+            throw new ProductionOutputValidationException(
+                $"Không tìm thấy chuyền sản xuất với ID {lineId}",
+                "LINE_NOT_FOUND",
+                new { LineId = lineId });
+        }
+    }
+
+    private async Task ValidateShiftIdAsync(int shiftId, CancellationToken cancellationToken)
+    {
+        var shift = await _shiftRepository.GetByIdAsync(shiftId, cancellationToken);
+        if (shift == null)
+        {
+            throw new ProductionOutputValidationException(
+                $"Không tìm thấy ca làm việc với ID {shiftId}",
+                "SHIFT_NOT_FOUND",
+                new { ShiftId = shiftId });
+        }
+    }
+
+    private void ValidateDate(DateTime date)
+    {
+        if (date > DateTime.Now.AddDays(1)) // Allow 1 day in future for planning
+        {
+            throw new ProductionOutputValidationException(
+                "Ngày sản xuất không được ở quá xa trong tương lai",
+                "PRODUCTION_OUTPUT_DATE_TOO_FUTURE",
+                new { Date = date, MaxAllowed = DateTime.Now.AddDays(1) });
+        }
+
+        if (date < new DateTime(2020, 1, 1))
+        {
+            throw new ProductionOutputValidationException(
+                "Ngày sản xuất không được nhỏ hơn năm 2020",
+                "PRODUCTION_OUTPUT_DATE_TOO_OLD",
+                new { Date = date, MinAllowed = new DateTime(2020, 1, 1) });
+        }
+    }
+
+    private void ValidateSlotTime(string slotTime)
+    {
+        if (string.IsNullOrWhiteSpace(slotTime))
+        {
+            throw new ProductionOutputValidationException(
+                "Thời gian slot không được để trống",
+                "PRODUCTION_OUTPUT_SLOT_TIME_REQUIRED");
+        }
+
+        // Validate slot time format (e.g., "7h-8h", "8h-9h", etc.)
+        var slotPattern = @"^\d{1,2}h-\d{1,2}h$";
+        if (!Regex.IsMatch(slotTime.Trim(), slotPattern))
+        {
+            throw new ProductionOutputValidationException(
+                "Thời gian slot phải có định dạng 'Xh-Yh' (VD: 7h-8h, 8h-9h)",
+                "PRODUCTION_OUTPUT_SLOT_TIME_INVALID_FORMAT",
+                new { SlotTime = slotTime });
+        }
+
+        // Validate hour range (0-23)
+        var hours = Regex.Matches(slotTime.Trim(), @"\d+");
+        if (hours.Count == 2)
+        {
+            int startHour = int.Parse(hours[0].Value);
+            int endHour = int.Parse(hours[1].Value);
+
+            if (startHour < 0 || startHour > 23 || endHour < 0 || endHour > 23)
+            {
+                throw new ProductionOutputValidationException(
+                    "Giờ trong slot phải từ 0 đến 23",
+                    "PRODUCTION_OUTPUT_SLOT_TIME_INVALID_HOURS",
+                    new { SlotTime = slotTime, StartHour = startHour, EndHour = endHour });
+            }
+
+            if (startHour >= endHour)
+            {
+                throw new ProductionOutputValidationException(
+                    "Giờ bắt đầu phải nhỏ hơn giờ kết thúc",
+                    "PRODUCTION_OUTPUT_SLOT_TIME_INVALID_RANGE",
+                    new { SlotTime = slotTime, StartHour = startHour, EndHour = endHour });
+            }
+        }
+    }
+
+    private void ValidateTargetAmount(int targetAmount)
+    {
+        if (targetAmount <= 0)
+        {
+            throw new ProductionOutputValidationException(
+                "Số lượng mục tiêu phải lớn hơn 0",
+                "PRODUCTION_OUTPUT_TARGET_AMOUNT_INVALID",
+                new { TargetAmount = targetAmount });
+        }
+
+        if (targetAmount > 10000)
+        {
+            throw new ProductionOutputValidationException(
+                "Số lượng mục tiêu không được vượt quá 10.000",
+                "PRODUCTION_OUTPUT_TARGET_AMOUNT_TOO_LARGE",
+                new { MaxAmount = 10000, ActualAmount = targetAmount });
+        }
+    }
+
+    private void ValidateResultAmount(int resultAmount)
+    {
+        if (resultAmount < 0)
+        {
+            throw new ProductionOutputValidationException(
+                "Số lượng thực tế không được âm",
+                "PRODUCTION_OUTPUT_RESULT_AMOUNT_NEGATIVE",
+                new { ResultAmount = resultAmount });
+        }
+
+        if (resultAmount > 10000)
+        {
+            throw new ProductionOutputValidationException(
+                "Số lượng thực tế không được vượt quá 10.000",
+                "PRODUCTION_OUTPUT_RESULT_AMOUNT_TOO_LARGE",
+                new { MaxAmount = 10000, ActualAmount = resultAmount });
+        }
+    }
+
+    private void ValidateLoadingTime(int loadingTime, string slotTime)
+    {
+        if (loadingTime <= 0)
+        {
+            throw new ProductionOutputValidationException(
+                "Thời gian tải phải lớn hơn 0",
+                "PRODUCTION_OUTPUT_LOADING_TIME_INVALID",
+                new { LoadingTime = loadingTime });
+        }
+
+        int maxLoadingTime = CalculateMaxLoadingTime(slotTime);
+        if (loadingTime > maxLoadingTime)
+        {
+            throw new ProductionOutputValidationException(
+                $"Thời gian tải không được vượt quá {maxLoadingTime} phút cho slot {slotTime}",
+                "PRODUCTION_OUTPUT_LOADING_TIME_TOO_LONG",
+                new { LoadingTime = loadingTime, MaxAllowed = maxLoadingTime, SlotTime = slotTime });
+        }
+    }
+
+    private void ValidateProductionAmounts(int targetAmount, int resultAmount)
+    {
+        if (resultAmount > targetAmount * 2)
+        {
+            throw new ProductionOutputValidationException(
+                "Số lượng thực tế không được vượt quá 2 lần số lượng mục tiêu",
+                "PRODUCTION_OUTPUT_RESULT_EXCEEDS_TARGET",
+                new {
+                    TargetAmount = targetAmount,
+                    ResultAmount = resultAmount,
+                    MaxAllowed = targetAmount * 2,
+                    ExcessRatio = (double)resultAmount / targetAmount
+                });
+        }
     }
 }

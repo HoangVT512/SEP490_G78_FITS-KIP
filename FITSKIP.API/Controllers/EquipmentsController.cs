@@ -1,5 +1,6 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using FITSKIP.Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -133,6 +134,16 @@ public class EquipmentsController : ControllerBase
                 )
             );
         }
+        catch (EquipmentValidationException ex)
+        {
+            _logger.LogWarning(ex, "Lỗi validation khi tạo thiết bị");
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
+        }
         catch (InvalidOperationException ex)
         {
             _logger.LogWarning(ex, "Lỗi business logic khi tạo thiết bị");
@@ -201,6 +212,16 @@ public class EquipmentsController : ControllerBase
                 equipment,
                 $"Cập nhật thiết bị '{equipment.EquipmentName}' thành công"
             ));
+        }
+        catch (EquipmentValidationException ex)
+        {
+            _logger.LogWarning(ex, "Lỗi validation khi cập nhật thiết bị với ID: {EquipmentId}", id);
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
         }
         catch (InvalidOperationException ex)
         {
