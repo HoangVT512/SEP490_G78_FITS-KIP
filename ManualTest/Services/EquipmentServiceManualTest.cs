@@ -94,8 +94,8 @@ public class EquipmentServiceManualTest
                     }
                     break;
                 case "10":
-                    var teamLeaderEquipmentsResult = await TestGetEquipmentsByTeamLeaderAsync();
-                    foreach (var equipment in teamLeaderEquipmentsResult)
+                    var userEquipmentsResult = await TestGetEquipmentsByUserLinesAsync();
+                    foreach (var equipment in userEquipmentsResult)
                     {
                         Console.WriteLine(FormatEquipment(equipment));
                     }
@@ -134,7 +134,7 @@ public class EquipmentServiceManualTest
         Console.WriteLine("7. Test GetEquipmentsByStageAsync");
         Console.WriteLine("8. Test GenerateQRCodeAsync (by ID)");
         Console.WriteLine("9. Test GenerateQRCodeAsync (by Code)");
-        Console.WriteLine("10. Test GetEquipmentsByTeamLeaderAsync");
+        Console.WriteLine("10. Test GetEquipmentsByUserLinesAsync");
         Console.WriteLine("11. Test GetEquipmentsByLineAsync");
         Console.WriteLine("0. Exit");
         Console.WriteLine();
@@ -577,11 +577,11 @@ public class EquipmentServiceManualTest
         }
     }
 
-    private async Task<IReadOnlyList<EquipmentDTO>> TestGetEquipmentsByTeamLeaderAsync()
+    private async Task<IReadOnlyList<EquipmentDTO>> TestGetEquipmentsByUserLinesAsync()
     {
-        Console.WriteLine("TEST: GetEquipmentsByTeamLeaderAsync");
+        Console.WriteLine("TEST: GetEquipmentsByUserLinesAsync");
 
-        Console.Write("[INPUT] Enter User ID (Team Leader): ");
+        Console.Write("[INPUT] Enter User ID: ");
         var userId = Console.ReadLine();
 
         if (string.IsNullOrWhiteSpace(userId))
@@ -591,21 +591,21 @@ public class EquipmentServiceManualTest
         }
 
         // For demo purposes, return equipments based on userId
-        // In real implementation, this would be based on team leader's assigned lines/equipments
-        var equipmentsByTeamLeader = userId.ToLower() switch
+        // In real implementation, this would be based on user's assigned lines/equipments
+        var equipmentsByUser = userId.ToLower() switch
         {
-            "tl001" => _testData.Where(e => e.StageId == 1 || e.StageId == 2).ToList(), // Team leader for Line 1
-            "tl002" => _testData.Where(e => e.StageId == 3 || e.StageId == 4).ToList(), // Team leader for Line 2
+            "tl001" => _testData.Where(e => e.StageId == 1 || e.StageId == 2).ToList(), // User for Line 1
+            "tl002" => _testData.Where(e => e.StageId == 3 || e.StageId == 4).ToList(), // User for Line 2
             _ => _testData.Where(e => e.Stage?.LineId != null).ToList() // Default: all equipments with lines
         };
 
         _mockEquipmentRepository.Setup(x => x.GetEquipmentsByTeamLeaderAsync(userId, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(equipmentsByTeamLeader);
+            .ReturnsAsync(equipmentsByUser);
 
         try
         {
             var result = await _service.GetEquipmentsByUserLinesAsync(userId);
-            Console.WriteLine($"[SUCCESS] Found {result.Count} equipments for team leader {userId}");
+            Console.WriteLine($"[SUCCESS] Found {result.Count} equipments for user {userId}");
             return result;
         }
         catch (Exception ex)

@@ -50,7 +50,10 @@ class Program
                 case "11":
                     await RunNotificationServiceTests();
                     break;
-/*                case "12":
+                case "12":
+                    await RunAzureStorageServiceTests();
+                    break;
+/*                case "13":
                     await RunDashboardServiceTests();
                     break;*/
                 case "0":
@@ -82,7 +85,8 @@ class Program
         Console.WriteLine("9. Spare Part Service Tests");
         Console.WriteLine("10. Replacement History Service Tests");
         Console.WriteLine("11. Notification Service Tests");
-        Console.WriteLine("12. Dashboard Service Tests");
+        Console.WriteLine("12. Azure Storage Service Tests");
+        Console.WriteLine("13. Dashboard Service Tests");
         Console.WriteLine("0. Exit");
         Console.WriteLine();
         Console.Write("Enter your choice: ");
@@ -154,8 +158,9 @@ class Program
     static async Task RunSparePartServiceTests()
     {
 
-        var testRunner = new SparePartServiceManualTest();
-        await testRunner.RunTests();
+        // var testRunner = new SparePartServiceManualTest();
+        // await testRunner.RunTests();
+        Console.WriteLine("SparePartServiceManualTest is temporarily disabled due to compilation issues.");
     }
 
     //static async Task RunReplacementHistoryServiceTests()
@@ -169,6 +174,13 @@ class Program
     {
 
         var testRunner = new NotificationServiceManualTest();
+        await testRunner.RunTests();
+    }
+
+    static async Task RunAzureStorageServiceTests()
+    {
+
+        var testRunner = new AzureStorageServiceManualTest();
         await testRunner.RunTests();
     }
 

@@ -584,7 +584,7 @@ public class LineServiceManualTest
     private string FormatLine(Line line)
     {
         if (line == null) return "[NULL]";
-
+        
         return $"{{ID:{line.LineId}, Name:\"{line.LineName}\", Code:\"{line.LineCode}\", DeptID:{line.DepartmentId}, Active:{line.IsActive}}}";
     }
 }
