@@ -776,10 +776,27 @@ namespace FITSKIP.Application.Services
             if (item == null)
                 throw new InvalidOperationException($"Checklist item not found: {checklistId}");
 
+            // ✅ CHỈ cập nhật CompletedBy khi CHƯA có người hoàn thành (lần đầu tick)
+            // Nếu đã có CompletedBy rồi → GIỮ NGUYÊN thông tin người hoàn thành ban đầu
+            if (request.IsChecked)
+            {
+                // Nếu đang tick và chưa có người hoàn thành → Ghi nhận
+                if (string.IsNullOrEmpty(item.CompletedBy))
+                {
+                    item.CompletedBy = technicianId;
+                    item.CompletedDate = DateTime.Now;
+                }
+                // Nếu đã có CompletedBy → GIỮ NGUYÊN, chỉ cập nhật notes
+            }
+            else
+            {
+                // Nếu untick → Xóa thông tin hoàn thành
+                item.CompletedBy = null;
+                item.CompletedDate = null;
+            }
+
             item.IsChecked = request.IsChecked;
             item.Notes = request.Notes;
-            item.CompletedBy = technicianId;
-            item.CompletedDate = request.IsChecked ? DateTime.Now : null;
 
             await _checklistRepository.UpdateAsync(item);
 
