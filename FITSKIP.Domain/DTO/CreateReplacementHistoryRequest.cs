@@ -24,7 +24,5 @@ namespace FITSKIP.Domain.DTO
         public string ReplacedBy { get; set; } = null!;
 
         public string Status { get; set; } = "Chờ duyệt cấp phát"; // Trạng thái mặc định (tiếng Việt)
-
-        public string? Remarks { get; set; }
     }
 }

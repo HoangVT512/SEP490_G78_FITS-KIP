@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Card, Table, message, Empty, Tag, Tooltip } from "antd";
+import { Card, Table, message, Empty, Tag } from "antd";
 import dayjs from "dayjs";
 import { replacementHistoryService } from "../../services/replacementHistoryService";
 
@@ -53,16 +53,19 @@ const ReplacementHistoryList = ({ equipmentId }) => {
       dataIndex: "replacedDate",
       key: "replacedDate",
       width: 180,
-      render: (d) => (d ? (
-        <div>
-          <div style={{ fontSize: "13px" }}>
-            {dayjs(d).format("DD/MM/YYYY")}
+      render: (d) =>
+        d ? (
+          <div>
+            <div style={{ fontSize: "13px" }}>
+              {dayjs(d).format("DD/MM/YYYY")}
+            </div>
+            <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+              {dayjs(d).format("HH:mm")}
+            </div>
           </div>
-          <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
-            {dayjs(d).format("HH:mm")}
-          </div>
-        </div>
-      ) : ""),
+        ) : (
+          ""
+        ),
     },
     {
       title: "Người cấp phát",
@@ -71,7 +74,9 @@ const ReplacementHistoryList = ({ equipmentId }) => {
       render: (_, record) => (
         <div>
           <div style={{ fontSize: "13px", fontWeight: 500 }}>
-            {record.replacedByFullName || record.replacedByUserName || "Chưa xác định"}
+            {record.replacedByFullName ||
+              record.replacedByUserName ||
+              "Chưa xác định"}
           </div>
           {record.replacedByEmployeeCode && (
             <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
@@ -90,37 +95,6 @@ const ReplacementHistoryList = ({ equipmentId }) => {
         const color =
           s === "Completed" ? "green" : s === "Pending" ? "orange" : "default";
         return <Tag color={color}>{s}</Tag>;
-      },
-    },
-    {
-      title: "Ghi chú",
-      dataIndex: "remarks",
-      key: "remarks",
-      width: 360,
-      render: (r) => {
-        if (!r) return "";
-        const short =
-          String(r).length > 250 ? String(r).slice(0, 250) + "..." : r;
-        return (
-          <Tooltip
-            title={
-              <div style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
-                {r}
-              </div>
-            }
-          >
-            <div
-              style={{
-                whiteSpace: "pre-wrap",
-                wordBreak: "break-word",
-                maxHeight: 120,
-                overflow: "auto",
-              }}
-            >
-              {short}
-            </div>
-          </Tooltip>
-        );
       },
     },
   ];

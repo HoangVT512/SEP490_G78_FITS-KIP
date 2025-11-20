@@ -164,26 +164,26 @@ public class TestDbContext : IdentityDbContext<User>
                 .HasConstraintName("FK__MaintenanPlan__Equip__1234567");
 
             // AssignedTo, AssignedToUser removed - now using Assignments
-            #pragma warning disable CS0618 // Obsolete
+#pragma warning disable CS0618 // Obsolete
             entity.Ignore(e => e.ChecklistItems); // Obsolete - use WorkOrders
-            #pragma warning restore CS0618
+#pragma warning restore CS0618
         });
 
         modelBuilder.Entity<MaintenanceChecklistItem>(entity =>
         {
             entity.HasKey(e => e.ChecklistId).HasName("PK__Maintena__26C4E2F5A1234567");
             entity.Property(e => e.ChecklistId).HasColumnName("ChecklistID");
-            #pragma warning disable CS0618 // Obsolete
+#pragma warning disable CS0618 // Obsolete
             entity.Property(e => e.PlanId).HasColumnName("PlanID");
-            #pragma warning restore CS0618
+#pragma warning restore CS0618
 
             entity.Property(e => e.StepName).HasMaxLength(200);
             entity.Property(e => e.CompletedDate).HasColumnType("datetime");
             entity.Property(e => e.Notes).HasMaxLength(500);
 
-            #pragma warning disable CS0618 // Obsolete
+#pragma warning disable CS0618 // Obsolete
             entity.Ignore(e => e.Plan);
-            #pragma warning restore CS0618
+#pragma warning restore CS0618
         });
 
         modelBuilder.Entity<ProductionOutput>(entity =>
@@ -257,7 +257,6 @@ public class TestDbContext : IdentityDbContext<User>
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .HasDefaultValue("Pending");
-            entity.Property(e => e.Remarks).HasMaxLength(500);
 
             entity.HasOne(d => d.Equipment).WithMany()
                 .HasForeignKey(d => d.EquipmentId)

@@ -228,75 +228,75 @@ const IncidentAssignList = () => {
           },
         ];
 
-        // Chỉ hiển thị "Ghi nhận thay thế" khi sự cố chưa hoàn thành
-        if (record.status !== "Hoàn thành") {
-          items.push({
-            key: "recordReplacement",
-            icon: <ToolOutlined />,
-            label: "Ghi nhận thay thế",
-            onClick: async () => {
-              // Check if there are any approved replacement requests
-              try {
-                const incidentId =
-                  record.incidentId || record.id || record.incidentID;
+        // Ẩn "Ghi nhận thay thế" - KTV chỉ xem lịch sử cấp phát tại quản lý kho
+        // if (record.status !== "Hoàn thành") {
+        //   items.push({
+        //     key: "recordReplacement",
+        //     icon: <ToolOutlined />,
+        //     label: "Ghi nhận thay thế",
+        //     onClick: async () => {
+        //       // Check if there are any approved replacement requests
+        //       try {
+        //         const incidentId =
+        //           record.incidentId || record.id || record.incidentID;
 
-                if (!incidentId) {
-                  console.error("Cannot find incident ID in record:", record);
-                  message.error("Không tìm thấy mã sự cố");
-                  return;
-                }
+        //         if (!incidentId) {
+        //           console.error("Cannot find incident ID in record:", record);
+        //           message.error("Không tìm thấy mã sự cố");
+        //           return;
+        //         }
 
-                console.log(
-                  "=== Checking replacement for incident:",
-                  incidentId
-                );
+        //         console.log(
+        //           "=== Checking replacement for incident:",
+        //           incidentId
+        //         );
 
-                const res = await replacementHistoryService.getByIncidentId(
-                  incidentId
-                );
-                const data = Array.isArray(res) ? res : res?.data || [];
+        //         const res = await replacementHistoryService.getByIncidentId(
+        //           incidentId
+        //         );
+        //         const data = Array.isArray(res) ? res : res?.data || [];
 
-                console.log("API Response:", res);
-                console.log("Parsed data:", data);
-                console.log(
-                  "Data statuses:",
-                  data.map((r) => ({ id: r.replacementID, status: r.status }))
-                );
+        //         console.log("API Response:", res);
+        //         console.log("Parsed data:", data);
+        //         console.log(
+        //           "Data statuses:",
+        //           data.map((r) => ({ id: r.replacementID, status: r.status }))
+        //         );
 
-                const hasApprovedReplacement = data.some(
-                  (r) =>
-                    r.status === "Đã duyệt cấp phát" || r.status === "Completed"
-                );
+        //         const hasApprovedReplacement = data.some(
+        //           (r) =>
+        //             r.status === "Đã duyệt cấp phát" || r.status === "Completed"
+        //         );
 
-                console.log(
-                  "Has approved replacement:",
-                  hasApprovedReplacement
-                );
+        //         console.log(
+        //           "Has approved replacement:",
+        //           hasApprovedReplacement
+        //         );
 
-                if (!hasApprovedReplacement) {
-                  message.warning({
-                    content:
-                      "Vui lòng tạo yêu cầu phụ tùng và chờ Quản lý kho duyệt cấp phát trước khi ghi nhận thay thế",
-                    duration: 5,
-                  });
-                  return;
-                }
+        //         if (!hasApprovedReplacement) {
+        //           message.warning({
+        //             content:
+        //               "Vui lòng tạo yêu cầu phụ tùng và chờ Quản lý kho duyệt cấp phát trước khi ghi nhận thay thế",
+        //             duration: 5,
+        //           });
+        //           return;
+        //         }
 
-                // If there are approved replacements, show the modal
-                setReplacementForIncident(record);
-                setReplacementModalVisible(true);
-              } catch (error) {
-                console.error("Error checking replacement history:", error);
-                // Nếu có lỗi API (ví dụ: chưa có yêu cầu nào), cũng hiển thị message hướng dẫn
-                message.warning({
-                  content:
-                    "Vui lòng tạo yêu cầu phụ tùng và chờ Quản lý kho duyệt cấp phát trước khi ghi nhận thay thế",
-                  duration: 5,
-                });
-              }
-            },
-          });
-        }
+        //         // If there are approved replacements, show the modal
+        //         setReplacementForIncident(record);
+        //         setReplacementModalVisible(true);
+        //       } catch (error) {
+        //         console.error("Error checking replacement history:", error);
+        //         // Nếu có lỗi API (ví dụ: chưa có yêu cầu nào), cũng hiển thị message hướng dẫn
+        //         message.warning({
+        //           content:
+        //             "Vui lòng tạo yêu cầu phụ tùng và chờ Quản lý kho duyệt cấp phát trước khi ghi nhận thay thế",
+        //           duration: 5,
+        //         });
+        //       }
+        //     },
+        //   });
+        // }
 
         items.push({
           key: "history",
@@ -308,18 +308,18 @@ const IncidentAssignList = () => {
           },
         });
 
-        // Chỉ hiển thị "Yêu cầu phụ tùng" khi sự cố chưa hoàn thành
-        if (record.status !== "Hoàn thành") {
-          items.push({
-            key: "spare",
-            icon: <ToolOutlined />,
-            label: "Yêu cầu phụ tùng",
-            onClick: () => {
-              setSpareForIncident(record);
-              setSpareModalVisible(true);
-            },
-          });
-        }
+        // Ẩn "Yêu cầu phụ tùng" - KTV chỉ xem lịch sử cấp phát tại quản lý kho
+        // if (record.status !== "Hoàn thành") {
+        //   items.push({
+        //     key: "spare",
+        //     icon: <ToolOutlined />,
+        //     label: "Yêu cầu phụ tùng",
+        //     onClick: () => {
+        //       setSpareForIncident(record);
+        //       setSpareModalVisible(true);
+        //     },
+        //   });
+        // }
 
         // Chỉ hiển thị "Cập nhật" khi sự cố chưa hoàn thành
         // if (record.status !== "Hoàn thành") {

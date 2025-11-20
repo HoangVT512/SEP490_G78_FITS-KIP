@@ -19,10 +19,5 @@ namespace FITSKIP.Domain.DTO
         /// "Hoàn thành" nếu không thừa
         /// </summary>
         public string Status { get; set; } = null!;
-
-        /// <summary>
-        /// Ghi chú (tùy chọn)
-        /// </summary>
-        public string? Remarks { get; set; }
     }
 }

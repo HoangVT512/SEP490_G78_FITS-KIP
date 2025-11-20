@@ -26,8 +26,6 @@ public partial class ReplacementHistory
 
     public string Status { get; set; } = "Chờ duyệt cấp phát"; // Trạng thái mặc định (tiếng Việt)
 
-    public string? Remarks { get; set; }
-
     /// <summary>
     /// Số lượng thực tế sử dụng (có thể khác với Quantity nếu có thừa/thiếu)
     /// </summary>

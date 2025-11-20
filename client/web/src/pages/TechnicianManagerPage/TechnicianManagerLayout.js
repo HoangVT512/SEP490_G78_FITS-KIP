@@ -38,6 +38,7 @@ import IncidentManagement from "./IncidentList";
 import MaintenancePlanManagement from "./MaintenanceManagement";
 import NotificationsList from "../ManagerPage/NotificationsList";
 import ReplacementReturnPage from "./ReplacementReturnPage";
+import ReplacementHistoryPage from "./ReplacementHistoryPage";
 import KtvReturnConfirmPage from "../TechnicianPage/KtvReturnConfirmPage";
 
 const { Header, Sider, Content } = AntLayout;
@@ -174,6 +175,12 @@ const TechnicianManagerLayout = () => {
       label: "Kế hoạch bảo trì",
       onClick: () => navigate("/technician-manager/maintenance-plans"),
     },
+    {
+      key: "replacement-history",
+      icon: <FileTextOutlined />,
+      label: "Lịch sử thay thế",
+      onClick: () => navigate("/technician-manager/replacement-history"),
+    },
     // {
     //   key: "returns",
     //   icon: <EditOutlined />,
@@ -213,6 +220,8 @@ const TechnicianManagerLayout = () => {
       return <IncidentManagement />;
     } else if (path.includes("maintenance-plans")) {
       return <MaintenancePlanManagement />;
+    } else if (path.includes("replacement-history")) {
+      return <ReplacementHistoryPage />;
     } else if (path.includes("replacement-returns")) {
       return <ReplacementReturnPage />;
     } else if (path.includes("ktv-confirm-return")) {

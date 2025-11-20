@@ -25,8 +25,6 @@ namespace FITSKIP.Domain.DTO
 
         public string Status { get; set; } = null!;
 
-        public string? Remarks { get; set; }
-
         /// <summary>
         /// Số lượng thực tế đã sử dụng
         /// </summary>

@@ -478,46 +478,15 @@ const IncidentList = () => {
   };
 
   const handleViewReplacementHistory = async (record) => {
-    try {
-      // Check if there are any approved replacement requests for this incident
-      const res = await replacementHistoryService.getByIncidentId(record.id);
-      const data = Array.isArray(res) ? res : res?.data || [];
-
-      // Check if there's at least one approved request
-      const hasApprovedReplacement = data.some(
-        (r) =>
-          r.status === "Đã duyệt cấp phát" ||
-          r.status === "Completed" ||
-          r.status === "Chờ trả lại" ||
-          r.status === "Hoàn thành"
-      );
-
-      if (!hasApprovedReplacement) {
-        message.warning({
-          content:
-            "Vui lòng tạo yêu cầu phụ tùng và chờ Quản lý kho duyệt cấp phát trước khi xem lịch sử thay thế",
-          duration: 5,
-        });
-        return;
-      }
-
-      // If there are approved replacements, show the modal
-      setSelectedIncidentId(record.id);
-      setSelectedEquipmentId(record.equipmentId);
-      setSelectedEquipmentInfo({
-        name: record.equipmentName,
-        code: record.equipmentCode,
-      });
-      setHistoryModalVisible(true);
-    } catch (error) {
-      console.error("Error checking replacement history:", error);
-      // Nếu có lỗi API (ví dụ: chưa có yêu cầu nào), cũng hiển thị message hướng dẫn
-      message.warning({
-        content:
-          "Vui lòng tạo yêu cầu phụ tùng và chờ Quản lý kho duyệt cấp phát trước khi xem lịch sử thay thế",
-        duration: 5,
-      });
-    }
+    // Simply show the modal without checking conditions
+    // The modal will display history with status "Đã xuất" and "Đã trả lại"
+    setSelectedIncidentId(record.id);
+    setSelectedEquipmentId(record.equipmentId);
+    setSelectedEquipmentInfo({
+      name: record.equipmentName,
+      code: record.equipmentCode,
+    });
+    setHistoryModalVisible(true);
   };
 
   const columns = [

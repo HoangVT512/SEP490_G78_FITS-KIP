@@ -17,7 +17,6 @@ namespace FITSKIP.Domain.DTO
         public DateTime? ReplacedDate { get; set; }
         public string? ReplacedBy { get; set; }
         public string? Status { get; set; }
-        public string? Remarks { get; set; }
 
         /// <summary>
         /// Số lượng thực tế sử dụng

@@ -477,7 +477,6 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .HasDefaultValue("Pending");
-            entity.Property(e => e.Remarks).HasMaxLength(500);
 
             // Equipment relationship - no reverse collection
             entity.HasOne(d => d.Equipment).WithMany()

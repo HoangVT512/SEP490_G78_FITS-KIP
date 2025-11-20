@@ -25,10 +25,5 @@ namespace FITSKIP.Domain.DTO
         /// Số lượng thực tế đã sử dụng
         /// </summary>
         public int ActualQuantityUsed { get; set; }
-
-        /// <summary>
-        /// Ghi chú (tùy chọn)
-        /// </summary>
-        public string? Remarks { get; set; }
     }
 }

@@ -219,7 +219,6 @@ namespace FITSKIP.Infrastructure.Repositories
                 existingHistory.ReplacedDate = replacementHistory.ReplacedDate;
                 existingHistory.ReplacedBy = replacementHistory.ReplacedBy;
                 existingHistory.Status = replacementHistory.Status;
-                existingHistory.Remarks = replacementHistory.Remarks;
                 existingHistory.ActualQuantityUsed = replacementHistory.ActualQuantityUsed;
                 existingHistory.QuantityToReturn = replacementHistory.QuantityToReturn;
                 existingHistory.ReturnedDate = replacementHistory.ReturnedDate;
