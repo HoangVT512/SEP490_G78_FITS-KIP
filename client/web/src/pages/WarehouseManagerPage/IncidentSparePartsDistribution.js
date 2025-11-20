@@ -108,8 +108,9 @@ const IncidentSparePartsDistribution = () => {
     try {
       const allReplacements = await replacementHistoryService.getAll();
 
+      // Get both "Đã xuất" and "Đã trả lại" statuses
       const exportedReplacements = (allReplacements || []).filter(
-        (r) => r.status === "Đã xuất"
+        (r) => r.status === "Đã xuất" || r.status === "Đã trả lại"
       );
 
       const formattedDistributions = exportedReplacements.map((replacement) => {
@@ -140,17 +141,19 @@ const IncidentSparePartsDistribution = () => {
               partName: replacement.partName || "",
               partNumber: replacement.partNumber || "",
               quantity: replacement.quantity,
+              actualQuantityUsed: replacement.actualQuantityUsed || 0,
+              quantityToReturn: replacement.quantityToReturn || 0,
             },
           ],
           notes: replacement.remarks || "",
-          status: Math.random() > 0.5 ? "Đã trả lại" : "Đã xuất",
+          status: replacement.status || "Đã xuất",
         };
       });
 
       setDistributions(formattedDistributions);
       const grouped = groupDistributions(formattedDistributions);
       setFilteredDistributions(grouped);
-      calculateStatistics(grouped);
+      calculateStatistics(formattedDistributions); // Use original data for stats
     } catch (error) {
       console.error("Error fetching distributions:", error);
       message.error("Lỗi khi tải danh sách phiếu cấp phát");
@@ -162,10 +165,8 @@ const IncidentSparePartsDistribution = () => {
   const calculateStatistics = (distributions) => {
     const stats = {
       total: distributions.length,
-      distributed: distributions.filter((d) => d.status === "Đã xuất").length,
+      exported: distributions.filter((d) => d.status === "Đã xuất").length,
       returned: distributions.filter((d) => d.status === "Đã trả lại").length,
-      pendingReturn: distributions.filter((d) => d.status === "Chờ trả lại")
-        .length,
     };
     setStatistics(stats);
   };
@@ -467,20 +468,9 @@ const IncidentSparePartsDistribution = () => {
 
       await Promise.all(updatePromises);
 
+      // Refresh data from server
       await fetchSpareParts();
-
-      const newDistribution = {
-        id: Date.now(),
-        distributionType: distributionType,
-        recordId: values.recordId,
-        recordName: selectedRecordData?.equipmentName || "",
-        technicianName: values.technicianName,
-        distributedAt: dayjs().format("YYYY-MM-DD HH:mm:ss"),
-        distributedBy: currentUserName,
-        items: selectedDistributions,
-        notes: values.notes || "",
-      };
-      setDistributions([newDistribution, ...distributions]);
+      await fetchDistributions();
 
       message.success(`Cấp phát vật tư cho ${recordType} thành công!`);
 
@@ -515,9 +505,17 @@ const IncidentSparePartsDistribution = () => {
   const handleOpenReturnModal = (record, item) => {
     setSelectedDistributionForReturn(record);
 
+    // Find the replacement ID for this specific item
+    const replacementRecord = record.distributions?.find((dist) =>
+      dist.items?.some((i) => i.partId === item.partId)
+    );
+
+    const replacementId = replacementRecord?.id || Date.now();
+
     // Chỉ lấy phụ tùng được click để trả lại
     const itemsToReturn = [
       {
+        replacementId: replacementId,
         partId: item.partId,
         partNumber: item.partNumber,
         partName: item.partName,
@@ -529,7 +527,6 @@ const IncidentSparePartsDistribution = () => {
     setReturnItems(itemsToReturn);
     returnForm.resetFields();
     setReturnModalVisible(true);
-    // setExpandedReturnRow(null); // Bỏ dòng này để giữ dropdown mở
   };
 
   const handleUpdateReturnQuantity = (partId, value) => {
@@ -557,8 +554,99 @@ const IncidentSparePartsDistribution = () => {
     try {
       setLoading(true);
 
-      // TODO: Thực hiện logic lưu trả lại ở đây
-      // await replacementHistoryService.create/update(...)
+      // Get current user from localStorage
+      const currentUserStr = localStorage.getItem("currentUser");
+      const currentUser = currentUserStr ? JSON.parse(currentUserStr) : null;
+      const currentUserId = currentUser?.id || currentUser?.userId;
+      const currentUserName =
+        currentUser?.fullName || currentUser?.userName || "Quản lý kho";
+
+      console.log("Current user for return confirmation:", currentUser);
+      console.log("Current user ID:", currentUserId);
+
+      // Update existing replacement history records with return information
+      const updatePromises = itemsWithReturn.map(async (item) => {
+        // First, get the existing record to preserve all fields
+        const existingRecord = await replacementHistoryService.getById(
+          item.replacementId
+        );
+
+        if (!existingRecord) {
+          throw new Error(`Không tìm thấy record với ID ${item.replacementId}`);
+        }
+
+        // Calculate actual quantity used
+        const actualQuantityUsed =
+          item.quantityExported - item.quantityToReturn;
+
+        // Update only the return-related fields, keep everything else
+        const updateData = {
+          partId: existingRecord.partID || existingRecord.partId,
+          equipmentId: existingRecord.equipmentID || existingRecord.equipmentId,
+          incidentId: existingRecord.incidentId,
+          workOrderId: existingRecord.workOrderId,
+          quantity: existingRecord.quantity, // Keep original exported quantity
+          replacedDate: existingRecord.replacedDate, // Keep original date
+          replacedBy: existingRecord.replacedBy, // Keep original technician
+          status: "Đã trả lại", // Update status to returned
+          remarks:
+            existingRecord.remarks ||
+            values.returnNotes ||
+            `Trả lại ${item.quantityToReturn} phụ tùng`,
+          actualQuantityUsed: actualQuantityUsed, // Actual quantity used (đã dùng thực tế)
+          quantityToReturn: item.quantityToReturn, // Quantity being returned (số lượng trả lại)
+          returnedDate: dayjs().format("YYYY-MM-DDTHH:mm:ss"), // Return date (ngày trả lại)
+          returnConfirmedBy: currentUserId, // Warehouse manager who confirmed (người xác nhận)
+        };
+
+        console.log(
+          "Updating replacement history:",
+          item.replacementId,
+          updateData
+        );
+        console.log("Existing record:", existingRecord);
+        return replacementHistoryService.update(item.replacementId, updateData);
+      });
+
+      // Execute all updates
+      await Promise.all(updatePromises);
+
+      // Update spare parts inventory: ADD back ONLY the returned quantity
+      const sparePartUpdatePromises = itemsWithReturn.map(async (item) => {
+        const part = spareParts.find((p) => p.partId === item.partId);
+        if (!part) return;
+
+        // Only add back the returned quantity (not the full exported quantity)
+        const newQuantity = part.quantity + item.quantityToReturn;
+        let newStatus = "Đủ hàng";
+
+        // Determine status based on quantity and minQuantity
+        if (newQuantity <= 0) {
+          newStatus = "Hết hàng";
+        } else if (newQuantity <= part.minQuantity) {
+          newStatus = "Sắp hết";
+        }
+
+        // Update spare part
+        const updateData = {
+          partNumber: part.partNumber,
+          partName: part.partName,
+          partType: part.partType,
+          quantity: newQuantity,
+          minQuantity: part.minQuantity,
+          location: part.location,
+          dateAdded: part.dateAdded,
+          status: newStatus,
+        };
+
+        return sparePartService.update(part.partId, updateData);
+      });
+
+      await Promise.all(sparePartUpdatePromises);
+
+      // Refresh data
+      await fetchSpareParts();
+      await fetchDistributions();
 
       message.success(
         `Ghi nhận trả lại ${itemsWithReturn.length} phụ tùng thành công!`
@@ -568,11 +656,11 @@ const IncidentSparePartsDistribution = () => {
       setReturnItems([]);
       setSelectedDistributionForReturn(null);
       returnForm.resetFields();
-
-      await fetchDistributions();
     } catch (error) {
       console.error("Error saving return:", error);
-      message.error("Lỗi khi lưu phiếu trả lại");
+      message.error(
+        error.message || "Lỗi khi lưu phiếu trả lại. Vui lòng thử lại."
+      );
     } finally {
       setLoading(false);
     }
@@ -755,15 +843,20 @@ const IncidentSparePartsDistribution = () => {
           (i) => i.partId === item.partId
         );
         if (existingItem) {
-          if (dist.status === "Đã xuất") {
-            existingItem.quantity += item.quantity;
-          }
+          // Always add quantity regardless of status (quantity is the exported amount)
+          existingItem.quantity += item.quantity || 0;
+          // Add returned quantity
           existingItem.quantityToReturn =
             (existingItem.quantityToReturn || 0) + (item.quantityToReturn || 0);
+          // Add actual used quantity
+          existingItem.actualQuantityUsed =
+            (existingItem.actualQuantityUsed || 0) +
+            (item.actualQuantityUsed || 0);
         } else {
           acc[key].allItems.push({
             ...item,
             quantityToReturn: item.quantityToReturn || 0,
+            actualQuantityUsed: item.actualQuantityUsed || 0,
           });
         }
       });
@@ -772,33 +865,43 @@ const IncidentSparePartsDistribution = () => {
     }, {});
 
     // Convert to array and determine primary status for each group
-    return Object.values(grouped)
-      .map((group) => {
-        const totalQuantity = group.allItems.reduce(
-          (sum, item) => sum + (item.quantity || 0),
-          0
-        );
-        const totalReturned = group.allItems.reduce(
-          (sum, item) => sum + (item.quantityToReturn || 0),
-          0
-        );
-        const totalUsed = group.allItems.reduce(
-          (sum, item) =>
-            sum +
-            Math.max(0, (item.quantity || 0) - (item.quantityToReturn || 0)),
-          0
-        );
+    return Object.values(grouped).map((group) => {
+      const totalQuantity = group.allItems.reduce(
+        (sum, item) => sum + (item.quantity || 0),
+        0
+      );
+      const totalReturned = group.allItems.reduce(
+        (sum, item) => sum + (item.quantityToReturn || 0),
+        0
+      );
+      const totalUsed = group.allItems.reduce(
+        (sum, item) =>
+          sum +
+          Math.max(0, (item.quantity || 0) - (item.quantityToReturn || 0)),
+        0
+      );
 
-        return {
-          ...group,
-          totalQuantity,
-          totalReturned,
-          totalUsed,
-          // Determine primary status (prioritize by order: Đã xuất > Đã trả lại)
-          status: totalUsed > 0 ? "Đã xuất" : "Đã trả lại",
-        };
-      })
-      .filter((group) => group.totalUsed > 0);
+      // Determine primary status based on allStatuses
+      // If all distributions have status "Đã trả lại", then the group status is "Đã trả lại"
+      // Otherwise, check if everything is returned (totalUsed === 0)
+      let primaryStatus = "Đã xuất";
+
+      const allReturned = Array.from(group.allStatuses).every(
+        (status) => status === "Đã trả lại"
+      );
+
+      if (allReturned || (totalQuantity > 0 && totalUsed === 0)) {
+        primaryStatus = "Đã trả lại";
+      }
+
+      return {
+        ...group,
+        totalQuantity,
+        totalReturned,
+        totalUsed,
+        status: primaryStatus,
+      };
+    });
   };
 
   const filteredDistributionsList = filteredDistributions.filter((dist) => {
@@ -817,11 +920,12 @@ const IncidentSparePartsDistribution = () => {
     setDetailModalVisible(true);
   }, []);
 
+  // Tab "Sự cố" và "Bảo trì" chỉ hiển thị những phiếu chưa trả hoàn toàn (còn đang sử dụng)
   const incidentDistributions = filteredDistributionsList.filter(
-    (d) => d.distributionType === "incident"
+    (d) => d.distributionType === "incident" && d.status === "Đã xuất"
   );
   const maintenanceDistributions = filteredDistributionsList.filter(
-    (d) => d.distributionType === "maintenance"
+    (d) => d.distributionType === "maintenance" && d.status === "Đã xuất"
   );
 
   // Hàm render expandable row cho trả lại vật tư
@@ -1103,7 +1207,7 @@ const IncidentSparePartsDistribution = () => {
 
       {/* Statistics Cards */}
       <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={8}>
           <Card bordered={false} style={{ backgroundColor: "#f0f5ff" }}>
             <Statistic
               title={
@@ -1117,21 +1221,21 @@ const IncidentSparePartsDistribution = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={8}>
           <Card bordered={false} style={{ backgroundColor: "#f6ffed" }}>
             <Statistic
               title={
                 <span style={{ fontSize: "13px", color: "#52c41a" }}>
-                  Đã cấp phát
+                  Đã xuất
                 </span>
               }
-              value={statistics.distributed}
+              value={statistics.exported}
               prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
               valueStyle={{ color: "#52c41a", fontSize: "24px" }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} md={6}>
+        <Col xs={24} sm={8}>
           <Card bordered={false} style={{ backgroundColor: "#f9f0ff" }}>
             <Statistic
               title={
@@ -1142,20 +1246,6 @@ const IncidentSparePartsDistribution = () => {
               value={statistics.returned}
               prefix={<InboxOutlined style={{ color: "#722ed1" }} />}
               valueStyle={{ color: "#722ed1", fontSize: "24px" }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card bordered={false} style={{ backgroundColor: "#fff7e6" }}>
-            <Statistic
-              title={
-                <span style={{ fontSize: "13px", color: "#fa8c16" }}>
-                  Chờ trả lại
-                </span>
-              }
-              value={statistics.pendingReturn}
-              prefix={<ClockCircleOutlined style={{ color: "#fa8c16" }} />}
-              valueStyle={{ color: "#fa8c16", fontSize: "24px" }}
             />
           </Card>
         </Col>
