@@ -1035,9 +1035,9 @@ const IncidentList = () => {
         viewMode={true}
       />
       {/* Statistics Cards */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card variant="borderless">
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '16px', marginBottom: 16 }}>
+        <div style={{ flex: '1 1 200px' }}>
+          <Card bordered={true}>
             <Statistic
               title={
                 activeTab === "pending"
@@ -1051,9 +1051,9 @@ const IncidentList = () => {
               valueStyle={{ color: "#1890ff" }}
             />
           </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card variant="borderless">
+        </div>
+        <div style={{ flex: '1 1 200px' }}>
+          <Card bordered={true}>
             <Statistic
               title="Chờ xử lý"
               value={stats.pending}
@@ -1061,9 +1061,9 @@ const IncidentList = () => {
               valueStyle={{ color: "#faad14" }}
             />
           </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card variant="borderless">
+        </div>
+        <div style={{ flex: '1 1 200px' }}>
+          <Card bordered={true}>
             <Statistic
               title="Đang xử lý"
               value={stats.inProgress}
@@ -1071,9 +1071,9 @@ const IncidentList = () => {
               valueStyle={{ color: "#1890ff" }}
             />
           </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card variant="borderless">
+        </div>
+        <div style={{ flex: '1 1 200px' }}>
+          <Card bordered={true}>
             <Statistic
               title="Thời gian chết"
               value={stats.totalDowntime}
@@ -1082,8 +1082,8 @@ const IncidentList = () => {
               valueStyle={{ color: "#ff4d4f" }}
             />
           </Card>
-        </Col>
-      </Row>
+        </div>
+      </div>
 
       {/* Tabs for Pending vs Completed */}
       <Tabs

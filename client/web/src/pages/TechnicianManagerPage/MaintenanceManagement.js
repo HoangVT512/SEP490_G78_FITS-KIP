@@ -1824,13 +1824,13 @@ const MaintenanceManagement = () => {
       plan.equipmentName?.toLowerCase().includes(searchText.toLowerCase()) ||
       plan.assignedToName?.toLowerCase().includes(searchText.toLowerCase()) ||
       plan.equipmentCode?.toLowerCase().includes(searchText.toLowerCase())
-  );
+  ).sort((a, b) => b.planId - a.planId);
 
   const searchedTemplates = templates.filter(
     (template) =>
       template.templateName?.toLowerCase().includes(searchText.toLowerCase()) ||
       template.description?.toLowerCase().includes(searchText.toLowerCase())
-  );
+  ).sort((a, b) => b.templateId - a.templateId);
 
   // Apply filters and sorting for Work Orders
   const getFilteredAndSortedWorkOrders = () => {
@@ -1892,9 +1892,9 @@ const MaintenanceManagement = () => {
       style={{ borderRadius: 8, boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
     >
       {/* Statistics */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '16px', marginBottom: 24 }}>
+        <div style={{ flex: '1 1 200px' }}>
+          <Card bordered={true}>
             <Statistic
               title="Tổng chu kỳ"
               value={stats.totalPlans}
@@ -1902,9 +1902,9 @@ const MaintenanceManagement = () => {
               valueStyle={{ color: '#1890ff' }}
             />
           </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
+        </div>
+        <div style={{ flex: '1 1 200px' }}>
+          <Card bordered={true}>
             <Statistic
               title="Đang hoạt động"
               value={stats.activePlans}
@@ -1912,28 +1912,18 @@ const MaintenanceManagement = () => {
               valueStyle={{ color: '#52c41a' }}
             />
           </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
+        </div>
+        <div style={{ flex: '1 1 200px' }}>
+          <Card bordered={true}>
             <Statistic
-              title="Đến hạn tuần này"
-              value={stats.dueThisWeek}
-              prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />}
-              valueStyle={{ color: '#faad14' }}
+              title="Không hoạt động"
+              value={stats.totalPlans - stats.activePlans}
+              prefix={<StopOutlined style={{ color: '#d9d9d9' }} />}
+              valueStyle={{ color: '#d9d9d9' }}
             />
           </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
-            <Statistic
-              title="Quá hạn"
-              value={stats.overdueWorkOrders}
-              prefix={<WarningOutlined style={{ color: '#ff4d4f' }} />}
-              valueStyle={{ color: '#ff4d4f' }}
-            />
-          </Card>
-        </Col>
-      </Row>
+        </div>
+      </div>
 
       <Space direction="vertical" size="middle" style={{ width: "100%" }}>
         <Row gutter={16}>

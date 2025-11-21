@@ -175,12 +175,12 @@ const InventoryManagement = () => {
             label: "Xem chi tiết",
             onClick: () => handleView(record),
           },
-          {
+          ...(record.isActive ? [{
             key: "edit",
             icon: <EditOutlined />,
             label: "Sửa",
             onClick: () => handleEdit(record),
-          },
+          }] : []),
           {
             key: "delete",
             icon: record.isActive ? (
@@ -284,7 +284,7 @@ const InventoryManagement = () => {
         warehouse: values.warehouse || "",
         uom: values.uom || "",
         replacementCycle: values.replacementCycle || "",
-        dateAdded: values.dateAdded ? values.dateAdded.toISOString() : null,
+        ...(editingRecord ? { dateAdded: editingRecord.dateAdded } : {}),
         documentUrl: values.documentUrl || "",
       };
 
@@ -385,8 +385,8 @@ const InventoryManagement = () => {
       return matchSearch && matchStatus && matchActive;
     })
     .sort((a, b) => {
-      // Sort by partId (database ID)
-      return a.partId - b.partId;
+      // Sort by partId descending (newest first)
+      return b.partId - a.partId;
     });
 
   // Get list of low stock and out of stock spare parts for alerts
@@ -910,74 +910,6 @@ const InventoryManagement = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="supplier"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Nhà cung cấp
-                  </span>
-                }
-              >
-                <Input placeholder="VD: Công ty XYZ" size="large" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="material"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Vật liệu
-                  </span>
-                }
-              >
-                <Input placeholder="VD: Thép không gỉ, Nhôm" size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="purchasePrice"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Giá mua (đ)
-                  </span>
-                }
-                rules={[
-                  { type: "number", min: 0, message: "Giá không được âm" },
-                ]}
-              >
-                <InputNumber
-                  style={{ width: "100%" }}
-                  placeholder="VD: 100000"
-                  size="large"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item
-                name="specifications"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Thông số kỹ thuật
-                  </span>
-                }
-              >
-                <Input.TextArea
-                  placeholder="VD: Chiều dài 1500mm, Đường kính 50mm"
-                  rows={2}
-                  size="large"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
                 name="quantity"
                 label={
                   <span style={{ fontWeight: "600", fontSize: "14px" }}>
@@ -1002,6 +934,9 @@ const InventoryManagement = () => {
                 />
               </Form.Item>
             </Col>
+          </Row>
+
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="minQuantity"
@@ -1016,9 +951,6 @@ const InventoryManagement = () => {
                 <InputNumber min={0} style={{ width: "100%" }} size="large" />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="location"
@@ -1034,63 +966,6 @@ const InventoryManagement = () => {
                 ]}
               >
                 <Input placeholder="VD: Kho A - Kệ 1" size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="warehouse"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Kho
-                  </span>
-                }
-              >
-                <Input placeholder="VD: Kho chính" size="large" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="uom"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Đơn vị tính
-                  </span>
-                }
-              >
-                <Input placeholder="VD: Cái, Bộ, Chiếc" size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="replacementCycle"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Chu kỳ thay thế
-                  </span>
-                }
-              >
-                <Input placeholder="VD: 12 tháng, 6 tháng" size="large" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item
-                name="documentUrl"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    URL tài liệu
-                  </span>
-                }
-              >
-                <Input
-                  placeholder="VD: /documents/SP001_datasheet.pdf"
-                  size="large"
-                />
               </Form.Item>
             </Col>
           </Row>
@@ -1281,22 +1156,22 @@ const InventoryManagement = () => {
               <Descriptions.Item label="Loại phụ tùng">
                 {viewingRecord.partType || "Chưa xác định"}
               </Descriptions.Item>
-              <Descriptions.Item label="Nhà cung cấp">
+              {/* <Descriptions.Item label="Nhà cung cấp">
                 {viewingRecord.supplier || "Chưa xác định"}
-              </Descriptions.Item>
+              </Descriptions.Item> */}
 
-              <Descriptions.Item label="Vật liệu">
+              {/* <Descriptions.Item label="Vật liệu">
                 {viewingRecord.material || "Chưa xác định"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Giá mua">
+              </Descriptions.Item> */}
+              {/* <Descriptions.Item label="Giá mua">
                 {viewingRecord.purchasePrice
                   ? `${viewingRecord.purchasePrice.toLocaleString("vi-VN")} đ`
                   : "Chưa xác định"}
-              </Descriptions.Item>
+              </Descriptions.Item> */}
 
-              <Descriptions.Item label="Thông số kỹ thuật" span={2}>
+              {/* <Descriptions.Item label="Thông số kỹ thuật" span={2}>
                 {viewingRecord.specifications || "Chưa xác định"}
-              </Descriptions.Item>
+              </Descriptions.Item> */}
 
               <Descriptions.Item label="Số lượng hiện tại">
                 {viewingRecord.quantity ?? 0} {viewingRecord.uom || "cái"}
@@ -1308,16 +1183,16 @@ const InventoryManagement = () => {
               <Descriptions.Item label="Vị trí">
                 {viewingRecord.location || "Chưa xác định"}
               </Descriptions.Item>
-              <Descriptions.Item label="Kho">
+              {/* <Descriptions.Item label="Kho">
                 {viewingRecord.warehouse || "Chưa xác định"}
-              </Descriptions.Item>
+              </Descriptions.Item> */}
 
-              <Descriptions.Item label="Đơn vị tính">
+              {/* <Descriptions.Item label="Đơn vị tính">
                 {viewingRecord.uom || "Chưa xác định"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Chu kỳ thay thế">
+              </Descriptions.Item> */}
+              {/* <Descriptions.Item label="Chu kỳ thay thế">
                 {viewingRecord.replacementCycle || "Chưa xác định"}
-              </Descriptions.Item>
+              </Descriptions.Item> */}
 
               <Descriptions.Item label="Ngày thêm">
                 {viewingRecord.dateAdded
@@ -1376,7 +1251,7 @@ const InventoryManagement = () => {
                 </Tag>
               </Descriptions.Item>
 
-              {viewingRecord.documentUrl && (
+              {/* {viewingRecord.documentUrl && (
                 <Descriptions.Item label="Tài liệu" span={2}>
                   <a
                     href={viewingRecord.documentUrl}
@@ -1386,7 +1261,7 @@ const InventoryManagement = () => {
                     {viewingRecord.documentUrl}
                   </a>
                 </Descriptions.Item>
-              )}
+              )} */}
             </Descriptions>
           </div>
         )}

@@ -729,6 +729,17 @@ const IncidentSparePartsDistribution = () => {
       (item) => item.quantityToReturn > 0
     );
 
+    // Validate số lượng trả lại không vượt quá số lượng đã xuất
+    const invalidItems = itemsWithReturn.filter(
+      (item) => item.quantityToReturn > item.quantityExported
+    );
+    if (invalidItems.length > 0) {
+      message.error(
+        "Số lượng trả lại không được vượt quá số lượng đã xuất cho một số phụ tùng!"
+      );
+      return;
+    }
+
     if (itemsWithReturn.length === 0) {
       message.warning(
         "Vui lòng nhập số lượng trả lại cho ít nhất một phụ tùng"
@@ -840,7 +851,7 @@ const IncidentSparePartsDistribution = () => {
       await fetchDistributions();
 
       message.success(
-        `Ghi nhận trả lại ${itemsWithReturn.length} phụ tùng thành công!`
+        `Ghi nhận trả lại ${itemsWithReturn.reduce((sum, item) => sum + item.quantityToReturn, 0)} phụ tùng thành công!`
       );
 
       setReturnModalVisible(false);
@@ -1817,6 +1828,7 @@ const IncidentSparePartsDistribution = () => {
             <Select
               placeholder="Chọn loại cấp phát"
               size="large"
+              allowClear
               onChange={(value) => {
                 setDistributionType(value);
                 setSelectedRecord(null);
@@ -1871,6 +1883,7 @@ const IncidentSparePartsDistribution = () => {
           >
             <Select
               showSearch
+              allowClear
               size="large"
               placeholder={`Tìm kiếm và chọn ${
                 distributionType === "incident" ? "sự cố" : "bảo trì"
@@ -2203,6 +2216,11 @@ const IncidentSparePartsDistribution = () => {
                               placeholder="Chọn phụ tùng"
                               style={{ width: "100%" }}
                               value={item.partId}
+                              allowClear
+                              showSearch
+                              filterOption={(input, option) =>
+                                option.label.toLowerCase().includes(input.toLowerCase())
+                              }
                               onChange={(value) =>
                                 handleUpdateSparePartInDistribution(
                                   item.id,
@@ -2676,7 +2694,7 @@ const IncidentSparePartsDistribution = () => {
                         >
                           <InputNumber
                             min={0}
-                            max={item.quantityExported}
+                            //max={item.quantityExported}
                             value={item.quantityToReturn}
                             onChange={(value) =>
                               handleUpdateReturnQuantity(item.partId, value)

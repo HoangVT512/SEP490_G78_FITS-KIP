@@ -733,6 +733,14 @@ namespace FITSKIP.Infrastructure.SeedData
                 }
 
                 await context.SaveChangesAsync();
+
+                // Update ManagerId for departments
+                if (maiAnhUser != null && khsxDept != null)
+                {
+                    khsxDept.ManagerId = maiAnhUser.Id;
+                }
+
+                await context.SaveChangesAsync();
             }
         }
 
