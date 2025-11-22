@@ -47,6 +47,11 @@ import {
   ToolOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import isBetween from "dayjs/plugin/isBetween";
+
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isBetween);
 import { incidentService } from "../../services/incidentService";
 import { sparePartService } from "../../services/sparePartService";
 import { replacementHistoryService } from "../../services/replacementHistoryService";
@@ -300,7 +305,8 @@ const IncidentSparePartsDistribution = () => {
           workOrder.status === "Pending" ||
           workOrder.status === "In Progress" ||
           workOrder.status === "Chờ xử lý" ||
-          workOrder.status === "Đang xử lý";
+          workOrder.status === "Đang xử lý" ||
+          workOrder.status === "Đang thực hiện";
 
         const searchMatch =
           workOrder.workOrderId?.toString().includes(searchValue) ||
@@ -311,8 +317,14 @@ const IncidentSparePartsDistribution = () => {
             ?.toLowerCase()
             .includes(searchValue.toLowerCase());
 
+        // Validate: Chỉ hiển thị nếu ngày hiện tại >= ngày bảo trì (ScheduledDate)
+        const isScheduledDateReached = dayjs().isSameOrAfter(
+          dayjs(workOrder.scheduledDate),
+          "day"
+        );
+
         // Show all pending/in-progress work orders regardless of technician assignment
-        return statusMatch && searchMatch;
+        return statusMatch && searchMatch && isScheduledDateReached;
       });
 
       setMaintenances(filtered);
@@ -340,7 +352,8 @@ const IncidentSparePartsDistribution = () => {
           workOrder.status === "Pending" ||
           workOrder.status === "In Progress" ||
           workOrder.status === "Chờ xử lý" ||
-          workOrder.status === "Đang xử lý";
+          workOrder.status === "Đang xử lý" ||
+          workOrder.status === "Đang thực hiện";
 
         // Check all possible technician field variations
         const hasTechnician =
@@ -350,9 +363,17 @@ const IncidentSparePartsDistribution = () => {
           workOrder.electricalTechnician ||
           workOrder.assignedTechnicians?.length > 0;
 
+        // Validate: Chỉ hiển thị nếu ngày hiện tại >= ngày bảo trì (ScheduledDate)
+        const isScheduledDateReached = dayjs().isSameOrAfter(
+          dayjs(workOrder.scheduledDate),
+          "day"
+        );
+
         console.log(`WorkOrder ${workOrder.workOrderId}:`, {
           status: workOrder.status,
           statusMatch,
+          scheduledDate: workOrder.scheduledDate,
+          isScheduledDateReached,
           mechanicalTechnicianId: workOrder.mechanicalTechnicianId,
           electricalTechnicianId: workOrder.electricalTechnicianId,
           mechanicalTechnician: workOrder.mechanicalTechnician,
@@ -363,7 +384,8 @@ const IncidentSparePartsDistribution = () => {
 
         // For warehouse distribution, we should show ALL pending/in-progress work orders
         // even if technician is not assigned yet (warehouse can prepare parts in advance)
-        return statusMatch;
+        // BUT only if the scheduled date has arrived
+        return statusMatch && isScheduledDateReached;
       });
 
       console.log("Filtered maintenances:", filteredMaintenances);
@@ -851,7 +873,10 @@ const IncidentSparePartsDistribution = () => {
       await fetchDistributions();
 
       message.success(
-        `Ghi nhận trả lại ${itemsWithReturn.reduce((sum, item) => sum + item.quantityToReturn, 0)} phụ tùng thành công!`
+        `Ghi nhận trả lại ${itemsWithReturn.reduce(
+          (sum, item) => sum + item.quantityToReturn,
+          0
+        )} phụ tùng thành công!`
       );
 
       setReturnModalVisible(false);
@@ -2219,7 +2244,9 @@ const IncidentSparePartsDistribution = () => {
                               allowClear
                               showSearch
                               filterOption={(input, option) =>
-                                option.label.toLowerCase().includes(input.toLowerCase())
+                                option.label
+                                  .toLowerCase()
+                                  .includes(input.toLowerCase())
                               }
                               onChange={(value) =>
                                 handleUpdateSparePartInDistribution(
