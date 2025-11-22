@@ -175,7 +175,7 @@ namespace FITSKIP.API.Controllers
             {
                 var fileBytes = excelService.GenerateTemplateExcelTemplate();
                 var fileName = $"MauBaoTri_Template_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-                
+
                 return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
             }
             catch (Exception ex)
@@ -195,7 +195,7 @@ namespace FITSKIP.API.Controllers
             {
                 var fileBytes = excelService.GenerateTemplateItemsExcelTemplate();
                 var fileName = $"MauBaoTri_CacBuocKiemTra_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
-                
+
                 return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
             }
             catch (Exception ex)
@@ -324,7 +324,7 @@ namespace FITSKIP.API.Controllers
         [HttpPost("templates/import")]
         [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
         public async Task<IActionResult> ImportTemplatesFromExcel(
-            IFormFile file, 
+            IFormFile file,
             [FromServices] IExcelImportService excelService,
             [FromServices] IStageService stageService)
         {
@@ -357,16 +357,16 @@ namespace FITSKIP.API.Controllers
 
                 var allStages = await stageService.GetStagesAsync();
                 var stageDict = allStages.ToDictionary(s => s.StageName.ToLower(), s => s);
-                
+
                 var allExistingTemplates = await _templateService.GetAllTemplatesAsync();
 
                 var validationErrors = new List<string>();
-                var rowNumber = 2; 
+                var rowNumber = 2;
 
                 foreach (var templateRequest in templateRequests)
                 {
                     var currentTemplateName = templateRequest.TemplateName;
-                    
+
                     if (!string.IsNullOrEmpty(templateRequest.StageName))
                     {
                         var stageNameLower = templateRequest.StageName.ToLower();
@@ -376,16 +376,16 @@ namespace FITSKIP.API.Controllers
                             rowNumber++;
                             continue;
                         }
-                        
+
                         var stage = stageDict[stageNameLower];
                         templateRequest.StageId = stage.StageId;
-                        
-                        var existingTemplate = allExistingTemplates.FirstOrDefault(t => 
+
+                        var existingTemplate = allExistingTemplates.FirstOrDefault(t =>
                             t.StageId == stage.StageId &&
                             t.TemplateName.Trim().Equals(currentTemplateName.Trim(), StringComparison.OrdinalIgnoreCase) &&
                             t.IsActive
                         );
-                        
+
                         if (existingTemplate != null)
                         {
                             validationErrors.Add(
@@ -399,25 +399,27 @@ namespace FITSKIP.API.Controllers
                     {
                         validationErrors.Add($"[Dòng {rowNumber}] Template '{currentTemplateName}' thiếu thông tin công đoạn (Stage)");
                     }
-                    
+
                     if (templateRequest.TemplateItems != null && templateRequest.TemplateItems.Any())
                     {
                         var duplicateItems = templateRequest.TemplateItems
-                            .GroupBy(item => new { 
-                                StepName = item.StepName.Trim().ToLower(), 
-                                Category = item.Category 
+                            .GroupBy(item => new
+                            {
+                                StepName = item.StepName.Trim().ToLower(),
+                                Category = item.Category
                             })
                             .Where(g => g.Count() > 1)
-                            .Select(g => new { 
-                                StepName = g.First().StepName, 
-                                Category = g.First().Category, 
-                                Count = g.Count() 
+                            .Select(g => new
+                            {
+                                StepName = g.First().StepName,
+                                Category = g.First().Category,
+                                Count = g.Count()
                             })
                             .ToList();
 
                         if (duplicateItems.Any())
                         {
-                            var duplicateList = string.Join(", ", duplicateItems.Select(d => 
+                            var duplicateList = string.Join(", ", duplicateItems.Select(d =>
                                 $"'{d.StepName}' ({d.Category}) xuất hiện {d.Count} lần"
                             ));
                             validationErrors.Add(
@@ -426,7 +428,7 @@ namespace FITSKIP.API.Controllers
                             );
                         }
                     }
-                    
+
                     rowNumber++;
                 }
 
@@ -434,7 +436,7 @@ namespace FITSKIP.API.Controllers
                 {
                     var errorMessage = $"⛔ Phát hiện {validationErrors.Count} lỗi trong file Excel. Vui lòng sửa các lỗi sau và import lại:\n\n" +
                                       string.Join("\n", validationErrors);
-                    
+
                     return BadRequest(ApiResponse<object>.ErrorResponse(
                         errorMessage,
                         validationErrors
@@ -443,7 +445,7 @@ namespace FITSKIP.API.Controllers
 
                 var createdTemplates = new List<MaintenanceTemplateDTO>();
                 var importErrors = new List<string>();
-                rowNumber = 2; 
+                rowNumber = 2;
 
                 foreach (var templateRequest in templateRequests)
                 {
@@ -471,7 +473,7 @@ namespace FITSKIP.API.Controllers
                 if (createdTemplates.Any())
                 {
                     return Ok(ApiResponse<object>.SuccessResponse(
-                        result, 
+                        result,
                         $"✅ Import thành công {createdTemplates.Count}/{templateRequests.Count} mẫu bảo trì"
                     ));
                 }
@@ -681,7 +683,7 @@ namespace FITSKIP.API.Controllers
         /// Lấy tất cả phiếu bảo trì
         /// </summary>
         [HttpGet("work-orders")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
+        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật,Quản lý kho")]
         public async Task<IActionResult> GetAllWorkOrders()
         {
             try
@@ -841,7 +843,7 @@ namespace FITSKIP.API.Controllers
                 }
 
                 var workOrder = await _workOrderService.UpdateWorkOrderAsync(workOrderId, request, userId);
-                
+
                 return Ok(ApiResponse<MaintenanceWorkOrderDTO>.SuccessResponse(workOrder, "Cập nhật phiếu bảo trì thành công"));
             }
             catch (InvalidOperationException ex)
@@ -864,8 +866,8 @@ namespace FITSKIP.API.Controllers
             try
             {
                 var workOrder = await _workOrderService.AssignTechniciansAsync(
-                    workOrderId, 
-                    request.ElectricalTechnicianId, 
+                    workOrderId,
+                    request.ElectricalTechnicianId,
                     request.MechanicalTechnicianId
                 );
                 return Ok(ApiResponse<MaintenanceWorkOrderDTO>.SuccessResponse(workOrder, "Phân công kỹ thuật viên thành công"));
@@ -955,7 +957,7 @@ namespace FITSKIP.API.Controllers
 
                 var workOrder = await _workOrderService.CloseWorkOrderAsync(workOrderId, userId, request?.Notes);
                 return Ok(ApiResponse<MaintenanceWorkOrderDTO>.SuccessResponse(
-                    workOrder, 
+                    workOrder,
                     "Đóng phiếu bảo trì thành công - Chu kỳ tiếp theo đã được cập nhật"
                 ));
             }

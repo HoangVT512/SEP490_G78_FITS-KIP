@@ -27,6 +27,17 @@ export const incidentService = {
     }
   },
 
+  async getActiveIncidentsByLine(lineId) {
+    try {
+      const url = `/Incidents/line/${lineId}/active-incidents`;
+      const data = await apiRequest(url);
+      return data?.data || [];
+    } catch (error) {
+      console.error("Lỗi lấy sự cố đang hoạt động theo dây chuyền:", error);
+      throw error;
+    }
+  },
+
   async getById(id) {
     const res = await apiRequest(`/Incidents/${encodeURIComponent(id)}`, {
       method: "GET",

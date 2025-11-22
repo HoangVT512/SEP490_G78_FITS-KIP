@@ -197,16 +197,16 @@ const WarehouseManagerLayout = () => {
       icon: <SwapOutlined />,
       label: "Cấp phát vật tư",
     },
-    {
-      key: "spare-parts-return",
-      icon: <CheckCircleOutlined />,
-      label: "Trả lại phụ tùng",
-    },
-    {
-      key: "history",
-      icon: <HistoryOutlined />,
-      label: "Lịch sử cấp phát linh kiện",
-    },
+    // {
+    //   key: "spare-parts-return",
+    //   icon: <CheckCircleOutlined />,
+    //   label: "Trả lại phụ tùng",
+    // },
+    // {
+    //   key: "history",
+    //   icon: <HistoryOutlined />,
+    //   label: "Lịch sử cấp phát linh kiện",
+    // },
     {
       key: "purchase-requests",
       icon: <ShoppingOutlined />,

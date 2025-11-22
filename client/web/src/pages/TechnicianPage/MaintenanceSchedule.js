@@ -18,7 +18,9 @@ import {
   Spin,
   message,
   Typography,
+  ConfigProvider,
 } from "antd";
+import viVN from "antd/locale/vi_VN";
 import {
   CalendarOutlined,
   ToolOutlined,
@@ -267,8 +269,9 @@ const MaintenanceSchedule = () => {
   };
 
   return (
-    <Spin spinning={loading}>
-      <div className={styles.scheduleContainer}>
+    <ConfigProvider locale={viVN}>
+      <Spin spinning={loading}>
+        <div className={styles.scheduleContainer}>
         {/* Header with filter */}
         <Card 
           bordered={false} 
@@ -630,7 +633,7 @@ const MaintenanceSchedule = () => {
                         color: item.status === "Overdue" ? "#ff4d4f" : "#1890ff"
                       }}
                     >
-                      {item.scheduledTime !== "-" ? item.scheduledTime : item.dueTime}
+                      {/* {item.scheduledTime !== "-" ? item.scheduledTime : item.dueTime} */}
                     </div>
                     <div style={{ fontSize: "10px", color: "#888", marginTop: 2 }}>
                       {item.scheduledTime !== "-" ? "Lên lịch" : "Đến hạn"}
@@ -665,7 +668,7 @@ const MaintenanceSchedule = () => {
                     </div>
                     {item.dueDate && (
                       <div style={{ fontSize: "11px", color: "#888", marginTop: 4 }}>
-                        ⏰ Hạn: {dayjs(item.dueDate).format("DD/MM/YYYY HH:mm")}
+                        ⏰ Hạn: {dayjs(item.dueDate).format("DD/MM/YYYY")}
                       </div>
                     )}
                   </div>
@@ -677,6 +680,7 @@ const MaintenanceSchedule = () => {
       </Modal>
     </div>
     </Spin>
+    </ConfigProvider>
   );
 };
 

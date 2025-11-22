@@ -50,7 +50,7 @@ const InventoryManagement = () => {
   // Replace filterActive with showInactive for tab-based filtering
   const [showInactive, setShowInactive] = useState(() => {
     // Load from localStorage or default to false (show active only)
-    const saved = localStorage.getItem('inventoryManagement_showInactive');
+    const saved = localStorage.getItem("inventoryManagement_showInactive");
     return saved ? JSON.parse(saved) : false;
   });
 
@@ -175,15 +175,19 @@ const InventoryManagement = () => {
             label: "Xem chi tiết",
             onClick: () => handleView(record),
           },
-          {
+          ...(record.isActive ? [{
             key: "edit",
             icon: <EditOutlined />,
             label: "Sửa",
             onClick: () => handleEdit(record),
-          },
+          }] : []),
           {
             key: "delete",
-            icon: record.isActive ? <DeleteOutlined /> : <CheckCircleOutlined />,
+            icon: record.isActive ? (
+              <DeleteOutlined />
+            ) : (
+              <CheckCircleOutlined />
+            ),
             label: record.isActive ? "Ngưng sử dụng" : "Khôi phục",
             danger: record.isActive,
             onClick: () => handleDelete(record),
@@ -274,13 +278,13 @@ const InventoryManagement = () => {
         specifications: values.specifications || "",
         supplier: values.supplier || "",
         purchasePrice: values.purchasePrice || null,
-        quantity: values.quantity || 0,  // ✅ THÊM giá trị mặc định
+        quantity: values.quantity || 0, // ✅ THÊM giá trị mặc định
         minQuantity: values.minQuantity ?? 5,
         location: values.location || "",
         warehouse: values.warehouse || "",
         uom: values.uom || "",
         replacementCycle: values.replacementCycle || "",
-        dateAdded: values.dateAdded ? values.dateAdded.toISOString() : null,
+        ...(editingRecord ? { dateAdded: editingRecord.dateAdded } : {}),
         documentUrl: values.documentUrl || "",
       };
 
@@ -349,7 +353,10 @@ const InventoryManagement = () => {
 
   // Persist inactive view state on change
   useEffect(() => {
-    localStorage.setItem('inventoryManagement_showInactive', JSON.stringify(showInactive));
+    localStorage.setItem(
+      "inventoryManagement_showInactive",
+      JSON.stringify(showInactive)
+    );
   }, [showInactive]);
 
   // Helper function to get sort order for status
@@ -378,13 +385,8 @@ const InventoryManagement = () => {
       return matchSearch && matchStatus && matchActive;
     })
     .sort((a, b) => {
-      // Sort by status first (out of stock first, then low stock, then in stock)
-      const statusOrderDiff =
-        getStatusSortOrder(a.status) - getStatusSortOrder(b.status);
-      if (statusOrderDiff !== 0) return statusOrderDiff;
-
-      // If same status, sort by part name
-      return (a.partName || "").localeCompare(b.partName || "", "vi");
+      // Sort by partId descending (newest first)
+      return b.partId - a.partId;
     });
 
   // Get list of low stock and out of stock spare parts for alerts
@@ -510,9 +512,16 @@ const InventoryManagement = () => {
       {/* Statistics */}
       <Row gutter={[16, 16]} className={styles.statsRow}>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #e8e8e8" }}>
+          <Card
+            className={styles.statsCard}
+            style={{ borderRadius: "8px", border: "1px solid #e8e8e8" }}
+          >
             <Statistic
-              title={<span style={{ color: "#283652", fontWeight: "600" }}>Tổng phụ tùng</span>}
+              title={
+                <span style={{ color: "#283652", fontWeight: "600" }}>
+                  Tổng phụ tùng
+                </span>
+              }
               value={stats.total}
               prefix={<InboxOutlined style={{ color: "#283652" }} />}
               valueStyle={{
@@ -524,9 +533,16 @@ const InventoryManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #b7eb8f" }}>
+          <Card
+            className={styles.statsCard}
+            style={{ borderRadius: "8px", border: "1px solid #b7eb8f" }}
+          >
             <Statistic
-              title={<span style={{ color: "#52c41a", fontWeight: "600" }}>Đủ hàng</span>}
+              title={
+                <span style={{ color: "#52c41a", fontWeight: "600" }}>
+                  Đủ hàng
+                </span>
+              }
               value={stats.inStock}
               prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
               valueStyle={{
@@ -538,9 +554,16 @@ const InventoryManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #ffe58f" }}>
+          <Card
+            className={styles.statsCard}
+            style={{ borderRadius: "8px", border: "1px solid #ffe58f" }}
+          >
             <Statistic
-              title={<span style={{ color: "#faad14", fontWeight: "600" }}>Sắp hết</span>}
+              title={
+                <span style={{ color: "#faad14", fontWeight: "600" }}>
+                  Sắp hết
+                </span>
+              }
               value={stats.lowStock}
               prefix={<WarningOutlined style={{ color: "#faad14" }} />}
               valueStyle={{
@@ -552,9 +575,16 @@ const InventoryManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #ffccc7" }}>
+          <Card
+            className={styles.statsCard}
+            style={{ borderRadius: "8px", border: "1px solid #ffccc7" }}
+          >
             <Statistic
-              title={<span style={{ color: "#ff4d4f", fontWeight: "600" }}>Hết hàng</span>}
+              title={
+                <span style={{ color: "#ff4d4f", fontWeight: "600" }}>
+                  Hết hàng
+                </span>
+              }
               value={stats.outOfStock}
               prefix={<WarningOutlined style={{ color: "#ff4d4f" }} />}
               valueStyle={{
@@ -606,19 +636,23 @@ const InventoryManagement = () => {
         }
       >
         <Tabs
-          activeKey={showInactive ? 'inactive' : 'active'}
-          onChange={(key) => setShowInactive(key === 'inactive')}
+          activeKey={showInactive ? "inactive" : "active"}
+          onChange={(key) => setShowInactive(key === "inactive")}
           items={[
             {
-              key: 'active',
+              key: "active",
               label: (
-                <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                <span style={{ fontSize: "14px", fontWeight: 500 }}>
                   <CheckCircleOutlined style={{ marginRight: 6 }} />
-                  Đang sử dụng ({spareParts.filter(p => p.isActive).length})
+                  Đang sử dụng ({spareParts.filter((p) => p.isActive).length})
                 </span>
               ),
               children: (
-                <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+                <Space
+                  direction="vertical"
+                  size="middle"
+                  style={{ width: "100%" }}
+                >
                   <Row gutter={16}>
                     <Col xs={24} sm={12} md={8}>
                       <Search
@@ -661,15 +695,19 @@ const InventoryManagement = () => {
               ),
             },
             {
-              key: 'inactive',
+              key: "inactive",
               label: (
-                <span style={{ fontSize: '14px', fontWeight: 500 }}>
+                <span style={{ fontSize: "14px", fontWeight: 500 }}>
                   <DeleteOutlined style={{ marginRight: 6 }} />
-                  Ngưng sử dụng ({spareParts.filter(p => !p.isActive).length})
+                  Ngưng sử dụng ({spareParts.filter((p) => !p.isActive).length})
                 </span>
               ),
               children: (
-                <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+                <Space
+                  direction="vertical"
+                  size="middle"
+                  style={{ width: "100%" }}
+                >
                   <Row gutter={16}>
                     <Col xs={24} sm={12} md={8}>
                       <Search
@@ -725,7 +763,7 @@ const InventoryManagement = () => {
           </div>
         }
         open={isModalVisible}
-        onOk={() => form.submit()}  // ✅ ĐÚNG: Gọi form.submit()
+        onOk={() => form.submit()} // ✅ ĐÚNG: Gọi form.submit()
         onCancel={() => {
           setIsModalVisible(false);
           form.resetFields();
@@ -745,7 +783,7 @@ const InventoryManagement = () => {
           },
           icon: editingRecord ? <EditOutlined /> : <PlusOutlined />,
           loading: loading,
-          htmlType: "submit",  // ✅ Thêm dòng này
+          htmlType: "submit", // ✅ Thêm dòng này
         }}
         cancelButtonProps={{
           style: {
@@ -864,77 +902,12 @@ const InventoryManagement = () => {
                   </span>
                 }
               >
-                <Input placeholder="VD: Cơ khí, Điện tử, Điều khiển" size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="supplier"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Nhà cung cấp
-                  </span>
-                }
-              >
-                <Input placeholder="VD: Công ty XYZ" size="large" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="material"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Vật liệu
-                  </span>
-                }
-              >
-                <Input placeholder="VD: Thép không gỉ, Nhôm" size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="purchasePrice"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Giá mua (đ)
-                  </span>
-                }
-                rules={[
-                  { type: "number", min: 0, message: "Giá không được âm" },
-                ]}
-              >
-                <InputNumber
-                  style={{ width: "100%" }}
-                  placeholder="VD: 100000"
+                <Input
+                  placeholder="VD: Cơ khí, Điện tử, Điều khiển"
                   size="large"
                 />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item
-                name="specifications"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Thông số kỹ thuật
-                  </span>
-                }
-              >
-                <Input.TextArea
-                  placeholder="VD: Chiều dài 1500mm, Đường kính 50mm"
-                  rows={2}
-                  size="large"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="quantity"
@@ -948,13 +921,22 @@ const InventoryManagement = () => {
                   {
                     type: "number",
                     min: editingRecord ? 0 : 1,
-                    message: editingRecord ? "Số lượng không được âm" : "Số lượng phải lớn hơn 0"
+                    message: editingRecord
+                      ? "Số lượng không được âm"
+                      : "Số lượng phải lớn hơn 0",
                   },
                 ]}
               >
-                <InputNumber min={editingRecord ? 0 : 1} style={{ width: "100%" }} size="large" />
+                <InputNumber
+                  min={editingRecord ? 0 : 1}
+                  style={{ width: "100%" }}
+                  size="large"
+                />
               </Form.Item>
             </Col>
+          </Row>
+
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="minQuantity"
@@ -969,9 +951,6 @@ const InventoryManagement = () => {
                 <InputNumber min={0} style={{ width: "100%" }} size="large" />
               </Form.Item>
             </Col>
-          </Row>
-
-          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="location"
@@ -987,60 +966,6 @@ const InventoryManagement = () => {
                 ]}
               >
                 <Input placeholder="VD: Kho A - Kệ 1" size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="warehouse"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Kho
-                  </span>
-                }
-              >
-                <Input placeholder="VD: Kho chính" size="large" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item
-                name="uom"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Đơn vị tính
-                  </span>
-                }
-              >
-                <Input placeholder="VD: Cái, Bộ, Chiếc" size="large" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name="replacementCycle"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Chu kỳ thay thế
-                  </span>
-                }
-              >
-                <Input placeholder="VD: 12 tháng, 6 tháng" size="large" />
-              </Form.Item>
-            </Col>
-          </Row>
-
-          <Row gutter={16}>
-            <Col span={24}>
-              <Form.Item
-                name="documentUrl"
-                label={
-                  <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    URL tài liệu
-                  </span>
-                }
-              >
-                <Input placeholder="VD: /documents/SP001_datasheet.pdf" size="large" />
               </Form.Item>
             </Col>
           </Row>
@@ -1061,9 +986,7 @@ const InventoryManagement = () => {
           try {
             setSavingMin(true);
             // Apply minValue to all active spare parts only
-            const activeParts = spareParts.filter(
-              (part) => part.isActive
-            );
+            const activeParts = spareParts.filter((part) => part.isActive);
             for (const part of activeParts) {
               // Send full payload with all required fields
               await sparePartService.update(part.partId, {
@@ -1138,17 +1061,19 @@ const InventoryManagement = () => {
       <Modal
         title={
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "50%",
-              backgroundColor: "#283652",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-              fontSize: "18px"
-            }}>
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                backgroundColor: "#283652",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                fontSize: "18px",
+              }}
+            >
               <InboxOutlined />
             </div>
             <div>
@@ -1162,7 +1087,8 @@ const InventoryManagement = () => {
                   fontWeight: "normal",
                 }}
               >
-                {viewingRecord?.partNumber} • {viewingRecord?.partType || "Chưa phân loại"}
+                {viewingRecord?.partNumber} •{" "}
+                {viewingRecord?.partType || "Chưa phân loại"}
               </div>
             </div>
           </div>
@@ -1230,22 +1156,22 @@ const InventoryManagement = () => {
               <Descriptions.Item label="Loại phụ tùng">
                 {viewingRecord.partType || "Chưa xác định"}
               </Descriptions.Item>
-              <Descriptions.Item label="Nhà cung cấp">
+              {/* <Descriptions.Item label="Nhà cung cấp">
                 {viewingRecord.supplier || "Chưa xác định"}
-              </Descriptions.Item>
+              </Descriptions.Item> */}
 
-              <Descriptions.Item label="Vật liệu">
+              {/* <Descriptions.Item label="Vật liệu">
                 {viewingRecord.material || "Chưa xác định"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Giá mua">
+              </Descriptions.Item> */}
+              {/* <Descriptions.Item label="Giá mua">
                 {viewingRecord.purchasePrice
                   ? `${viewingRecord.purchasePrice.toLocaleString("vi-VN")} đ`
                   : "Chưa xác định"}
-              </Descriptions.Item>
+              </Descriptions.Item> */}
 
-              <Descriptions.Item label="Thông số kỹ thuật" span={2}>
+              {/* <Descriptions.Item label="Thông số kỹ thuật" span={2}>
                 {viewingRecord.specifications || "Chưa xác định"}
-              </Descriptions.Item>
+              </Descriptions.Item> */}
 
               <Descriptions.Item label="Số lượng hiện tại">
                 {viewingRecord.quantity ?? 0} {viewingRecord.uom || "cái"}
@@ -1257,22 +1183,22 @@ const InventoryManagement = () => {
               <Descriptions.Item label="Vị trí">
                 {viewingRecord.location || "Chưa xác định"}
               </Descriptions.Item>
-              <Descriptions.Item label="Kho">
+              {/* <Descriptions.Item label="Kho">
                 {viewingRecord.warehouse || "Chưa xác định"}
-              </Descriptions.Item>
+              </Descriptions.Item> */}
 
-              <Descriptions.Item label="Đơn vị tính">
+              {/* <Descriptions.Item label="Đơn vị tính">
                 {viewingRecord.uom || "Chưa xác định"}
-              </Descriptions.Item>
-              <Descriptions.Item label="Chu kỳ thay thế">
+              </Descriptions.Item> */}
+              {/* <Descriptions.Item label="Chu kỳ thay thế">
                 {viewingRecord.replacementCycle || "Chưa xác định"}
-              </Descriptions.Item>
+              </Descriptions.Item> */}
 
               <Descriptions.Item label="Ngày thêm">
                 {viewingRecord.dateAdded
                   ? new Date(viewingRecord.dateAdded).toLocaleDateString(
-                    "vi-VN"
-                  )
+                      "vi-VN"
+                    )
                   : "Chưa xác định"}
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái">
@@ -1325,7 +1251,7 @@ const InventoryManagement = () => {
                 </Tag>
               </Descriptions.Item>
 
-              {viewingRecord.documentUrl && (
+              {/* {viewingRecord.documentUrl && (
                 <Descriptions.Item label="Tài liệu" span={2}>
                   <a
                     href={viewingRecord.documentUrl}
@@ -1335,7 +1261,7 @@ const InventoryManagement = () => {
                     {viewingRecord.documentUrl}
                   </a>
                 </Descriptions.Item>
-              )}
+              )} */}
             </Descriptions>
           </div>
         )}

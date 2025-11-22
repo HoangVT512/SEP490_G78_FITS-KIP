@@ -135,22 +135,22 @@ const MaintenanceTasks = () => {
   const getMyStatus = (workOrder) => {
     if (!workOrder) return "Chờ xử lý";
     const taskType = getMyTaskType(workOrder);
-    
+
     // Nếu là Electrical, lấy electricalStatus
     if (taskType === "Electrical") {
       return workOrder.electricalStatus || "Chờ xử lý";
     }
-    
+
     // Nếu là Mechanical, lấy mechanicalStatus
     if (taskType === "Mechanical") {
       return workOrder.mechanicalStatus || "Chờ xử lý";
     }
-    
+
     // Nếu làm cả 2, lấy status chung
     if (taskType === "Both") {
       return workOrder.status || "Chờ xử lý";
     }
-    
+
     return "Chờ xử lý";
   };
 
@@ -244,7 +244,8 @@ const MaintenanceTasks = () => {
         const scheduledDate = dayjs(text);
         const today = dayjs();
         const isPast =
-          scheduledDate.isBefore(today, "day") && record?.status !== "Hoàn thành";
+          scheduledDate.isBefore(today, "day") &&
+          record?.status !== "Hoàn thành";
         const isToday = scheduledDate.isSame(today, "day");
         return (
           <div
@@ -290,11 +291,11 @@ const MaintenanceTasks = () => {
       render: (status, record) => {
         // ✅ Lấy trạng thái riêng của KTV hiện tại
         const myStatus = getMyStatus(record);
-        
+
         let color = "default";
         let icon = null;
         let text = myStatus || "-";
-        
+
         if (myStatus === "Đang thực hiện") {
           color = "processing";
           icon = <PlayCircleOutlined />;
@@ -315,7 +316,7 @@ const MaintenanceTasks = () => {
           color = "default";
           text = "Không giao";
         }
-        
+
         return (
           <Tag icon={icon} color={color}>
             {text}
@@ -350,12 +351,14 @@ const MaintenanceTasks = () => {
             label: "Lịch sử linh kiện",
             onClick: () => handleViewSparePartsHistory(record),
           },
-          isScheduledDateReached && (record.status === "Chờ xử lý" || record.status === "Đang thực hiện") && {
-            key: "execute",
-            icon: <CheckCircleOutlined />,
-            label: "Thực hiện",
-            onClick: () => handleOpenChecklist(record),
-          },
+          isScheduledDateReached &&
+            (record.status === "Chờ xử lý" ||
+              record.status === "Đang thực hiện") && {
+              key: "execute",
+              icon: <CheckCircleOutlined />,
+              label: "Thực hiện",
+              onClick: () => handleOpenChecklist(record),
+            },
         ].filter(Boolean);
 
         return (
@@ -671,7 +674,9 @@ const MaintenanceTasks = () => {
 
   const getTaskProgress = () => {
     // ✅ Tính tiến độ theo trạng thái riêng của KTV hiện tại
-    const completed = workOrders.filter((t) => getMyStatus(t) === "Hoàn thành").length;
+    const completed = workOrders.filter(
+      (t) => getMyStatus(t) === "Hoàn thành"
+    ).length;
     const total = workOrders.length;
     return total > 0 ? Math.round((completed / total) * 100) : 0;
   };
@@ -904,7 +909,9 @@ const MaintenanceTasks = () => {
                       </div>
                       <div>
                         <strong>Ngày thực hiện:</strong>{" "}
-                        {dayjs(selectedWorkOrder.scheduledDate).format("DD/MM/YYYY")}
+                        {dayjs(selectedWorkOrder.scheduledDate).format(
+                          "DD/MM/YYYY"
+                        )}
                       </div>
                     </Col>
                   </Row>
@@ -1280,131 +1287,6 @@ const MaintenanceTasks = () => {
             )}
 
             <Divider />
-
-            <Card
-              title={
-                <>
-                  <FileTextOutlined style={{ color: "#faad14" }} /> Yêu cầu linh
-                  kiện vật tư
-                </>
-              }
-              size="small"
-              style={{ marginBottom: 16 }}
-            >
-              <div style={{ marginBottom: 12 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>
-                  Nhấn nút "+ Thêm" để yêu cầu linh kiện cần thiết cho công việc
-                  này
-                </Text>
-              </div>
-              {spareParts.length > 0 ? (
-                <AntTable
-                  columns={[
-                    {
-                      title: "Tên linh kiện",
-                      dataIndex: "partName",
-                      key: "partName",
-                      render: (_, record) => (
-                        <Select
-                          placeholder="Chọn linh kiện..."
-                          value={record.partName || undefined}
-                          onChange={(value) =>
-                            updateSparePart(record.key, "partName", value)
-                          }
-                          style={{ width: "100%" }}
-                          size="small"
-                          allowClear
-                        >
-                          {sparePartsList.map((part) => (
-                            <Select.Option
-                              key={part.partId}
-                              value={part.partName}
-                            >
-                              {part.partName} (Mã: {part.partNumber})
-                            </Select.Option>
-                          ))}
-                        </Select>
-                      ),
-                    },
-                    {
-                      title: "Số lượng cần",
-                      dataIndex: "quantity",
-                      key: "quantity",
-                      width: 100,
-                      render: (_, record) => (
-                        <InputNumber
-                          min={1}
-                          value={record.quantity}
-                          onChange={(value) =>
-                            updateSparePart(record.key, "quantity", value)
-                          }
-                          size="small"
-                          style={{ width: "100%" }}
-                        />
-                      ),
-                    },
-                    {
-                      title: "Tồn kho",
-                      key: "stock",
-                      width: 100,
-                      render: (_, record) => {
-                        const sparePart = sparePartsList.find(
-                          (part) => part.partID === record.partID
-                        );
-                        return sparePart ? sparePart.quantity : 0;
-                      },
-                    },
-                    {
-                      title: "Thao tác",
-                      key: "action",
-                      width: 80,
-                      render: (_, record) => (
-                        <Button
-                          type="link"
-                          danger
-                          size="small"
-                          icon={<DeleteOutlined />}
-                          onClick={() => removeSparePart(record.key)}
-                        >
-                          Xóa
-                        </Button>
-                      ),
-                    },
-                  ]}
-                  dataSource={spareParts}
-                  rowKey="key"
-                  pagination={false}
-                  size="small"
-                />
-              ) : (
-                <Alert
-                  message="Chưa có yêu cầu linh kiện"
-                  description="Nhấn nút Thêm phía dưới để yêu cầu linh kiện"
-                  type="info"
-                  showIcon
-                  style={{ marginBottom: 12 }}
-                />
-              )}
-              <Space style={{ width: "100%", marginTop: 12, gap: 8 }}>
-                <Button
-                  type="dashed"
-                  icon={<PlusOutlined />}
-                  flex={1}
-                  onClick={addSparePart}
-                >
-                  Thêm linh kiện
-                </Button>
-                <Button
-                  type="primary"
-                  onClick={handleSendSparePartsRequest}
-                  loading={loading}
-                  disabled={spareParts.length === 0}
-                  flex={1}
-                >
-                  Gửi yêu cầu
-                </Button>
-              </Space>
-            </Card>
 
             <Alert
               message="Lưu ý"
