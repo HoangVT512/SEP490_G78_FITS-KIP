@@ -693,21 +693,13 @@ const IncidentSparePartsDistribution = () => {
     setSelectedDistributionForReturn(record);
   };
 
-  const handleOpenReturnModal = (record, item) => {
+  const handleOpenReturnModal = (record, distributionRecord) => {
     setSelectedDistributionForReturn(record);
 
     console.log("Opening return modal for record:", record);
-    console.log("Item to return:", item);
-
-    // Find the replacement ID for this specific item
-    const replacementRecord = record.distributions?.find((dist) =>
-      dist.items?.some((i) => i.partId === item.partId)
-    );
-
-    const replacementId = replacementRecord?.id || Date.now();
+    console.log("Distribution record to return:", distributionRecord);
 
     // Get workOrderId and incidentId from the record
-    // Record has distributionType to determine which ID to use
     const workOrderId =
       record.distributionType === "maintenance" ? record.recordId : null;
     const incidentId =
@@ -717,19 +709,17 @@ const IncidentSparePartsDistribution = () => {
     console.log("WorkOrderId for return:", workOrderId);
     console.log("IncidentId for return:", incidentId);
 
-    // Chỉ lấy phụ tùng được click để trả lại
-    const itemsToReturn = [
-      {
-        replacementId: replacementId,
-        partId: item.partId,
-        partNumber: item.partNumber,
-        partName: item.partName,
-        quantityExported: item.quantity,
-        quantityToReturn: 0,
-        workOrderId: workOrderId, // Add workOrderId for maintenance
-        incidentId: incidentId, // Add incidentId for incident
-      },
-    ];
+    // Map all items in this specific distribution record
+    const itemsToReturn = distributionRecord.items.map((item) => ({
+      replacementId: distributionRecord.id,
+      partId: item.partId,
+      partNumber: item.partNumber,
+      partName: item.partName,
+      quantityExported: item.quantity, // Original exported quantity for THIS record
+      quantityToReturn: 0,
+      workOrderId: workOrderId,
+      incidentId: incidentId,
+    }));
 
     setReturnItems(itemsToReturn);
     returnForm.resetFields();
@@ -1060,6 +1050,7 @@ const IncidentSparePartsDistribution = () => {
         distributedBy: dist.distributedBy,
         items: dist.items,
         notes: dist.notes,
+        status: dist.status, // Add status to distribution record
       });
 
       // Track all statuses for this record
@@ -1159,12 +1150,13 @@ const IncidentSparePartsDistribution = () => {
   const renderReturnExpandRow = (record) => {
     if (expandedReturnRow !== record.recordId) return null;
 
-    const itemsToShow =
-      record.allItems && record.allItems.length > 0
-        ? record.allItems.filter(
-            (item) => (item.quantity || 0) > (item.quantityToReturn || 0)
-          )
-        : record.items || [];
+    // Filter only "Đã xuất" distributions (not returned yet)
+    const activeDistributions =
+      record.distributions?.filter(
+        (dist) => dist.status === "Đã xuất" || !dist.status
+      ) || [];
+
+    console.log("Active distributions for return:", activeDistributions);
 
     return (
       <div
@@ -1279,7 +1271,18 @@ const IncidentSparePartsDistribution = () => {
                     borderRight: "1px solid #aaaaaaff",
                   }}
                 >
-                  Tổng cấp phát
+                  Ngày xuất
+                </th>
+                <th
+                  style={{
+                    padding: "14px",
+                    textAlign: "center",
+                    fontWeight: 700,
+                    color: "#fff",
+                    borderRight: "1px solid #aaaaaaff",
+                  }}
+                >
+                  SL đã xuất
                 </th>
                 <th
                   style={{
@@ -1295,106 +1298,123 @@ const IncidentSparePartsDistribution = () => {
               </tr>
             </thead>
             <tbody>
-              {itemsToShow && itemsToShow.length > 0 ? (
-                itemsToShow.map((item, idx) => (
-                  <tr
-                    key={`${item.partId}_${idx}`}
-                    style={{
-                      borderBottom: "1px solid #e8e8e8",
-                      backgroundColor: idx % 2 === 0 ? "#fff" : "#f5f5f5ff",
-                      transition: "all 0.2s ease",
-                      cursor: "pointer",
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = "#f5f5f5ff";
-                      e.currentTarget.style.boxShadow =
-                        "inset 0 0 0 1px #aaaaaaff";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor =
-                        idx % 2 === 0 ? "#fff" : "#f5f5f5ff";
-                      e.currentTarget.style.boxShadow = "none";
-                    }}
-                  >
-                    <td
-                      style={{
-                        padding: "14px",
-                        textAlign: "center",
-                        fontWeight: 600,
-                        borderRight: "1px solid #e8e8e8",
-                      }}
-                    >
-                      {idx + 1}
-                    </td>
-                    <td
-                      style={{
-                        padding: "14px",
-                        textAlign: "center",
-                        fontSize: "13px",
-                        color: "#666",
-                        borderRight: "1px solid #e8e8e8",
-                      }}
-                    >
-                      {item.partNumber}
-                    </td>
-                    <td
-                      style={{
-                        padding: "14px",
-                        borderRight: "1px solid #e8e8e8",
-                      }}
-                    >
-                      <strong style={{ fontSize: "15px" }}>
-                        {item.partName}
-                      </strong>
-                    </td>
-                    <td
-                      style={{
-                        padding: "14px",
-                        textAlign: "center",
-                        borderRight: "1px solid #e8e8e8",
-                      }}
-                    >
-                      <Tag
-                        color="blue"
-                        style={{ fontSize: "14px", padding: "4px 12px" }}
-                      >
-                        {item.quantity}
-                      </Tag>
-                    </td>
-                    <td
-                      style={{
-                        padding: "14px",
-                        textAlign: "center",
-                      }}
-                    >
-                      <Button
-                        type="primary"
-                        //danger
-                        size="small"
-                        icon={<RollbackOutlined />}
-                        onClick={() => handleOpenReturnModal(record, item)}
+              {activeDistributions && activeDistributions.length > 0 ? (
+                activeDistributions.map((dist, idx) => (
+                  <React.Fragment key={`dist_${dist.id}_${idx}`}>
+                    {dist.items.map((item, itemIdx) => (
+                      <tr
+                        key={`${dist.id}_${item.partId}_${itemIdx}`}
                         style={{
-                          fontWeight: 600,
-                          backgroundColor: "#C8AC7D",
-                          borderColor: "#C8AC7D",
+                          borderBottom: "1px solid #e8e8e8",
+                          backgroundColor: idx % 2 === 0 ? "#fff" : "#f5f5f5ff",
+                          transition: "all 0.2s ease",
+                          cursor: "pointer",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = "#f5f5f5ff";
+                          e.currentTarget.style.boxShadow =
+                            "inset 0 0 0 1px #aaaaaaff";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor =
+                            idx % 2 === 0 ? "#fff" : "#f5f5f5ff";
+                          e.currentTarget.style.boxShadow = "none";
                         }}
                       >
-                        Trả lại
-                      </Button>
-                    </td>
-                  </tr>
+                        <td
+                          style={{
+                            padding: "14px",
+                            textAlign: "center",
+                            fontWeight: 600,
+                            borderRight: "1px solid #e8e8e8",
+                          }}
+                        >
+                          {idx + 1}
+                        </td>
+                        <td
+                          style={{
+                            padding: "14px",
+                            textAlign: "center",
+                            fontSize: "13px",
+                            color: "#666",
+                            borderRight: "1px solid #e8e8e8",
+                          }}
+                        >
+                          {item.partNumber}
+                        </td>
+                        <td
+                          style={{
+                            padding: "14px",
+                            borderRight: "1px solid #e8e8e8",
+                          }}
+                        >
+                          <strong style={{ fontSize: "15px" }}>
+                            {item.partName}
+                          </strong>
+                        </td>
+                        <td
+                          style={{
+                            padding: "14px",
+                            textAlign: "center",
+                            fontSize: "13px",
+                            borderRight: "1px solid #e8e8e8",
+                          }}
+                        >
+                          {dayjs(dist.distributedAt).format("DD/MM/YYYY HH:mm")}
+                        </td>
+                        <td
+                          style={{
+                            padding: "14px",
+                            textAlign: "center",
+                            borderRight: "1px solid #e8e8e8",
+                          }}
+                        >
+                          <Tag
+                            color="blue"
+                            style={{ fontSize: "14px", padding: "4px 12px" }}
+                          >
+                            {item.quantity}
+                          </Tag>
+                        </td>
+                        <td
+                          style={{
+                            padding: "14px",
+                            textAlign: "center",
+                          }}
+                        >
+                          {itemIdx === 0 && (
+                            <Button
+                              type="primary"
+                              size="small"
+                              icon={<RollbackOutlined />}
+                              onClick={() =>
+                                handleOpenReturnModal(record, dist)
+                              }
+                              style={{
+                                fontWeight: 600,
+                                backgroundColor: "#C8AC7D",
+                                borderColor: "#C8AC7D",
+                              }}
+                            >
+                              Trả lại
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
                 ))
               ) : (
                 <tr>
                   <td
-                    colSpan="5"
+                    colSpan="6"
                     style={{
                       padding: "20px",
                       textAlign: "center",
                       color: "#999",
                     }}
                   >
-                    Không có phụ tùng nào
+                    Không có phụ tùng nào cần trả lại
                   </td>
                 </tr>
               )}
