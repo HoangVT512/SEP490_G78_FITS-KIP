@@ -950,8 +950,10 @@ const WorkScheduleManagement = ({ openWorkOrderCode }) => {
     
     const config = statusConfig[statusKey] || statusConfig.pending;
     
-    // ✅ Nếu WorkOrder đã bị hoãn, hiển thị cả status Hoãn
-    const isPostponed = record.type === "workOrder" && record.postponedDate;
+    // ✅ Chỉ hiển thị Tag "Hoãn" phụ khi status KHÔNG PHẢI là "Hoãn" và có postponedDate
+    const shouldShowPostponedTag = record.type === "workOrder" && 
+                                   record.postponedDate && 
+                                   statusKey !== "postponed";
     
     // Nếu là WorkOrder đã giao việc (assigned/Pending), hiển thị thêm ngày scheduledDate
     if (record.type === "workOrder" && (statusKey === "pending" || record.workStatus === "assigned") && record.scheduledDate) {
@@ -960,7 +962,7 @@ const WorkScheduleManagement = ({ openWorkOrderCode }) => {
           <Tag icon={config.icon} color={config.color}>
             {config.text}
           </Tag>
-          {isPostponed && (
+          {shouldShowPostponedTag && (
             <Tag icon={<ClockCircleOutlined />} color="orange" style={{ marginLeft: 4 }}>
               Hoãn
             </Tag>
@@ -973,7 +975,7 @@ const WorkScheduleManagement = ({ openWorkOrderCode }) => {
     }
     
     // Nếu là status khác nhưng vẫn bị hoãn
-    if (isPostponed) {
+    if (shouldShowPostponedTag) {
       return (
         <div>
           <Tag icon={config.icon} color={config.color}>
