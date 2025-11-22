@@ -396,6 +396,33 @@ public class IncidentsController : ControllerBase
                 }
             }
 
+            // Validate Duration based on Stop Type
+            if (request.TypeId.HasValue && request.Duration.HasValue)
+            {
+                var stopTypes = await _incidentService.GetStopTypesAsync();
+                var stopType = stopTypes.FirstOrDefault(st => st.StopTypeId == request.TypeId.Value);
+
+                if (stopType != null)
+                {
+                    var typeName = stopType.TypeName;
+                    var duration = request.Duration.Value;
+
+                    // Check for "Dừng ngắn" - must be < 5 minutes
+                    if (typeName == "Dừng ngắn" && duration >= 5)
+                    {
+                        return BadRequest(new { success = false, message = "Loại 'Dừng ngắn' chỉ áp dụng khi thời lượng < 5 phút." });
+                    }
+
+                    // Check for "Dừng dài" - must be >= 5 minutes
+                    if (typeName == "Dừng dài" && duration < 5)
+                    {
+                        return BadRequest(new { success = false, message = "Loại 'Dừng dài' chỉ áp dụng khi thời lượng ≥ 5 phút." });
+                    }
+
+                    // Other types (Vệ sinh, Đổi mã, Phế phẩm) - no duration check
+                }
+            }
+
             // Don't auto-set ReportedByUserId - allow it to be null if not selected
             // If user doesn't select anyone, it should remain null in database
 
@@ -483,6 +510,33 @@ public class IncidentsController : ControllerBase
                     if (incident.Duration.Value > actualDuration)
                     {
                         return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Thời lượng ({incident.Duration.Value:F2} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
+                    }
+                }
+
+                // Validate Duration based on Stop Type
+                if (incident.TypeId.HasValue && incident.Duration.HasValue)
+                {
+                    var stopTypes = await _incidentService.GetStopTypesAsync();
+                    var stopType = stopTypes.FirstOrDefault(st => st.StopTypeId == incident.TypeId.Value);
+
+                    if (stopType != null)
+                    {
+                        var typeName = stopType.TypeName;
+                        var duration = incident.Duration.Value;
+
+                        // Check for "Dừng ngắn" - must be < 5 minutes
+                        if (typeName == "Dừng ngắn" && duration >= 5)
+                        {
+                            return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Loại 'Dừng ngắn' chỉ áp dụng khi thời lượng < 5 phút." });
+                        }
+
+                        // Check for "Dừng dài" - must be >= 5 minutes
+                        if (typeName == "Dừng dài" && duration < 5)
+                        {
+                            return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Loại 'Dừng dài' chỉ áp dụng khi thời lượng ≥ 5 phút." });
+                        }
+
+                        // Other types (Vệ sinh, Đổi mã, Phế phẩm) - no duration check
                     }
                 }
             }
@@ -607,6 +661,33 @@ public class IncidentsController : ControllerBase
                 if (request.Duration.Value > actualDuration)
                 {
                     return BadRequest(new { success = false, message = $"Thời lượng ({request.Duration.Value:F2} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
+                }
+            }
+
+            // Validate Duration based on Stop Type
+            if (request.TypeId.HasValue && request.Duration.HasValue)
+            {
+                var stopTypes = await _incidentService.GetStopTypesAsync();
+                var stopType = stopTypes.FirstOrDefault(st => st.StopTypeId == request.TypeId.Value);
+
+                if (stopType != null)
+                {
+                    var typeName = stopType.TypeName;
+                    var duration = request.Duration.Value;
+
+                    // Check for "Dừng ngắn" - must be < 5 minutes
+                    if (typeName == "Dừng ngắn" && duration >= 5)
+                    {
+                        return BadRequest(new { success = false, message = "Loại 'Dừng ngắn' chỉ áp dụng khi thời lượng < 5 phút." });
+                    }
+
+                    // Check for "Dừng dài" - must be >= 5 minutes
+                    if (typeName == "Dừng dài" && duration < 5)
+                    {
+                        return BadRequest(new { success = false, message = "Loại 'Dừng dài' chỉ áp dụng khi thời lượng ≥ 5 phút." });
+                    }
+
+                    // Other types (Vệ sinh, Đổi mã, Phế phẩm) - no duration check
                 }
             }
 

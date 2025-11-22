@@ -1127,6 +1127,36 @@ const IncidentManagement = () => {
         }
       }
 
+      // Validate duration based on stop type (edit mode)
+      if (values.typeId && values.duration) {
+        const stopType = stopTypes.find(
+          (st) => (st.stopTypeId || st.typeId) === values.typeId
+        );
+        if (stopType) {
+          const typeName = stopType.typeName || stopType.stopTypeName;
+
+          // Check for "Dừng ngắn" - must be < 5 minutes
+          if (typeName === "Dừng ngắn" && values.duration >= 5) {
+            message.error(
+              "Loại 'Dừng ngắn' chỉ áp dụng khi thời lượng < 5 phút."
+            );
+            setLoading(false);
+            return;
+          }
+
+          // Check for "Dừng dài" - must be >= 5 minutes
+          if (typeName === "Dừng dài" && values.duration < 5) {
+            message.error(
+              "Loại 'Dừng dài' chỉ áp dụng khi thời lượng ≥ 5 phút."
+            );
+            setLoading(false);
+            return;
+          }
+
+          // Other types (Vệ sinh, Đổi mã, Phế phẩm) - no duration check
+        }
+      }
+
       if (isEditMode) {
         // Edit mode - determine status with business rules
         const hasEndTime = values.endTime && dayjs(values.endTime).isValid();
@@ -1304,6 +1334,36 @@ const IncidentManagement = () => {
               );
               setLoading(false);
               return;
+            }
+          }
+
+          // Validate duration based on stop type
+          if (typeId && duration) {
+            const stopType = stopTypes.find(
+              (st) => (st.stopTypeId || st.typeId) === typeId
+            );
+            if (stopType) {
+              const typeName = stopType.typeName || stopType.stopTypeName;
+
+              // Check for "Dừng ngắn" - must be < 5 minutes
+              if (typeName === "Dừng ngắn" && duration >= 5) {
+                message.error(
+                  `Sự cố No.${formId}: Loại 'Dừng ngắn' chỉ áp dụng khi thời lượng < 5 phút.`
+                );
+                setLoading(false);
+                return;
+              }
+
+              // Check for "Dừng dài" - must be >= 5 minutes
+              if (typeName === "Dừng dài" && duration < 5) {
+                message.error(
+                  `Sự cố No.${formId}: Loại 'Dừng dài' chỉ áp dụng khi thời lượng ≥ 5 phút.`
+                );
+                setLoading(false);
+                return;
+              }
+
+              // Other types (Vệ sinh, Đổi mã, Phế phẩm) - no duration check
             }
           }
 
