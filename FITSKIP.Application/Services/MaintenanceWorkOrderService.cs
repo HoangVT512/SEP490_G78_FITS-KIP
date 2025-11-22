@@ -715,10 +715,19 @@ namespace FITSKIP.Application.Services
                 throw new InvalidOperationException($"❌ Ngày hoãn phải sau ngày đến hạn hiện tại ({workOrder.DueDate:dd/MM/yyyy})");
             }
 
-            // ✅ Validate: Ngày hoãn phải TRƯỚC chu kỳ tiếp theo
-            if (request.NewScheduledDate.Date >= plan.NextDueDate.Date)
+            // ✅ Validate: Ngày hoãn phải TRƯỚC (NextDueDate + chu kỳ)
+            // Tính maxPostponeDate dựa trên chu kỳ
+            DateTime maxPostponeDate = plan.IntervalType switch
             {
-                throw new InvalidOperationException($"❌ Không thể hoãn đến sau ngày chu kỳ tiếp theo ({plan.NextDueDate:dd/MM/yyyy}). Vui lòng chọn ngày trước đó.");
+                "Days" => plan.NextDueDate.AddDays(plan.IntervalValue),
+                "Months" => plan.NextDueDate.AddMonths(plan.IntervalValue),
+                "Hours" => plan.NextDueDate.AddHours(plan.IntervalValue),
+                _ => plan.NextDueDate
+            };
+            
+            if (request.NewScheduledDate.Date >= maxPostponeDate.Date)
+            {
+                throw new InvalidOperationException($"❌ Không thể hoãn đến sau ngày {maxPostponeDate:dd/MM/yyyy}. Ngày hoãn phải nằm trong khoảng từ sau {workOrder.DueDate:dd/MM/yyyy} đến trước {maxPostponeDate:dd/MM/yyyy}.");
             }
 
             // ✅ Validate: Ngày hoãn phải sau hôm nay
@@ -745,10 +754,21 @@ namespace FITSKIP.Application.Services
                 }
             }
 
-
-            // ✅ Cập nhật ScheduledDate và DueDate đến ngày hoãn mới
-            workOrder.ScheduledDate = request.NewScheduledDate;
-            workOrder.DueDate = request.NewScheduledDate;
+            // ✅ Logic hoãn:
+            // - Nếu ĐÃ GIAO VIỆC (có ScheduledDate): Cập nhật cả ScheduledDate và DueDate
+            // - Nếu CHƯA GIAO VIỆC (chưa có ScheduledDate): Chỉ cập nhật DueDate
+            
+            if (workOrder.ScheduledDate > DateTime.MinValue && hasAssignedTechnician)
+            {
+                // Đã giao việc → Cập nhật cả 2
+                workOrder.ScheduledDate = request.NewScheduledDate;
+                workOrder.DueDate = request.NewScheduledDate;
+            }
+            else
+            {
+                // Chưa giao việc → Chỉ cập nhật DueDate
+                workOrder.DueDate = request.NewScheduledDate;
+            }
             
             // ✅ Chuyển trạng thái sang "Hoãn"
             workOrder.Status = "Hoãn";
@@ -779,6 +799,18 @@ namespace FITSKIP.Application.Services
                     UserId = workOrder.AssignedToMechanical!,
                     Title = "Phiếu bảo trì bị hoãn",
                     Message = $"Phiếu bảo trì #{workOrder.WorkOrderCode} cho thiết bị {workOrder.Equipment?.EquipmentName} đã được hoãn đến ngày {request.NewScheduledDate:dd/MM/yyyy}. Lý do: {request.Reason}"
+                });
+            }
+            
+            // ✅ Gửi notification cho QLKT khi hoãn
+            var techManagers = await _userRepository.GetUsersByRoleAsync("Quản lý kỹ thuật");
+            foreach (var manager in techManagers)
+            {
+                await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+                {
+                    UserId = manager.Id,
+                    Title = "📅 Phiếu bảo trì đã được hoãn",
+                    Message = $"Phiếu #{workOrder.WorkOrderCode} cho thiết bị {workOrder.Equipment?.EquipmentName} đã được hoãn đến ngày {request.NewScheduledDate:dd/MM/yyyy}. Lý do: {request.Reason}"
                 });
             }
 
@@ -1032,6 +1064,18 @@ namespace FITSKIP.Application.Services
                             workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động hủy - Đã đến chu kỳ tiếp theo ({plan.NextDueDate:dd/MM/yyyy})";
                             await _workOrderRepository.UpdateAsync(workOrder);
                             
+                            // ✅ Gửi notification cho QLKT khi auto-cancel
+                            var techManagers = await _userRepository.GetUsersByRoleAsync("Quản lý kỹ thuật");
+                            var equipment = await _equipmentRepository.GetByIdAsync(workOrder.EquipmentId);
+                            foreach (var manager in techManagers)
+                            {
+                                await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+                                {
+                                    UserId = manager.Id,
+                                    Title = "⚠️ Phiếu bảo trì quá hạn bị tự động hủy",
+                                    Message = $"Phiếu #{workOrder.WorkOrderCode} cho thiết bị {equipment?.EquipmentName} ({equipment?.EquipmentCode}) đã quá hạn quá lâu và bị hủy tự động vì đã đến chu kỳ tiếp theo ({plan.NextDueDate:dd/MM/yyyy})."
+                                });
+                            }
                         }
                     }
                 }
@@ -1083,6 +1127,7 @@ namespace FITSKIP.Application.Services
                             DueDate = plan.NextDueDate,
                             Status = "Chờ xử lý",
                             Notes = $"[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động tạo WorkOrder từ chu kỳ bảo trì",
+                            CreatedBy = "SYSTEM",
                             CreatedDate = DateTime.Now,
                             UpdatedDate = DateTime.Now
                         };

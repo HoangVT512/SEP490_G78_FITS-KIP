@@ -1319,23 +1319,34 @@ const WorkScheduleManagement = ({ openWorkOrderCode }) => {
                 
                 const today = dayjs().startOf('day');
                 const dueDate = selectedRecord?.dueDate ? dayjs(selectedRecord.dueDate).startOf('day') : null;
-                const planNextDueDate = selectedRecord?.planNextDueDate ? dayjs(selectedRecord.planNextDueDate).startOf('day') : null;
                 
-                // ✅ Cho phép hoãn SAU ngày đến hạn nhưng TRƯỚC chu kỳ tiếp theo
-                // VD: DueDate = 30/11, PlanNextDueDate = 05/12 → Cho chọn 01/12 - 04/12
+                // Tính maxDate = dueDate + chu kỳ
+                let maxDate = null;
+                if (dueDate && selectedRecord?.intervalValue && selectedRecord?.intervalType) {
+                  const intervalValue = selectedRecord.intervalValue;
+                  const intervalType = selectedRecord.intervalType;
+                  
+                  if (intervalType === 'Days' || intervalType === 'days') {
+                    maxDate = dueDate.add(intervalValue, 'day');
+                  } else if (intervalType === 'Months' || intervalType === 'months') {
+                    maxDate = dueDate.add(intervalValue, 'month');
+                  } else if (intervalType === 'Hours' || intervalType === 'hours') {
+                    maxDate = dueDate.add(intervalValue, 'hour');
+                  }
+                }
                 
-                // Không cho chọn hôm nay hoặc quá khứ
+                // Không cho chọn quá khứ
                 if (current < today) {
                   return true;
                 }
                 
-                // Không cho chọn TRƯỚC hoặc BẰNG ngày đến hạn hiện tại
+                // Không cho chọn <= ngày đến hạn hiện tại
                 if (dueDate && current <= dueDate) {
                   return true;
                 }
                 
-                // Không cho chọn SAU hoặc BẰNG chu kỳ tiếp theo
-                if (planNextDueDate && current >= planNextDueDate) {
+                // Không cho chọn >= maxDate (dueDate + chu kỳ)
+                if (maxDate && current >= maxDate) {
                   return true;
                 }
                 
