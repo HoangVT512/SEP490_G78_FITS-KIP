@@ -40,5 +40,6 @@ namespace FITSKIP.Application.Interfaces
         Task GenerateWorkOrdersForDuePlansAsync();
         Task UpdateOverdueStatusAsync();
         Task SendMaintenanceRemindersAsync();
+        Task SendCompletedWorkOrderRemindersAsync();
     }
 }

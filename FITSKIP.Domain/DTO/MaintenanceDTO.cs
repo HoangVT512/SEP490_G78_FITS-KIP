@@ -345,6 +345,7 @@ namespace FITSKIP.Domain.DTO
         public bool IsChecked { get; set; }
         public string? CompletedBy { get; set; }
         public string? CompletedByName { get; set; }
+        public string? CompletedByEmployeeCode { get; set; }
         public DateTime? CompletedDate { get; set; }
         public string? Notes { get; set; }
     }

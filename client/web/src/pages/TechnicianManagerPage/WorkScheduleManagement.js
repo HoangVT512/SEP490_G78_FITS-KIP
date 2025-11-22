@@ -25,6 +25,7 @@ import {
   Checkbox,
   Popconfirm,
   Dropdown,
+  Progress,
 } from "antd";
 import {
   EyeOutlined,
@@ -47,6 +48,7 @@ import {
   DownOutlined,
   SafetyCertificateOutlined,
   LockOutlined,
+  SwapOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
@@ -199,17 +201,21 @@ const WorkScheduleManagement = () => {
 
     // 2. Thêm WorkOrders (đã tạo)
     workOrders.forEach((wo) => {
-      let workStatus = "pending"; // ✅ Mặc định là pending (dù đã giao việc hay chưa)
-      if (wo.status === "InProgress") {
+      let workStatus = "pending"; // ✅ Mặc định là pending
+
+      if (wo.status === "Đang thực hiện") {
         workStatus = "inProgress";
-      } else if (wo.status === "Completed") {
+      } else if (wo.status === "Hoàn thành") {
         workStatus = "completed";
-      } else if (wo.status === "Closed") {
+      } else if (wo.status === "Đã đóng") {
         workStatus = "closed";
-      } else if (wo.status === "Cancelled") {
+      } else if (wo.status === "Đã hủy") {
         workStatus = "cancelled";
-      } else if (wo.status === "Overdue") {
+      } else if (wo.status === "Quá hạn") {
         workStatus = "overdue";
+      } else if (wo.status === "Chờ xử lý" && (wo.assignedToElectrical || wo.assignedToMechanical)) {
+        // ✅ Nếu đã giao KTV nhưng chưa bắt đầu, set thành assigned
+        workStatus = "assigned";
       }
 
       merged.push({
@@ -267,34 +273,50 @@ const WorkScheduleManagement = () => {
   // Handlers
   const handleViewDetail = async (record) => {
     console.log("🔍 Record clicked:", record);
-    
+
     setSelectedRecord(record);
     setIsDetailModalVisible(true);
-    setIsEditMode(false); // ← Đảm bảo luôn vào chế độ View
+    setIsEditMode(false); // ← Luôn vào chế độ View khi ấn "Xem"
     setTemplateChecklistItems([]); // ← Reset trước khi load
 
-    // ✅ Nếu là WorkOrder: checklistItems đã có sẵn trong record
-    if (record.type === "workOrder" && record.checklistItems && record.checklistItems.length > 0) {
-      console.log("✅ WorkOrder đã có checklistItems:", record.checklistItems);
-      setTemplateChecklistItems(record.checklistItems);
+    // ✅ Load template checklist
+    if (record.type === "workOrder" && record.workOrderId) {
+      // ✅ Reload WorkOrder từ API để lấy checklist items mới nhất
+      try {
+        const { getWorkOrderById } = require("../../services/maintenanceService");
+        const workOrderResponse = await getWorkOrderById(record.workOrderId);
+
+        if (workOrderResponse?.data?.checklistItems && workOrderResponse.data.checklistItems.length > 0) {
+          console.log("✅ WorkOrder reloaded với checklistItems:", workOrderResponse.data.checklistItems);
+          setTemplateChecklistItems(workOrderResponse.data.checklistItems);
+        }
+        // Nếu vẫn không có checklist, load từ template
+        else if (record.templateId) {
+          const { getTemplateById } = require("../../services/maintenanceService");
+          const templateResponse = await getTemplateById(record.templateId);
+
+          if (templateResponse?.data?.templateItems) {
+            console.log("✅ Template loaded từ WorkOrder templateId:", templateResponse.data);
+            setTemplateChecklistItems(templateResponse.data.templateItems);
+          }
+        }
+      } catch (error) {
+        console.error("❌ Load WorkOrder checklist error:", error);
+      }
     }
     // ✅ Nếu là Plan: Load template từ templateId
     else if (record.type === "plan" && record.templateId) {
       try {
         const { getTemplateById } = require("../../services/maintenanceService");
         const templateResponse = await getTemplateById(record.templateId);
-        
+
         if (templateResponse?.data?.templateItems) {
           console.log("✅ Template loaded từ Plan:", templateResponse.data);
           setTemplateChecklistItems(templateResponse.data.templateItems);
-        } else {
-          console.log("⚠️ Template response nhưng không có templateItems:", templateResponse);
         }
       } catch (error) {
         console.error("❌ Load template checklist error:", error);
       }
-    } else {
-      console.log("⚠️ Record không có templateId hoặc checklistItems!");
     }
 
     // Load spare parts nếu là WorkOrder
@@ -314,10 +336,27 @@ const WorkScheduleManagement = () => {
     setSelectedRecord(record);
     detailForm.resetFields();
     setHasFormChanges(false); // ← Reset tracking
-    
+    setTemplateChecklistItems([]); // ← Reset trước khi load
+
     if (record.type === "workOrder") {
-      setTemplateChecklistItems(record.checklistItems || []);
-      
+      // ✅ Load template checklist - ưu tiên checklistItems, nếu không có thì load từ templateId
+      if (record.checklistItems && record.checklistItems.length > 0) {
+        console.log("✅ WorkOrder đã có checklistItems:", record.checklistItems);
+        setTemplateChecklistItems(record.checklistItems);
+      } else if (record.templateId) {
+        try {
+          const { getTemplateById } = require("../../services/maintenanceService");
+          const templateResponse = await getTemplateById(record.templateId);
+
+          if (templateResponse?.data?.templateItems) {
+            console.log("✅ Template loaded từ WorkOrder templateId:", templateResponse.data);
+            setTemplateChecklistItems(templateResponse.data.templateItems);
+          }
+        } catch (error) {
+          console.error("❌ Load template checklist error:", error);
+        }
+      }
+
       const scheduledDate = dayjs(record.scheduledDate);
       detailForm.setFieldsValue({
         scheduledDate: scheduledDate,
@@ -325,7 +364,7 @@ const WorkScheduleManagement = () => {
         assignedToMechanical: record.assignedToMechanical,
         notes: record.notes,
       });
-      
+
       // ✅ Load workload cho ngày scheduledDate (gửi Date object)
       await loadTechWorkloadForDate(scheduledDate.toDate());
     } else {
@@ -333,7 +372,7 @@ const WorkScheduleManagement = () => {
         try {
           const { getTemplateById } = require("../../services/maintenanceService");
           const templateResponse = await getTemplateById(record.templateId);
-          
+
           if (templateResponse?.data?.templateItems) {
             setTemplateChecklistItems(templateResponse.data.templateItems);
           } else {
@@ -346,14 +385,14 @@ const WorkScheduleManagement = () => {
       } else {
         setTemplateChecklistItems([]);
       }
-      
+
       const defaultDate = record.postponedDueDate
         ? dayjs(record.postponedDueDate)
         : dayjs(record.nextDueDate);
       detailForm.setFieldsValue({
         scheduledDate: defaultDate,
       });
-      
+
       // ✅ Load workload cho ngày mặc định
       await loadTechWorkloadForDate(defaultDate.toDate());
     }
@@ -366,13 +405,13 @@ const WorkScheduleManagement = () => {
   const loadTechWorkloadForDate = async (date) => {
     try {
       const { getTechniciansWorkloadByDate } = require("../../services/maintenanceService");
-      
+
       // ✅ Format ngày theo định dạng YYYY-MM-DD để gửi lên API
       const formattedDate = dayjs(date).format('YYYY-MM-DD');
       console.log("🔄 Loading workload for date:", formattedDate);
-      
+
       const response = await getTechniciansWorkloadByDate(formattedDate);
-      
+
       if (response?.data) {
         // Convert array to object map: { userId: workOrderCount }
         const workloadMap = {};
@@ -403,7 +442,7 @@ const WorkScheduleManagement = () => {
   const getChecklistJobTypes = () => {
     const hasElectrical = templateChecklistItems.some(item => item.category === "Electrical");
     const hasMechanical = templateChecklistItems.some(item => item.category === "Mechanical");
-    
+
     return { hasElectrical, hasMechanical };
   };
 
@@ -414,35 +453,35 @@ const WorkScheduleManagement = () => {
       const jobTypes = getChecklistJobTypes();
       const scheduledDate = dayjs(values.scheduledDate);
       const today = dayjs().startOf('day');
-      
+
       // Validate ngày không được là quá khứ
       if (scheduledDate.isBefore(today)) {
         message.error('Ngày bảo trì không được là ngày trong quá khứ!');
         setLoading(false);
         return;
       }
-      
+
       // Validate phải có ít nhất 1 KTV được chọn
       if (!values.assignedToElectrical && !values.assignedToMechanical) {
         message.error('Vui lòng chọn ít nhất 1 kỹ thuật viên!');
         setLoading(false);
         return;
       }
-      
+
       // Validate KTV điện nếu có công việc điện
       if (jobTypes.hasElectrical && !values.assignedToElectrical) {
         message.error('Mẫu bảo trì có công việc điện, vui lòng chọn KTV điện!');
         setLoading(false);
         return;
       }
-      
+
       // Validate KTV cơ khí nếu có công việc cơ khí
       if (jobTypes.hasMechanical && !values.assignedToMechanical) {
         message.error('Mẫu bảo trì có công việc cơ khí, vui lòng chọn KTV cơ khí!');
         setLoading(false);
         return;
       }
-      
+
       if (selectedRecord.type === "workOrder") {
         // ===== CẬP NHẬT WORKORDER =====
         if (!selectedRecord.workOrderId) {
@@ -450,7 +489,14 @@ const WorkScheduleManagement = () => {
           setLoading(false);
           return;
         }
-        
+
+        // ✅ Validate notes bắt buộc khi đổi KTV cho WorkOrder đang thực hiện
+        if ((selectedRecord.status === "Đang thực hiện" || selectedRecord.workStatus === "inProgress") && !values.notes) {
+          message.error('Vui lòng nhập lý do thay đổi KTV!');
+          setLoading(false);
+          return;
+        }
+
         // Validate ngày không được sau dueDate
         const dueDate = dayjs(selectedRecord.dueDate).endOf('day');
         if (scheduledDate.isAfter(dueDate)) {
@@ -458,53 +504,53 @@ const WorkScheduleManagement = () => {
           setLoading(false);
           return;
         }
-        
+
         const updateData = {
           scheduledDate: scheduledDate.format('YYYY-MM-DD'),
           assignedToElectrical: values.assignedToElectrical || null,
           assignedToMechanical: values.assignedToMechanical || null,
           notes: values.notes || '',
         };
-        
+
         console.log('🔄 Updating WorkOrder ID:', selectedRecord.workOrderId);
         console.log('🔄 Update Data:', updateData);
-        
+
         const response = await updateWorkOrder(selectedRecord.workOrderId, updateData);
         console.log('✅ Update response:', response);
-        
+
         message.success('Cập nhật phân công thành công!');
-        
+
         // Reload data
         await loadAllData();
-        
+
         // Tìm và update selectedRecord với data mới
         const updatedWorkOrders = await getAllWorkOrders();
         const updatedRecord = updatedWorkOrders?.data?.find(
           wo => wo.workOrderId === selectedRecord.workOrderId
         );
-        
+
         if (updatedRecord) {
           setSelectedRecord(updatedRecord);
           setTemplateChecklistItems(updatedRecord.checklistItems || []);
         }
-        
+
         setIsEditMode(false);
         setHasFormChanges(false);
-        
+
       } else {
         // ===== TẠO WORKORDER MỚI TỪ PLAN =====
-        
+
         // Validate ngày không được sau dueDate của Plan
         const planDueDate = selectedRecord.postponedDueDate
           ? dayjs(selectedRecord.postponedDueDate).endOf('day')
           : dayjs(selectedRecord.nextDueDate).endOf('day');
-          
+
         if (scheduledDate.isAfter(planDueDate)) {
           message.error(`Ngày bảo trì không được sau ngày đến hạn (${planDueDate.format('DD/MM/YYYY')})!`);
           setLoading(false);
           return;
         }
-        
+
         const createData = {
           planId: selectedRecord.planId,
           scheduledDate: scheduledDate.format('YYYY-MM-DD'),
@@ -512,18 +558,18 @@ const WorkScheduleManagement = () => {
           assignedToMechanical: values.assignedToMechanical || null,
           notes: values.notes || '',
         };
-        
+
         console.log('🆕 Creating WorkOrder:', createData);
-        
+
         await createWorkOrder(createData);
         message.success('Giao việc thành công!');
-        
+
         // Reload và đóng modal
         await loadAllData();
         setIsDetailModalVisible(false);
         detailForm.resetFields();
       }
-      
+
     } catch (error) {
       console.error('❌ Error:', error);
       const errorMsg = error.response?.data?.message || error.message || 'Có lỗi xảy ra';
@@ -573,21 +619,21 @@ const WorkScheduleManagement = () => {
   const handleCancelOverdueWorkOrder = async (record) => {
     try {
       setLoading(true);
-      
+
       if (!record.workOrderId) {
         message.error("Không tìm thấy mã WorkOrder!");
         return;
       }
-      
+
       // Gọi API hủy WorkOrder
       await cancelWorkOrder(record.workOrderId, "Hủy lần bảo trì do quá hạn - TechManager quyết định");
-      
+
       message.success("✅ Đã hủy lần bảo trì này. Chu kỳ tiếp theo sẽ được cập nhật!");
-      
+
       // Đóng modal và reload data
       setIsDetailModalVisible(false);
       await loadAllData();
-      
+
     } catch (error) {
       const errorMessage = error.response?.data?.message || error.message || "Có lỗi xảy ra khi hủy WorkOrder";
       message.error(errorMessage);
@@ -730,6 +776,16 @@ const WorkScheduleManagement = () => {
 
   // Get status tag
   const getStatusTag = (record) => {
+    // ✅ Map từ status tiếng Việt (DB) sang config
+    const statusMap = {
+      "Chờ xử lý": "pending",
+      "Đang thực hiện": "inProgress",
+      "Hoàn thành": "completed",
+      "Đã đóng": "closed",
+      "Đã hủy": "cancelled",
+      "Quá hạn": "overdue",
+    };
+
     const statusConfig = {
       pending: {
         color: "gold",
@@ -744,7 +800,7 @@ const WorkScheduleManagement = () => {
       completed: {
         color: "green",
         icon: <CheckCircleOutlined />,
-        text: "Hoàn tất",
+        text: "Hoàn thành",
       },
       closed: {
         color: "default",
@@ -762,13 +818,16 @@ const WorkScheduleManagement = () => {
         text: "Quá hạn",
       },
     };
-    const config = statusConfig[record.workStatus?.toLowerCase()] || statusConfig.pending;
-    
+
+    // ✅ Ưu tiên dùng record.status (tiếng Việt từ DB), fallback về workStatus (tiếng Anh)
+    const statusKey = record.status ? statusMap[record.status] : record.workStatus?.toLowerCase();
+    const config = statusConfig[statusKey] || statusConfig.pending;
+
     // ✅ Nếu WorkOrder đã bị hoãn, hiển thị cả status Hoãn
     const isPostponed = record.type === "workOrder" && record.postponedDate;
-    
+
     // Nếu là WorkOrder đã giao việc (assigned/Pending), hiển thị thêm ngày scheduledDate
-    if (record.type === "workOrder" && record.workStatus === "assigned" && record.scheduledDate) {
+    if (record.type === "workOrder" && (statusKey === "pending" || record.workStatus === "assigned") && record.scheduledDate) {
       return (
         <div>
           <Tag icon={config.icon} color={config.color}>
@@ -785,7 +844,7 @@ const WorkScheduleManagement = () => {
         </div>
       );
     }
-    
+
     // Nếu là status khác nhưng vẫn bị hoãn
     if (isPostponed) {
       return (
@@ -799,7 +858,7 @@ const WorkScheduleManagement = () => {
         </div>
       );
     }
-    
+
     return (
       <Tag icon={config.icon} color={config.color}>
         {config.text}
@@ -883,8 +942,8 @@ const WorkScheduleManagement = () => {
                 color: isOverdue
                   ? "#ff4d4f"
                   : isUpcomingSoon
-                  ? "#faad14"
-                  : "inherit",
+                    ? "#faad14"
+                    : "inherit",
                 fontWeight: isOverdue || isUpcomingSoon ? "bold" : "normal",
               }}
             >
@@ -894,8 +953,8 @@ const WorkScheduleManagement = () => {
               {daysUntilDue > 0
                 ? `Còn ${daysUntilDue} ngày`
                 : daysUntilDue === 0
-                ? "Hôm nay"
-                : `Quá ${Math.abs(daysUntilDue)} ngày`}
+                  ? "Hôm nay"
+                  : `Quá ${Math.abs(daysUntilDue)} ngày`}
             </Text>
           </div>
         );
@@ -1000,7 +1059,6 @@ const WorkScheduleManagement = () => {
             });
           }
         }
-
         return (
           <Dropdown
             menu={{ items: actionMenuItems }}
@@ -1018,9 +1076,9 @@ const WorkScheduleManagement = () => {
     <div style={{ padding: 24 }}>
       <Card title="Lịch bảo trì & Công việc" bordered={false}>
         {/* Statistics */}
-        <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={12} lg={6}>
-            <Card bordered={false}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '16px', marginBottom: 24 }}>
+          <div style={{ flex: '1 1 200px' }}>
+            <Card bordered={true}>
               <Statistic
                 title="Chờ giao việc"
                 value={stats.pendingCount}
@@ -1028,9 +1086,9 @@ const WorkScheduleManagement = () => {
                 valueStyle={{ color: "#faad14" }}
               />
             </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card bordered={false}>
+          </div>
+          <div style={{ flex: '1 1 200px' }}>
+            <Card bordered={true}>
               <Statistic
                 title="Đang thực hiện"
                 value={stats.inProgressCount}
@@ -1038,9 +1096,9 @@ const WorkScheduleManagement = () => {
                 valueStyle={{ color: "#1890ff" }}
               />
             </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-            <Card bordered={false}>
+          </div>
+          <div style={{ flex: '1 1 200px' }}>
+            <Card bordered={true}>
               <Statistic
                 title="Quá hạn"
                 value={stats.overdueCount}
@@ -1048,9 +1106,9 @@ const WorkScheduleManagement = () => {
                 valueStyle={{ color: "#ff4d4f" }}
               />
             </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-             <Card bordered={false}>
+          </div>
+          <div style={{ flex: '1 1 200px' }}>
+            <Card bordered={true}>
               <Statistic
                 title="Hoàn thành"
                 value={stats.completedCount}
@@ -1058,9 +1116,9 @@ const WorkScheduleManagement = () => {
                 valueStyle={{ color: "#52c41a" }}
               />
             </Card>
-          </Col>
-          <Col xs={24} sm={12} lg={6}>
-             <Card bordered={false}>
+          </div>
+          <div style={{ flex: '1 1 200px' }}>
+            <Card bordered={true}>
               <Statistic
                 title="Đã đóng"
                 value={stats.closedCount}
@@ -1068,8 +1126,8 @@ const WorkScheduleManagement = () => {
                 valueStyle={{ color: "#8c8c8c" }}
               />
             </Card>
-          </Col>
-        </Row>
+          </div>
+        </div>
 
         <Space direction="vertical" size="middle" style={{ width: "100%" }}>
           <Row gutter={16}>
@@ -1227,10 +1285,12 @@ const WorkScheduleManagement = () => {
             {isEditMode
               ? selectedRecord?.type === "plan"
                 ? "Giao việc bảo trì"
-                : "Cập nhật phân công"
+                : (selectedRecord?.status === "Đang thực hiện" || selectedRecord?.workStatus === "inProgress")
+                  ? "Đổi kỹ thuật viên"
+                  : "Cập nhật phân công"
               : selectedRecord?.workOrderId
-              ? "Chi tiết phiếu bảo trì"
-              : "Chi tiết kế hoạch bảo trì"}
+                ? "Chi tiết phiếu bảo trì"
+                : "Chi tiết kế hoạch bảo trì"}
           </Space>
         }
         open={isDetailModalVisible}
@@ -1240,147 +1300,47 @@ const WorkScheduleManagement = () => {
           detailForm.resetFields();
         }}
         footer={
-          selectedRecord && 
-          selectedRecord.workStatus !== "completed" && 
-          selectedRecord.workStatus !== "cancelled" &&
-          selectedRecord.workStatus !== "closed"
+          selectedRecord &&
+            selectedRecord.workStatus !== "completed" &&
+            selectedRecord.workStatus !== "cancelled" &&
+            selectedRecord.workStatus !== "closed"
             ? isEditMode
               ? [
-                  <Button
-                    key="cancel"
-                    onClick={() => {
-                      setIsEditMode(false);
-                      detailForm.resetFields();
-                    }}
-                    style={{
-                      height: "40px",
-                      fontSize: "16px",
-                      minWidth: "120px",
-                    }}
-                  >
-                    Hủy
-                  </Button>,
-                  <Button
-                    key="submit"
-                    type="primary"
-                    loading={loading}
-                    disabled={selectedRecord.type === "workOrder" && !hasFormChanges}
-                    onClick={() => detailForm.submit()}
-                    style={{
-                      backgroundColor: "#283652",
-                      borderColor: "#283652",
-                      color: "#fff",
-                      height: "40px",
-                      fontSize: "16px",
-                      minWidth: "120px",
-                    }}
-                  >
-                    {selectedRecord.type === "plan" ? "Giao việc" : "Cập nhật"}
-                  </Button>,
-                ]
-              : [
-                  <Button
-                    key="close"
-                    onClick={() => {
-                      setIsDetailModalVisible(false);
-                      setIsEditMode(false);
-                    }}
-                    style={{
-                      height: "40px",
-                      fontSize: "16px",
-                      minWidth: "120px",
-                    }}
-                  >
-                    Đóng
-                  </Button>,
-
-                  // ✅ NÚT CHUYỂN LỊCH CHO OVERDUE:
-                  // WorkOrder quá hạn (Overdue) → Hiện nút "Chuyển lịch" để update ngày và KTV
-                  (selectedRecord.workStatus === "overdue" || selectedRecord.status === "Overdue") && (
-                    <Button
-                      key="reschedule"
-                      type="primary"
-                      icon={<EditOutlined />}
-                      onClick={() => handleAssignWork(selectedRecord)}
-                      style={{
-                        backgroundColor: "#1890ff",
-                        borderColor: "#1890ff",
-                        height: "40px",
-                        fontSize: "16px",
-                        minWidth: "120px",
-                      }}
-                    >
-                      Chuyển lịch
-                    </Button>
-                  ),
-
-                  // ✅ NÚT HỦY BẢO TRÌ LẦN NÀY CHO OVERDUE:
-                  (selectedRecord.workStatus === "overdue" || selectedRecord.status === "Overdue") && (
-                    <Popconfirm
-                      key="cancel-overdue"
-                      title="Hủy lần bảo trì này?"
-                      description={`Bạn có chắc muốn hủy lần bảo trì này? Chu kỳ tiếp theo sẽ được tính từ ngày ${dayjs(selectedRecord.nextDueDate || selectedRecord.dueDate).format('DD/MM/YYYY')}.`}
-                      onConfirm={() => handleCancelOverdueWorkOrder(selectedRecord)}
-                      okText="Đồng ý"
-                      cancelText="Không"
-                    >
-                      <Button
-                        key="cancel-overdue"
-                        danger
-                        icon={<CloseCircleOutlined />}
-                        style={{
-                          height: "40px",
-                          fontSize: "16px",
-                          minWidth: "120px",
-                        }}
-                      >
-                        Hủy bảo trì lần này
-                      </Button>
-                    </Popconfirm>
-                  ),
-
-                  // ✅ NÚT HOÃN CHO PENDING/ASSIGNED (không overdue):
-                  (selectedRecord.status !== "InProgress") && 
-                  (selectedRecord.workStatus !== "overdue" && selectedRecord.status !== "Overdue") && (
-                    <Button
-                      key="postpone"
-                      icon={<ClockCircleOutlined />}
-                      onClick={() => {
-                        setIsDetailModalVisible(false);
-                        handlePostpone(selectedRecord);
-                      }}
-                      style={{
-                        height: "40px",
-                        fontSize: "16px",
-                        minWidth: "120px",
-                      }}
-                    >
-                      Hoãn
-                    </Button>
-                  ),
-
-                  // ✅ NÚT GIAO VIỆC/CẬP NHẬT KTV CHO NON-OVERDUE:
-                  (selectedRecord.workStatus !== "overdue" && selectedRecord.status !== "Overdue") && (
-                    <Button
-                      key="assign"
-                      type="primary"
-                      icon={<UserAddOutlined />}
-                      onClick={() => handleAssignWork(selectedRecord)}
-                      style={{
-                        backgroundColor: "#283652",
-                        borderColor: "#283652",
-                        height: "40px",
-                        fontSize: "16px",
-                        minWidth: "120px",
-                      }}
-                    >
-                      {selectedRecord.type === "plan" ? "Giao việc" : "Cập nhật KTV"}
-                    </Button>
-                  ),
-                ].filter(Boolean) // Lọc bỏ các false values
-            : [
                 <Button
-                  key="close-modal"
+                  key="cancel"
+                  onClick={() => {
+                    setIsEditMode(false);
+                    detailForm.resetFields();
+                  }}
+                  style={{
+                    height: "40px",
+                    fontSize: "16px",
+                    minWidth: "120px",
+                  }}
+                >
+                  Hủy
+                </Button>,
+                <Button
+                  key="submit"
+                  type="primary"
+                  loading={loading}
+                  disabled={selectedRecord.type === "workOrder" && !hasFormChanges}
+                  onClick={() => detailForm.submit()}
+                  style={{
+                    backgroundColor: "#283652",
+                    borderColor: "#283652",
+                    color: "#fff",
+                    height: "40px",
+                    fontSize: "16px",
+                    minWidth: "120px",
+                  }}
+                >
+                  {selectedRecord.type === "plan" ? "Giao việc" : "Cập nhật"}
+                </Button>,
+              ]
+              : [
+                <Button
+                  key="close"
                   onClick={() => {
                     setIsDetailModalVisible(false);
                     setIsEditMode(false);
@@ -1393,26 +1353,149 @@ const WorkScheduleManagement = () => {
                 >
                   Đóng
                 </Button>,
-                // ✅ NÚT ĐÓNG PHIẾU BẢO TRÌ khi status = Completed
-                selectedRecord?.workStatus === "completed" && selectedRecord?.workOrderId && (
+
+                // ✅ NÚT CHUYỂN LỊCH CHO OVERDUE:
+                // WorkOrder quá hạn (Overdue) → Hiện nút "Chuyển lịch" để update ngày và KTV
+                (selectedRecord.workStatus === "overdue" || selectedRecord.status === "Overdue") && (
                   <Button
-                    key="close-workorder"
+                    key="reschedule"
                     type="primary"
-                    icon={<LockOutlined />}
-                    loading={loading}
-                    onClick={() => handleCloseWorkOrder(selectedRecord.workOrderId)}
+                    icon={<EditOutlined />}
+                    onClick={() => handleAssignWork(selectedRecord)}
                     style={{
-                      backgroundColor: "#52c41a",
-                      borderColor: "#52c41a",
+                      backgroundColor: "#1890ff",
+                      borderColor: "#1890ff",
                       height: "40px",
                       fontSize: "16px",
                       minWidth: "120px",
                     }}
                   >
-                    Đóng phiếu bảo trì
+                    Chuyển lịch
                   </Button>
                 ),
-              ].filter(Boolean)
+
+                // ✅ NÚT HỦY BẢO TRÌ LẦN NÀY CHO OVERDUE:
+                (selectedRecord.workStatus === "overdue" || selectedRecord.status === "Overdue") && (
+                  <Popconfirm
+                    key="cancel-overdue"
+                    title="Hủy lần bảo trì này?"
+                    description={`Bạn có chắc muốn hủy lần bảo trì này? Chu kỳ tiếp theo sẽ được tính từ ngày ${dayjs(selectedRecord.nextDueDate || selectedRecord.dueDate).format('DD/MM/YYYY')}.`}
+                    onConfirm={() => handleCancelOverdueWorkOrder(selectedRecord)}
+                    okText="Đồng ý"
+                    cancelText="Không"
+                  >
+                    <Button
+                      key="cancel-overdue"
+                      danger
+                      icon={<CloseCircleOutlined />}
+                      style={{
+                        height: "40px",
+                        fontSize: "16px",
+                        minWidth: "120px",
+                      }}
+                    >
+                      Hủy bảo trì lần này
+                    </Button>
+                  </Popconfirm>
+                ),
+
+                // ✅ NÚT ĐỔI KTV CHO ĐANG THỰC HIỆN (thay thế KTV bị tai nạn/nghỉ việc):
+                (selectedRecord.status === "Đang thực hiện" || selectedRecord.workStatus === "inProgress") && (
+                  <Button
+                    key="change-technician"
+                    type="primary"
+                    icon={<SwapOutlined />}
+                    onClick={() => handleAssignWork(selectedRecord)}
+                    style={{
+                      backgroundColor: "#faad14",
+                      borderColor: "#faad14",
+                      height: "40px",
+                      fontSize: "16px",
+                      minWidth: "120px",
+                    }}
+                  >
+                    Đổi KTV
+                  </Button>
+                ),
+
+                // ✅ NÚT HOÃN CHO PENDING (không InProgress, không overdue, không Đang thực hiện):
+                (selectedRecord.status !== "Đang thực hiện") &&
+                (selectedRecord.workStatus !== "inProgress") &&
+                (selectedRecord.workStatus !== "overdue" && selectedRecord.status !== "Quá hạn") &&
+                (selectedRecord.status !== "Đang thực hiện") && (
+                  <Button
+                    key="postpone"
+                    icon={<ClockCircleOutlined />}
+                    onClick={() => {
+                      setIsDetailModalVisible(false);
+                      handlePostpone(selectedRecord);
+                    }}
+                    style={{
+                      height: "40px",
+                      fontSize: "16px",
+                      minWidth: "120px",
+                    }}
+                  >
+                    Hoãn
+                  </Button>
+                ),
+
+                // ✅ NÚT GIAO VIỆC/CẬP NHẬT KTV (không InProgress, không overdue):
+                (selectedRecord.status !== "Đang thực hiện") &&
+                (selectedRecord.workStatus !== "inProgress") &&
+                (selectedRecord.workStatus !== "overdue" && selectedRecord.status !== "Overdue") && (
+                  <Button
+                    key="assign"
+                    type="primary"
+                    icon={<UserAddOutlined />}
+                    onClick={() => handleAssignWork(selectedRecord)}
+                    style={{
+                      backgroundColor: "#283652",
+                      borderColor: "#283652",
+                      height: "40px",
+                      fontSize: "16px",
+                      minWidth: "120px",
+                    }}
+                  >
+                    {selectedRecord.type === "plan" ? "Giao việc" : "Cập nhật KTV"}
+                  </Button>
+                ),
+              ].filter(Boolean) // Lọc bỏ các false values
+            : [
+              <Button
+                key="close-modal"
+                onClick={() => {
+                  setIsDetailModalVisible(false);
+                  setIsEditMode(false);
+                }}
+                style={{
+                  height: "40px",
+                  fontSize: "16px",
+                  minWidth: "120px",
+                }}
+              >
+                Đóng
+              </Button>,
+              // ✅ NÚT ĐÓNG PHIẾU BẢO TRÌ khi status = Completed
+              selectedRecord?.workStatus === "completed" && selectedRecord?.workOrderId && (
+                <Button
+                  key="close-workorder"
+                  type="primary"
+                  icon={<LockOutlined />}
+                  loading={loading}
+                  onClick={() => handleCloseWorkOrder(selectedRecord.workOrderId)}
+                  style={{
+                    backgroundColor: "#52c41a",
+                    borderColor: "#52c41a",
+                    height: "40px",
+                    fontSize: "16px",
+                    minWidth: "120px",
+                  }}
+                >
+                  Đóng phiếu bảo trì
+                </Button>
+              ),
+            ].filter(Boolean)
         }
         width={900}
       >
@@ -1505,10 +1588,10 @@ const WorkScheduleManagement = () => {
                     {selectedRecord.intervalType === "Days"
                       ? "ngày"
                       : selectedRecord.intervalType === "Months"
-                      ? "tháng"
-                      : selectedRecord.intervalType === "Hours"
-                      ? "giờ"
-                      : "chu kỳ"}
+                        ? "tháng"
+                        : selectedRecord.intervalType === "Hours"
+                          ? "giờ"
+                          : "chu kỳ"}
                   </Descriptions.Item>
                   <Descriptions.Item label="Ngày bắt đầu">
                     {dayjs(selectedRecord.startDate).format("DD/MM/YYYY")}
@@ -1542,9 +1625,28 @@ const WorkScheduleManagement = () => {
               )}
             </Descriptions>
 
+
+
             {/* Form Giao việc - CHỈ HIỂN THỊ KHI isEditMode = true */}
             {isEditMode && (
               <div style={{ marginTop: 24 }}>
+                {/* ✅ Cảnh báo khi đổi KTV cho WorkOrder đang thực hiện */}
+                {selectedRecord?.workOrderId && (selectedRecord.status === "Đang thực hiện" || selectedRecord.workStatus === "inProgress") && (
+                  <Alert
+                    message="Đổi kỹ thuật viên đang thực hiện"
+                    description={
+                      <div>
+                        <p>Bạn đang thay đổi KTV cho phiếu bảo trì đang thực hiện.</p>
+                        <p><strong>Lưu ý:</strong> Các công việc đã hoàn thành sẽ giữ nguyên thông tin KTV cũ. KTV mới chỉ thực hiện các công việc còn lại.</p>
+                      </div>
+                    }
+                    type="warning"
+                    showIcon
+                    icon={<SwapOutlined />}
+                    style={{ marginBottom: 16 }}
+                  />
+                )}
+
                 <Divider orientation="left">
                   <Space>
                     <UserAddOutlined style={{ color: "#1890ff" }} />
@@ -1577,17 +1679,17 @@ const WorkScheduleManagement = () => {
                           placeholder="Chọn ngày bảo trì"
                           disabledDate={(current) => {
                             if (!current) return false;
-                            
+
                             const today = dayjs().startOf('day');
-                            
+
                             // ❌ Không được chọn ngày quá khứ
                             if (current.isBefore(today, 'day')) {
                               return true;
                             }
-                            
+
                             // Lấy ngày đến hạn từ record
                             let dueDate = null;
-                            
+
                             if (selectedRecord?.type === 'plan') {
                               // Giao việc mới từ Plan
                               dueDate = selectedRecord.postponedDueDate
@@ -1597,12 +1699,12 @@ const WorkScheduleManagement = () => {
                               // Cập nhật WorkOrder
                               dueDate = dayjs(selectedRecord.dueDate);
                             }
-                            
+
                             // ❌ Không được chọn ngày sau dueDate
                             if (dueDate && current.isAfter(dueDate, 'day')) {
                               return true;
                             }
-                            
+
                             return false;
                           }}
                           onChange={handleScheduledDateChange}
@@ -1717,6 +1819,34 @@ const WorkScheduleManagement = () => {
                       </Form.Item>
                     </Col>
                   </Row>
+
+                  {/* ✅ Trường Notes - BẮT BUỘC khi đổi KTV cho WorkOrder đang thực hiện */}
+                  {selectedRecord?.workOrderId && (selectedRecord.status === "Đang thực hiện" || selectedRecord.workStatus === "inProgress") && (
+                    <Row gutter={16}>
+                      <Col span={24}>
+                        <Form.Item
+                          name="notes"
+                          label={
+                            <span>
+                              <FileTextOutlined style={{ color: "#faad14", marginRight: 4 }} />
+                              Lý do thay đổi KTV
+                            </span>
+                          }
+                          rules={[
+                            { required: true, message: "Vui lòng nhập lý do thay đổi KTV" },
+                            { min: 10, message: "Lý do phải có ít nhất 10 ký tự" }
+                          ]}
+                        >
+                          <TextArea
+                            rows={3}
+                            placeholder="Ví dụ: KTV cũ bị tai nạn nghề nghiệp, cần thay thế khẩn cấp..."
+                            showCount
+                            maxLength={500}
+                          />
+                        </Form.Item>
+                      </Col>
+                    </Row>
+                  )}
                 </Form>
 
                 {/* Template Checklist - Hiển thị ở chế độ Edit để Manager xem trước */}
@@ -1731,11 +1861,9 @@ const WorkScheduleManagement = () => {
                           </Text>
                         </Space>
                       }
-                      description={`${
-                        templateChecklistItems.filter((i) => i.category === "Electrical").length
-                      } công việc điện + ${
-                        templateChecklistItems.filter((i) => i.category === "Mechanical").length
-                      } công việc cơ khí`}
+                      description={`${templateChecklistItems.filter((i) => i.category === "Electrical").length
+                        } công việc điện + ${templateChecklistItems.filter((i) => i.category === "Mechanical").length
+                        } công việc cơ khí`}
                       type="info"
                       showIcon
                       style={{ marginBottom: 16 }}
@@ -1852,13 +1980,11 @@ const WorkScheduleManagement = () => {
                     <Text strong>Danh sách công việc kiểm tra</Text>
                   </Space>
                 </Divider>
-                
+
                 <Alert
-                  message={`Tổng cộng: ${templateChecklistItems.length} bước kiểm tra (${
-                    templateChecklistItems.filter((i) => i.category === "Electrical").length
-                  } điện + ${
-                    templateChecklistItems.filter((i) => i.category === "Mechanical").length
-                  } cơ khí)`}
+                  message={`Tổng cộng: ${templateChecklistItems.length} bước kiểm tra (${templateChecklistItems.filter((i) => i.category === "Electrical").length
+                    } điện + ${templateChecklistItems.filter((i) => i.category === "Mechanical").length
+                    } cơ khí)`}
                   type="info"
                   showIcon
                   style={{ marginBottom: 16 }}
@@ -1911,18 +2037,25 @@ const WorkScheduleManagement = () => {
                                 description={
                                   selectedRecord.workOrderId && item.isChecked ? (
                                     <div style={{ marginTop: 4 }}>
-                                      <Text type="success" style={{ fontSize: 12 }}>
-                                        ✓ Đã hoàn thành
-                                      </Text>
-                                      {item.completedByName && (
-                                        <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>
-                                          bởi {item.completedByName}
+                                      <div>
+                                        <Text strong style={{ fontSize: 12, color: "#52c41a" }}>
+                                          {item.completedByName || "KTV"}
                                         </Text>
-                                      )}
-                                      {item.completedDate && (
-                                        <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
-                                          {dayjs(item.completedDate).format("DD/MM/YYYY HH:mm")}
+                                        {item.completedByEmployeeCode && (
+                                          <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                                            - {item.completedByEmployeeCode}
+                                          </Text>
+                                        )}
+                                        <Text type="secondary" style={{ fontSize: 11 }}>
+                                          {" "}đã hoàn thành lúc {dayjs(item.completedDate).format("DD/MM/YYYY HH:mm")}
                                         </Text>
+                                      </div>
+                                      {item.notes && (
+                                        <div style={{ marginTop: 4, paddingLeft: 8, borderLeft: "2px solid #d9d9d9" }}>
+                                          <Text type="secondary" style={{ fontSize: 11, fontStyle: "italic" }}>
+                                            Ghi chú: {item.notes}
+                                          </Text>
+                                        </div>
                                       )}
                                     </div>
                                   ) : null
@@ -1987,18 +2120,25 @@ const WorkScheduleManagement = () => {
                                 description={
                                   selectedRecord.workOrderId && item.isChecked ? (
                                     <div style={{ marginTop: 4 }}>
-                                      <Text type="success" style={{ fontSize: 12 }}>
-                                        ✓ Đã hoàn thành
-                                      </Text>
-                                      {item.completedByName && (
-                                        <Text type="secondary" style={{ fontSize: 11, marginLeft: 8 }}>
-                                          bởi {item.completedByName}
+                                      <div>
+                                        <Text strong style={{ fontSize: 12, color: "#52c41a" }}>
+                                          {item.completedByName || "KTV"}
                                         </Text>
-                                      )}
-                                      {item.completedDate && (
-                                        <Text type="secondary" style={{ fontSize: 11, display: "block" }}>
-                                          {dayjs(item.completedDate).format("DD/MM/YYYY HH:mm")}
+                                        {item.completedByEmployeeCode && (
+                                          <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                                            - {item.completedByEmployeeCode}
+                                          </Text>
+                                        )}
+                                        <Text type="secondary" style={{ fontSize: 11 }}>
+                                          {" "}đã hoàn thành lúc {dayjs(item.completedDate).format("DD/MM/YYYY HH:mm")}
                                         </Text>
+                                      </div>
+                                      {item.notes && (
+                                        <div style={{ marginTop: 4, paddingLeft: 8, borderLeft: "2px solid #d9d9d9" }}>
+                                          <Text type="secondary" style={{ fontSize: 11, fontStyle: "italic" }}>
+                                            Ghi chú: {item.notes}
+                                          </Text>
+                                        </div>
                                       )}
                                     </div>
                                   ) : null
@@ -2031,14 +2171,14 @@ const WorkScheduleManagement = () => {
                     <Text strong>Yêu cầu linh kiện</Text>
                   </Space>
                 </Divider>
-                
+
                 <Alert
                   message={`Có ${workOrderSparePartsList.length} yêu cầu linh kiện`}
                   type="warning"
                   showIcon
                   style={{ marginBottom: 16 }}
                 />
-                
+
                 <Table
                   columns={[
                     {
@@ -2110,12 +2250,12 @@ const WorkScheduleManagement = () => {
                           )}
                           {(record.status === "Đã duyệt cấp phát" ||
                             record.status === "Hoàn thành") && (
-                            <Tag color="success">
-                              {record.status === "Đã duyệt cấp phát"
-                                ? "Đã duyệt"
-                                : "Hoàn thành"}
-                            </Tag>
-                          )}
+                              <Tag color="success">
+                                {record.status === "Đã duyệt cấp phát"
+                                  ? "Đã duyệt"
+                                  : "Hoàn thành"}
+                              </Tag>
+                            )}
                         </Space>
                       ),
                     },

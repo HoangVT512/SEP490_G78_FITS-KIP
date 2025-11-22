@@ -135,15 +135,14 @@ const MaintenanceManagement = () => {
     });
   };
 
-
-
   // Modal states
   const [isPlanModalVisible, setIsPlanModalVisible] = useState(false);
   const [isTemplateModalVisible, setIsTemplateModalVisible] = useState(false);
   const [isWorkOrderModalVisible, setIsWorkOrderModalVisible] = useState(false);
   const [isImportModalVisible, setIsImportModalVisible] = useState(false);
   const [isViewPlanModalVisible, setIsViewPlanModalVisible] = useState(false);
-  const [isViewTemplateModalVisible, setIsViewTemplateModalVisible] = useState(false);
+  const [isViewTemplateModalVisible, setIsViewTemplateModalVisible] =
+    useState(false);
 
   const [editingPlan, setEditingPlan] = useState(null);
   const [editingTemplate, setEditingTemplate] = useState(null);
@@ -153,7 +152,8 @@ const MaintenanceManagement = () => {
   const [planMaintenanceHistory, setPlanMaintenanceHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [viewingWorkOrder, setViewingWorkOrder] = useState(null);
-  const [isViewWorkOrderModalVisible, setIsViewWorkOrderModalVisible] = useState(false);
+  const [isViewWorkOrderModalVisible, setIsViewWorkOrderModalVisible] =
+    useState(false);
   const [viewingTemplate, setViewingTemplate] = useState(null);
 
   // Forms
@@ -163,7 +163,6 @@ const MaintenanceManagement = () => {
   const [workOrderForm] = Form.useForm();
   const [searchText, setSearchText] = useState("");
   const [activeTab, setActiveTab] = useState("plans");
-
 
   // Data states
   const [maintenancePlans, setMaintenancePlans] = useState([]);
@@ -200,8 +199,10 @@ const MaintenanceManagement = () => {
   const [filteredTemplates, setFilteredTemplates] = useState([]);
 
   // ===== STATES CHO IMPORT TEMPLATE ITEMS (BƯỚC KIỂM TRA) =====
-  const [isItemsImportModalVisible, setIsItemsImportModalVisible] = useState(false);
-  const [selectedTemplateForImport, setSelectedTemplateForImport] = useState(null);
+  const [isItemsImportModalVisible, setIsItemsImportModalVisible] =
+    useState(false);
+  const [selectedTemplateForImport, setSelectedTemplateForImport] =
+    useState(null);
   const [uploadedItemsFile, setUploadedItemsFile] = useState(null);
   const [importItemsLoading, setImportItemsLoading] = useState(false);
 
@@ -229,16 +230,30 @@ const MaintenanceManagement = () => {
         setLoadingHistory(true);
         try {
           const allWorkOrders = await getAllWorkOrders();
-          // ✅ Hiển thị cả Completed và Cancelled trong lịch sử
-          const history = allWorkOrders.data?.filter(
-            wo => wo.planId === viewingPlan.planId && (wo.status === 'Completed' || wo.status === 'Cancelled')
-          ).sort((a, b) => new Date(b.completedDate || b.scheduledDate) - new Date(a.completedDate || a.scheduledDate)) || [];
+          // ✅ Hiển thị WorkOrders đã đóng và đã hủy trong lịch sử
+          const history =
+            allWorkOrders.data
+              ?.filter(
+                (wo) =>
+                  wo.planId === viewingPlan.planId &&
+                  (wo.status === "Đã đóng" ||
+                    wo.status === "Đã hủy" ||
+                    wo.status === "Closed" ||
+                    wo.status === "Cancelled")
+              )
+              .sort(
+                (a, b) =>
+                  new Date(b.completedDate || b.scheduledDate) -
+                  new Date(a.completedDate || a.scheduledDate)
+              ) || [];
           setPlanMaintenanceHistory(history);
 
           // Load templates for equipment if editing mode
           if (viewingPlan.equipmentId) {
             try {
-              const response = await templateService.getTemplatesByEquipment(viewingPlan.equipmentId);
+              const response = await templateService.getTemplatesByEquipment(
+                viewingPlan.equipmentId
+              );
               setFilteredTemplates(response?.data || []);
             } catch (error) {
               console.error("Load templates error:", error);
@@ -292,7 +307,9 @@ const MaintenanceManagement = () => {
       setTemplates(response?.data || []);
     } catch (error) {
       console.error("Load templates error:", error);
-      showError("Tải danh sách template thất bại", [error.message || "Lỗi không xác định"]);
+      showError("Tải danh sách template thất bại", [
+        error.message || "Lỗi không xác định",
+      ]);
     } finally {
       setLoading(false);
     }
@@ -310,7 +327,9 @@ const MaintenanceManagement = () => {
       }
     } catch (error) {
       console.error("Load work orders error:", error);
-      showError("Tải danh sách phiếu bảo trì thất bại", [error.message || "Lỗi không xác định"]);
+      showError("Tải danh sách phiếu bảo trì thất bại", [
+        error.message || "Lỗi không xác định",
+      ]);
     } finally {
       setLoading(false);
     }
@@ -356,7 +375,9 @@ const MaintenanceManagement = () => {
       setPendingWorkOrders(response?.data || []);
     } catch (error) {
       console.error("Load pending work orders error:", error);
-      showError("Tải danh sách phiếu chờ xử lý thất bại", [error.message || "Lỗi không xác định"]);
+      showError("Tải danh sách phiếu chờ xử lý thất bại", [
+        error.message || "Lỗi không xác định",
+      ]);
     } finally {
       setLoading(false);
     }
@@ -369,7 +390,9 @@ const MaintenanceManagement = () => {
       setUpcomingMaintenance(response?.data || []);
     } catch (error) {
       console.error("Load upcoming maintenance error:", error);
-      showError("Tải danh sách bảo trì sắp đến hạn thất bại", [error.message || "Lỗi không xác định"]);
+      showError("Tải danh sách bảo trì sắp đến hạn thất bại", [
+        error.message || "Lỗi không xác định",
+      ]);
     } finally {
       setLoading(false);
     }
@@ -424,7 +447,9 @@ const MaintenanceManagement = () => {
       }
     } catch (error) {
       console.error("Load technicians error:", error);
-      showError("Không thể tải danh sách kỹ thuật viên", [error.message || "Lỗi không xác định"]);
+      showError("Không thể tải danh sách kỹ thuật viên", [
+        error.message || "Lỗi không xác định",
+      ]);
     }
   };
 
@@ -459,7 +484,9 @@ const MaintenanceManagement = () => {
         setFilteredStages(stageResponse?.data || []);
       } catch (error) {
         console.error("Load stages by line error:", error);
-        showError("Không thể tải danh sách công đoạn", [error.message || "Lỗi không xác định"]);
+        showError("Không thể tải danh sách công đoạn", [
+          error.message || "Lỗi không xác định",
+        ]);
       }
     }
   };
@@ -488,7 +515,9 @@ const MaintenanceManagement = () => {
         setFilteredTemplates(templateResponse?.data || []);
       } catch (error) {
         console.error("Load by stage error:", error);
-        showError("Không thể tải dữ liệu", [error.message || "Lỗi không xác định"]);
+        showError("Không thể tải dữ liệu", [
+          error.message || "Lỗi không xác định",
+        ]);
       }
     }
   };
@@ -546,13 +575,17 @@ const MaintenanceManagement = () => {
       const response = await getAllMaintenancePlans();
       const updatedPlans = response?.data || response || [];
       if (Array.isArray(updatedPlans)) {
-        const updatedPlan = updatedPlans.find(p => p.planId === viewingPlan.planId);
+        const updatedPlan = updatedPlans.find(
+          (p) => p.planId === viewingPlan.planId
+        );
         if (updatedPlan) {
           setViewingPlan(updatedPlan);
         }
       }
     } catch (error) {
-      showError("Lỗi khi cập nhật kế hoạch", [error.message || "Lỗi không xác định"]);
+      showError("Lỗi khi cập nhật kế hoạch", [
+        error.message || "Lỗi không xác định",
+      ]);
     } finally {
       setLoading(false);
     }
@@ -570,7 +603,9 @@ const MaintenanceManagement = () => {
       loadMaintenancePlans();
       loadStats();
     } catch (error) {
-      showError("Xóa kế hoạch thất bại", [error.message || "Lỗi không xác định"]);
+      showError("Xóa kế hoạch thất bại", [
+        error.message || "Lỗi không xác định",
+      ]);
     }
   };
 
@@ -596,16 +631,20 @@ const MaintenanceManagement = () => {
 
         // Loop through each equipment and create a plan
         for (const equipmentId of equipmentIds) {
-          const equipment = filteredEquipments.find(eq => eq.equipmentId === equipmentId);
-          const equipmentName = equipment ? `${equipment.equipmentName} (${equipment.equipmentCode})` : `ID ${equipmentId}`;
-          
+          const equipment = filteredEquipments.find(
+            (eq) => eq.equipmentId === equipmentId
+          );
+          const equipmentName = equipment
+            ? `${equipment.equipmentName} (${equipment.equipmentCode})`
+            : `ID ${equipmentId}`;
+
           try {
             const planData = {
               equipmentId: equipmentId,
               templateId: values.templateId,
               intervalType: values.intervalType,
               intervalValue: values.intervalValue,
-              startDate: values.startDate.format('YYYY-MM-DD'),
+              startDate: values.startDate.format("YYYY-MM-DD"),
               reminderDaysBefore: values.reminderDaysBefore ?? 3,
             };
             await createMaintenancePlan(planData);
@@ -614,7 +653,9 @@ const MaintenanceManagement = () => {
             let errorMessage = error.message || "Lỗi không xác định";
             // Loại bỏ phần "Chu kỳ hiện tại: ..." khỏi thông báo lỗi
             if (errorMessage.includes("Chu kỳ hiện tại:")) {
-              errorMessage = errorMessage.replace(/Chu kỳ hiện tại:.*?\./g, '').trim();
+              errorMessage = errorMessage
+                .replace(/Chu kỳ hiện tại:.*?\./g, "")
+                .trim();
             }
             errorList.push(`${equipmentName}: ${errorMessage}`);
           }
@@ -622,7 +663,9 @@ const MaintenanceManagement = () => {
 
         // Show summary messages
         if (successList.length > 0 && errorList.length === 0) {
-          message.success(`Tạo chu kỳ bảo trì thành công cho ${successList.length} thiết bị!`);
+          message.success(
+            `Tạo chu kỳ bảo trì thành công cho ${successList.length} thiết bị!`
+          );
         } else if (successList.length > 0 && errorList.length > 0) {
           Modal.info({
             title: "Kết quả tạo chu kỳ bảo trì",
@@ -630,22 +673,33 @@ const MaintenanceManagement = () => {
             content: (
               <div>
                 <div style={{ marginBottom: 16 }}>
-                  <h4 style={{ color: '#52c41a', marginBottom: 8 }}>
+                  <h4 style={{ color: "#52c41a", marginBottom: 8 }}>
                     ✓ Thành công ({successList.length}):
                   </h4>
                   <ul style={{ paddingLeft: 20, margin: 0 }}>
                     {successList.map((name, idx) => (
-                      <li key={idx} style={{ color: '#52c41a' }}>{name}</li>
+                      <li key={idx} style={{ color: "#52c41a" }}>
+                        {name}
+                      </li>
                     ))}
                   </ul>
                 </div>
                 <div>
-                  <h4 style={{ color: '#ff4d4f', marginBottom: 8 }}>
+                  <h4 style={{ color: "#ff4d4f", marginBottom: 8 }}>
                     ✗ Thất bại ({errorList.length}):
                   </h4>
-                  <ul style={{ paddingLeft: 20, margin: 0, maxHeight: 200, overflowY: 'auto' }}>
+                  <ul
+                    style={{
+                      paddingLeft: 20,
+                      margin: 0,
+                      maxHeight: 200,
+                      overflowY: "auto",
+                    }}
+                  >
                     {errorList.map((msg, idx) => (
-                      <li key={idx} style={{ color: '#ff4d4f' }}>{msg}</li>
+                      <li key={idx} style={{ color: "#ff4d4f" }}>
+                        {msg}
+                      </li>
                     ))}
                   </ul>
                 </div>
@@ -667,7 +721,9 @@ const MaintenanceManagement = () => {
 
       // Loại bỏ phần "Chu kỳ hiện tại: ..." khỏi thông báo lỗi
       if (errorMessage.includes("Chu kỳ hiện tại:")) {
-        errorMessage = errorMessage.replace(/Chu kỳ hiện tại:.*?\./g, '').trim();
+        errorMessage = errorMessage
+          .replace(/Chu kỳ hiện tại:.*?\./g, "")
+          .trim();
       }
 
       showError("Lỗi khi xử lý kế hoạch bảo trì", [errorMessage]);
@@ -711,11 +767,16 @@ const MaintenanceManagement = () => {
       const errorMessage = error.message || "Lỗi không xác định";
 
       // Kiểm tra nếu là lỗi đang được sử dụng bởi chu kỳ
-      if (errorMessage.includes("đang được sử dụng bởi") || errorMessage.includes("chu kỳ bảo trì")) {
+      if (
+        errorMessage.includes("đang được sử dụng bởi") ||
+        errorMessage.includes("chu kỳ bảo trì")
+      ) {
         // Trích xuất tên chu kỳ từ message (lấy phần sau "chu kỳ bảo trì đang hoạt động:")
         const match = errorMessage.match(/đang hoạt động: (.+?) Vui lòng/);
         const cycleInfo = match ? match[1] : "các chu kỳ bảo trì";
-        message.error(`Mẫu bảo trì này đang được dùng ở chu kỳ ${cycleInfo}. Không thể xóa.`);
+        message.error(
+          `Mẫu bảo trì này đang được dùng ở chu kỳ ${cycleInfo}. Không thể xóa.`
+        );
       } else {
         showError("Xóa mẫu bảo trì thất bại", [errorMessage]);
       }
@@ -748,7 +809,9 @@ const MaintenanceManagement = () => {
       setChecklistItems([]);
       loadTemplates();
     } catch (error) {
-      showError("Lỗi khi xử lý mẫu bảo trì", [error.message || "Lỗi không xác định"]);
+      showError("Lỗi khi xử lý mẫu bảo trì", [
+        error.message || "Lỗi không xác định",
+      ]);
     } finally {
       setLoading(false);
     }
@@ -762,7 +825,9 @@ const MaintenanceManagement = () => {
 
   const handleAddChecklistItemClick = () => {
     if (!newChecklistItem.stepName || !newChecklistItem.category) {
-      showError("Thiếu thông tin", ["Vui lòng nhập đầy đủ thông tin bước kiểm tra"]);
+      showError("Thiếu thông tin", [
+        "Vui lòng nhập đầy đủ thông tin bước kiểm tra",
+      ]);
       return;
     }
 
@@ -793,7 +858,7 @@ const MaintenanceManagement = () => {
   const handleDownloadTemplateExcel = async () => {
     try {
       const apiBaseUrl =
-        process.env.REACT_APP_API_BASE_URL || "http://localhost:7003/api";
+        process.env.REACT_APP_API_BASE_URL || "https://localhost:7003/api";
       const token = localStorage.getItem("token");
 
       const response = await fetch(
@@ -821,7 +886,9 @@ const MaintenanceManagement = () => {
       message.success("Tải Excel mẫu thành công!");
     } catch (error) {
       console.error("Download error:", error);
-      showError("Tải Excel mẫu thất bại", [error.message || "Lỗi không xác định"]);
+      showError("Tải Excel mẫu thất bại", [
+        error.message || "Lỗi không xác định",
+      ]);
     }
   };
 
@@ -851,7 +918,7 @@ const MaintenanceManagement = () => {
 
       // ✅ Sửa biến môi trường đúng
       const apiBaseUrl =
-        process.env.REACT_APP_API_BASE_URL || "http://localhost:7003/api";
+        process.env.REACT_APP_API_BASE_URL || "https://localhost:7003/api";
 
       const response = await fetch(
         `${apiBaseUrl}/maintenance/templates/import`,
@@ -874,9 +941,11 @@ const MaintenanceManagement = () => {
         if (result.data.errors && result.data.errors.length > 0) {
           Modal.warning({
             title: (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <WarningOutlined style={{ color: '#faad14' }} />
-                <span>Phát hiện {result.data.errorCount} lỗi trong file Excel</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <WarningOutlined style={{ color: "#faad14" }} />
+                <span>
+                  Phát hiện {result.data.errorCount} lỗi trong file Excel
+                </span>
               </div>
             ),
             content: (
@@ -887,20 +956,22 @@ const MaintenanceManagement = () => {
                   showIcon
                   style={{ marginBottom: 16 }}
                 />
-                <div style={{ marginBottom: 8, fontWeight: 'bold' }}>
+                <div style={{ marginBottom: 8, fontWeight: "bold" }}>
                   Vui lòng sửa các lỗi sau và import lại:
                 </div>
-                <ul style={{
-                  maxHeight: 400,
-                  overflow: 'auto',
-                  paddingLeft: 20,
-                  backgroundColor: '#fff1f0',
-                  padding: '12px 20px',
-                  borderRadius: 4,
-                  border: '1px solid #ffccc7'
-                }}>
+                <ul
+                  style={{
+                    maxHeight: 400,
+                    overflow: "auto",
+                    paddingLeft: 20,
+                    backgroundColor: "#fff1f0",
+                    padding: "12px 20px",
+                    borderRadius: 4,
+                    border: "1px solid #ffccc7",
+                  }}
+                >
                   {result.data.errors.map((err, idx) => (
-                    <li key={idx} style={{ marginBottom: 8, color: '#cf1322' }}>
+                    <li key={idx} style={{ marginBottom: 8, color: "#cf1322" }}>
                       {err}
                     </li>
                   ))}
@@ -922,9 +993,11 @@ const MaintenanceManagement = () => {
         if (result.errors && result.errors.length > 0) {
           Modal.error({
             title: (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
-                <span>Phát hiện {result.errors.length} lỗi trong file Excel</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <CloseCircleOutlined style={{ color: "#ff4d4f" }} />
+                <span>
+                  Phát hiện {result.errors.length} lỗi trong file Excel
+                </span>
               </div>
             ),
             content: (
@@ -932,18 +1005,20 @@ const MaintenanceManagement = () => {
                 <div style={{ marginBottom: 8 }}>
                   Vui lòng sửa các lỗi sau và import lại:
                 </div>
-                <ul style={{
-                  maxHeight: 400,
-                  overflow: 'auto',
-                  paddingLeft: 20,
-                  backgroundColor: '#fff1f0',
-                  padding: '12px 20px',
-                  borderRadius: 4,
-                  border: '1px solid #ffccc7',
-                  margin: 0
-                }}>
+                <ul
+                  style={{
+                    maxHeight: 400,
+                    overflow: "auto",
+                    paddingLeft: 20,
+                    backgroundColor: "#fff1f0",
+                    padding: "12px 20px",
+                    borderRadius: 4,
+                    border: "1px solid #ffccc7",
+                    margin: 0,
+                  }}
+                >
                   {result.errors.map((err, idx) => (
-                    <li key={idx} style={{ marginBottom: 8, color: '#cf1322' }}>
+                    <li key={idx} style={{ marginBottom: 8, color: "#cf1322" }}>
                       {err}
                     </li>
                   ))}
@@ -956,7 +1031,9 @@ const MaintenanceManagement = () => {
             maskClosable: true,
           });
         } else {
-          showError("Import thất bại", [result.message || "Lỗi không xác định"]);
+          showError("Import thất bại", [
+            result.message || "Lỗi không xác định",
+          ]);
         }
       }
     } catch (error) {
@@ -971,7 +1048,7 @@ const MaintenanceManagement = () => {
   const handleDownloadTemplateItemsExcel = async () => {
     try {
       const apiBaseUrl =
-        process.env.REACT_APP_API_BASE_URL || "http://localhost:7003/api";
+        process.env.REACT_APP_API_BASE_URL || "https://localhost:7003/api";
       const token = localStorage.getItem("token");
 
       const response = await fetch(
@@ -999,7 +1076,9 @@ const MaintenanceManagement = () => {
       message.success("Tải Excel mẫu bước kiểm tra thành công!");
     } catch (error) {
       console.error("Download error:", error);
-      showError("Tải Excel mẫu thất bại", [error.message || "Lỗi không xác định"]);
+      showError("Tải Excel mẫu thất bại", [
+        error.message || "Lỗi không xác định",
+      ]);
     }
   };
 
@@ -1032,7 +1111,7 @@ const MaintenanceManagement = () => {
 
       const token = localStorage.getItem("token");
       const apiBaseUrl =
-        process.env.REACT_APP_API_BASE_URL || "http://localhost:7003/api";
+        process.env.REACT_APP_API_BASE_URL || "https://localhost:7003/api";
 
       const response = await fetch(
         `${apiBaseUrl}/maintenance/templates/${selectedTemplateForImport.templateId}/import-items`,
@@ -1055,9 +1134,11 @@ const MaintenanceManagement = () => {
         if (result.data.errors && result.data.errors.length > 0) {
           Modal.warning({
             title: (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <WarningOutlined style={{ color: '#faad14' }} />
-                <span>Phát hiện {result.data.errorCount} lỗi trong file Excel</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <WarningOutlined style={{ color: "#faad14" }} />
+                <span>
+                  Phát hiện {result.data.errorCount} lỗi trong file Excel
+                </span>
               </div>
             ),
             content: (
@@ -1068,20 +1149,22 @@ const MaintenanceManagement = () => {
                   showIcon
                   style={{ marginBottom: 16 }}
                 />
-                <div style={{ marginBottom: 8, fontWeight: 'bold' }}>
+                <div style={{ marginBottom: 8, fontWeight: "bold" }}>
                   Vui lòng sửa các lỗi sau và import lại:
                 </div>
-                <ul style={{
-                  maxHeight: 400,
-                  overflow: 'auto',
-                  paddingLeft: 20,
-                  backgroundColor: '#fff1f0',
-                  padding: '12px 20px',
-                  borderRadius: 4,
-                  border: '1px solid #ffccc7'
-                }}>
+                <ul
+                  style={{
+                    maxHeight: 400,
+                    overflow: "auto",
+                    paddingLeft: 20,
+                    backgroundColor: "#fff1f0",
+                    padding: "12px 20px",
+                    borderRadius: 4,
+                    border: "1px solid #ffccc7",
+                  }}
+                >
                   {result.data.errors.map((err, idx) => (
-                    <li key={idx} style={{ marginBottom: 8, color: '#cf1322' }}>
+                    <li key={idx} style={{ marginBottom: 8, color: "#cf1322" }}>
                       {err}
                     </li>
                   ))}
@@ -1104,9 +1187,11 @@ const MaintenanceManagement = () => {
         if (result.errors && result.errors.length > 0) {
           Modal.error({
             title: (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
-                <span>Phát hiện {result.errors.length} lỗi trong file Excel</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <CloseCircleOutlined style={{ color: "#ff4d4f" }} />
+                <span>
+                  Phát hiện {result.errors.length} lỗi trong file Excel
+                </span>
               </div>
             ),
             content: (
@@ -1114,17 +1199,19 @@ const MaintenanceManagement = () => {
                 <div style={{ marginBottom: 8 }}>
                   Vui lòng sửa các lỗi sau và import lại:
                 </div>
-                <ul style={{
-                  maxHeight: 400,
-                  overflow: 'auto',
-                  paddingLeft: 20,
-                  backgroundColor: '#fff1f0',
-                  padding: '12px 20px',
-                  borderRadius: 4,
-                  border: '1px solid #ffccc7'
-                }}>
+                <ul
+                  style={{
+                    maxHeight: 400,
+                    overflow: "auto",
+                    paddingLeft: 20,
+                    backgroundColor: "#fff1f0",
+                    padding: "12px 20px",
+                    borderRadius: 4,
+                    border: "1px solid #ffccc7",
+                  }}
+                >
                   {result.errors.map((err, idx) => (
-                    <li key={idx} style={{ marginBottom: 8, color: '#cf1322' }}>
+                    <li key={idx} style={{ marginBottom: 8, color: "#cf1322" }}>
                       {err}
                     </li>
                   ))}
@@ -1137,7 +1224,9 @@ const MaintenanceManagement = () => {
             maskClosable: true,
           });
         } else {
-          showError("Import thất bại", [result.message || "Lỗi không xác định"]);
+          showError("Import thất bại", [
+            result.message || "Lỗi không xác định",
+          ]);
         }
       }
     } catch (error) {
@@ -1184,12 +1273,18 @@ const MaintenanceManagement = () => {
             const rowNum = index + 2; // Excel row (header = 1)
 
             // Validate required fields
-            if (!row["Tên bước kiểm tra"] || row["Tên bước kiểm tra"].toString().trim() === "") {
+            if (
+              !row["Tên bước kiểm tra"] ||
+              row["Tên bước kiểm tra"].toString().trim() === ""
+            ) {
               errors.push(`Dòng ${rowNum}: Thiếu tên bước`);
               return;
             }
 
-            if (!row["Loại công việc"] || row["Loại công việc"].toString().trim() === "") {
+            if (
+              !row["Loại công việc"] ||
+              row["Loại công việc"].toString().trim() === ""
+            ) {
               errors.push(`Dòng ${rowNum}: Thiếu loại công việc`);
               return;
             }
@@ -1201,12 +1296,17 @@ const MaintenanceManagement = () => {
             let category;
             if (categoryRaw === "Điện" || categoryRaw === "Electrical") {
               category = "Electrical";
-            } else if (categoryRaw === "Cơ khí" || categoryRaw === "Mechanical") {
+            } else if (
+              categoryRaw === "Cơ khí" ||
+              categoryRaw === "Mechanical"
+            ) {
               category = "Mechanical";
             } else if (categoryRaw === "Chung" || categoryRaw === "General") {
               category = "General";
             } else {
-              errors.push(`Dòng ${rowNum}: Loại công việc không hợp lệ (chỉ chấp nhận: Điện/Electrical, Cơ khí/Mechanical, Chung/General)`);
+              errors.push(
+                `Dòng ${rowNum}: Loại công việc không hợp lệ (chỉ chấp nhận: Điện/Electrical, Cơ khí/Mechanical, Chung/General)`
+              );
               return;
             }
 
@@ -1219,7 +1319,9 @@ const MaintenanceManagement = () => {
 
             if (isDuplicate) {
               errors.push(
-                `Dòng ${rowNum}: Bước "${stepName}" (${category === "Electrical" ? "Điện" : "Cơ khí"}) đã tồn tại`
+                `Dòng ${rowNum}: Bước "${stepName}" (${
+                  category === "Electrical" ? "Điện" : "Cơ khí"
+                }) đã tồn tại`
               );
               return;
             }
@@ -1233,7 +1335,9 @@ const MaintenanceManagement = () => {
 
             if (isDuplicateInNew) {
               errors.push(
-                `Dòng ${rowNum}: Bước "${stepName}" (${category === "Electrical" ? "Điện" : "Cơ khí"}) bị trùng trong file Excel`
+                `Dòng ${rowNum}: Bước "${stepName}" (${
+                  category === "Electrical" ? "Điện" : "Cơ khí"
+                }) bị trùng trong file Excel`
               );
               return;
             }
@@ -1245,7 +1349,9 @@ const MaintenanceManagement = () => {
             newItems.push({
               stepName,
               category,
-              stepDescription: row["Mô tả chi tiết"] ? row["Mô tả chi tiết"].toString().trim() : "",
+              stepDescription: row["Mô tả chi tiết"]
+                ? row["Mô tả chi tiết"].toString().trim()
+                : "",
               requiredRole: requiredRole, // ✅ Thêm trường này cho API
               orderIndex: checklistItems.length + newItems.length + 1,
             });
@@ -1257,7 +1363,9 @@ const MaintenanceManagement = () => {
               content: (
                 <div>
                   <p>
-                    <strong>Tìm thấy {errors.length} lỗi trong file Excel:</strong>
+                    <strong>
+                      Tìm thấy {errors.length} lỗi trong file Excel:
+                    </strong>
                   </p>
                   <ul style={{ maxHeight: 400, overflow: "auto" }}>
                     {errors.map((err, idx) => (
@@ -1281,8 +1389,10 @@ const MaintenanceManagement = () => {
           // Thêm vào checklistItems
           setChecklistItems([...checklistItems, ...newItems]);
           message.success(
-            `✅ Import thành công ${newItems.length} bước kiểm tra (${newItems.filter((i) => i.category === "Electrical").length
-            } điện + ${newItems.filter((i) => i.category === "Mechanical").length
+            `✅ Import thành công ${newItems.length} bước kiểm tra (${
+              newItems.filter((i) => i.category === "Electrical").length
+            } điện + ${
+              newItems.filter((i) => i.category === "Mechanical").length
             } cơ khí)`
           );
 
@@ -1290,14 +1400,18 @@ const MaintenanceManagement = () => {
           setUploadedItemsFile(null);
         } catch (parseError) {
           console.error("Parse error:", parseError);
-          showError("Lỗi khi đọc file Excel", [parseError.message || "Định dạng file không hợp lệ"]);
+          showError("Lỗi khi đọc file Excel", [
+            parseError.message || "Định dạng file không hợp lệ",
+          ]);
         } finally {
           setImportLoading(false);
         }
       };
 
       reader.onerror = () => {
-        showError("Lỗi khi đọc file", ["Không thể đọc file, vui lòng kiểm tra lại"]);
+        showError("Lỗi khi đọc file", [
+          "Không thể đọc file, vui lòng kiểm tra lại",
+        ]);
         setImportLoading(false);
       };
 
@@ -1308,9 +1422,6 @@ const MaintenanceManagement = () => {
       setImportLoading(false);
     }
   };
-
-
-
 
   // ===== RENDERING HELPERS =====
 
@@ -1445,8 +1556,8 @@ const MaintenanceManagement = () => {
                 color: isOverdue
                   ? "#ff4d4f"
                   : isUpcomingSoon
-                    ? "#faad14"
-                    : "inherit",
+                  ? "#faad14"
+                  : "inherit",
                 fontWeight: isOverdue || isUpcomingSoon ? "bold" : "normal",
               }}
             >
@@ -1457,8 +1568,8 @@ const MaintenanceManagement = () => {
                 {record.daysUntilDue > 0
                   ? `Còn ${record.daysUntilDue} ngày`
                   : record.daysUntilDue === 0
-                    ? "Hôm nay"
-                    : `Quá ${Math.abs(record.daysUntilDue)} ngày`}
+                  ? "Hôm nay"
+                  : `Quá ${Math.abs(record.daysUntilDue)} ngày`}
               </Text>
             )}
             {record.postponedDueDate && (
@@ -1547,7 +1658,7 @@ const MaintenanceManagement = () => {
     //     <Tooltip placement="topLeft" title={desc}>
     //       {desc}
     //     </Tooltip>
-    //   ),  
+    //   ),
     // },
     //{
     //  title: "Mã kiểm tra",
@@ -1818,18 +1929,24 @@ const MaintenanceManagement = () => {
     },
   ];
 
-  const filteredPlans = maintenancePlans.filter(
-    (plan) =>
-      plan.equipmentName?.toLowerCase().includes(searchText.toLowerCase()) ||
-      plan.assignedToName?.toLowerCase().includes(searchText.toLowerCase()) ||
-      plan.equipmentCode?.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const filteredPlans = maintenancePlans
+    .filter(
+      (plan) =>
+        plan.equipmentName?.toLowerCase().includes(searchText.toLowerCase()) ||
+        plan.assignedToName?.toLowerCase().includes(searchText.toLowerCase()) ||
+        plan.equipmentCode?.toLowerCase().includes(searchText.toLowerCase())
+    )
+    .sort((a, b) => b.planId - a.planId);
 
-  const searchedTemplates = templates.filter(
-    (template) =>
-      template.templateName?.toLowerCase().includes(searchText.toLowerCase()) ||
-      template.description?.toLowerCase().includes(searchText.toLowerCase())
-  );
+  const searchedTemplates = templates
+    .filter(
+      (template) =>
+        template.templateName
+          ?.toLowerCase()
+          .includes(searchText.toLowerCase()) ||
+        template.description?.toLowerCase().includes(searchText.toLowerCase())
+    )
+    .sort((a, b) => b.templateId - a.templateId);
 
   // Apply filters and sorting for Work Orders
   const getFilteredAndSortedWorkOrders = () => {
@@ -1882,57 +1999,55 @@ const MaintenanceManagement = () => {
   const MaintenancePlansTab = (
     <Card
       title={
-        <span style={{ fontSize: '18px', fontWeight: 600, color: '#262626' }}>
+        <span style={{ fontSize: "18px", fontWeight: 600, color: "#262626" }}>
           <ToolOutlined style={{ marginRight: 8 }} />
           Chu kỳ bảo trì
         </span>
       }
       bordered={false}
-      style={{ borderRadius: 8, boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
+      style={{ borderRadius: 8, boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}
     >
       {/* Statistics */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "space-between",
+          gap: "16px",
+          marginBottom: 24,
+        }}
+      >
+        <div style={{ flex: "1 1 200px" }}>
+          <Card bordered={true}>
             <Statistic
               title="Tổng chu kỳ"
               value={stats.totalPlans}
-              prefix={<FileTextOutlined style={{ color: '#1890ff' }} />}
-              valueStyle={{ color: '#1890ff' }}
+              prefix={<FileTextOutlined style={{ color: "#1890ff" }} />}
+              valueStyle={{ color: "#1890ff" }}
             />
           </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
+        </div>
+        <div style={{ flex: "1 1 200px" }}>
+          <Card bordered={true}>
             <Statistic
               title="Đang hoạt động"
               value={stats.activePlans}
-              prefix={<CheckCircleOutlined style={{ color: '#52c41a' }} />}
-              valueStyle={{ color: '#52c41a' }}
+              prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
+              valueStyle={{ color: "#52c41a" }}
             />
           </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
+        </div>
+        <div style={{ flex: "1 1 200px" }}>
+          <Card bordered={true}>
             <Statistic
-              title="Đến hạn tuần này"
-              value={stats.dueThisWeek}
-              prefix={<ClockCircleOutlined style={{ color: '#faad14' }} />}
-              valueStyle={{ color: '#faad14' }}
+              title="Không hoạt động"
+              value={stats.totalPlans - stats.activePlans}
+              prefix={<StopOutlined style={{ color: "#d9d9d9" }} />}
+              valueStyle={{ color: "#d9d9d9" }}
             />
           </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
-            <Statistic
-              title="Quá hạn"
-              value={stats.overdueWorkOrders}
-              prefix={<WarningOutlined style={{ color: '#ff4d4f' }} />}
-              valueStyle={{ color: '#ff4d4f' }}
-            />
-          </Card>
-        </Col>
-      </Row>
+        </div>
+      </div>
 
       <Space direction="vertical" size="middle" style={{ width: "100%" }}>
         <Row gutter={16}>
@@ -1976,13 +2091,13 @@ const MaintenanceManagement = () => {
   const TemplatesTab = (
     <Card
       title={
-        <span style={{ fontSize: '18px', fontWeight: 600, color: '#262626' }}>
+        <span style={{ fontSize: "18px", fontWeight: 600, color: "#262626" }}>
           <FileTextOutlined style={{ marginRight: 8 }} />
           Mẫu bảo trì
         </span>
       }
       bordered={false}
-      style={{ borderRadius: 8, boxShadow: '0 1px 2px rgba(0,0,0,0.03)' }}
+      style={{ borderRadius: 8, boxShadow: "0 1px 2px rgba(0,0,0,0.03)" }}
     >
       <Space direction="vertical" size="middle" style={{ width: "100%" }}>
         <Row gutter={16}>
@@ -2037,7 +2152,7 @@ const MaintenanceManagement = () => {
       {/* Import Modal */}
       <Modal
         title={
-          <div style={{ fontSize: 20, fontWeight: 600, color: '#283652' }}>
+          <div style={{ fontSize: 20, fontWeight: 600, color: "#283652" }}>
             Import Mẫu Bảo Trì từ Excel
           </div>
         }
@@ -2062,14 +2177,19 @@ const MaintenanceManagement = () => {
             type="primary"
             onClick={handleImportExcel}
             loading={importLoading}
-            style={{ height: 40, fontSize: 16, minWidth: 120, backgroundColor: '#283652' }}
+            style={{
+              height: 40,
+              fontSize: 16,
+              minWidth: 120,
+              backgroundColor: "#283652",
+            }}
           >
             Import
-          </Button>
+          </Button>,
         ]}
         width={1000}
         centered={true}
-        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
+        bodyStyle={{ maxHeight: "70vh", overflowY: "auto" }}
         className={styles.modal}
       >
         <Upload
@@ -2090,8 +2210,9 @@ const MaintenanceManagement = () => {
       {/* Import Template Items Modal */}
       <Modal
         title={
-          <div style={{ fontSize: 20, fontWeight: 600, color: '#283652' }}>
-            Import Các Bước Kiểm Tra vào: {selectedTemplateForImport?.templateName || ''}
+          <div style={{ fontSize: 20, fontWeight: 600, color: "#283652" }}>
+            Import Các Bước Kiểm Tra vào:{" "}
+            {selectedTemplateForImport?.templateName || ""}
           </div>
         }
         open={isItemsImportModalVisible}
@@ -2117,14 +2238,19 @@ const MaintenanceManagement = () => {
             type="primary"
             onClick={handleImportItemsExcel}
             loading={importItemsLoading}
-            style={{ height: 40, fontSize: 16, minWidth: 120, backgroundColor: '#283652' }}
+            style={{
+              height: 40,
+              fontSize: 16,
+              minWidth: 120,
+              backgroundColor: "#283652",
+            }}
           >
             Import
-          </Button>
+          </Button>,
         ]}
         width={1000}
         centered={true}
-        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
+        bodyStyle={{ maxHeight: "70vh", overflowY: "auto" }}
         className={styles.modal}
       >
         <Alert
@@ -2135,9 +2261,7 @@ const MaintenanceManagement = () => {
               <p>2. Điền thông tin các bước kiểm tra vào file Excel</p>
               <p>3. Upload file Excel đã điền để import</p>
               <p>
-                <Text type="warning">
-                  ⚠️ Các bước trùng tên sẽ bị từ chối
-                </Text>
+                <Text type="warning">⚠️ Các bước trùng tên sẽ bị từ chối</Text>
               </p>
             </div>
           }
@@ -2203,15 +2327,20 @@ const MaintenanceManagement = () => {
     },
   ];
 
-
-
   return (
-    <div className={styles.container} style={{ padding: '24px', backgroundColor: '#f5f5f5', minHeight: '100vh' }}>
+    <div
+      className={styles.container}
+      style={{
+        padding: "24px",
+        backgroundColor: "#f5f5f5",
+        minHeight: "100vh",
+      }}
+    >
       <Card
         bordered={false}
         style={{
           borderRadius: 12,
-          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
           marginBottom: 24,
         }}
         bodyStyle={{ padding: 0 }}
@@ -2222,10 +2351,10 @@ const MaintenanceManagement = () => {
           onChange={setActiveTab}
           defaultActiveKey="plans"
           size="large"
-          style={{ padding: '0 24px' }}
+          style={{ padding: "0 24px" }}
           tabBarStyle={{
             marginBottom: 0,
-            borderBottom: '2px solid #f0f0f0',
+            borderBottom: "2px solid #f0f0f0",
           }}
         />
       </Card>
@@ -2325,10 +2454,10 @@ const MaintenanceManagement = () => {
                       {editingPlan.intervalType === "Days"
                         ? "ngày"
                         : editingPlan.intervalType === "Months"
-                          ? "tháng"
-                          : editingPlan.intervalType === "Hours"
-                            ? "giờ"
-                            : "chu kỳ"}
+                        ? "tháng"
+                        : editingPlan.intervalType === "Hours"
+                        ? "giờ"
+                        : "chu kỳ"}
                     </Descriptions.Item>
                     <Descriptions.Item label="Ngày bắt đầu">
                       {dayjs(editingPlan.startDate).format("DD/MM/YYYY")}
@@ -2425,10 +2554,14 @@ const MaintenanceManagement = () => {
                             type="link"
                             size="small"
                             onClick={() => {
-                              const allEquipmentIds = filteredEquipments.map(eq => eq.equipmentId);
-                              planForm.setFieldsValue({ equipmentIds: allEquipmentIds });
+                              const allEquipmentIds = filteredEquipments.map(
+                                (eq) => eq.equipmentId
+                              );
+                              planForm.setFieldsValue({
+                                equipmentIds: allEquipmentIds,
+                              });
                             }}
-                            style={{ padding: 0, height: 'auto' }}
+                            style={{ padding: 0, height: "auto" }}
                           >
                             Chọn tất cả ({filteredEquipments.length})
                           </Button>
@@ -2436,7 +2569,10 @@ const MaintenanceManagement = () => {
                       </Space>
                     }
                     rules={[
-                      { required: true, message: "Vui lòng chọn ít nhất một thiết bị" },
+                      {
+                        required: true,
+                        message: "Vui lòng chọn ít nhất một thiết bị",
+                      },
                     ]}
                     tooltip="Có thể chọn nhiều thiết bị để tạo chu kỳ bảo trì cùng lúc"
                   >
@@ -2462,9 +2598,10 @@ const MaintenanceManagement = () => {
                             key={equipment.equipmentId}
                             value={equipment.equipmentId}
                           >
-                            {equipment.equipmentName} - {equipment.equipmentCode}
+                            {equipment.equipmentName} -{" "}
+                            {equipment.equipmentCode}
                             {hasMaintenancePlan && (
-                              <span style={{ color: '#52c41a', marginLeft: 8 }}>
+                              <span style={{ color: "#52c41a", marginLeft: 8 }}>
                                 (đã có chu kỳ bảo trì)
                               </span>
                             )}
@@ -2558,7 +2695,7 @@ const MaintenanceManagement = () => {
                       format="DD/MM/YYYY"
                       style={{ width: "100%" }}
                       disabledDate={(current) => {
-                        return current && current < dayjs().startOf('day');
+                        return current && current < dayjs().startOf("day");
                       }}
                       size="large"
                     />
@@ -2599,7 +2736,7 @@ const MaintenanceManagement = () => {
       </Modal>
       <Modal
         title={
-          <div style={{ fontSize: 20, fontWeight: 600, color: '#283652' }}>
+          <div style={{ fontSize: 20, fontWeight: 600, color: "#283652" }}>
             {editingTemplate ? "Cập nhật mẫu bảo trì" : "Thêm mẫu bảo trì mới"}
           </div>
         }
@@ -2628,14 +2765,20 @@ const MaintenanceManagement = () => {
             form="templateForm"
             loading={loading}
             disabled={checklistItems.length === 0}
-            style={{ height: 40, fontSize: 16, minWidth: 120, backgroundColor: '#283652', color: '#fff' }}
+            style={{
+              height: 40,
+              fontSize: 16,
+              minWidth: 120,
+              backgroundColor: "#283652",
+              color: "#fff",
+            }}
           >
             {editingTemplate ? "Cập nhật" : "Thêm mới"}
-          </Button>
+          </Button>,
         ]}
         width={1000}
         centered={true}
-        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
+        bodyStyle={{ maxHeight: "70vh", overflowY: "auto" }}
         className={styles.modal}
       >
         <Form
@@ -2681,14 +2824,14 @@ const MaintenanceManagement = () => {
           </Row>
 
           {/* <Row gutter={16}> */}
-            {/* <Col span={12}> */}
-              {/* <Form.Item name="inspectionCode" label="Mã kiểm tra"> */}
-                {/* <Input placeholder="Nhập mã kiểm tra (tùy chọn)" /> */}
-              {/* </Form.Item> */}
-            {/* </Col> */}
-            {/* <Col span={12}> */}
-              {/* Optional field can be added here if needed */}
-            {/* </Col> */}
+          {/* <Col span={12}> */}
+          {/* <Form.Item name="inspectionCode" label="Mã kiểm tra"> */}
+          {/* <Input placeholder="Nhập mã kiểm tra (tùy chọn)" /> */}
+          {/* </Form.Item> */}
+          {/* </Col> */}
+          {/* <Col span={12}> */}
+          {/* Optional field can be added here if needed */}
+          {/* </Col> */}
           {/* </Row> */}
 
           <Row gutter={16}>
@@ -2723,7 +2866,7 @@ const MaintenanceManagement = () => {
             size="small"
             style={{ marginBottom: 16, backgroundColor: "#f5f5f5" }}
           >
-            <Space direction="vertical" style={{ width: '100%' }} size="small">
+            <Space direction="vertical" style={{ width: "100%" }} size="small">
               <Row gutter={16} align="bottom">
                 <Col span={12}>
                   <Input
@@ -2792,7 +2935,11 @@ const MaintenanceManagement = () => {
           {/* Import Excel cho các bước kiểm tra */}
           <Card
             size="small"
-            style={{ marginBottom: 16, backgroundColor: "#e6f7ff", borderColor: "#1890ff" }}
+            style={{
+              marginBottom: 16,
+              backgroundColor: "#e6f7ff",
+              borderColor: "#1890ff",
+            }}
           >
             <Row gutter={16} align="middle">
               <Col span={24}>
@@ -2892,11 +3039,13 @@ const MaintenanceManagement = () => {
                             />
                           }
                           title={item.stepName}
-                          description={item.stepDescription ? (
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              {item.stepDescription}
-                            </Text>
-                          ) : null}
+                          description={
+                            item.stepDescription ? (
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {item.stepDescription}
+                              </Text>
+                            ) : null
+                          }
                         />
                       </List.Item>
                     )}
@@ -2959,11 +3108,13 @@ const MaintenanceManagement = () => {
                             />
                           }
                           title={item.stepName}
-                          description={item.stepDescription ? (
-                            <Text type="secondary" style={{ fontSize: 12 }}>
-                              {item.stepDescription}
-                            </Text>
-                          ) : null}
+                          description={
+                            item.stepDescription ? (
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                {item.stepDescription}
+                              </Text>
+                            ) : null
+                          }
                         />
                       </List.Item>
                     )}
@@ -2982,9 +3133,11 @@ const MaintenanceManagement = () => {
           <Divider />
 
           <Alert
-            message={`Tổng cộng: ${checklistItems.length} bước kiểm tra (${checklistItems.filter((i) => i.category === "Electrical").length
-              } điện + ${checklistItems.filter((i) => i.category === "Mechanical").length
-              } cơ khí)`}
+            message={`Tổng cộng: ${checklistItems.length} bước kiểm tra (${
+              checklistItems.filter((i) => i.category === "Electrical").length
+            } điện + ${
+              checklistItems.filter((i) => i.category === "Mechanical").length
+            } cơ khí)`}
             type="info"
             showIcon
             style={{ marginTop: 16 }}
@@ -2995,7 +3148,7 @@ const MaintenanceManagement = () => {
       {/* Modal Xem Chi Tiết Kế Hoạch Bảo Trì */}
       <Modal
         title={
-          <div style={{ fontSize: 20, fontWeight: 600, color: '#283652' }}>
+          <div style={{ fontSize: 20, fontWeight: 600, color: "#283652" }}>
             Chi Tiết Kế Hoạch Bảo Trì
           </div>
         }
@@ -3009,98 +3162,126 @@ const MaintenanceManagement = () => {
         }}
         width={1400}
         centered={true}
-        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
+        bodyStyle={{ maxHeight: "70vh", overflowY: "auto" }}
         className={styles.modal}
         footer={
-          isViewPlanEditing ? [
-            <Button
-              key="cancel"
-              onClick={() => {
-                setIsViewPlanEditing(false);
-                viewPlanForm.resetFields();
-              }}
-              style={{ height: 40, fontSize: 16, minWidth: 120 }}
-            >
-              Hủy
-            </Button>,
-            <Button
-              key="save"
-              type="primary"
-              icon={<SaveOutlined />}
-              loading={loading}
-              onClick={() => viewPlanForm.submit()}
-              style={{ height: 40, fontSize: 16, minWidth: 120, backgroundColor: '#283652' }}
-            >
-              Lưu
-            </Button>,
-          ] : [
-            <Button
-              key="close"
-              onClick={() => {
-                setIsViewPlanModalVisible(false);
-                setViewingPlan(null);
-                setPlanMaintenanceHistory([]);
-              }}
-              style={{ height: 40, fontSize: 16, minWidth: 120 }}
-            >
-              Đóng
-            </Button>,
-            <Button
-              key="update"
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={async () => {
-                // Lấy stageId từ equipment nếu viewingPlan không có
-                let stageIdToUse = viewingPlan.stageId;
-                
-                if (!stageIdToUse && viewingPlan.equipmentId) {
-                  // Tìm equipment từ danh sách để lấy stageId
-                  const equipment = equipments.find(eq => eq.equipmentId === viewingPlan.equipmentId);
-                  if (equipment) {
-                    stageIdToUse = equipment.stageId;
-                  }
-                }
-                
-                console.log('🔍 ViewingPlan:', viewingPlan);
-                console.log('🔍 StageId to use:', stageIdToUse);
-                
-                if (stageIdToUse) {
-                  try {
-                    setLoading(true);
-                    const templateResponse = await getTemplatesByStage(stageIdToUse);
-                    const templateData = templateResponse?.data || templateResponse || [];
-                    console.log('🔍 Templates loaded:', templateData);
-                    console.log('🔍 Current templateId:', viewingPlan.templateId);
-                    
-                    if (Array.isArray(templateData) && templateData.length > 0) {
-                      setFilteredTemplates(templateData);
-                      // Set field values SAU KHI đã có templates
-                      setTimeout(() => {
-                        setIsViewPlanEditing(true);
-                        viewPlanForm.setFieldsValue({
-                          isActive: viewingPlan.isActive,
-                          reminderDaysBefore: viewingPlan.reminderDaysBefore || 3,
-                          templateId: viewingPlan.templateId,
-                        });
-                      }, 100);
-                    } else {
-                      message.warning('Không tìm thấy mẫu bảo trì nào cho công đoạn này');
+          isViewPlanEditing
+            ? [
+                <Button
+                  key="cancel"
+                  onClick={() => {
+                    setIsViewPlanEditing(false);
+                    viewPlanForm.resetFields();
+                  }}
+                  style={{ height: 40, fontSize: 16, minWidth: 120 }}
+                >
+                  Hủy
+                </Button>,
+                <Button
+                  key="save"
+                  type="primary"
+                  icon={<SaveOutlined />}
+                  loading={loading}
+                  onClick={() => viewPlanForm.submit()}
+                  style={{
+                    height: 40,
+                    fontSize: 16,
+                    minWidth: 120,
+                    backgroundColor: "#283652",
+                  }}
+                >
+                  Lưu
+                </Button>,
+              ]
+            : [
+                <Button
+                  key="close"
+                  onClick={() => {
+                    setIsViewPlanModalVisible(false);
+                    setViewingPlan(null);
+                    setPlanMaintenanceHistory([]);
+                  }}
+                  style={{ height: 40, fontSize: 16, minWidth: 120 }}
+                >
+                  Đóng
+                </Button>,
+                <Button
+                  key="update"
+                  type="primary"
+                  icon={<EditOutlined />}
+                  onClick={async () => {
+                    // Lấy stageId từ equipment nếu viewingPlan không có
+                    let stageIdToUse = viewingPlan.stageId;
+
+                    if (!stageIdToUse && viewingPlan.equipmentId) {
+                      // Tìm equipment từ danh sách để lấy stageId
+                      const equipment = equipments.find(
+                        (eq) => eq.equipmentId === viewingPlan.equipmentId
+                      );
+                      if (equipment) {
+                        stageIdToUse = equipment.stageId;
+                      }
                     }
-                  } catch (error) {
-                    console.error('❌ Error loading templates:', error);
-                    message.error('Không thể tải danh sách mẫu bảo trì');
-                  } finally {
-                    setLoading(false);
-                  }
-                } else {
-                  message.error('Không xác định được công đoạn của chu kỳ này');
-                }
-              }}
-              style={{ height: 40, fontSize: 16, minWidth: 120, backgroundColor: '#283652' }}
-            >
-              Cập nhật
-            </Button>,
-          ]
+
+                    console.log("🔍 ViewingPlan:", viewingPlan);
+                    console.log("🔍 StageId to use:", stageIdToUse);
+
+                    if (stageIdToUse) {
+                      try {
+                        setLoading(true);
+                        const templateResponse = await getTemplatesByStage(
+                          stageIdToUse
+                        );
+                        const templateData =
+                          templateResponse?.data || templateResponse || [];
+                        console.log("🔍 Templates loaded:", templateData);
+                        console.log(
+                          "🔍 Current templateId:",
+                          viewingPlan.templateId
+                        );
+
+                        if (
+                          Array.isArray(templateData) &&
+                          templateData.length > 0
+                        ) {
+                          setFilteredTemplates(templateData);
+                          // Set field values SAU KHI đã có templates
+                          setTimeout(() => {
+                            setIsViewPlanEditing(true);
+                            viewPlanForm.setFieldsValue({
+                              isActive: viewingPlan.isActive,
+                              reminderDaysBefore:
+                                viewingPlan.reminderDaysBefore || 3,
+                              templateId: viewingPlan.templateId,
+                            });
+                          }, 100);
+                        } else {
+                          message.warning(
+                            "Không tìm thấy mẫu bảo trì nào cho công đoạn này"
+                          );
+                        }
+                      } catch (error) {
+                        console.error("❌ Error loading templates:", error);
+                        message.error("Không thể tải danh sách mẫu bảo trì");
+                      } finally {
+                        setLoading(false);
+                      }
+                    } else {
+                      message.error(
+                        "Không xác định được công đoạn của chu kỳ này"
+                      );
+                    }
+                  }}
+                  style={{
+                    height: 40,
+                    fontSize: 16,
+                    minWidth: 120,
+                    backgroundColor: "#283652",
+                  }}
+                >
+                  Cập nhật
+                </Button>,
+              ]
         }
       >
         {viewingPlan && (
@@ -3118,31 +3299,30 @@ const MaintenanceManagement = () => {
                 </Descriptions.Item>
                 <Descriptions.Item label="Trạng Thái" span={1}>
                   {isViewPlanEditing ? (
-                    <Form.Item
-                      name="isActive"
-                      style={{ marginBottom: 0 }}
-                    >
-                      <Select style={{ width: '200px' }}>
+                    <Form.Item name="isActive" style={{ marginBottom: 0 }}>
+                      <Select style={{ width: "200px" }}>
                         <Option value={true}>
-                          <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 4 }} />
+                          <CheckCircleOutlined
+                            style={{ color: "#52c41a", marginRight: 4 }}
+                          />
                           Hoạt động
                         </Option>
                         <Option value={false}>
-                          <CloseOutlined style={{ color: '#d9d9d9', marginRight: 4 }} />
+                          <CloseOutlined
+                            style={{ color: "#d9d9d9", marginRight: 4 }}
+                          />
                           Không hoạt động
                         </Option>
                       </Select>
                     </Form.Item>
+                  ) : viewingPlan.isActive ? (
+                    <Tag color="success" icon={<CheckCircleOutlined />}>
+                      Hoạt động
+                    </Tag>
                   ) : (
-                    viewingPlan.isActive ? (
-                      <Tag color="success" icon={<CheckCircleOutlined />}>
-                        Hoạt động
-                      </Tag>
-                    ) : (
-                      <Tag color="default" icon={<CloseOutlined />}>
-                        Không hoạt động
-                      </Tag>
-                    )
+                    <Tag color="default" icon={<CloseOutlined />}>
+                      Không hoạt động
+                    </Tag>
                   )}
                 </Descriptions.Item>
 
@@ -3163,26 +3343,42 @@ const MaintenanceManagement = () => {
                     <Form.Item
                       name="templateId"
                       style={{ marginBottom: 0 }}
-                      rules={[{ required: true, message: "Vui lòng chọn mẫu bảo trì" }]}
+                      rules={[
+                        {
+                          required: true,
+                          message: "Vui lòng chọn mẫu bảo trì",
+                        },
+                      ]}
                     >
                       <Select
                         placeholder="Chọn mẫu bảo trì"
-                        style={{ width: '100%' }}
+                        style={{ width: "100%" }}
                         showSearch
                         filterOption={(input, option) =>
-                          (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                          (option?.label ?? "")
+                            .toLowerCase()
+                            .includes(input.toLowerCase())
                         }
                         options={filteredTemplates.map((template) => ({
-                          label: `${template.templateName} (TPL${String(template.templateId).padStart(3, "0")})`,
+                          label: `${template.templateName} (TPL${String(
+                            template.templateId
+                          ).padStart(3, "0")})`,
                           value: template.templateId,
                         }))}
                       />
                     </Form.Item>
                   ) : (
-                    <Space direction="vertical" size="small" style={{ width: '100%' }}>
+                    <Space
+                      direction="vertical"
+                      size="small"
+                      style={{ width: "100%" }}
+                    >
                       <div>
                         <strong>{viewingPlan.templateName}</strong>
-                        <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
+                        <Text
+                          type="secondary"
+                          style={{ fontSize: 12, marginLeft: 8 }}
+                        >
                           (TPL{String(viewingPlan.templateId).padStart(3, "0")})
                         </Text>
                       </div>
@@ -3193,12 +3389,16 @@ const MaintenanceManagement = () => {
                         onClick={async () => {
                           try {
                             setLoading(true);
-                            const response = await getTemplateById(viewingPlan.templateId);
+                            const response = await getTemplateById(
+                              viewingPlan.templateId
+                            );
                             if (response?.data) {
                               handleViewTemplateDetail(response.data);
                             }
                           } catch (error) {
-                            showError("Không thể tải chi tiết mẫu bảo trì", [error.message || "Lỗi không xác định"]);
+                            showError("Không thể tải chi tiết mẫu bảo trì", [
+                              error.message || "Lỗi không xác định",
+                            ]);
                           } finally {
                             setLoading(false);
                           }
@@ -3242,7 +3442,7 @@ const MaintenanceManagement = () => {
                       <InputNumber
                         min={0}
                         max={365}
-                        style={{ width: '200px' }}
+                        style={{ width: "200px" }}
                         placeholder="Ví dụ: 3 ngày"
                         addonAfter="ngày"
                       />
@@ -3252,8 +3452,12 @@ const MaintenanceManagement = () => {
                       <Tag color="orange" icon={<BellOutlined />}>
                         Trước {viewingPlan.reminderDaysBefore || 3} ngày
                       </Tag>
-                      <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>
-                        Hệ thống sẽ gửi thông báo trước {viewingPlan.reminderDaysBefore || 3} ngày đến hạn
+                      <Text
+                        type="secondary"
+                        style={{ fontSize: 12, marginLeft: 8 }}
+                      >
+                        Hệ thống sẽ gửi thông báo trước{" "}
+                        {viewingPlan.reminderDaysBefore || 3} ngày đến hạn
                       </Text>
                     </>
                   )}
@@ -3280,9 +3484,10 @@ const MaintenanceManagement = () => {
                   {planMaintenanceHistory.length > 0 ? (
                     <Text type="success">
                       <CheckOutlined style={{ marginRight: 4 }} />
-                      {dayjs(planMaintenanceHistory[0].completedDate || planMaintenanceHistory[0].scheduledDate).format(
-                        "DD/MM/YYYY"
-                      )}
+                      {dayjs(
+                        planMaintenanceHistory[0].completedDate ||
+                          planMaintenanceHistory[0].scheduledDate
+                      ).format("DD/MM/YYYY")}
                     </Text>
                   ) : (
                     <Text type="secondary">Chưa có</Text>
@@ -3290,13 +3495,19 @@ const MaintenanceManagement = () => {
                 </Descriptions.Item>
 
                 <Descriptions.Item label="Người Tạo" span={1}>
-                  <Text>{viewingPlan.createdByName || viewingPlan.createdBy || "N/A"}</Text>
+                  <Text>
+                    {viewingPlan.createdByName ||
+                      viewingPlan.createdBy ||
+                      "N/A"}
+                  </Text>
                 </Descriptions.Item>
 
                 <Descriptions.Item label="Ngày Tạo" span={1}>
                   <Text type="secondary">
                     {viewingPlan.createdDate
-                      ? dayjs(viewingPlan.createdDate).format("DD/MM/YYYY HH:mm")
+                      ? dayjs(viewingPlan.createdDate).format(
+                          "DD/MM/YYYY HH:mm"
+                        )
                       : "N/A"}
                   </Text>
                 </Descriptions.Item>
@@ -3315,11 +3526,12 @@ const MaintenanceManagement = () => {
 
               {/* Lịch Sử Bảo Trì */}
               <Divider orientation="left">
-                <FileTextOutlined /> Lịch Sử Bảo Trì ({planMaintenanceHistory.length})
+                <FileTextOutlined /> Lịch Sử Bảo Trì (
+                {planMaintenanceHistory.length})
               </Divider>
 
               {loadingHistory ? (
-                <div style={{ textAlign: 'center', padding: '20px' }}>
+                <div style={{ textAlign: "center", padding: "20px" }}>
                   <ReloadOutlined spin /> Đang tải lịch sử...
                 </div>
               ) : planMaintenanceHistory.length === 0 ? (
@@ -3330,10 +3542,23 @@ const MaintenanceManagement = () => {
               ) : (
                 <Timeline mode="left">
                   {planMaintenanceHistory.map((wo) => {
-                    const isCompleted = wo.status === 'Completed';
-                    const isCancelled = wo.status === 'Cancelled';
-                    const isOverdue = wo.status === 'Overdue';
-                    const color = isCompleted ? 'green' : isCancelled ? 'red' : isOverdue ? 'orange' : 'blue';
+                    const isClosed =
+                      wo.status === "Đã đóng" || wo.status === "Closed";
+                    const isCancelled =
+                      wo.status === "Đã hủy" || wo.status === "Cancelled";
+                    const isCompleted =
+                      wo.status === "Hoàn thành" || wo.status === "Completed";
+                    const isOverdue =
+                      wo.status === "Quá hạn" || wo.status === "Overdue";
+                    const color = isClosed
+                      ? "gray"
+                      : isCompleted
+                      ? "green"
+                      : isCancelled
+                      ? "red"
+                      : isOverdue
+                      ? "orange"
+                      : "blue";
 
                     return (
                       <Timeline.Item
@@ -3341,7 +3566,9 @@ const MaintenanceManagement = () => {
                         color={color}
                         label={
                           <Text type="secondary" style={{ fontSize: 12 }}>
-                            {dayjs(wo.completedDate || wo.dueDate).format("DD/MM/YYYY")}
+                            {dayjs(wo.completedDate || wo.dueDate).format(
+                              "DD/MM/YYYY"
+                            )}
                           </Text>
                         }
                       >
@@ -3349,60 +3576,108 @@ const MaintenanceManagement = () => {
                           size="small"
                           hoverable
                           onClick={() => handleViewWorkOrderDetail(wo)}
-                          style={{ cursor: 'pointer' }}
+                          style={{ cursor: "pointer" }}
                         >
-                          <Space direction="vertical" size="small" style={{ width: '100%' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <Space
+                            direction="vertical"
+                            size="small"
+                            style={{ width: "100%" }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                              }}
+                            >
                               <Text strong>
                                 {wo.workOrderCode || `WO${wo.workOrderId}`}
                               </Text>
-                              {isCompleted ? (
-                                <Tag color="success" icon={<CheckCircleOutlined />}>
+                              {isClosed ? (
+                                <Tag color="default" icon={<LockOutlined />}>
+                                  Đã đóng
+                                </Tag>
+                              ) : isCompleted ? (
+                                <Tag
+                                  color="success"
+                                  icon={<CheckCircleOutlined />}
+                                >
                                   Hoàn thành
                                 </Tag>
                               ) : isCancelled ? (
-                                <Tag color="error" icon={<CloseCircleOutlined />}>
+                                <Tag
+                                  color="error"
+                                  icon={<CloseCircleOutlined />}
+                                >
                                   Đã hủy
                                 </Tag>
                               ) : isOverdue ? (
-                                <Tag color="warning" icon={<ExclamationCircleOutlined />}>
+                                <Tag
+                                  color="warning"
+                                  icon={<ExclamationCircleOutlined />}
+                                >
                                   Quá hạn
                                 </Tag>
                               ) : (
-                                <Tag color="processing" icon={<ClockCircleOutlined />}>
+                                <Tag
+                                  color="processing"
+                                  icon={<ClockCircleOutlined />}
+                                >
                                   {wo.status}
                                 </Tag>
                               )}
                             </div>
 
+                            {isClosed && wo.completedDate && (
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                <LockOutlined /> Đã đóng:{" "}
+                                {dayjs(
+                                  wo.updatedDate || wo.completedDate
+                                ).format("DD/MM/YYYY HH:mm")}
+                              </Text>
+                            )}
+
                             {isCompleted && wo.completedDate && (
                               <Text type="secondary" style={{ fontSize: 12 }}>
-                                <ClockCircleOutlined /> Hoàn thành: {dayjs(wo.completedDate).format("DD/MM/YYYY HH:mm")}
+                                <ClockCircleOutlined /> Hoàn thành:{" "}
+                                {dayjs(wo.completedDate).format(
+                                  "DD/MM/YYYY HH:mm"
+                                )}
                               </Text>
                             )}
 
                             {isOverdue && (
                               <Text type="danger" style={{ fontSize: 12 }}>
-                                <WarningOutlined /> Đến hạn: {dayjs(wo.dueDate).format("DD/MM/YYYY")} - Không thực hiện bảo trì
+                                <WarningOutlined /> Đến hạn:{" "}
+                                {dayjs(wo.dueDate).format("DD/MM/YYYY")} - Không
+                                thực hiện bảo trì
                               </Text>
                             )}
 
                             {wo.scheduledDate && (
                               <Text type="secondary" style={{ fontSize: 12 }}>
-                                <CalendarOutlined /> Dự kiến: {dayjs(wo.scheduledDate).format("DD/MM/YYYY")}
+                                <CalendarOutlined /> Dự kiến:{" "}
+                                {dayjs(wo.scheduledDate).format("DD/MM/YYYY")}
                               </Text>
                             )}
 
                             <div>
                               {wo.mechanicalTechnicianName && (
                                 <div>
-                                  <Tag color="orange" size="small" icon={<ToolOutlined />}>
+                                  <Tag
+                                    color="orange"
+                                    size="small"
+                                    icon={<ToolOutlined />}
+                                  >
                                     Cơ khí
                                   </Tag>
                                   <Text style={{ fontSize: 12 }}>
                                     {wo.mechanicalTechnicianName}
                                     {wo.mechanicalEmployeeCode && (
-                                      <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                                      <Text
+                                        type="secondary"
+                                        style={{ fontSize: 11, marginLeft: 4 }}
+                                      >
                                         ({wo.mechanicalEmployeeCode})
                                       </Text>
                                     )}
@@ -3411,13 +3686,20 @@ const MaintenanceManagement = () => {
                               )}
                               {wo.electricalTechnicianName && (
                                 <div>
-                                  <Tag color="blue" size="small" icon={<ThunderboltOutlined />}>
+                                  <Tag
+                                    color="blue"
+                                    size="small"
+                                    icon={<ThunderboltOutlined />}
+                                  >
                                     Điện
                                   </Tag>
                                   <Text style={{ fontSize: 12 }}>
                                     {wo.electricalTechnicianName}
                                     {wo.electricalEmployeeCode && (
-                                      <Text type="secondary" style={{ fontSize: 11, marginLeft: 4 }}>
+                                      <Text
+                                        type="secondary"
+                                        style={{ fontSize: 11, marginLeft: 4 }}
+                                      >
                                         ({wo.electricalEmployeeCode})
                                       </Text>
                                     )}
@@ -3427,7 +3709,11 @@ const MaintenanceManagement = () => {
                             </div>
 
                             {wo.completionNotes && (
-                              <Text type="secondary" italic style={{ fontSize: 12 }}>
+                              <Text
+                                type="secondary"
+                                italic
+                                style={{ fontSize: 12 }}
+                              >
                                 "{wo.completionNotes}"
                               </Text>
                             )}
@@ -3458,7 +3744,7 @@ const MaintenanceManagement = () => {
       {/* Modal Xem Chi Tiết Work Order */}
       <Modal
         title={
-          <div style={{ fontSize: 20, fontWeight: 600, color: '#283652' }}>
+          <div style={{ fontSize: 20, fontWeight: 600, color: "#283652" }}>
             Chi Tiết Work Order
           </div>
         }
@@ -3477,11 +3763,11 @@ const MaintenanceManagement = () => {
             style={{ height: 40, fontSize: 16, minWidth: 120 }}
           >
             Đóng
-          </Button>
+          </Button>,
         ]}
         width={1400}
         centered={true}
-        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
+        bodyStyle={{ maxHeight: "70vh", overflowY: "auto" }}
         className={styles.modal}
       >
         {viewingWorkOrder && (
@@ -3489,31 +3775,43 @@ const MaintenanceManagement = () => {
             <Descriptions bordered column={2} size="small">
               <Descriptions.Item label="Mã Work Order" span={1}>
                 <Tag color="green">
-                  {viewingWorkOrder.workOrderCode || `WO${viewingWorkOrder.workOrderId}`}
+                  {viewingWorkOrder.workOrderCode ||
+                    `WO${viewingWorkOrder.workOrderId}`}
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Trạng Thái" span={1}>
-                {viewingWorkOrder.status === 'Completed' && (
+                {(viewingWorkOrder.status === "Đã đóng" ||
+                  viewingWorkOrder.status === "Closed") && (
+                  <Tag color="default" icon={<LockOutlined />}>
+                    Đã đóng
+                  </Tag>
+                )}
+                {(viewingWorkOrder.status === "Hoàn thành" ||
+                  viewingWorkOrder.status === "Completed") && (
                   <Tag color="success" icon={<CheckCircleOutlined />}>
                     Hoàn thành
                   </Tag>
                 )}
-                {viewingWorkOrder.status === 'Cancelled' && (
+                {(viewingWorkOrder.status === "Đã hủy" ||
+                  viewingWorkOrder.status === "Cancelled") && (
                   <Tag color="error" icon={<CloseCircleOutlined />}>
                     Đã hủy
                   </Tag>
                 )}
-                {viewingWorkOrder.status === 'Overdue' && (
+                {(viewingWorkOrder.status === "Quá hạn" ||
+                  viewingWorkOrder.status === "Overdue") && (
                   <Tag color="warning" icon={<ExclamationCircleOutlined />}>
                     Quá hạn
                   </Tag>
                 )}
-                {viewingWorkOrder.status === 'InProgress' && (
+                {(viewingWorkOrder.status === "Đang thực hiện" ||
+                  viewingWorkOrder.status === "InProgress") && (
                   <Tag color="processing" icon={<PlayCircleOutlined />}>
                     Đang thực hiện
                   </Tag>
                 )}
-                {viewingWorkOrder.status === 'Pending' && (
+                {(viewingWorkOrder.status === "Chờ xử lý" ||
+                  viewingWorkOrder.status === "Pending") && (
                   <Tag color="default" icon={<ClockCircleOutlined />}>
                     Chờ xử lý
                   </Tag>
@@ -3521,9 +3819,7 @@ const MaintenanceManagement = () => {
               </Descriptions.Item>
 
               <Descriptions.Item label="Kế Hoạch" span={2}>
-                <Tag color="blue">
-                  PLAN{viewingWorkOrder.planId}
-                </Tag>
+                <Tag color="blue">PLAN{viewingWorkOrder.planId}</Tag>
               </Descriptions.Item>
 
               <Descriptions.Item label="Ngày Lên Lịch" span={1}>
@@ -3536,7 +3832,9 @@ const MaintenanceManagement = () => {
               <Descriptions.Item label="Ngày Bắt Đầu" span={1}>
                 {viewingWorkOrder.startedDate ? (
                   <Text type="success">
-                    {dayjs(viewingWorkOrder.startedDate).format("DD/MM/YYYY HH:mm")}
+                    {dayjs(viewingWorkOrder.startedDate).format(
+                      "DD/MM/YYYY HH:mm"
+                    )}
                   </Text>
                 ) : (
                   <Text type="secondary">Chưa bắt đầu</Text>
@@ -3547,7 +3845,9 @@ const MaintenanceManagement = () => {
                 {viewingWorkOrder.completedDate ? (
                   <Text type="success">
                     <CheckOutlined style={{ marginRight: 4 }} />
-                    {dayjs(viewingWorkOrder.completedDate).format("DD/MM/YYYY HH:mm")}
+                    {dayjs(viewingWorkOrder.completedDate).format(
+                      "DD/MM/YYYY HH:mm"
+                    )}
                   </Text>
                 ) : (
                   <Text type="secondary">Chưa hoàn thành</Text>
@@ -3563,7 +3863,7 @@ const MaintenanceManagement = () => {
                     <Text>{viewingWorkOrder.mechanicalTechnicianName}</Text>
                     <br />
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      Mã NV: {viewingWorkOrder.mechanicalTechnicianEmployeeCode}
+                      Mã NV: {viewingWorkOrder.mechanicalEmployeeCode}
                     </Text>
                   </div>
                 ) : (
@@ -3580,7 +3880,7 @@ const MaintenanceManagement = () => {
                     <Text>{viewingWorkOrder.electricalTechnicianName}</Text>
                     <br />
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      Mã NV: {viewingWorkOrder.electricalTechnicianEmployeeCode}
+                      Mã NV: {viewingWorkOrder.electricalEmployeeCode}
                     </Text>
                   </div>
                 ) : (
@@ -3598,62 +3898,77 @@ const MaintenanceManagement = () => {
             </Descriptions>
 
             {/* Checklist Items */}
-            {viewingWorkOrder.checklistItems && viewingWorkOrder.checklistItems.length > 0 && (
-              <>
-                <Divider orientation="left">
-                  <CheckOutlined /> Checklist ({viewingWorkOrder.checklistItems.length} items)
-                </Divider>
-                <List
-                  dataSource={viewingWorkOrder.checklistItems}
-                  renderItem={(item) => (
-                    <List.Item>
-                      <List.Item.Meta
-                        avatar={
-                          item.isCompleted ? (
-                            <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 20 }} />
-                          ) : (
-                            <CloseOutlined style={{ color: '#d9d9d9', fontSize: 20 }} />
-                          )
-                        }
-                        title={
-                          <div>
-                            <Text strong>{item.itemDescription}</Text>
-                            {item.category && (
-                              <Tag
-                                color={item.category === 'Mechanical' ? 'orange' : 'blue'}
-                                style={{ marginLeft: 8 }}
-                              >
-                                {item.category === 'Mechanical' ? 'Cơ khí' : 'Điện'}
-                              </Tag>
+            {viewingWorkOrder.checklistItems &&
+              viewingWorkOrder.checklistItems.length > 0 && (
+                <>
+                  <Divider orientation="left">
+                    <CheckOutlined /> Checklist (
+                    {viewingWorkOrder.checklistItems.length} items)
+                  </Divider>
+                  <List
+                    dataSource={viewingWorkOrder.checklistItems}
+                    renderItem={(item) => (
+                      <List.Item>
+                        <List.Item.Meta
+                          avatar={
+                            item.isCompleted ? (
+                              <CheckCircleOutlined
+                                style={{ color: "#52c41a", fontSize: 20 }}
+                              />
+                            ) : (
+                              <CloseOutlined
+                                style={{ color: "#d9d9d9", fontSize: 20 }}
+                              />
+                            )
+                          }
+                          title={
+                            <div>
+                              <Text strong>{item.itemDescription}</Text>
+                              {item.category && (
+                                <Tag
+                                  color={
+                                    item.category === "Mechanical"
+                                      ? "orange"
+                                      : "blue"
+                                  }
+                                  style={{ marginLeft: 8 }}
+                                >
+                                  {item.category === "Mechanical"
+                                    ? "Cơ khí"
+                                    : "Điện"}
+                                </Tag>
+                              )}
+                              {item.isRequired && (
+                                <Tag color="red" style={{ marginLeft: 8 }}>
+                                  Bắt buộc
+                                </Tag>
+                              )}
+                            </div>
+                          }
+                          description={
+                            item.notes ? (
+                              <Text type="secondary" italic>
+                                {item.notes}
+                              </Text>
+                            ) : null
+                          }
+                        />
+                        {item.completedDate && (
+                          <Text type="secondary" style={{ fontSize: 12 }}>
+                            <ClockCircleOutlined />{" "}
+                            {dayjs(item.completedDate).format(
+                              "DD/MM/YYYY HH:mm"
                             )}
-                            {item.isRequired && (
-                              <Tag color="red" style={{ marginLeft: 8 }}>Bắt buộc</Tag>
-                            )}
-                          </div>
-                        }
-                        description={
-                          item.notes ? (
-                            <Text type="secondary" italic>{item.notes}</Text>
-                          ) : null
-                        }
-                      />
-                      {item.completedDate && (
-                        <Text type="secondary" style={{ fontSize: 12 }}>
-                          <ClockCircleOutlined /> {dayjs(item.completedDate).format("DD/MM/YYYY HH:mm")}
-                        </Text>
-                      )}
-                    </List.Item>
-                  )}
-                />
-              </>
-            )}
+                          </Text>
+                        )}
+                      </List.Item>
+                    )}
+                  />
+                </>
+              )}
           </div>
         )}
       </Modal>
-
-
-
-
 
       {/* Add CSS animation for pulsing effect */}
       <style>
@@ -3680,9 +3995,12 @@ const MaintenanceManagement = () => {
           setViewingTemplate(null);
         }}
         footer={[
-          <Button key="close" onClick={() => setIsViewTemplateModalVisible(false)}>
+          <Button
+            key="close"
+            onClick={() => setIsViewTemplateModalVisible(false)}
+          >
             Đóng
-          </Button>
+          </Button>,
         ]}
         width={900}
       >
@@ -3690,7 +4008,9 @@ const MaintenanceManagement = () => {
           <div>
             <Descriptions bordered column={2} size="small">
               <Descriptions.Item label="Mã Template" span={1}>
-                <Tag color="blue">TPL{String(viewingTemplate.templateId).padStart(3, "0")}</Tag>
+                <Tag color="blue">
+                  TPL{String(viewingTemplate.templateId).padStart(3, "0")}
+                </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Trạng thái" span={1}>
                 <Tag color={viewingTemplate.isActive ? "green" : "default"}>
@@ -3704,11 +4024,15 @@ const MaintenanceManagement = () => {
                 <Text>{viewingTemplate.stageName}</Text>
               </Descriptions.Item>
               <Descriptions.Item label="Mô Tả" span={2}>
-                <Text type="secondary">{viewingTemplate.description || "Không có mô tả"}</Text>
+                <Text type="secondary">
+                  {viewingTemplate.description || "Không có mô tả"}
+                </Text>
               </Descriptions.Item>
             </Descriptions>
 
-            <Divider>Các Bước Kiểm Tra ({viewingTemplate.templateItems?.length || 0})</Divider>
+            <Divider>
+              Các Bước Kiểm Tra ({viewingTemplate.templateItems?.length || 0})
+            </Divider>
             <Table
               dataSource={viewingTemplate.templateItems || []}
               rowKey="itemId"
@@ -3732,7 +4056,8 @@ const MaintenanceManagement = () => {
                   title: "Mô Tả",
                   dataIndex: "stepDescription",
                   key: "stepDescription",
-                  render: (text) => text || <Text type="secondary">Không có</Text>,
+                  render: (text) =>
+                    text || <Text type="secondary">Không có</Text>,
                 },
                 {
                   title: "Loại",
@@ -3745,7 +4070,6 @@ const MaintenanceManagement = () => {
                     </Tag>
                   ),
                 },
-
               ]}
             />
           </div>
