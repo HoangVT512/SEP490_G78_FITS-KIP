@@ -1236,6 +1236,9 @@ const IncidentManagement = () => {
         // Create mode - multiple incidents
         const incidentsToCreate = [];
 
+        // Collect unique lineIds to check for active incidents
+        const lineIdsToCheck = new Set();
+
         // Loop through each incident form and collect data
         for (const incidentForm of incidentForms) {
           const formId = incidentForm.id;
@@ -1273,6 +1276,11 @@ const IncidentManagement = () => {
             );
             setLoading(false);
             return;
+          }
+
+          // Collect lineId for validation if provided
+          if (lineId) {
+            lineIdsToCheck.add(lineId);
           }
 
           // Validate duration against actual time difference
@@ -1328,6 +1336,42 @@ const IncidentManagement = () => {
 
           console.log(`Payload for incident No.${formId}:`, payload);
           incidentsToCreate.push(payload);
+        }
+
+        // Check for active incidents on the lines being reported
+        if (lineIdsToCheck.size > 0) {
+          try {
+            const activeIncidentsPromises = Array.from(lineIdsToCheck).map(
+              (lineId) => incidentService.getActiveIncidentsByLine(lineId)
+            );
+            const activeIncidentsResults = await Promise.all(
+              activeIncidentsPromises
+            );
+
+            // Check if any line has active incidents
+            for (let i = 0; i < Array.from(lineIdsToCheck).length; i++) {
+              const lineId = Array.from(lineIdsToCheck)[i];
+              const activeIncidents = activeIncidentsResults[i];
+
+              if (activeIncidents && activeIncidents.length > 0) {
+                const lineName =
+                  lines.find((l) => l.lineId === lineId)?.lineName ||
+                  `ID ${lineId}`;
+                message.error(
+                  `Không thể tạo sự cố mới! Dây chuyền "${lineName}" đang có ${activeIncidents.length} sự cố đang hoạt động. Vui lòng hoàn thành các sự cố hiện tại trước khi báo cáo sự cố mới.`
+                );
+                setLoading(false);
+                return;
+              }
+            }
+          } catch (error) {
+            console.error("Lỗi khi kiểm tra sự cố đang hoạt động:", error);
+            message.error(
+              "Không thể kiểm tra trạng thái dây chuyền. Vui lòng thử lại."
+            );
+            setLoading(false);
+            return;
+          }
         }
 
         // Create all incidents using bulk API

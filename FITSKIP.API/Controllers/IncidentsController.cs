@@ -215,6 +215,40 @@ public class IncidentsController : ControllerBase
     }
 
     /// <summary>
+    /// Kiểm tra các sự cố đang hoạt động trên một dây chuyền
+    /// </summary>
+    [HttpGet("line/{lineId}/active-incidents")]
+    public async Task<IActionResult> GetActiveIncidentsByLine(int lineId)
+    {
+        try
+        {
+            if (lineId <= 0)
+            {
+                return BadRequest(new { success = false, message = "ID dây chuyền không hợp lệ" });
+            }
+
+            var allIncidents = await _incidentService.GetIncidentsAsync();
+
+            // Filter active incidents: no EndTime (ongoing) OR status is not "Hoàn thành"
+            var activeIncidents = allIncidents.Where(i =>
+                i.LineId == lineId &&
+                (i.EndTime == null || i.Status != "Hoàn thành")
+            ).ToList();
+
+            return Ok(new
+            {
+                success = true,
+                data = activeIncidents,
+                message = $"Tìm thấy {activeIncidents.Count} sự cố đang hoạt động trên dây chuyền {lineId}"
+            });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Có lỗi xảy ra khi kiểm tra sự cố đang hoạt động", details = ex.Message });
+        }
+    }
+
+    /// <summary>
     /// Lấy danh sách loại dừng
     /// </summary>
     [HttpGet("stop-types")]
