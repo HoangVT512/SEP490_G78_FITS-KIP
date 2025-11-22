@@ -36,7 +36,7 @@ import styles from "../../styles/pages/TechnicianManagerLayout.module.css";
 import TechnicianManagerDashboard from "./TechnicianManagerDashboard";
 import IncidentManagement from "./IncidentList";
 import MaintenancePlanManagement from "./MaintenanceManagement";
-import NotificationsList from "../ManagerPage/NotificationsList";
+import NotificationsList from "./NotificationsList";
 import ReplacementReturnPage from "./ReplacementReturnPage";
 import ReplacementHistoryPage from "./ReplacementHistoryPage";
 import KtvReturnConfirmPage from "../TechnicianPage/KtvReturnConfirmPage";

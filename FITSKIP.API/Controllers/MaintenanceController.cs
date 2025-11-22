@@ -1249,6 +1249,25 @@ namespace FITSKIP.API.Controllers
         }
 
         /// <summary>
+        /// [BACKGROUND JOB] Tự động tạo WorkOrder khi đến ReminderDaysBefore trước NextDueDate
+        /// Chạy định kỳ mỗi ngày lúc 00:00 hoặc khi QLKT load trang
+        /// </summary>
+        [HttpPost("background/create-auto-workorders")]
+        [AllowAnonymous] // TODO: Temporary - fix role authorization later
+        public async Task<IActionResult> CreateAutoWorkOrders()
+        {
+            try
+            {
+                await _workOrderService.CreateAutoWorkOrdersAsync();
+                return Ok(ApiResponse<object>.SuccessResponse(new { }, "Đã tạo WorkOrder tự động thành công"));
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Lỗi: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
         /// [BACKGROUND JOB] Cập nhật trạng thái quá hạn cho các công việc
         /// Chạy định kỳ mỗi ngày
         /// </summary>
