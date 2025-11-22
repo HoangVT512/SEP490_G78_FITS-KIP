@@ -236,7 +236,7 @@ namespace FITSKIP.Domain.DTO
         public string? LineName { get; set; }
         
         // Dates
-        public DateTime AssignedDate { get; set; }
+        public DateTime? AssignedDate { get; set; }
         public DateTime ScheduledDate { get; set; } // Ngày dự định bảo trì (ngày máy dừng)
         public DateTime DueDate { get; set; }
         public DateTime? StartedDate { get; set; }

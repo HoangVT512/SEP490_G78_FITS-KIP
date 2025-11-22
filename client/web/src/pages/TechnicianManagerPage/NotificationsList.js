@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import {
   List,
   Badge,
@@ -34,10 +33,8 @@ const NotificationsList = ({
   onNotificationCountChange, 
   initialNotifications = [], 
   initialLoading = false, 
-  onRefresh,
-  onNavigateToWorkOrder  // ✅ Callback để navigate đến WorkOrder
+  onRefresh
 }) => {
-  const navigate = useNavigate();
   const [notifications, setNotifications] = useState(initialNotifications);
   const [loading, setLoading] = useState(initialLoading);
   const [unreadOnly, setUnreadOnly] = useState(false);
@@ -111,28 +108,10 @@ const NotificationsList = ({
     }
   };
 
-  // ✅ Handle click notification - Navigate to WorkOrder if applicable
+  // Chỉ đánh dấu đã đọc khi click
   const handleNotificationClick = async (item) => {
-    // Đánh dấu đã đọc nếu chưa đọc
     if (!item.isRead) {
       await markAsRead(item.notificationId);
-    }
-
-    // Kiểm tra nếu là notification về WorkOrder
-    if (item.message?.includes("Phiếu #WO-")) {
-      // Extract WorkOrderCode from message
-      const match = item.message.match(/Phiếu #(WO-\d+-\d+)/);
-      if (match && match[1]) {
-        const workOrderCode = match[1];
-        // Navigate to maintenance schedule page
-        navigate("/technician-manager/maintenance-plans", { 
-          state: { 
-            openWorkOrder: workOrderCode,
-            activeTab: "workSchedule" // Chuyển đến tab "Lịch bảo trì & Công việc"
-          } 
-        });
-        onClose(); // Đóng drawer
-      }
     }
   };
 
@@ -227,7 +206,6 @@ const NotificationsList = ({
                 className={`${styles.notificationItem} ${
                   !item.isRead ? styles.unread : ""
                 }`}
-                style={{ cursor: "pointer" }}
                 onClick={() => handleNotificationClick(item)}
                 actions={[
                   <Space key="actions" size="small">

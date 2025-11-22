@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import {
   Card,
@@ -102,6 +102,7 @@ const MaintenanceManagement = () => {
   const location = useLocation();
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("plans");
+  const hasCalledAutoCreate = useRef(false); // ✅ Tránh gọi 2 lần do StrictMode
 
   // Helper functions for showing errors/success messages
   const showError = (title, errors) => {
@@ -287,10 +288,14 @@ const MaintenanceManagement = () => {
     setLoading(true);
     try {
       // ✅ Tự động tạo WorkOrder khi QLKT vào trang (background job)
-      try {
-        await createAutoWorkOrders();
-      } catch (error) {
-        // Không throw error để không block việc load data chính
+      // Chỉ gọi 1 lần để tránh duplicate do StrictMode
+      if (!hasCalledAutoCreate.current) {
+        hasCalledAutoCreate.current = true;
+        try {
+          await createAutoWorkOrders();
+        } catch (error) {
+          // Không throw error để không block việc load data chính
+        }
       }
 
       await Promise.all([
@@ -2328,7 +2333,7 @@ const MaintenanceManagement = () => {
           Lịch bảo trì & Công việc
         </span>
       ),
-      children: <WorkScheduleManagement openWorkOrderCode={location.state?.openWorkOrder} />,
+      children: <WorkScheduleManagement />,
     },
     {
       key: "templates",

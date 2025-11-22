@@ -1093,9 +1093,13 @@ namespace FITSKIP.Application.Services
             var allActivePlans = await _planRepository.GetAllAsync();
             var today = DateTime.Today;
 
+            Console.WriteLine($"[AUTO-CREATE] Checking {allActivePlans.Count(p => p.IsActive)} active plans at {today:yyyy-MM-dd}");
+
             foreach (var plan in allActivePlans.Where(p => p.IsActive))
             {
                 var daysUntilDue = (plan.NextDueDate - today).Days;
+
+                Console.WriteLine($"[AUTO-CREATE] Plan {plan.PlanId}: NextDueDate={plan.NextDueDate:yyyy-MM-dd}, DaysUntil={daysUntilDue}, Reminder={plan.ReminderDaysBefore}");
 
                 if (daysUntilDue <= plan.ReminderDaysBefore && daysUntilDue >= 0)
                 {
@@ -1106,13 +1110,21 @@ namespace FITSKIP.Application.Services
                     }
 
                     var existingWorkOrders = await _workOrderRepository.GetByPlanIdAsync(plan.PlanId);
-                    var hasActiveWorkOrder = existingWorkOrders.Any(wo => 
+                    
+                    Console.WriteLine($"[AUTO-CREATE] Plan {plan.PlanId} has {existingWorkOrders.Count()} total WorkOrders");
+                    
+                    // ✅ Chỉ kiểm tra WorkOrder ĐANG HOẠT ĐỘNG cho chu kỳ HIỆN TẠI (NextDueDate)
+                    // Không tính các WorkOrder đã đóng/hủy hoặc của chu kỳ cũ
+                    var hasActiveWorkOrderForCurrentCycle = existingWorkOrders.Any(wo => 
                         wo.Status != "Đã đóng" && 
                         wo.Status != "Đã hủy" &&
-                        wo.DueDate.Date == plan.NextDueDate.Date
+                        wo.DueDate.Date == plan.NextDueDate.Date &&
+                        wo.CreatedDate >= DateTime.Today.AddDays(-plan.ReminderDaysBefore) // Chỉ tính WO tạo trong khoảng reminder
                     );
 
-                    if (!hasActiveWorkOrder)
+                    Console.WriteLine($"[AUTO-CREATE] Plan {plan.PlanId}: hasActiveWorkOrderForCurrentCycle={hasActiveWorkOrderForCurrentCycle}");
+
+                    if (!hasActiveWorkOrderForCurrentCycle)
                     {
                         // ✅ Generate mã WorkOrder tự động tăng (WO-YYYYMM-XXX)
                         var workOrderCode = await _workOrderRepository.GenerateWorkOrderCodeAsync();
@@ -1122,17 +1134,18 @@ namespace FITSKIP.Application.Services
                             PlanId = plan.PlanId,
                             EquipmentId = plan.EquipmentId.Value,
                             WorkOrderCode = workOrderCode,
-                            AssignedDate = DateTime.Now,
                             ScheduledDate = plan.NextDueDate,
                             DueDate = plan.NextDueDate,
                             Status = "Chờ xử lý",
                             Notes = $"[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động tạo WorkOrder từ chu kỳ bảo trì",
-                            CreatedBy = "SYSTEM",
+                            CreatedBy = null, // Auto-created, không có user cụ thể
                             CreatedDate = DateTime.Now,
                             UpdatedDate = DateTime.Now
                         };
 
                         var createdWorkOrder = await _workOrderRepository.CreateAsync(newWorkOrder);
+
+                        Console.WriteLine($"[AUTO-CREATE] ✅ Created WorkOrder {createdWorkOrder.WorkOrderCode} for Plan {plan.PlanId}");
 
                         if (plan.TemplateId.HasValue)
                         {

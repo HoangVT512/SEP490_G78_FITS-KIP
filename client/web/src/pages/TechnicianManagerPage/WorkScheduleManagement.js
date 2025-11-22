@@ -71,7 +71,7 @@ const { TextArea } = Input;
 const { Search } = Input;
 const { Text } = Typography;
 
-const WorkScheduleManagement = ({ openWorkOrderCode }) => {
+const WorkScheduleManagement = () => {
   const [loading, setLoading] = useState(false);
 
   // Modal states
@@ -146,16 +146,6 @@ const WorkScheduleManagement = ({ openWorkOrderCode }) => {
       signalRService.offReceiveNotification(handleWorkOrderNotification);
     };
   }, [workOrders]); // Dependency on workOrders để có data mới nhất
-
-  // ✅ Tự động mở WorkOrder khi navigate từ notification
-  useEffect(() => {
-    if (openWorkOrderCode && workOrders.length > 0) {
-      const workOrder = workOrders.find(wo => wo.workOrderCode === openWorkOrderCode);
-      if (workOrder) {
-        handleViewDetail(workOrder);
-      }
-    }
-  }, [openWorkOrderCode, workOrders]);
 
   const loadAllData = async () => {
     setLoading(true);
@@ -1165,42 +1155,9 @@ const WorkScheduleManagement = ({ openWorkOrderCode }) => {
           },
         ];
 
-        // Add assign action for pending plans
-        if (record.workStatus === "pending") {
-          actionMenuItems.push(
-            {
-              key: "assign",
-              label: "Giao việc",
-              icon: <UserAddOutlined />,
-              onClick: () => handleAssignWork(record),
-            },
-            {
-              key: "postpone",
-              label: "Hoãn",
-              icon: <ClockCircleOutlined />,
-              onClick: () => handlePostpone(record),
-            }
-          );
-        }
-        // Add update action for assigned work orders
-        else if (record.workStatus === "assigned" || record.workStatus === "inProgress") {
-          actionMenuItems.push({
-            key: "update",
-            label: "Cập nhật KTV",
-            icon: <UserAddOutlined />,
-            onClick: () => handleAssignWork(record),
-          });
+        // ✅ Đã bỏ nút Giao việc và Hoãn - chỉ giữ Xem chi tiết
+        // Tất cả thao tác giao việc/hoãn được thực hiện trong modal Detail
 
-          // Add postpone action only if not in progress
-          if (record.workStatus !== "inProgress") {
-            actionMenuItems.push({
-              key: "postpone",
-              label: "Hoãn",
-              icon: <ClockCircleOutlined />,
-              onClick: () => handlePostpone(record),
-            });
-          }
-        }
         return (
           <Dropdown
             menu={{ items: actionMenuItems }}
