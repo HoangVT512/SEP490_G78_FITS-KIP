@@ -64,13 +64,14 @@ import {
 } from "../../services/maintenanceService";
 import { replacementHistoryService } from "../../services/replacementHistoryService";
 import { authService } from "../../services/authService";
+import signalRService from "../../services/signalRService";
 
 const { Option } = Select;
 const { TextArea } = Input;
 const { Search } = Input;
 const { Text } = Typography;
 
-const WorkScheduleManagement = () => {
+const WorkScheduleManagement = ({ openWorkOrderCode }) => {
   const [loading, setLoading] = useState(false);
 
   // Modal states
@@ -110,6 +111,51 @@ const WorkScheduleManagement = () => {
   useEffect(() => {
     loadAllData();
   }, []);
+
+  // ✅ Lắng nghe SignalR notification để reload data
+  useEffect(() => {
+    const handleWorkOrderNotification = (notificationData) => {
+      if (notificationData.Type === "workOrderCompleted") {
+        // Reload data khi có WorkOrder hoàn thành
+        loadAllData();
+        
+        // Hiển thị message
+        message.success({
+          content: notificationData.Message,
+          duration: 5,
+          onClick: () => {
+            // Nếu có workOrderId, mở modal detail
+            if (notificationData.WorkOrderId) {
+              const workOrder = workOrders.find(
+                wo => wo.workOrderId === notificationData.WorkOrderId
+              );
+              if (workOrder) {
+                handleViewDetail(workOrder);
+              }
+            }
+          },
+        });
+      }
+    };
+
+    // Đăng ký listener
+    signalRService.onReceiveNotification(handleWorkOrderNotification);
+
+    // Cleanup
+    return () => {
+      signalRService.offReceiveNotification(handleWorkOrderNotification);
+    };
+  }, [workOrders]); // Dependency on workOrders để có data mới nhất
+
+  // ✅ Tự động mở WorkOrder khi navigate từ notification
+  useEffect(() => {
+    if (openWorkOrderCode && workOrders.length > 0) {
+      const workOrder = workOrders.find(wo => wo.workOrderCode === openWorkOrderCode);
+      if (workOrder) {
+        handleViewDetail(workOrder);
+      }
+    }
+  }, [openWorkOrderCode, workOrders]);
 
   const loadAllData = async () => {
     setLoading(true);
@@ -201,18 +247,23 @@ const WorkScheduleManagement = () => {
 
     // 2. Thêm WorkOrders (đã tạo)
     workOrders.forEach((wo) => {
+      // ✅ Normalize status: trim và lowercase để so sánh
+      const normalizedStatus = wo.status?.trim();
+      
       let workStatus = "pending"; // ✅ Mặc định là pending
-
-      if (wo.status === "Đang thực hiện") {
+      
+      if (normalizedStatus === "Đang thực hiện" || normalizedStatus === "InProgress") {
         workStatus = "inProgress";
-      } else if (wo.status === "Hoàn thành") {
+      } else if (normalizedStatus === "Hoàn thành" || normalizedStatus === "Completed") {
         workStatus = "completed";
-      } else if (wo.status === "Đã đóng") {
+      } else if (normalizedStatus === "Đã đóng" || normalizedStatus === "Closed") {
         workStatus = "closed";
-      } else if (wo.status === "Đã hủy") {
+      } else if (normalizedStatus === "Đã hủy" || normalizedStatus === "Cancelled") {
         workStatus = "cancelled";
-      } else if (wo.status === "Quá hạn") {
+      } else if (normalizedStatus === "Quá hạn" || normalizedStatus === "Overdue") {
         workStatus = "overdue";
+      } else if (normalizedStatus === "Hoãn" || normalizedStatus === "Postponed") {
+        workStatus = "postponed";
       } else if (wo.status === "Chờ xử lý" && (wo.assignedToElectrical || wo.assignedToMechanical)) {
         // ✅ Nếu đã giao KTV nhưng chưa bắt đầu, set thành assigned
         workStatus = "assigned";
@@ -226,8 +277,32 @@ const WorkScheduleManagement = () => {
       });
     });
 
-    // Sort theo ngày đến hạn
-    merged.sort((a, b) => a.sortDate - b.sortDate);
+    // Sắp xếp ưu tiên theo trạng thái: Quá hạn → Chờ xử lý → Đang thực hiện → Khác
+    // Trong cùng trạng thái thì sắp xếp theo ngày tạo mới nhất
+    merged.sort((a, b) => {
+      const statusPriority = {
+        overdue: 1,
+        pending: 2,
+        inProgress: 3,
+        completed: 4,
+        postponed: 5,
+        closed: 6,
+        cancelled: 7,
+      };
+
+      const priorityA = statusPriority[a.workStatus] || 99;
+      const priorityB = statusPriority[b.workStatus] || 99;
+
+      // Ưu tiên theo trạng thái trước
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      // Trong cùng trạng thái, sắp xếp theo ngày tạo mới nhất
+      const dateA = new Date(a.createdDate || 0);
+      const dateB = new Date(b.createdDate || 0);
+      return dateB - dateA;
+    });
 
     setMergedData(merged);
 
@@ -267,7 +342,31 @@ const WorkScheduleManagement = () => {
       );
     }
 
-    return filtered;
+    // Sắp xếp ưu tiên theo trạng thái, sau đó theo ngày tạo
+    return filtered.sort((a, b) => {
+      const statusPriority = {
+        overdue: 1,
+        pending: 2,
+        inProgress: 3,
+        completed: 4,
+        postponed: 5,
+        closed: 6,
+        cancelled: 7,
+      };
+
+      const priorityA = statusPriority[a.workStatus] || 99;
+      const priorityB = statusPriority[b.workStatus] || 99;
+
+      // Ưu tiên theo trạng thái trước
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      // Trong cùng trạng thái, sắp xếp theo ngày tạo mới nhất
+      const dateA = new Date(a.createdDate || 0);
+      const dateB = new Date(b.createdDate || 0);
+      return dateB - dateA;
+    });
   };
 
   // Handlers
@@ -615,7 +714,6 @@ const WorkScheduleManagement = () => {
     }
   };
 
-  // ✅ Hủy WorkOrder quá hạn
   const handleCancelOverdueWorkOrder = async (record) => {
     try {
       setLoading(true);
@@ -779,11 +877,19 @@ const WorkScheduleManagement = () => {
     // ✅ Map từ status tiếng Việt (DB) sang config
     const statusMap = {
       "Chờ xử lý": "pending",
+      "Cho xu ly": "pending", // Fallback không dấu
       "Đang thực hiện": "inProgress",
+      "Dang thuc hien": "inProgress", // Fallback không dấu
       "Hoàn thành": "completed",
+      "Hoan thanh": "completed", // Fallback không dấu
       "Đã đóng": "closed",
+      "Da dong": "closed", // Fallback không dấu
       "Đã hủy": "cancelled",
+      "Da huy": "cancelled", // Fallback không dấu
       "Quá hạn": "overdue",
+      "Qua han": "overdue", // Fallback không dấu
+      "Hoãn": "postponed",
+      "Hoan": "postponed", // Fallback không dấu
     };
 
     const statusConfig = {
@@ -817,10 +923,34 @@ const WorkScheduleManagement = () => {
         icon: <ExclamationCircleOutlined />,
         text: "Quá hạn",
       },
+      postponed: {
+        color: "orange",
+        icon: <ClockCircleOutlined />,
+        text: "Hoãn",
+      },
     };
-
-    // ✅ Ưu tiên dùng record.status (tiếng Việt từ DB), fallback về workStatus (tiếng Anh)
-    const statusKey = record.status ? statusMap[record.status] : record.workStatus?.toLowerCase();
+    
+    const normalizedStatus = record.status?.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    let statusKey = record.status ? statusMap[record.status] : null;
+    
+    if (!statusKey && normalizedStatus) {
+      const normalizedMap = {
+        'cho xu ly': 'pending',
+        'dang thuc hien': 'inProgress',
+        'hoan thanh': 'completed',
+        'da dong': 'closed',
+        'da huy': 'cancelled',
+        'qua han': 'overdue',
+        'hoan': 'postponed',
+      };
+      statusKey = normalizedMap[normalizedStatus];
+    }
+    
+    // Fallback về workStatus hoặc pending
+    if (!statusKey) {
+      statusKey = record.workStatus?.toLowerCase() || 'pending';
+    }
+    
     const config = statusConfig[statusKey] || statusConfig.pending;
 
     // ✅ Nếu WorkOrder đã bị hoãn, hiển thị cả status Hoãn
@@ -929,11 +1059,24 @@ const WorkScheduleManagement = () => {
               : dayjs(record.nextDueDate)
             : dayjs(record.dueDate);
 
+        const isClosed = record.workStatus === "Đã đóng" || record.workStatus === "closed";
+
+        if (isClosed) {
+          return (
+            <div>
+              <div>{dueDate.format("DD/MM/YYYY")}</div>
+            </div>
+          );
+        }
+
         const today = dayjs().startOf('day');
         const dueDateStart = dueDate.startOf('day');
         const daysUntilDue = dueDateStart.diff(today, "day");
         const isOverdue = daysUntilDue < 0;
-        const isUpcomingSoon = daysUntilDue <= 3 && daysUntilDue >= 0;
+        
+        // ✅ Lấy reminderDaysBefore từ record (mặc định 3 ngày)
+        const reminderDays = record.reminderDaysBefore || 3;
+        const isUpcomingSoon = daysUntilDue <= reminderDays && daysUntilDue >= 0;
 
         return (
           <div>
@@ -1222,14 +1365,41 @@ const WorkScheduleManagement = () => {
               format="DD/MM/YYYY"
               placeholder="Chọn ngày hoãn"
               disabledDate={(current) => {
-                // Không cho chọn ngày hôm nay hoặc quá khứ
-                if (current && current <= dayjs().startOf('day')) {
+                if (!current) return false;
+                
+                const today = dayjs().startOf('day');
+                const dueDate = selectedRecord?.dueDate ? dayjs(selectedRecord.dueDate).startOf('day') : null;
+                
+                // Tính maxDate = dueDate + chu kỳ
+                let maxDate = null;
+                if (dueDate && selectedRecord?.intervalValue && selectedRecord?.intervalType) {
+                  const intervalValue = selectedRecord.intervalValue;
+                  const intervalType = selectedRecord.intervalType;
+                  
+                  if (intervalType === 'Days' || intervalType === 'days') {
+                    maxDate = dueDate.add(intervalValue, 'day');
+                  } else if (intervalType === 'Months' || intervalType === 'months') {
+                    maxDate = dueDate.add(intervalValue, 'month');
+                  } else if (intervalType === 'Hours' || intervalType === 'hours') {
+                    maxDate = dueDate.add(intervalValue, 'hour');
+                  }
+                }
+                
+                // Không cho chọn quá khứ
+                if (current < today) {
                   return true;
                 }
-                // Không cho chọn ngày sau NextDueDate của Plan
-                if (selectedRecord?.nextDueDate && current >= dayjs(selectedRecord.nextDueDate).startOf('day')) {
+                
+                // Không cho chọn <= ngày đến hạn hiện tại
+                if (dueDate && current <= dueDate) {
                   return true;
                 }
+                
+                // Không cho chọn >= maxDate (dueDate + chu kỳ)
+                if (maxDate && current >= maxDate) {
+                  return true;
+                }
+                
                 return false;
               }}
             />

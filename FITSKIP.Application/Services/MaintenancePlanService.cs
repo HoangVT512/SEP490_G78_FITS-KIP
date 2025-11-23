@@ -124,7 +124,6 @@ namespace FITSKIP.Application.Services
             if (plan == null)
                 throw new InvalidOperationException($"Plan not found: {planId}");
 
-            // ✅ VALIDATION: Nếu chuyển sang IsActive = false (Ngưng hoạt động)
             var isBeingDeactivated = (request.IsActive == false && plan.IsActive);
             
             if (isBeingDeactivated)
@@ -132,18 +131,23 @@ namespace FITSKIP.Application.Services
                 // ✅ Kiểm tra xem có WorkOrder đang active không
                 var allWorkOrders = await _workOrderRepository.GetByPlanIdAsync(planId);
                 var activeWorkOrders = allWorkOrders.Where(wo => 
-                    wo.Status == "Pending" || 
-                    wo.Status == "Assigned" || 
-                    wo.Status == "InProgress" ||
-                    wo.Status == "Overdue"
-                ).ToList();
+                {
+                    var normalizedStatus = wo.Status?.Trim().ToLower();
+                    return normalizedStatus == "chờ xử lý" || 
+                           normalizedStatus == "đang thực hiện" || 
+                           normalizedStatus == "hoàn thành" ||
+                           normalizedStatus == "quá hạn" ||
+                           normalizedStatus == "hoãn";
+                }).ToList();
                 
                 if (activeWorkOrders.Any())
                 {
-                    var workOrderCodes = string.Join(", ", activeWorkOrders.Select(wo => wo.WorkOrderCode));
+                    var workOrderList = string.Join(", ", activeWorkOrders.Select(wo => 
+                        $"{wo.WorkOrderCode} ({wo.Status})"
+                    ));
                     throw new InvalidOperationException(
-                        $"Không thể chuyển trạng thái sang 'Không hoạt động' vì còn phiếu bảo trì đang hoạt động: {workOrderCodes}. " +
-                        $"Vui lòng hoàn thành hoặc hủy các phiếu bảo trì này trước."
+                        $"Không thể ngưng hoạt động chu kỳ bảo trì vì còn {activeWorkOrders.Count} phiếu bảo trì đang hoạt động: {workOrderList}. " 
+                        
                     );
                 }
 
@@ -185,9 +189,7 @@ namespace FITSKIP.Application.Services
             if (request.ReminderDaysBefore.HasValue)
                 plan.ReminderDaysBefore = request.ReminderDaysBefore.Value;
 
-            // TODO: Technician assignment moved to WorkOrder level
             
-            // Chỉ update IsActive nếu chưa được xử lý ở trên
             if (!isBeingDeactivated && !isBeingActivated)
             {
                 plan.IsActive = request.IsActive;
@@ -205,37 +207,29 @@ namespace FITSKIP.Application.Services
             if (plan == null)
                 throw new InvalidOperationException($"Plan not found: {planId}");
 
-            // ✅ VALIDATION 3A: Không được xóa kế hoạch đang hoạt động
+            //  VALIDATION 3A: Không được xóa kế hoạch đang hoạt động
             if (plan.IsActive)
             {
                 throw new InvalidOperationException(
-                    $"❌ Không thể xóa kế hoạch bảo trì đang hoạt động cho thiết bị '{plan.Equipment?.EquipmentName ?? "N/A"}'. " +
-                    $"Vui lòng ngưng hoạt động (IsActive = false) trước khi xóa."
+                    $"❌ Không thể xóa kế hoạch bảo trì đang hoạt động cho thiết bị '{plan.Equipment?.EquipmentName ?? "N/A"}'. " 
+                    
                 );
             }
 
-            // ✅ VALIDATION 3B: Kiểm tra có work order đang chờ xử lý (Pending)
+            //  VALIDATION 3B: Kiểm tra có work order đang chờ xử lý hoặc đang thực hiện , quá hạn hoặc hoãn
             var workOrders = await _workOrderRepository.GetByPlanIdAsync(planId);
-            var pendingWorkOrders = workOrders.Where(wo => wo.Status == "Pending").ToList();
-            
-            if (pendingWorkOrders.Any())
+            var activeWorkOrders = workOrders.Where(wo => 
             {
-                var woList = string.Join(", ", pendingWorkOrders.Select(wo => $"#{wo.WorkOrderCode}"));
+                var normalizedStatus = wo.Status?.Trim().ToLower();
+                return normalizedStatus == "chờ xử lý" || normalizedStatus == "đang thực hiện" || normalizedStatus == "quá hạn" || normalizedStatus == "hoãn";
+            }).ToList();
+            
+            if (activeWorkOrders.Any())
+            {
+                var woList = string.Join(", ", activeWorkOrders.Select(wo => $"#{wo.WorkOrderCode} ({wo.Status})"));
                 throw new InvalidOperationException(
-                    $"❌ Không thể xóa kế hoạch bảo trì vì có {pendingWorkOrders.Count} phiếu bảo trì đang chờ xử lý: {woList}. " +
+                    $"❌ Không thể xóa kế hoạch bảo trì vì có {activeWorkOrders.Count} phiếu bảo trì đang hoạt động: {woList}. " +
                     $"Vui lòng hoàn thành hoặc hủy các phiếu này trước khi xóa kế hoạch."
-                );
-            }
-
-            // ✅ VALIDATION 3C: Kiểm tra có work order đang được thực hiện (InProgress - KTV đã checklist)
-            var inProgressWorkOrders = workOrders.Where(wo => wo.Status == "InProgress").ToList();
-            
-            if (inProgressWorkOrders.Any())
-            {
-                var woList = string.Join(", ", inProgressWorkOrders.Select(wo => $"#{wo.WorkOrderCode}"));
-                throw new InvalidOperationException(
-                    $"❌ Không thể xóa kế hoạch bảo trì vì có {inProgressWorkOrders.Count} phiếu bảo trì đang được thực hiện: {woList}. " +
-                    $"Vui lòng hoàn thành các phiếu bảo trì này trước khi xóa kế hoạch."
                 );
             }
 
@@ -255,7 +249,11 @@ namespace FITSKIP.Application.Services
             {
                 if (!p.IsActive) return false;
                 
-                var hasActiveWorkOrder = p.WorkOrders?.Any(wo => wo.Status == "Pending" || wo.Status == "InProgress") ?? false;
+                var hasActiveWorkOrder = p.WorkOrders?.Any(wo => 
+                {
+                    var normalizedStatus = wo.Status?.Trim().ToLower();
+                    return normalizedStatus == "chờ xử lý" || normalizedStatus == "đang thực hiện";
+                }) ?? false;
                 if (hasActiveWorkOrder) return false;
                 
                 var daysUntil = (p.NextDueDate - today).Days;
@@ -300,13 +298,13 @@ namespace FITSKIP.Application.Services
                 NextDueDate = plan.NextDueDate,
                 ReminderDaysBefore = plan.ReminderDaysBefore,
                 IsActive = plan.IsActive,
-                Status = plan.IsActive ? "Đang hoạt động" : "Không hoạt động", // ✅ Chỉ 2 trạng thái
+                Status = plan.IsActive ? "Đang hoạt động" : "Không hoạt động", 
                 CreatedDate = plan.CreatedDate,
                 CreatedByName = plan.CreatedByUser?.FullName,
                 DaysUntilDue = daysUntilDue,
                 IsOverdue = plan.NextDueDate < today,
                 TotalWorkOrders = workOrders.Count,
-                CompletedWorkOrders = workOrders.Count(wo => wo.Status == "Completed"),
+                CompletedWorkOrders = workOrders.Count(wo => wo.Status == "Hoàn thành"),
                 HasActiveWorkOrder = hasActiveWorkOrder
             };
         }

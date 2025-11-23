@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   Card,
   Table,
@@ -82,6 +83,7 @@ import {
   getUpcomingMaintenance,
   addChecklistItemToTemplate,
   getTemplateById,
+  createAutoWorkOrders,
 } from "../../services/maintenanceService";
 import { equipmentService } from "../../services/equipmentService";
 import { getAllStages, stageService } from "../../services/stageService";
@@ -97,7 +99,9 @@ const { Text, Title } = Typography;
 const { Step } = Steps;
 
 const MaintenanceManagement = () => {
+  const location = useLocation();
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState("plans");
 
   // Helper functions for showing errors/success messages
   const showError = (title, errors) => {
@@ -162,7 +166,6 @@ const MaintenanceManagement = () => {
   const [templateForm] = Form.useForm();
   const [workOrderForm] = Form.useForm();
   const [searchText, setSearchText] = useState("");
-  const [activeTab, setActiveTab] = useState("plans");
 
   // Data states
   const [maintenancePlans, setMaintenancePlans] = useState([]);
@@ -210,6 +213,13 @@ const MaintenanceManagement = () => {
   useEffect(() => {
     loadAllData();
   }, []);
+
+  // ✅ Handle navigation from notification
+  useEffect(() => {
+    if (location.state?.activeTab) {
+      setActiveTab(location.state.activeTab);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     if (activeTab === "workOrders") {
@@ -276,6 +286,13 @@ const MaintenanceManagement = () => {
   const loadAllData = async () => {
     setLoading(true);
     try {
+      // ✅ Tự động tạo WorkOrder khi QLKT vào trang (background job)
+      try {
+        await createAutoWorkOrders();
+      } catch (error) {
+        // Không throw error để không block việc load data chính
+      }
+
       await Promise.all([
         loadMaintenancePlans(),
         loadStats(),
@@ -429,21 +446,14 @@ const MaintenanceManagement = () => {
     try {
       // Lấy TẤT CẢ kỹ thuật viên, không phân biệt cơ khí hay điện
       const response = await getAllTechnicians();
-      console.log("All Technicians Response:", response);
-
       const techData = response?.data || [];
-
-      console.log("All Technicians Data:", techData);
 
       // Sử dụng chung một danh sách cho cả 2 dropdown
       setMechanicalTechs(techData);
       setElectricalTechs(techData);
 
       if (techData.length === 0) {
-        console.warn("⚠️ Không có kỹ thuật viên nào!");
         message.warning("Không có kỹ thuật viên nào trong hệ thống");
-      } else {
-        console.log(`✅ Đã load ${techData.length} kỹ thuật viên`);
       }
     } catch (error) {
       console.error("Load technicians error:", error);
@@ -1936,7 +1946,11 @@ const MaintenanceManagement = () => {
         plan.assignedToName?.toLowerCase().includes(searchText.toLowerCase()) ||
         plan.equipmentCode?.toLowerCase().includes(searchText.toLowerCase())
     )
-    .sort((a, b) => b.planId - a.planId);
+    .sort((a, b) => {
+      const dateA = new Date(a.createdDate || 0);
+      const dateB = new Date(b.createdDate || 0);
+      return dateB - dateA;
+    });
 
   const searchedTemplates = templates
     .filter(
@@ -1962,7 +1976,6 @@ const MaintenanceManagement = () => {
         order.equipmentCode?.toLowerCase().includes(searchText.toLowerCase())
     );
 
-    // Filter by status
     if (statusFilter !== "all") {
       filtered = filtered.filter((order) => order.status === statusFilter);
     }
@@ -2261,7 +2274,9 @@ const MaintenanceManagement = () => {
               <p>2. Điền thông tin các bước kiểm tra vào file Excel</p>
               <p>3. Upload file Excel đã điền để import</p>
               <p>
-                <Text type="warning">⚠️ Các bước trùng tên sẽ bị từ chối</Text>
+                <Text type="warning">
+                   Các bước trùng tên sẽ bị từ chối
+                </Text>
               </p>
             </div>
           }
@@ -2313,7 +2328,7 @@ const MaintenanceManagement = () => {
           Lịch bảo trì & Công việc
         </span>
       ),
-      children: <WorkScheduleManagement />,
+      children: <WorkScheduleManagement openWorkOrderCode={location.state?.openWorkOrder} />,
     },
     {
       key: "templates",

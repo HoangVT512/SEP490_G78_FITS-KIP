@@ -176,24 +176,21 @@ namespace FITSKIP.Application.Services
             if (template == null)
                 throw new InvalidOperationException($"Template not found: {templateId}");
 
-            // ✅ VALIDATION 1: Kiểm tra template có đang được sử dụng bởi maintenance plan đang hoạt động không
+            // ✅ VALIDATION: Kiểm tra template có đang được sử dụng bởi maintenance plan không
             var plansUsingTemplate = await _planRepository.GetAllAsync();
             var activePlansWithTemplate = plansUsingTemplate.Where(p => 
-                p.TemplateId == templateId && 
-                p.IsActive && 
-                (p.Status == "Pending" || p.Status == "InProgress" || p.Status == "Postponed")
+                p.TemplateId == templateId && p.IsActive
             ).ToList();
             
             if (activePlansWithTemplate.Any())
             {
                 var planList = string.Join(", ", activePlansWithTemplate.Select(p => 
-                    $"#{p.PlanId} - {p.Equipment?.EquipmentName ?? "N/A"} (Chu kỳ: {p.IntervalValue} {p.IntervalType})"
+                    $"PLAN{p.PlanId:D3} - {p.Equipment?.EquipmentName ?? "N/A"}"
                 ));
                 
                 throw new InvalidOperationException(
-                    $"❌ Không thể xóa mẫu bảo trì '{template.TemplateName}' vì đang được sử dụng bởi {activePlansWithTemplate.Count} chu kỳ bảo trì đang hoạt động:\n" +
-                    $"{planList}\n\n" +
-                    $"Vui lòng ngưng hoạt động các chu kỳ bảo trì này trước khi xóa mẫu."
+                    $"❌ Không thể xóa mẫu bảo trì '{template.TemplateName}' vì đang được sử dụng bởi {activePlansWithTemplate.Count} chu kỳ bảo trì: {planList}. " +
+                    $"Vui lòng ngưng hoạt động các chu kỳ này trước."
                 );
             }
 

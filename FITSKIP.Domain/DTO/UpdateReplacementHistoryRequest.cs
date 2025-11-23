@@ -19,11 +19,11 @@ namespace FITSKIP.Domain.DTO
 
         public int Quantity { get; set; }
 
-        public DateTime ReplacedDate { get; set; }
+        public DateTime? ReplacedDate { get; set; }
 
-        public string ReplacedBy { get; set; } = null!;
+        public string? ReplacedBy { get; set; }
 
-        public string Status { get; set; } = null!;
+        public string? Status { get; set; }
 
         /// <summary>
         /// Số lượng thực tế đã sử dụng

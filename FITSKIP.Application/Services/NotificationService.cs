@@ -109,6 +109,11 @@ namespace FITSKIP.Application.Services
             await _notificationHubService.SendToGroupAsync(groupName, notificationData);
         }
 
+        public async Task SendNotificationToGroupWithDataAsync(string groupName, object notificationData)
+        {
+            await _notificationHubService.SendToGroupAsync(groupName, notificationData);
+        }
+
         public async Task SendNotificationToAllAsync(string title, string message, string type = "info")
         {
             var notificationData = new

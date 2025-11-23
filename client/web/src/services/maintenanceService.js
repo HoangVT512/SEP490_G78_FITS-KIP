@@ -347,3 +347,12 @@ export const getMaintenanceHistory = async (equipmentId = null) => {
   const completed = response.data?.filter(wo => wo.status === 'Completed');
   return { data: completed };
 };
+
+// ===== BACKGROUND JOB APIs =====
+
+// Tự động tạo WorkOrder khi đến ReminderDaysBefore
+export const createAutoWorkOrders = async () => {
+  return apiRequest('/maintenance/background/create-auto-workorders', {
+    method: 'POST',
+  });
+};
