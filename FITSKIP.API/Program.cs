@@ -135,14 +135,14 @@ namespace FITSKIP.API
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IMaintenancePlanRepository, FITSKIP.Infrastructure.Repositories.MaintenancePlanRepository>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IMaintenanceWorkOrderRepository, FITSKIP.Infrastructure.Repositories.MaintenanceWorkOrderRepository>();
             builder.Services.AddScoped<FITSKIP.Domain.Interfaces.IMaintenanceChecklistItemRepository, FITSKIP.Infrastructure.Repositories.MaintenanceChecklistItemRepository>();
-            
+
             // Maintenance services - split into 3 separate services for better maintainability
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IMaintenanceTemplateService, FITSKIP.Application.Services.MaintenanceTemplateService>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IMaintenancePlanService, FITSKIP.Application.Services.MaintenancePlanService>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IMaintenanceWorkOrderService, FITSKIP.Application.Services.MaintenanceWorkOrderService>();
 
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IExcelImportService, FITSKIP.Application.Services.ExcelImportService>();
-            
+
             // JWT Authentication services
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IJwtTokenService, FITSKIP.Application.Services.JwtTokenService>();
             builder.Services.AddScoped<FITSKIP.Application.Interfaces.IAuthService, FITSKIP.Application.Services.AuthService>();
