@@ -356,6 +356,12 @@ public class IncidentsController : ControllerBase
                 return BadRequest(new { success = false, message = "ID loại dừng phải là số nguyên dương" });
             }
 
+            // Validate TypeId is required when not tech support OR when tech support and completed (has EndTime)
+            if ((!request.IsTechSupport || (request.IsTechSupport && request.EndTime.HasValue)) && !request.TypeId.HasValue)
+            {
+                return BadRequest(new { success = false, message = "Loại dừng là bắt buộc khi không cần hỗ trợ kỹ thuật hoặc khi sự cố hỗ trợ kỹ thuật đã hoàn thành" });
+            }
+
             // Validate Duration if provided
             if (request.Duration.HasValue && request.Duration.Value < 0)
             {
@@ -513,31 +519,10 @@ public class IncidentsController : ControllerBase
                     }
                 }
 
-                // Validate Duration based on Stop Type
-                if (incident.TypeId.HasValue && incident.Duration.HasValue)
+                // Validate TypeId is required when not tech support OR when tech support and completed (has EndTime)
+                if ((!incident.IsTechSupport || (incident.IsTechSupport && incident.EndTime.HasValue)) && !incident.TypeId.HasValue)
                 {
-                    var stopTypes = await _incidentService.GetStopTypesAsync();
-                    var stopType = stopTypes.FirstOrDefault(st => st.StopTypeId == incident.TypeId.Value);
-
-                    if (stopType != null)
-                    {
-                        var typeName = stopType.TypeName;
-                        var duration = incident.Duration.Value;
-
-                        // Check for "Dừng ngắn" - must be < 5 minutes
-                        if (typeName == "Dừng ngắn" && duration >= 5)
-                        {
-                            return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Loại 'Dừng ngắn' chỉ áp dụng khi thời lượng < 5 phút." });
-                        }
-
-                        // Check for "Dừng dài" - must be >= 5 minutes
-                        if (typeName == "Dừng dài" && duration < 5)
-                        {
-                            return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Loại 'Dừng dài' chỉ áp dụng khi thời lượng ≥ 5 phút." });
-                        }
-
-                        // Other types (Vệ sinh, Đổi mã, Phế phẩm) - no duration check
-                    }
+                    return BadRequest(new { success = false, message = $"Error: Sự cố #{i + 1} - Loại dừng là bắt buộc khi không cần hỗ trợ kỹ thuật hoặc khi sự cố hỗ trợ kỹ thuật đã hoàn thành" });
                 }
             }
 
@@ -658,10 +643,28 @@ public class IncidentsController : ControllerBase
                 var rawActualDuration = CalculateAdjustedDuration(request.StartTime, request.EndTime.Value);
                 var actualDuration = Math.Round(rawActualDuration, 2);
 
-                if (request.Duration.Value > actualDuration)
+                if (request.Duration.Value > actualDuration + 0.01m)
                 {
                     return BadRequest(new { success = false, message = $"Thời lượng ({request.Duration.Value:F2} phút) không được lớn hơn thời gian thực tế ({actualDuration:F2} phút)!" });
                 }
+            }
+
+            // Get existing incident to check current state
+            var existingIncident = await _incidentService.GetIncidentByIdAsync(id);
+            if (existingIncident == null)
+            {
+                return NotFound(new { success = false, message = "Không tìm thấy sự cố để cập nhật" });
+            }
+
+            // Validate TypeId is required when not tech support OR when tech support and completed (has EndTime)
+            // For updates, check the final state: use request value if provided, otherwise use existing value
+            var finalIsTechSupport = request.IsTechSupport;
+            var finalHasEndTime = request.EndTime.HasValue;
+            var finalTypeId = request.TypeId ?? existingIncident.TypeId;
+
+            if ((!finalIsTechSupport || (finalIsTechSupport && finalHasEndTime)) && !finalTypeId.HasValue)
+            {
+                return BadRequest(new { success = false, message = "Loại dừng là bắt buộc khi không cần hỗ trợ kỹ thuật hoặc khi sự cố hỗ trợ kỹ thuật đã hoàn thành" });
             }
 
             // Validate Duration based on Stop Type
@@ -737,6 +740,14 @@ public class IncidentsController : ControllerBase
             // await _hubContext.Clients.Group("TechnicalManagers").SendAsync("DataUpdated", new { type = "incident", action = "deleted", incidentId = id });
             await _hubContext.Clients.Group("TeamLeaders").SendAsync("DataUpdated", new { type = "incident", action = "deleted", incidentId = id });
             return Ok(new { success = true, data = true, message = "Xóa sự cố thành công" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
         }
         catch (Exception ex)
         {

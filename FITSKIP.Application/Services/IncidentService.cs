@@ -113,6 +113,22 @@ public class IncidentService : IIncidentService
             duration = CalculateAdjustedDuration(startTime, request.EndTime.Value, rawDuration);
         }
 
+        // Validate overlapping incidents
+        if (request.LineId.HasValue)
+        {
+            var overlappingIncidents = await _incidentRepository.GetOverlappingIncidentsAsync(
+                request.LineId.Value,
+                startTime,
+                request.EndTime ?? DateTime.MaxValue,
+                null,
+                cancellationToken);
+
+            if (overlappingIncidents.Any())
+            {
+                throw new InvalidOperationException("Thời gian báo cáo sự cố trùng với sự cố khác trên cùng dây chuyền");
+            }
+        }
+
         var incident = new IncidentHistory
         {
             EquipmentId = request.EquipmentId,
@@ -257,6 +273,29 @@ public class IncidentService : IIncidentService
                     duration = CalculateAdjustedDuration(startTime, incidentRequest.EndTime.Value, rawDuration);
                 }
 
+                // Validate overlapping incidents
+                if (incidentRequest.LineId.HasValue)
+                {
+                    var overlappingIncidents = await _incidentRepository.GetOverlappingIncidentsAsync(
+                        incidentRequest.LineId.Value,
+                        startTime,
+                        incidentRequest.EndTime ?? DateTime.MaxValue,
+                        null,
+                        cancellationToken);
+
+                    if (overlappingIncidents.Any())
+                    {
+                        response.FailureCount++;
+                        response.Errors.Add(new BulkIncidentError
+                        {
+                            Index = i + 1,
+                            ErrorMessage = "Thời gian báo cáo sự cố trùng với sự cố khác trên cùng dây chuyền",
+                            FailedRequest = incidentRequest
+                        });
+                        continue;
+                    }
+                }
+
                 var incident = new IncidentHistory
                 {
                     EquipmentId = incidentRequest.EquipmentId,
@@ -354,198 +393,276 @@ public class IncidentService : IIncidentService
 
     public async Task<IncidentHistory?> UpdateIncidentAsync(int id, UpdateIncidentRequest request, CancellationToken cancellationToken = default)
     {
-        var existingIncident = await _incidentRepository.GetByIdAsync(id, cancellationToken);
-        if (existingIncident == null)
+        try
         {
-            return null;
-        }
-
-        // Validate equipment exists and is active if EquipmentId is provided
-        if (request.EquipmentId.HasValue)
-        {
-            var validatedEquipment = await _equipmentRepository.GetByIdAsync(request.EquipmentId.Value, cancellationToken);
-            if (validatedEquipment == null)
+            var existingIncident = await _incidentRepository.GetByIdAsync(id, cancellationToken);
+            if (existingIncident == null)
             {
-                throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId.Value}");
-            }
-            if (!validatedEquipment.IsActive)
-            {
-                throw new InvalidOperationException($"Thiết bị với ID: {request.EquipmentId.Value} đã bị vô hiệu hóa");
-            }
-        }
-
-        // Validate line exists and is active if LineId is provided
-        if (request.LineId.HasValue)
-        {
-            var line = await _lineRepository.GetByIdAsync(request.LineId.Value, cancellationToken);
-            if (line == null)
-            {
-                throw new InvalidOperationException($"Không tìm thấy dây chuyền với ID: {request.LineId.Value}");
-            }
-            if (!line.IsActive)
-            {
-                throw new InvalidOperationException($"Dây chuyền với ID: {request.LineId.Value} đã bị vô hiệu hóa");
-            }
-        }
-
-        // Validate start time
-        if (request.StartTime > DateTime.Now)
-        {
-            throw new InvalidOperationException("Thời gian bắt đầu không thể trong tương lai");
-        }
-
-        // Validate end time if provided
-        if (request.EndTime.HasValue)
-        {
-            if (request.EndTime.Value <= request.StartTime)
-            {
-                throw new InvalidOperationException("Thời gian kết thúc phải sau thời gian bắt đầu");
+                return null;
             }
 
-            if (request.EndTime.Value > DateTime.Now)
+            // Validate equipment exists and is active if EquipmentId is provided
+            if (request.EquipmentId.HasValue)
             {
-                throw new InvalidOperationException("Thời gian kết thúc không thể trong tương lai");
-            }
-        }
-
-        // Calculate duration logic:
-        // 1. If user provides duration manually, use it (manual override)
-        // 2. If no duration provided but endTime exists, calculate from startTime-endTime with break time deduction
-        // 3. If neither duration nor endTime provided, duration remains null
-        decimal? duration = request.Duration; // Use manual duration if provided
-        if (!request.Duration.HasValue && request.EndTime.HasValue)
-        {
-            // Auto-calculate only when no manual duration is provided
-            var rawDuration = (decimal)(request.EndTime.Value - request.StartTime).TotalMinutes;
-            // Làm tròn chính xác đến 2 chữ số thập phân
-            rawDuration = Math.Round(rawDuration, 2, MidpointRounding.ToEven);
-            duration = CalculateAdjustedDuration(request.StartTime, request.EndTime.Value, rawDuration);
-        }
-
-        existingIncident.EquipmentId = request.EquipmentId;
-        existingIncident.LineId = request.LineId;
-        existingIncident.StartTime = request.StartTime;
-        existingIncident.EndTime = request.EndTime;
-        existingIncident.Duration = duration;
-
-        // Update TypeId only if provided
-        if (request.TypeId.HasValue && request.TypeId > 0)
-        {
-            existingIncident.TypeId = request.TypeId;
-        }
-
-        // Update ReportedByUserId (can be null)
-        existingIncident.ReportedByUserId = request.ReportedByUserId;
-
-        existingIncident.Issue = request.Issue?.Trim();
-        existingIncident.Reason = request.Reason?.Trim(); // Có thể null
-        existingIncident.Solution = request.Solution?.Trim(); // Có thể null
-
-        // Update IncidentImages collection
-        if (request.ImageUrls != null && request.ImageUrls.Count > 0)
-        {
-            Console.WriteLine($"[UpdateIncidentAsync] Updating {request.ImageUrls.Count} image records for incident {id}");
-
-            // Clear existing images
-            existingIncident.IncidentImages.Clear();
-
-            // Add new images
-            for (int i = 0; i < Math.Min(request.ImageUrls.Count, 5); i++) // Max 5 images
-            {
-                var incidentImage = new IncidentImage
+                var validatedEquipment = await _equipmentRepository.GetByIdAsync(request.EquipmentId.Value, cancellationToken);
+                if (validatedEquipment == null)
                 {
-                    IncidentId = existingIncident.IncidentId,
-                    ImageUrl = request.ImageUrls[i],
-                    OrderIndex = i,
-                    UploadedAt = DateTime.Now
-                };
-                existingIncident.IncidentImages.Add(incidentImage);
-                Console.WriteLine($"[UpdateIncidentAsync] Added image {i}: {request.ImageUrls[i]}");
+                    throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId.Value}");
+                }
+                if (!validatedEquipment.IsActive)
+                {
+                    throw new InvalidOperationException($"Thiết bị với ID: {request.EquipmentId.Value} đã bị vô hiệu hóa");
+                }
             }
-            Console.WriteLine($"[UpdateIncidentAsync] Updated {existingIncident.IncidentImages.Count} images");
-        }
-        else if (request.ImageUrls != null && request.ImageUrls.Count == 0)
-        {
-            // If imageUrls is empty array, clear all images
-            Console.WriteLine($"[UpdateIncidentAsync] Clearing all images for incident {id}");
-            existingIncident.IncidentImages.Clear();
-        }
 
-        // Update status if provided
-        if (!string.IsNullOrEmpty(request.Status))
-        {
-            existingIncident.Status = request.Status;
-        }
-
-        // Track if status or IsTechSupport changed to "Chờ xử lý" + true (need notification)
-        var wasNotTechSupport = !existingIncident.IsTechSupport;
-        var wasNotPending = existingIncident.Status != "Chờ xử lý";
-
-        existingIncident.IsTechSupport = request.IsTechSupport;
-
-        var updatedIncident = await _incidentRepository.UpdateAsync(existingIncident, cancellationToken);
-
-        // Tự động tạo IncidentShift records nếu có endtime và đã có IncidentShift nào
-        if (request.EndTime.HasValue && updatedIncident != null)
-        {
-            // Clear existing incident shifts if any
-            updatedIncident.IncidentShifts.Clear();
-            await CreateIncidentShiftsAsync(updatedIncident, cancellationToken);
-            // Save changes after creating incident shifts
-            updatedIncident = await _incidentRepository.UpdateAsync(updatedIncident, cancellationToken);
-        }
-
-        // Gửi notification CHỈ KHI status hoặc IsTechSupport THAY ĐỔI thành "Chờ xử lý" + true
-        // Tránh gửi duplicate notification khi update các field khác
-        var shouldSendNotification = updatedIncident != null
-            && updatedIncident.Status == "Chờ xử lý"
-            && updatedIncident.IsTechSupport
-            && (wasNotTechSupport || wasNotPending); // Only if changed TO this state
-
-        if (shouldSendNotification && updatedIncident != null)
-        {
-            var updatedEquipment = updatedIncident.EquipmentId.HasValue ? await _equipmentRepository.GetByIdAsync(updatedIncident.EquipmentId.Value, cancellationToken) : null;
-            if (updatedEquipment != null)
+            // Validate line exists and is active if LineId is provided
+            if (request.LineId.HasValue)
             {
-                Console.WriteLine($"🔔 Update triggered notification - wasNotTechSupport: {wasNotTechSupport}, wasNotPending: {wasNotPending}");
-                await SendIncidentNotificationToTechnicalManagersAsync(updatedIncident, updatedEquipment, cancellationToken);
+                var line = await _lineRepository.GetByIdAsync(request.LineId.Value, cancellationToken);
+                if (line == null)
+                {
+                    throw new InvalidOperationException($"Không tìm thấy dây chuyền với ID: {request.LineId.Value}");
+                }
+                if (!line.IsActive)
+                {
+                    throw new InvalidOperationException($"Dây chuyền với ID: {request.LineId.Value} đã bị vô hiệu hóa");
+                }
             }
-        }
-        else
-        {
-            Console.WriteLine($"⏭️ Skipping notification on update - Status: {updatedIncident?.Status}, IsTechSupport: {updatedIncident?.IsTechSupport}, Changed: {wasNotTechSupport || wasNotPending}");
-        }
 
-        // Always broadcast to Managers group for OEE Dashboard realtime updates (for any update)
-        if (updatedIncident != null)
-        {
+            // Validate start time
+            if (request.StartTime > DateTime.Now)
+            {
+                throw new InvalidOperationException("Thời gian bắt đầu không thể trong tương lai");
+            }
+
+            // Validate end time if provided
+            if (request.EndTime.HasValue)
+            {
+                if (request.EndTime.Value <= request.StartTime)
+                {
+                    throw new InvalidOperationException("Thời gian kết thúc phải sau thời gian bắt đầu");
+                }
+
+                if (request.EndTime.Value > DateTime.Now)
+                {
+                    throw new InvalidOperationException("Thời gian kết thúc không thể trong tương lai");
+                }
+            }
+
+            // Calculate duration logic:
+            // 1. If user provides duration manually, use it (manual override)
+            // 2. If no duration provided but endTime exists, calculate from startTime-endTime with break time deduction
+            // 3. If neither duration nor endTime provided, duration remains null
+            decimal? duration = request.Duration; // Use manual duration if provided
+            if (!request.Duration.HasValue && request.EndTime.HasValue)
+            {
+                // Auto-calculate only when no manual duration is provided
+                var rawDuration = (decimal)(request.EndTime.Value - request.StartTime).TotalMinutes;
+                // Làm tròn chính xác đến 2 chữ số thập phân
+                rawDuration = Math.Round(rawDuration, 2, MidpointRounding.ToEven);
+                duration = CalculateAdjustedDuration(request.StartTime, request.EndTime.Value, rawDuration);
+            }
+
+            // Validate overlapping incidents
+            if (request.LineId.HasValue)
+            {
+                var overlappingIncidents = await _incidentRepository.GetOverlappingIncidentsAsync(
+                    request.LineId.Value,
+                    request.StartTime,
+                    request.EndTime ?? DateTime.MaxValue,
+                    id, // exclude current incident
+                    cancellationToken);
+
+                if (overlappingIncidents.Any())
+                {
+                    throw new InvalidOperationException("Thời gian báo cáo sự cố trùng với sự cố khác trên cùng dây chuyền");
+                }
+            }
+
+            existingIncident.EquipmentId = request.EquipmentId;
+            existingIncident.LineId = request.LineId;
+            existingIncident.StartTime = request.StartTime;
+            existingIncident.EndTime = request.EndTime;
+            existingIncident.Duration = duration;
+
+            // Update TypeId only if provided
+            if (request.TypeId.HasValue && request.TypeId > 0)
+            {
+                existingIncident.TypeId = request.TypeId;
+            }
+
+            // Update ReportedByUserId (can be null)
+            existingIncident.ReportedByUserId = request.ReportedByUserId;
+
+            existingIncident.Issue = request.Issue?.Trim();
+            existingIncident.Reason = request.Reason?.Trim(); // Có thể null
+            existingIncident.Solution = request.Solution?.Trim(); // Có thể null
+
+            // Update IncidentImages collection
             try
             {
-                var updatedEquipment = updatedIncident.EquipmentId.HasValue ? await _equipmentRepository.GetByIdAsync(updatedIncident.EquipmentId.Value, cancellationToken) : null;
-                var updatedLine = updatedIncident.LineId.HasValue ? await _lineRepository.GetByIdAsync(updatedIncident.LineId.Value, cancellationToken) : null;
+                if (request.ImageUrls != null && request.ImageUrls.Count > 0)
+                {
+                    Console.WriteLine($"[UpdateIncidentAsync] Updating {request.ImageUrls.Count} image records for incident {id}");
 
-                Console.WriteLine($"📡 Broadcasting incident update to Managers group for OEE Dashboard - Incident ID: {updatedIncident.IncidentId}");
-                await _notificationService.SendNotificationToGroupAsync(
-                    "Managers",
-                    "Cập nhật sự cố",
-                    $"Sự cố {updatedIncident.IncidentId} đã được cập nhật tại {(updatedEquipment != null ? $"thiết bị {updatedEquipment.EquipmentName}" : $"dây chuyền {updatedLine?.LineName ?? "Chưa xác định"}")}",
-                    "incident"
-                );
-                Console.WriteLine($"✅ Broadcast to Managers group completed for incident update");
+                    // Clear existing images
+                    existingIncident.IncidentImages.Clear();
+
+                    // Add new images
+                    for (int i = 0; i < Math.Min(request.ImageUrls.Count, 5); i++) // Max 5 images
+                    {
+                        var incidentImage = new IncidentImage
+                        {
+                            IncidentId = existingIncident.IncidentId,
+                            ImageUrl = request.ImageUrls[i],
+                            OrderIndex = i,
+                            UploadedAt = DateTime.Now
+                        };
+                        existingIncident.IncidentImages.Add(incidentImage);
+                        Console.WriteLine($"[UpdateIncidentAsync] Added image {i}: {request.ImageUrls[i]}");
+                    }
+                    Console.WriteLine($"[UpdateIncidentAsync] Updated {existingIncident.IncidentImages.Count} images");
+                }
+                else if (request.ImageUrls != null && request.ImageUrls.Count == 0)
+                {
+                    // If imageUrls is empty array, clear all images
+                    Console.WriteLine($"[UpdateIncidentAsync] Clearing all images for incident {id}");
+                    existingIncident.IncidentImages.Clear();
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ Error broadcasting incident update: {ex.Message}");
+                Console.WriteLine($"❌ Error updating IncidentImages for incident {id}: {ex.Message}");
+                // Continue with the update without updating images
             }
-        }
 
-        return updatedIncident;
+            // Update status if provided
+            if (!string.IsNullOrEmpty(request.Status))
+            {
+                existingIncident.Status = request.Status;
+            }
+
+            // Track if status or IsTechSupport changed to "Chờ xử lý" + true (need notification)
+            var wasNotTechSupport = !existingIncident.IsTechSupport;
+            var wasNotPending = existingIncident.Status != "Chờ xử lý";
+
+            existingIncident.IsTechSupport = request.IsTechSupport;
+
+            // Always determine status based on final incident state
+            if (existingIncident.EndTime.HasValue)
+            {
+                existingIncident.Status = "Hoàn thành";
+            }
+            else if (!string.IsNullOrEmpty(existingIncident.AssignedTo))
+            {
+                existingIncident.Status = "Đang xử lý";
+            }
+            else
+            {
+                existingIncident.Status = "Chờ xử lý";
+            }
+
+            // Tự động tạo IncidentShift records nếu có endtime BEFORE saving
+            if (request.EndTime.HasValue)
+            {
+                try
+                {
+                    // Clear existing incident shifts
+                    // Note: The repository will handle the cascading delete when we save
+                    existingIncident.IncidentShifts.Clear();
+                    
+                    // Create new incident shifts
+                    await CreateIncidentShiftsAsync(existingIncident, cancellationToken);
+                    Console.WriteLine($"✅ Prepared {existingIncident.IncidentShifts.Count} IncidentShifts for incident {id}");
+                }
+                catch (Exception ex)
+                {
+                    // Log error but don't fail the incident update
+                    Console.WriteLine($"❌ Error preparing IncidentShifts for incident {id}: {ex.Message}");
+                    Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+                    // Continue with the update without IncidentShifts
+                }
+            }
+
+            // Save all changes (incident + shifts + images) in one transaction
+            var updatedIncident = await _incidentRepository.UpdateAsync(existingIncident, cancellationToken);
+            
+            // Gửi notification CHỈ KHI status hoặc IsTechSupport THAY ĐỔI thành "Chờ xử lý" + true
+            // Tránh gửi duplicate notification khi update các field khác
+            var shouldSendNotification = updatedIncident != null
+                && updatedIncident.Status == "Chờ xử lý"
+                && updatedIncident.IsTechSupport
+                && (wasNotTechSupport || wasNotPending); // Only if changed TO this state
+
+            if (shouldSendNotification && updatedIncident != null)
+            {
+                var updatedEquipment = updatedIncident.EquipmentId.HasValue ? await _equipmentRepository.GetByIdAsync(updatedIncident.EquipmentId.Value, cancellationToken) : null;
+                if (updatedEquipment != null)
+                {
+                    Console.WriteLine($"🔔 Update triggered notification - wasNotTechSupport: {wasNotTechSupport}, wasNotPending: {wasNotPending}");
+                    await SendIncidentNotificationToTechnicalManagersAsync(updatedIncident, updatedEquipment, cancellationToken);
+                }
+            }
+            else
+            {
+                Console.WriteLine($"⏭️ Skipping notification on update - Status: {updatedIncident?.Status}, IsTechSupport: {updatedIncident?.IsTechSupport}, Changed: {wasNotTechSupport || wasNotPending}");
+            }
+
+            // Always broadcast to Managers group for OEE Dashboard realtime updates (for any update)
+            if (updatedIncident != null)
+            {
+                try
+                {
+                    var updatedEquipment = updatedIncident.EquipmentId.HasValue ? await _equipmentRepository.GetByIdAsync(updatedIncident.EquipmentId.Value, cancellationToken) : null;
+                    var updatedLine = updatedIncident.LineId.HasValue ? await _lineRepository.GetByIdAsync(updatedIncident.LineId.Value, cancellationToken) : null;
+
+                    Console.WriteLine($"📡 Broadcasting incident update to Managers group for OEE Dashboard - Incident ID: {updatedIncident.IncidentId}");
+                    await _notificationService.SendNotificationToGroupAsync(
+                        "Managers",
+                        "Cập nhật sự cố",
+                        $"Sự cố {updatedIncident.IncidentId} đã được cập nhật tại {(updatedEquipment != null ? $"thiết bị {updatedEquipment.EquipmentName}" : $"dây chuyền {updatedLine?.LineName ?? "Chưa xác định"}")}",
+                        "incident"
+                    );
+                    Console.WriteLine($"✅ Broadcast to Managers group completed for incident update");
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Error broadcasting incident update: {ex.Message}");
+                }
+            }
+
+            return updatedIncident;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Critical error in UpdateIncidentAsync for incident {id}: {ex.Message}");
+            Console.WriteLine($"   Stack trace: {ex.StackTrace}");
+            throw; // Re-throw to be handled by controller
+        }
     }
 
     public async Task<bool> DeleteIncidentAsync(int id, CancellationToken cancellationToken = default)
     {
         // Get incident info before deleting for notification
         var incident = await _incidentRepository.GetByIdAsync(id, cancellationToken);
+        if (incident == null)
+        {
+            throw new InvalidOperationException("Không tìm thấy sự cố với ID đã cho.");
+        }
+
+        // Validate deletion rules
+        if (incident.Status == "Hoàn thành" && !string.IsNullOrEmpty(incident.AssignedTo))
+        {
+            throw new InvalidOperationException("Không thể xóa sự cố đã hoàn thành và đã phân công kỹ thuật viên.");
+        }
+
+        if (incident.Status == "Đang xử lý" || !string.IsNullOrEmpty(incident.AssignedTo))
+        {
+            throw new InvalidOperationException("Sự cố đang có kỹ thuật viên xử lý, không thể xóa.");
+        }
+
+        // DEL-01: Cho phép xóa sự cố hoàn thành không có KTV
+        // DEL-05: Cho phép xóa sự cố Chờ xử lý không có KTV
 
         var result = await _incidentRepository.DeleteAsync(id, cancellationToken);
 
@@ -738,35 +855,52 @@ public class IncidentService : IIncidentService
         if (!incident.EndTime.HasValue || !incident.StartTime.HasValue)
             return;
 
-        // Get all shifts
-        var shifts = await _shiftRepository.GetAllAsync(cancellationToken);
-
-        foreach (var shift in shifts)
+        try
         {
-            // Calculate shift start and end datetime for the incident date
-            var incidentDate = incident.StartTime.Value.Date;
-            var shiftStartDateTime = incidentDate.Add(shift.StartTime.ToTimeSpan());
-            var shiftEndDateTime = shift.StartTime <= shift.EndTime
-                ? incidentDate.Add(shift.EndTime.ToTimeSpan())  // Normal shift
-                : incidentDate.AddDays(1).Add(shift.EndTime.ToTimeSpan());  // Night shift crossing midnight
+            // Get all shifts
+            var shifts = await _shiftRepository.GetAllAsync(cancellationToken);
 
-            // Calculate overlap between incident and shift
-            var overlapStart = incident.StartTime.Value > shiftStartDateTime ? incident.StartTime.Value : shiftStartDateTime;
-            var overlapEnd = incident.EndTime.Value < shiftEndDateTime ? incident.EndTime.Value : shiftEndDateTime;
-
-            // Only create IncidentShift if there is actual overlap
-            if (overlapStart < overlapEnd)
+            foreach (var shift in shifts)
             {
-                var incidentShift = new IncidentShift
+                try
                 {
-                    IncidentId = incident.IncidentId,
-                    ShiftId = shift.ShiftId,
-                    StartTime = overlapStart,
-                    EndTime = overlapEnd
-                };
+                    // Calculate shift start and end datetime for the incident date
+                    var incidentDate = incident.StartTime.Value.Date;
+                    var shiftStartDateTime = incidentDate.Add(shift.StartTime.ToTimeSpan());
+                    var shiftEndDateTime = shift.StartTime <= shift.EndTime
+                        ? incidentDate.Add(shift.EndTime.ToTimeSpan())  // Normal shift
+                        : incidentDate.AddDays(1).Add(shift.EndTime.ToTimeSpan());  // Night shift crossing midnight
 
-                incident.IncidentShifts.Add(incidentShift);
+                    // Calculate overlap between incident and shift
+                    var overlapStart = incident.StartTime.Value > shiftStartDateTime ? incident.StartTime.Value : shiftStartDateTime;
+                    var overlapEnd = incident.EndTime.Value < shiftEndDateTime ? incident.EndTime.Value : shiftEndDateTime;
+
+                    // Only create IncidentShift if there is actual overlap
+                    if (overlapStart < overlapEnd)
+                    {
+                        var incidentShift = new IncidentShift
+                        {
+                            IncidentId = incident.IncidentId,
+                            ShiftId = shift.ShiftId,
+                            StartTime = overlapStart,
+                            EndTime = overlapEnd
+                        };
+
+                        incident.IncidentShifts.Add(incidentShift);
+                        Console.WriteLine($"✅ Created IncidentShift for incident {incident.IncidentId}, shift {shift.ShiftId}: {overlapStart} - {overlapEnd}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"❌ Error processing shift {shift.ShiftId} for incident {incident.IncidentId}: {ex.Message}");
+                    // Continue with other shifts
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Error in CreateIncidentShiftsAsync for incident {incident.IncidentId}: {ex.Message}");
+            throw; // Re-throw to be caught by the caller
         }
     }
 

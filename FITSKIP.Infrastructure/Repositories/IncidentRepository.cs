@@ -85,6 +85,19 @@ public class IncidentRepository : IIncidentRepository
     {
         _context.IncidentHistories.Update(incident);
 
+        // Ensure IncidentShifts collection is properly tracked
+        if (incident.IncidentShifts != null)
+        {
+            foreach (var shift in incident.IncidentShifts)
+            {
+                // If IncidentShiftId is 0, it's a new shift - add it
+                if (shift.IncidentShiftId == 0)
+                {
+                    _context.Entry(shift).State = EntityState.Added;
+                }
+            }
+        }
+
         // Ensure IncidentImages collection is tracked and saved
         if (incident.IncidentImages != null && incident.IncidentImages.Any())
         {
@@ -227,6 +240,29 @@ public class IncidentRepository : IIncidentRepository
             .Include(ishft => ishft.Shift)
             .Where(ishft => ishft.IncidentId == incidentId)
             .OrderBy(ishft => ishft.StartTime)
+            .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<IncidentHistory>> GetOverlappingIncidentsAsync(int lineId, DateTime startTime, DateTime endTime, int? excludeIncidentId = null, CancellationToken cancellationToken = default)
+    {
+        var query = _context.IncidentHistories
+            .Include(i => i.Equipment)
+            .Include(i => i.Line)
+            .Include(i => i.Type)
+            .Where(i =>
+                // Filter by line only (not equipment)
+                i.LineId == lineId &&
+                // Time overlap: incident starts before new end time and ends after new start time
+                i.StartTime < endTime && (i.EndTime == null || i.EndTime > startTime));
+
+        // Exclude current incident if updating
+        if (excludeIncidentId.HasValue)
+        {
+            query = query.Where(i => i.IncidentId != excludeIncidentId.Value);
+        }
+
+        return await query
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }
