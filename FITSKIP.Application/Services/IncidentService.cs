@@ -118,6 +118,7 @@ public class IncidentService : IIncidentService
         {
             var overlappingIncidents = await _incidentRepository.GetOverlappingIncidentsAsync(
                 request.LineId.Value,
+                startTime.Date, // Pass the date
                 startTime,
                 request.EndTime ?? DateTime.MaxValue,
                 null,
@@ -278,6 +279,7 @@ public class IncidentService : IIncidentService
                 {
                     var overlappingIncidents = await _incidentRepository.GetOverlappingIncidentsAsync(
                         incidentRequest.LineId.Value,
+                        startTime.Date, // Pass the date
                         startTime,
                         incidentRequest.EndTime ?? DateTime.MaxValue,
                         null,
@@ -468,6 +470,7 @@ public class IncidentService : IIncidentService
             {
                 var overlappingIncidents = await _incidentRepository.GetOverlappingIncidentsAsync(
                     request.LineId.Value,
+                    request.StartTime.Date, // Pass the date
                     request.StartTime,
                     request.EndTime ?? DateTime.MaxValue,
                     id, // exclude current incident

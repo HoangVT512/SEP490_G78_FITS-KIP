@@ -635,6 +635,9 @@ const IncidentManagement = () => {
       });
       setIncidents(mapped);
       setFilteredIncidents(mapped);
+      // Clear selection after refresh ✅ THÊM DÒng này
+      setSelectedRowKeys([]);
+      setSelectedRows([]);
     } catch (err) {
       console.error("Lỗi khi tải danh sách sự cố:", err);
       message.error(err?.message || "Không thể tải danh sách sự cố");
@@ -873,6 +876,64 @@ const IncidentManagement = () => {
       setLoading(false);
     }
   };
+
+  // const handleBulkDelete = async () => {
+  //   if (selectedRows.length === 0) {
+  //     message.warning("Vui lòng chọn ít nhất một sự cố để xóa!");
+  //     return;
+  //   }
+
+  //   Modal.confirm({
+  //     title: "Xóa nhiều sự cố",
+  //     content: `Bạn có chắc chắn muốn xóa ${selectedRows.length} sự cố đã chọn?`,
+  //     okText: "Xóa",
+  //     cancelText: "Hủy",
+  //     okButtonProps: { danger: true },
+  //     onOk: async () => {
+  //       try {
+  //         setLoading(true);
+  //         // Delete each selected incident in parallel
+  //         const deletePromises = selectedRows.map(async (incident) => {
+  //           try {
+  //             await incidentService.delete(incident.id);
+  //             return { success: true, incident };
+  //           } catch (deleteError) {
+  //             const errMsg = deleteError?.response?.data?.message || deleteError?.message || deleteError?.data?.message || "Xóa thất bại!";
+  //             return { success: false, incident, error: errMsg };
+  //           }
+  //         });
+
+  //         const results = await Promise.all(deletePromises);
+  //         const successCount = results.filter(r => r.success).length;
+  //         const failedResults = results.filter(r => !r.success);
+
+  //         // Show results
+  //         if (successCount > 0) {
+  //           message.success(`Đã xóa thành công ${successCount} sự cố!`);
+  //         }
+
+  //         if (failedResults.length > 0) {
+  //           const errorMessages = failedResults.map(failed =>
+  //             `Sự cố #${failed.incident.id} (${failed.incident.equipmentName}): ${failed.error}`
+  //           );
+  //           message.error(`${errorMessages.join('\n')}`);
+  //         }
+
+  //         if (successCount > 0) {
+  //           setSelectedRowKeys([]);
+  //           setSelectedRows([]);
+  //           fetchIncidents();
+  //         }
+  //       } catch (error) {
+  //         console.error("Lỗi khi xóa nhiều sự cố:", error);
+  //         const errMsg =
+  //           error?.response?.data?.message || error?.message || error?.data?.message || "Xóa thất bại!";
+  //         message.error(errMsg);
+  //         setLoading(false);
+  //       }
+  //     },
+  //   });
+  // };
 
   const handleBulkDelete = async () => {
     if (selectedRows.length === 0) {
@@ -1299,9 +1360,6 @@ const IncidentManagement = () => {
         // Create mode - multiple incidents
         const incidentsToCreate = [];
 
-        // Collect unique lineIds to check for active incidents
-        const lineIdsToCheck = new Set();
-
         // Loop through each incident form and collect data
         for (const incidentForm of incidentForms) {
           const formId = incidentForm.id;
@@ -1325,11 +1383,6 @@ const IncidentManagement = () => {
             );
             setLoading(false);
             return;
-          }
-
-          // Collect lineId for validation if provided
-          if (lineId) {
-            lineIdsToCheck.add(lineId);
           }
 
           // Validate overlapping incidents (frontend check)
@@ -1429,6 +1482,36 @@ const IncidentManagement = () => {
           const hasEndTime = endTime && dayjs(endTime).isValid();
           const status = hasEndTime ? "Hoàn thành" : "Chờ xử lý";
 
+          // Check for active incidents on the line (same day and after start time)
+          if (lineId && startTime) {
+            try {
+              const activeIncidents = await incidentService.getActiveIncidentsByLine(lineId);
+
+              // Filter active incidents that are in the same day and started before the new incident
+              const conflictingIncidents = activeIncidents.filter(activeIncident => {
+                const activeStart = dayjs(activeIncident.reportDate || activeIncident.startTime);
+                const newStart = dayjs(startTime);
+
+                // Same day and new incident starts after active incident
+                return activeStart.isSame(newStart, 'day') && newStart.isAfter(activeStart);
+              });
+
+              if (conflictingIncidents.length > 0) {
+                const lineName = lines.find((l) => l.lineId === lineId)?.lineName || `ID ${lineId}`;
+                message.error(
+                  `Sự cố No.${formId}: Không thể tạo sự cố mới! Dây chuyền "${lineName}" đang có ${conflictingIncidents.length} sự cố chưa hoàn thành.`
+                );
+                setLoading(false);
+                return;
+              }
+            } catch (error) {
+              console.error("Lỗi khi kiểm tra sự cố đang hoạt động:", error);
+              message.error("Không thể kiểm tra trạng thái dây chuyền. Vui lòng thử lại.");
+              setLoading(false);
+              return;
+            }
+          }
+
           // Build payload for this incident
           const payload = {
             equipmentId: equipmentId || null,
@@ -1454,42 +1537,6 @@ const IncidentManagement = () => {
 
           console.log(`Payload for incident No.${formId}:`, payload);
           incidentsToCreate.push(payload);
-        }
-
-        // Check for active incidents on the lines being reported
-        if (lineIdsToCheck.size > 0) {
-          try {
-            const activeIncidentsPromises = Array.from(lineIdsToCheck).map(
-              (lineId) => incidentService.getActiveIncidentsByLine(lineId)
-            );
-            const activeIncidentsResults = await Promise.all(
-              activeIncidentsPromises
-            );
-
-            // Check if any line has active incidents
-            for (let i = 0; i < Array.from(lineIdsToCheck).length; i++) {
-              const lineId = Array.from(lineIdsToCheck)[i];
-              const activeIncidents = activeIncidentsResults[i];
-
-              if (activeIncidents && activeIncidents.length > 0) {
-                const lineName =
-                  lines.find((l) => l.lineId === lineId)?.lineName ||
-                  `ID ${lineId}`;
-                message.error(
-                  `Không thể tạo sự cố mới! Dây chuyền “${lineName}” đang có ${activeIncidents.length} sự cố chưa hoàn thành.`
-                );
-                setLoading(false);
-                return;
-              }
-            }
-          } catch (error) {
-            console.error("Lỗi khi kiểm tra sự cố đang hoạt động:", error);
-            message.error(
-              "Không thể kiểm tra trạng thái dây chuyền. Vui lòng thử lại."
-            );
-            setLoading(false);
-            return;
-          }
         }
 
         // Create all incidents using bulk API

@@ -244,7 +244,7 @@ public class IncidentRepository : IIncidentRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<IncidentHistory>> GetOverlappingIncidentsAsync(int lineId, DateTime startTime, DateTime endTime, int? excludeIncidentId = null, CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<IncidentHistory>> GetOverlappingIncidentsAsync(int lineId, DateTime date, DateTime startTime, DateTime endTime, int? excludeIncidentId = null, CancellationToken cancellationToken = default)
     {
         var query = _context.IncidentHistories
             .Include(i => i.Equipment)
@@ -253,6 +253,8 @@ public class IncidentRepository : IIncidentRepository
             .Where(i =>
                 // Filter by line only (not equipment)
                 i.LineId == lineId &&
+                // Filter by date: only incidents on the same day
+                i.StartTime.HasValue && i.StartTime.Value.Date == date.Date &&
                 // Time overlap: incident starts before new end time and ends after new start time
                 i.StartTime < endTime && (i.EndTime == null || i.EndTime > startTime));
 
