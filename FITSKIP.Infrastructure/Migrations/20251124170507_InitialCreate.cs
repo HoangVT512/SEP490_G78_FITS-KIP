@@ -555,7 +555,7 @@ namespace FITSKIP.Infrastructure.Migrations
                     WorkOrderCode = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     PlanID = table.Column<int>(type: "int", nullable: false),
                     EquipmentID = table.Column<int>(type: "int", nullable: false),
-                    AssignedDate = table.Column<DateTime>(type: "datetime", nullable: false),
+                    AssignedDate = table.Column<DateTime>(type: "datetime", nullable: true),
                     ScheduledDate = table.Column<DateTime>(type: "datetime", nullable: false),
                     DueDate = table.Column<DateTime>(type: "datetime", nullable: false),
                     AssignedToElectrical = table.Column<string>(type: "nvarchar(450)", maxLength: 450, nullable: true),

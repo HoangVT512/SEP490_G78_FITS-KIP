@@ -116,46 +116,51 @@ const IncidentSparePartsDistribution = () => {
 
       // Get all replacement histories with any status
       const allReplacementsFiltered = (allReplacements || []).filter(
-        (r) => r.status === "Đã xuất" || r.status === "Đã trả một phần" || r.status === "Hoàn tất"
+        (r) =>
+          r.status === "Đã xuất" ||
+          r.status === "Đã trả một phần" ||
+          r.status === "Hoàn tất"
       );
 
-      const formattedDistributions = allReplacementsFiltered.map((replacement) => {
-        const distributionType = replacement.incidentId
-          ? "incident"
-          : "maintenance";
-        const recordId = replacement.incidentId || replacement.workOrderId;
+      const formattedDistributions = allReplacementsFiltered.map(
+        (replacement) => {
+          const distributionType = replacement.incidentId
+            ? "incident"
+            : "maintenance";
+          const recordId = replacement.incidentId || replacement.workOrderId;
 
-        return {
-          id: replacement.replacementID,
-          distributionType: distributionType,
-          recordId: recordId,
-          recordName: replacement.equipmentName || "",
-          recordCode: replacement.equipmentCode || "",
-          technicianName:
-            replacement.replacedByFullName ||
-            replacement.replacedByUserName ||
-            "",
-          technicianCode: replacement.replacedByEmployeeCode || "",
-          distributedAt: replacement.replacedDate,
-          distributedBy:
-            replacement.replacedByFullName ||
-            replacement.replacedByUserName ||
-            "",
-          returnDate: replacement.returnedDate, // Thêm trường ngày trả lại
-          items: [
-            {
-              partId: replacement.partID,
-              partName: replacement.partName || "",
-              partNumber: replacement.partNumber || "",
-              quantity: replacement.quantity,
-              actualQuantityUsed: replacement.actualQuantityUsed || 0,
-              quantityToReturn: replacement.quantityToReturn || 0,
-            },
-          ],
-          notes: replacement.remarks || "",
-          status: replacement.status || "Đã xuất",
-        };
-      });
+          return {
+            id: replacement.replacementID,
+            distributionType: distributionType,
+            recordId: recordId,
+            recordName: replacement.equipmentName || "",
+            recordCode: replacement.equipmentCode || "",
+            technicianName:
+              replacement.replacedByFullName ||
+              replacement.replacedByUserName ||
+              "",
+            technicianCode: replacement.replacedByEmployeeCode || "",
+            distributedAt: replacement.replacedDate,
+            distributedBy:
+              replacement.replacedByFullName ||
+              replacement.replacedByUserName ||
+              "",
+            returnDate: replacement.returnedDate, // Thêm trường ngày trả lại
+            items: [
+              {
+                partId: replacement.partID,
+                partName: replacement.partName || "",
+                partNumber: replacement.partNumber || "",
+                quantity: replacement.quantity,
+                actualQuantityUsed: replacement.actualQuantityUsed || 0,
+                quantityToReturn: replacement.quantityToReturn || 0,
+              },
+            ],
+            notes: replacement.remarks || "",
+            status: replacement.status || "Đã xuất",
+          };
+        }
+      );
 
       setDistributions(formattedDistributions);
       const grouped = groupDistributions(formattedDistributions);
@@ -172,7 +177,9 @@ const IncidentSparePartsDistribution = () => {
   const calculateStatistics = (distributions) => {
     const stats = {
       total: distributions.length,
-      inUse: distributions.filter((d) => d.status === "Đã xuất" || d.status === "Đã trả một phần").length,
+      inUse: distributions.filter(
+        (d) => d.status === "Đã xuất" || d.status === "Đã trả một phần"
+      ).length,
       completed: distributions.filter((d) => d.status === "Hoàn tất").length,
     };
     setStatistics(stats);
@@ -231,7 +238,9 @@ const IncidentSparePartsDistribution = () => {
     try {
       const data = await sparePartService.getAll();
       // Chỉ lấy phụ tùng có trạng thái hoạt động (isActive = true hoặc 1)
-      const activeSpareParts = (data || []).filter(sparePart => sparePart.isActive === true || sparePart.isActive === 1);
+      const activeSpareParts = (data || []).filter(
+        (sparePart) => sparePart.isActive === true || sparePart.isActive === 1
+      );
       setSpareParts(activeSpareParts);
     } catch (error) {
       console.error("Error fetching spare parts:", error);
@@ -544,6 +553,22 @@ const IncidentSparePartsDistribution = () => {
         return;
       }
 
+      // Check for duplicate spare parts
+      const partIds = selectedDistributions.map((item) => item.partId);
+      const hasDuplicates = partIds.some(
+        (id, index) => partIds.indexOf(id) !== index
+      );
+      if (hasDuplicates) {
+        const duplicateIndex = partIds.findIndex(
+          (id, index) => partIds.indexOf(id) !== index
+        );
+        const duplicateItem = selectedDistributions[duplicateIndex];
+        const name = duplicateItem ? duplicateItem.partName : "không xác định";
+        message.error(`Phụ tùng ${name} đã được thêm vào phiếu cấp phát`);
+        setLoading(false);
+        return;
+      }
+
       const invalidParts = selectedDistributions.some((part) => !part.partId);
       if (invalidParts) {
         message.warning("Vui lòng chọn phụ tùng cho tất cả các dòng");
@@ -804,7 +829,10 @@ const IncidentSparePartsDistribution = () => {
         };
 
         console.log("Confirmation data being sent:", confirmationData);
-        return replacementHistoryService.confirmReturn(item.replacementId, confirmationData);
+        return replacementHistoryService.confirmReturn(
+          item.replacementId,
+          confirmationData
+        );
       });
 
       // Execute all updates
@@ -903,8 +931,8 @@ const IncidentSparePartsDistribution = () => {
         type === "incident"
           ? "Mã sự cố"
           : type === "maintenance"
-            ? "Mã bảo trì"
-            : "Mã SC/BT",
+          ? "Mã bảo trì"
+          : "Mã SC/BT",
       dataIndex: "recordId",
       key: "recordId",
       width: 100,
@@ -1023,7 +1051,9 @@ const IncidentSparePartsDistribution = () => {
         };
       }
 
-      if (dayjs(dist.distributedAt).isAfter(dayjs(acc[key].lastDistributedAt))) {
+      if (
+        dayjs(dist.distributedAt).isAfter(dayjs(acc[key].lastDistributedAt))
+      ) {
         acc[key].lastDistributedAt = dist.distributedAt;
       }
 
@@ -1040,11 +1070,16 @@ const IncidentSparePartsDistribution = () => {
       acc[key].allStatuses.add(dist.status);
 
       dist.items?.forEach((item) => {
-        const existingItem = acc[key].allItems.find((i) => i.partId === item.partId);
+        const existingItem = acc[key].allItems.find(
+          (i) => i.partId === item.partId
+        );
         if (existingItem) {
           existingItem.quantity += item.quantity || 0;
-          existingItem.quantityToReturn = (existingItem.quantityToReturn || 0) + (item.quantityToReturn || 0);
-          existingItem.actualQuantityUsed = (existingItem.actualQuantityUsed || 0) + (item.actualQuantityUsed || 0);
+          existingItem.quantityToReturn =
+            (existingItem.quantityToReturn || 0) + (item.quantityToReturn || 0);
+          existingItem.actualQuantityUsed =
+            (existingItem.actualQuantityUsed || 0) +
+            (item.actualQuantityUsed || 0);
         } else {
           acc[key].allItems.push({
             ...item,
@@ -1059,18 +1094,29 @@ const IncidentSparePartsDistribution = () => {
 
     // Sửa logic aggregate: Ưu tiên status per record, aggregate chỉ khi tất cả đều giống nhau
     return Object.values(grouped).map((group) => {
-      const totalQuantity = group.allItems.reduce((sum, item) => sum + (item.quantity || 0), 0);
-      const totalReturned = group.allItems.reduce((sum, item) => sum + (item.quantityToReturn || 0), 0);
-      const totalUsed = group.allItems.reduce((sum, item) => sum + Math.max(0, (item.quantity || 0) - (item.quantityToReturn || 0)), 0);
+      const totalQuantity = group.allItems.reduce(
+        (sum, item) => sum + (item.quantity || 0),
+        0
+      );
+      const totalReturned = group.allItems.reduce(
+        (sum, item) => sum + (item.quantityToReturn || 0),
+        0
+      );
+      const totalUsed = group.allItems.reduce(
+        (sum, item) =>
+          sum +
+          Math.max(0, (item.quantity || 0) - (item.quantityToReturn || 0)),
+        0
+      );
 
       // ✅ Sửa: Aggregate dựa trên status của từng distribution record
       const allStatuses = Array.from(group.allStatuses);
       let primaryStatus = "Đã xuất"; // Mặc định
 
       if (allStatuses.length > 0) {
-        if (allStatuses.every(s => s === "Hoàn tất")) {
+        if (allStatuses.every((s) => s === "Hoàn tất")) {
           primaryStatus = "Hoàn tất"; // Tất cả đều hoàn tất
-        } else if (allStatuses.some(s => s === "Đã trả một phần")) {
+        } else if (allStatuses.some((s) => s === "Đã trả một phần")) {
           primaryStatus = "Đã trả một phần"; // Có ít nhất một trả một phần
         } // Ngược lại: "Đã xuất"
       }
@@ -1104,10 +1150,14 @@ const IncidentSparePartsDistribution = () => {
 
   // Tab "Sự cố" và "Bảo trì" hiển thị những phiếu có ít nhất một phụ tùng chưa trả lại (có status "Đã xuất")
   const incidentDistributions = filteredDistributionsList.filter(
-    (d) => d.distributionType === "incident" && d.distributionStatuses?.includes("Đã xuất")
+    (d) =>
+      d.distributionType === "incident" &&
+      d.distributionStatuses?.includes("Đã xuất")
   );
   const maintenanceDistributions = filteredDistributionsList.filter(
-    (d) => d.distributionType === "maintenance" && d.distributionStatuses?.includes("Đã xuất")
+    (d) =>
+      d.distributionType === "maintenance" &&
+      d.distributionStatuses?.includes("Đã xuất")
   );
 
   // Hàm render expandable row cho trả lại vật tư
@@ -1119,9 +1169,7 @@ const IncidentSparePartsDistribution = () => {
     // - "Đã trả một phần": đã trả một phần, có thể trả thêm
     // - "Hoàn tất": đã trả hết, KHÔNG thể trả thêm
     const activeDistributions =
-      record.distributions?.filter(
-        (dist) => dist.status === "Đã xuất"
-      ) || [];
+      record.distributions?.filter((dist) => dist.status === "Đã xuất") || [];
 
     console.log("Active distributions for return:", activeDistributions);
 
@@ -1440,7 +1488,7 @@ const IncidentSparePartsDistribution = () => {
             <Statistic
               title={
                 <span style={{ fontSize: "13px", color: "#52c41a" }}>
-                   Đã xuất (sử dụng)
+                  Đã xuất (sử dụng)
                 </span>
               }
               value={statistics.inUse}
@@ -1512,7 +1560,9 @@ const IncidentSparePartsDistribution = () => {
                 allowClear
               >
                 <Select.Option value="Đã xuất">Đã xuất</Select.Option>
-                <Select.Option value="Đã trả một phần">Đã trả một phần</Select.Option>
+                <Select.Option value="Đã trả một phần">
+                  Đã trả một phần
+                </Select.Option>
                 <Select.Option value="Hoàn tất">Hoàn tất</Select.Option>
               </Select>
             </Col>
@@ -1892,8 +1942,9 @@ const IncidentSparePartsDistribution = () => {
             rules={[
               {
                 required: true,
-                message: `Vui lòng chọn ${distributionType === "incident" ? "sự cố" : "bảo trì"
-                  }`,
+                message: `Vui lòng chọn ${
+                  distributionType === "incident" ? "sự cố" : "bảo trì"
+                }`,
               },
             ]}
           >
@@ -1901,8 +1952,9 @@ const IncidentSparePartsDistribution = () => {
               showSearch
               allowClear
               size="large"
-              placeholder={`Tìm kiếm và chọn ${distributionType === "incident" ? "sự cố" : "bảo trì"
-                }...`}
+              placeholder={`Tìm kiếm và chọn ${
+                distributionType === "incident" ? "sự cố" : "bảo trì"
+              }...`}
               onSearch={(value) => {
                 if (distributionType === "incident") {
                   searchIncidents(value);
@@ -2028,7 +2080,10 @@ const IncidentSparePartsDistribution = () => {
                   <div
                     style={{
                       display: "grid",
-                      gridTemplateColumns: distributionType === "maintenance" ? "max-content 1fr max-content 1fr max-content 1fr" : "max-content 1fr max-content 1fr",
+                      gridTemplateColumns:
+                        distributionType === "maintenance"
+                          ? "max-content 1fr max-content 1fr max-content 1fr"
+                          : "max-content 1fr max-content 1fr",
                       gap: "8px 16px",
                       alignItems: "start",
                     }}
@@ -2085,20 +2140,20 @@ const IncidentSparePartsDistribution = () => {
 
                     {(selectedRecord.startTime ||
                       selectedRecord.scheduledDate) && (
-                        <>
-                          <strong>
-                            {distributionType === "incident"
-                              ? "Thời gian bắt đầu:"
-                              : "Ngày thực hiện:"}
-                          </strong>
-                          <span>
-                            {dayjs(
-                              selectedRecord.startTime ||
+                      <>
+                        <strong>
+                          {distributionType === "incident"
+                            ? "Thời gian bắt đầu:"
+                            : "Ngày thực hiện:"}
+                        </strong>
+                        <span>
+                          {dayjs(
+                            selectedRecord.startTime ||
                               selectedRecord.scheduledDate
-                            ).format("DD/MM/YYYY")}
-                          </span>
-                        </>
-                      )}
+                          ).format("DD/MM/YYYY")}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
               }
@@ -2271,8 +2326,8 @@ const IncidentSparePartsDistribution = () => {
                                 fontWeight: 500,
                                 color: item.partId
                                   ? (spareParts.find(
-                                    (p) => p.partId === item.partId
-                                  )?.quantity || 0) < item.quantity
+                                      (p) => p.partId === item.partId
+                                    )?.quantity || 0) < item.quantity
                                     ? "#ff4d4f"
                                     : "#52c41a"
                                   : "#000",
@@ -2280,8 +2335,8 @@ const IncidentSparePartsDistribution = () => {
                             >
                               {item.partId
                                 ? spareParts.find(
-                                  (p) => p.partId === item.partId
-                                )?.quantity || 0
+                                    (p) => p.partId === item.partId
+                                  )?.quantity || 0
                                 : "-"}
                             </span>
                           </td>
@@ -2490,12 +2545,12 @@ const IncidentSparePartsDistribution = () => {
 
             {(selectedDistributionDetail.totalReturned != null ||
               selectedDistributionDetail.totalReturned > 0) && (
-                <Descriptions.Item label="Tổng số lượng trả lại" span={2}>
-                  <strong style={{ color: "#1890ff" }}>
-                    {selectedDistributionDetail.totalReturned ?? 0} cái
-                  </strong>
-                </Descriptions.Item>
-              )}
+              <Descriptions.Item label="Tổng số lượng trả lại" span={2}>
+                <strong style={{ color: "#1890ff" }}>
+                  {selectedDistributionDetail.totalReturned ?? 0} cái
+                </strong>
+              </Descriptions.Item>
+            )}
 
             <Descriptions.Item label="Người yêu cầu">
               <div>
@@ -2513,8 +2568,8 @@ const IncidentSparePartsDistribution = () => {
             <Descriptions.Item label="Ngày yêu cầu">
               {selectedDistributionDetail.lastDistributedAt
                 ? dayjs(selectedDistributionDetail.lastDistributedAt).format(
-                  "DD/MM/YYYY HH:mm"
-                )
+                    "DD/MM/YYYY HH:mm"
+                  )
                 : "-"}
             </Descriptions.Item>
 
