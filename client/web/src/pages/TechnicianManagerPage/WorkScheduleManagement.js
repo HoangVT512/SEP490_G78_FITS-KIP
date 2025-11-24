@@ -96,8 +96,13 @@ const WorkScheduleManagement = () => {
   const [electricalTechs, setElectricalTechs] = useState([]);
   const [workOrderSparePartRequests, setWorkOrderSparePartRequests] = useState({});
   const [workOrderSparePartsList, setWorkOrderSparePartsList] = useState([]);
-  const [templateChecklistItems, setTemplateChecklistItems] = useState([]); // ← Thêm state riêng cho checklist
-  const [techWorkload, setTechWorkload] = useState({}); // ← Thêm state để lưu workload của KTV theo ngày
+  const [templateChecklistItems, setTemplateChecklistItems] = useState([]);
+  const [techWorkload, setTechWorkload] = useState({});
+  const [overdueCompletedWOs, setOverdueCompletedWOs] = useState([]);
+  const [overdueNotStartedWOs, setOverdueNotStartedWOs] = useState([]);
+  const [showOverdueWarning, setShowOverdueWarning] = useState(false);
+  const [closeNotes, setCloseNotes] = useState("");
+  const [isClosing, setIsClosing] = useState(false);
 
   // Statistics
   const [stats, setStats] = useState({
@@ -118,7 +123,7 @@ const WorkScheduleManagement = () => {
       if (notificationData.Type === "workOrderCompleted") {
         // Reload data khi có WorkOrder hoàn thành
         loadAllData();
-        
+
         // Hiển thị message
         message.success({
           content: notificationData.Message,
@@ -174,10 +179,33 @@ const WorkScheduleManagement = () => {
   const loadWorkOrders = async () => {
     try {
       const response = await getAllWorkOrders();
-      setWorkOrders(response?.data || []);
+      const orders = response?.data || [];
+      setWorkOrders(orders);
 
-      if (response?.data && response.data.length > 0) {
-        await fetchSparePartRequestsForWorkOrders(response.data);
+      if (orders.length > 0) {
+        await fetchSparePartRequestsForWorkOrders(orders);
+      }
+
+      const now = dayjs();
+      
+      // WO đã hoàn thành quá 24h chưa đóng
+      const overdueCompleted = orders.filter(wo => {
+        if (wo.status !== "Hoàn thành" && wo.status !== "Completed") return false;
+        if (!wo.completedDate) return false;
+        const hoursSinceCompleted = now.diff(dayjs(wo.completedDate), 'hour');
+        return hoursSinceCompleted >= 24;
+      });
+
+      // WO quá hạn chưa bảo trì (status = Overdue)
+      const overdueNotStarted = orders.filter(wo => {
+        return wo.workStatus === "overdue" || wo.status === "Quá hạn";
+      });
+
+      setOverdueCompletedWOs(overdueCompleted);
+      setOverdueNotStartedWOs(overdueNotStarted);
+      
+      if (overdueCompleted.length > 0 || overdueNotStarted.length > 0) {
+        setShowOverdueWarning(true);
       }
     } catch (error) {
       console.error("Load work orders error:", error);
@@ -239,9 +267,9 @@ const WorkScheduleManagement = () => {
     workOrders.forEach((wo) => {
       // ✅ Normalize status: trim và lowercase để so sánh
       const normalizedStatus = wo.status?.trim();
-      
+
       let workStatus = "pending"; // ✅ Mặc định là pending
-      
+
       if (normalizedStatus === "Đang thực hiện" || normalizedStatus === "InProgress") {
         workStatus = "inProgress";
       } else if (normalizedStatus === "Hoàn thành" || normalizedStatus === "Completed") {
@@ -254,8 +282,6 @@ const WorkScheduleManagement = () => {
         workStatus = "overdue";
       } else if (normalizedStatus === "Hoãn" || normalizedStatus === "Postponed") {
         workStatus = "postponed";
-      } else if (wo.status === "Chờ xử lý" && (wo.assignedToElectrical || wo.assignedToMechanical)) {
-        workStatus = "assigned";
       }
 
       merged.push({
@@ -450,7 +476,7 @@ const WorkScheduleManagement = () => {
         scheduledDate: scheduledDate,
         assignedToElectrical: record.assignedToElectrical,
         assignedToMechanical: record.assignedToMechanical,
-        notes: record.notes,
+        notes: '', // ✅ Không load notes cũ, để trống cho nhập mới
       });
 
       // ✅ Load workload cho ngày scheduledDate (gửi Date object)
@@ -585,12 +611,20 @@ const WorkScheduleManagement = () => {
           return;
         }
 
-        // Validate ngày không được sau dueDate
-        const dueDate = dayjs(selectedRecord.dueDate).endOf('day');
-        if (scheduledDate.isAfter(dueDate)) {
-          message.error(`Ngày bảo trì không được sau ngày đến hạn (${dueDate.format('DD/MM/YYYY')})!`);
-          setLoading(false);
-          return;
+        if (selectedRecord.status === "Quá hạn" || selectedRecord.workStatus === "overdue") {
+          const maxAllowedDate = today.add(2, 'day');
+          if (scheduledDate.isAfter(maxAllowedDate)) {
+            message.error(`Ngày bảo trì quá hạn chỉ được chuyển tối đa đến ${maxAllowedDate.format('DD/MM/YYYY')}!`);
+            setLoading(false);
+            return;
+          }
+        } else {
+          const dueDate = dayjs(selectedRecord.dueDate).endOf('day');
+          if (scheduledDate.isAfter(dueDate)) {
+            message.error(`Ngày bảo trì không được sau ngày đến hạn (${dueDate.format('DD/MM/YYYY')})!`);
+            setLoading(false);
+            return;
+          }
         }
 
         const updateData = {
@@ -754,7 +788,9 @@ const WorkScheduleManagement = () => {
   };
 
   // ✅ Handler đóng phiếu bảo trì (QLKT)
-  const handleCloseWorkOrder = async (workOrderId) => {
+  const handleCloseWorkOrder = (workOrderId) => {
+    let noteValue = "";
+
     Modal.confirm({
       title: "Xác nhận đóng phiếu bảo trì",
       content: (
@@ -763,15 +799,28 @@ const WorkScheduleManagement = () => {
           <p style={{ color: '#ff4d4f', marginTop: 8 }}>
             ⚠️ Sau khi đóng, chu kỳ bảo trì tiếp theo sẽ được kích hoạt và không thể hoàn tác.
           </p>
+          <Divider style={{ margin: '12px 0' }} />
+          <div style={{ marginTop: 16 }}>
+            <Text strong>Ghi chú đóng phiếu (tùy chọn):</Text>
+            <TextArea
+              rows={3}
+              placeholder="Nhập ghi chú nếu cần (ví dụ: Đã kiểm tra kỹ, thiết bị hoạt động tốt...)\nNếu không nhập, hệ thống sẽ tự động ghi: Đã đóng"
+              onChange={(e) => { noteValue = e.target.value; }}
+              maxLength={500}
+              showCount
+              style={{ marginTop: 8 }}
+            />
+          </div>
         </div>
       ),
       okText: "Đồng ý đóng",
       cancelText: "Hủy",
       okButtonProps: { danger: true },
+      width: 600,
       onOk: async () => {
         try {
           setLoading(true);
-          await closeWorkOrder(workOrderId);
+          await closeWorkOrder(workOrderId, noteValue || null);
           message.success("✅ Đã đóng phiếu bảo trì và kích hoạt chu kỳ tiếp theo!");
           setIsDetailModalVisible(false);
           await loadAllData();
@@ -918,10 +967,10 @@ const WorkScheduleManagement = () => {
         text: "Hoãn",
       },
     };
-    
+
     const normalizedStatus = record.status?.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     let statusKey = record.status ? statusMap[record.status] : null;
-    
+
     if (!statusKey && normalizedStatus) {
       const normalizedMap = {
         'cho xu ly': 'pending',
@@ -934,19 +983,19 @@ const WorkScheduleManagement = () => {
       };
       statusKey = normalizedMap[normalizedStatus];
     }
-    
+
     // Fallback về workStatus hoặc pending
     if (!statusKey) {
       statusKey = record.workStatus?.toLowerCase() || 'pending';
     }
-    
+
     const config = statusConfig[statusKey] || statusConfig.pending;
-    
+
     // ✅ Chỉ hiển thị Tag "Hoãn" phụ khi status KHÔNG PHẢI là "Hoãn" và có postponedDate
-    const shouldShowPostponedTag = record.type === "workOrder" && 
-                                   record.postponedDate && 
-                                   statusKey !== "postponed";
-    
+    const shouldShowPostponedTag = record.type === "workOrder" &&
+      record.postponedDate &&
+      statusKey !== "postponed";
+
     // Nếu là WorkOrder đã giao việc (assigned/Pending), hiển thị thêm ngày scheduledDate
     if (record.type === "workOrder" && (statusKey === "pending" || record.workStatus === "assigned") && record.scheduledDate) {
       return (
@@ -1064,7 +1113,7 @@ const WorkScheduleManagement = () => {
         const dueDateStart = dueDate.startOf('day');
         const daysUntilDue = dueDateStart.diff(today, "day");
         const isOverdue = daysUntilDue < 0;
-        
+
         // ✅ Lấy reminderDaysBefore từ record (mặc định 3 ngày)
         const reminderDays = record.reminderDaysBefore || 3;
         const isUpcomingSoon = daysUntilDue <= reminderDays && daysUntilDue >= 0;
@@ -1175,6 +1224,119 @@ const WorkScheduleManagement = () => {
 
   return (
     <div style={{ padding: 24 }}>
+      <Modal
+        title={
+          <Space>
+            <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
+            <Text strong>⚠️ Cảnh báo kế hoạch bảo trì</Text>
+          </Space>
+        }
+        open={showOverdueWarning}
+        onCancel={() => setShowOverdueWarning(false)}
+        footer={[
+          <Button key="close" type="primary" onClick={() => setShowOverdueWarning(false)}>
+            Đã hiểu
+          </Button>,
+        ]}
+        width={800}
+      >
+        {/* Cảnh báo WO quá hạn chưa bảo trì */}
+        {overdueNotStartedWOs.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <Alert
+              message={`Có ${overdueNotStartedWOs.length} phiếu bảo trì quá hạn chưa được thực hiện!`}
+              description="Vui lòng chuyển lịch hoặc hủy các phiếu bảo trì quá hạn."
+              type="error"
+              showIcon
+              style={{ marginBottom: 12 }}
+            />
+            <List
+              size="small"
+              dataSource={overdueNotStartedWOs}
+              renderItem={(wo) => (
+                <List.Item
+                  actions={[
+                    <Button
+                      size="small"
+                      type="link"
+                      onClick={() => {
+                        setShowOverdueWarning(false);
+                        handleViewDetail(wo);
+                      }}
+                    >
+                      Xem chi tiết
+                    </Button>,
+                  ]}
+                >
+                  <List.Item.Meta
+                    title={
+                      <Space>
+                        <Text strong>{wo.workOrderCode || `WO${wo.workOrderId}`}</Text>
+                        <Tag color="red">Quá hạn</Tag>
+                      </Space>
+                    }
+                    description={
+                      <div>
+                        <div>Thiết bị: {wo.equipmentName} ({wo.equipmentCode})</div>
+                        <div>Đến hạn: {dayjs(wo.dueDate).format('DD/MM/YYYY HH:mm')}</div>
+                      </div>
+                    }
+                  />
+                </List.Item>
+              )}
+            />
+          </div>
+        )}
+
+        {/* Cảnh báo WO hoàn thành chưa đóng */}
+        {overdueCompletedWOs.length > 0 && (
+          <div>
+            <Alert
+              message={`Có ${overdueCompletedWOs.length} phiếu bảo trì đã hoàn thành quá 1 ngày nhưng chưa được kiểm tra và đóng!`}
+              description="Vui lòng kiểm tra và đóng các phiếu bảo trì để kích hoạt chu kỳ tiếp theo."
+              type="warning"
+              showIcon
+              style={{ marginBottom: 12 }}
+            />
+            <List
+              size="small"
+              dataSource={overdueCompletedWOs}
+              renderItem={(wo) => (
+                <List.Item
+                  actions={[
+                    <Button
+                      size="small"
+                      type="primary"
+                      onClick={() => {
+                        setShowOverdueWarning(false);
+                        handleViewDetail(wo);
+                      }}
+                    >
+                      Xem và đóng
+                    </Button>,
+                  ]}
+                >
+                  <List.Item.Meta
+                    title={
+                      <Space>
+                        <Text strong>{wo.workOrderCode || `WO${wo.workOrderId}`}</Text>
+                        <Tag color="orange">Hoàn thành {dayjs().diff(dayjs(wo.completedDate), 'day')} ngày trước</Tag>
+                      </Space>
+                    }
+                    description={
+                      <div>
+                        <div>Thiết bị: {wo.equipmentName} ({wo.equipmentCode})</div>
+                        <div>Hoàn thành lúc: {dayjs(wo.completedDate).format('DD/MM/YYYY HH:mm')}</div>
+                      </div>
+                    }
+                  />
+                </List.Item>
+              )}
+            />
+          </div>
+        )}
+      </Modal>
+
       <Card title="Lịch bảo trì & Công việc" bordered={false}>
         {/* Statistics */}
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '16px', marginBottom: 24 }}>
@@ -1324,16 +1486,16 @@ const WorkScheduleManagement = () => {
               placeholder="Chọn ngày hoãn"
               disabledDate={(current) => {
                 if (!current) return false;
-                
+
                 const today = dayjs().startOf('day');
                 const dueDate = selectedRecord?.dueDate ? dayjs(selectedRecord.dueDate).startOf('day') : null;
-                
+
                 // Tính maxDate = dueDate + chu kỳ
                 let maxDate = null;
                 if (dueDate && selectedRecord?.intervalValue && selectedRecord?.intervalType) {
                   const intervalValue = selectedRecord.intervalValue;
                   const intervalType = selectedRecord.intervalType;
-                  
+
                   if (intervalType === 'Days' || intervalType === 'days') {
                     maxDate = dueDate.add(intervalValue, 'day');
                   } else if (intervalType === 'Months' || intervalType === 'months') {
@@ -1342,22 +1504,22 @@ const WorkScheduleManagement = () => {
                     maxDate = dueDate.add(intervalValue, 'hour');
                   }
                 }
-                
+
                 // Không cho chọn quá khứ
                 if (current < today) {
                   return true;
                 }
-                
+
                 // Không cho chọn <= ngày đến hạn hiện tại
                 if (dueDate && current <= dueDate) {
                   return true;
                 }
-                
+
                 // Không cho chọn >= maxDate (dueDate + chu kỳ)
                 if (maxDate && current >= maxDate) {
                   return true;
                 }
-                
+
                 return false;
               }}
             />
@@ -1407,6 +1569,7 @@ const WorkScheduleManagement = () => {
 
       {/* Detail Modal - Gộp cả View và Edit */}
       <Modal
+        key={selectedRecord?.workOrderId || selectedRecord?.planId || 'modal'}
         title={
           <Space>
             <FileTextOutlined />
@@ -1686,11 +1849,19 @@ const WorkScheduleManagement = () => {
                       <Text type="secondary">Chưa phân công</Text>
                     )}
                   </Descriptions.Item>
-                  {selectedRecord.notes && (
-                    <Descriptions.Item label="Ghi chú" span={2}>
-                      {selectedRecord.notes}
-                    </Descriptions.Item>
-                  )}
+                  <Descriptions.Item label="Ghi chú" span={2}>
+                    {!selectedRecord.notes ? (
+                      <Text type="secondary">Chưa có ghi chú</Text>
+                    ) : (
+                      selectedRecord.notes.split('\n')
+                        .filter(line => line.trim())
+                        .map((line, idx, arr) => (
+                          <div key={idx} style={{ marginBottom: idx < arr.length - 1 ? '8px' : 0 }}>
+                            {line}
+                          </div>
+                        ))
+                    )}
+                  </Descriptions.Item>
                 </>
               ) : (
                 <>
@@ -1810,27 +1981,29 @@ const WorkScheduleManagement = () => {
 
                             const today = dayjs().startOf('day');
 
-                            // ❌ Không được chọn ngày quá khứ
                             if (current.isBefore(today, 'day')) {
                               return true;
                             }
 
-                            // Lấy ngày đến hạn từ record
-                            let dueDate = null;
-
                             if (selectedRecord?.type === 'plan') {
-                              // Giao việc mới từ Plan
-                              dueDate = selectedRecord.postponedDueDate
+                              const dueDate = selectedRecord.postponedDueDate
                                 ? dayjs(selectedRecord.postponedDueDate)
                                 : dayjs(selectedRecord.nextDueDate);
+                              if (dueDate && current.isAfter(dueDate, 'day')) {
+                                return true;
+                              }
                             } else if (selectedRecord?.type === 'workOrder') {
-                              // Cập nhật WorkOrder
-                              dueDate = dayjs(selectedRecord.dueDate);
-                            }
-
-                            // ❌ Không được chọn ngày sau dueDate
-                            if (dueDate && current.isAfter(dueDate, 'day')) {
-                              return true;
+                              if (selectedRecord.status === 'Quá hạn' || selectedRecord.workStatus === 'overdue') {
+                                const maxAllowedDate = today.add(2, 'day');
+                                if (current.isAfter(maxAllowedDate, 'day')) {
+                                  return true;
+                                }
+                              } else {
+                                const dueDate = dayjs(selectedRecord.dueDate);
+                                if (dueDate && current.isAfter(dueDate, 'day')) {
+                                  return true;
+                                }
+                              }
                             }
 
                             return false;
@@ -1948,33 +2121,40 @@ const WorkScheduleManagement = () => {
                     </Col>
                   </Row>
 
-                  {/* ✅ Trường Notes - BẮT BUỘC khi đổi KTV cho WorkOrder đang thực hiện */}
-                  {selectedRecord?.workOrderId && (selectedRecord.status === "Đang thực hiện" || selectedRecord.workStatus === "inProgress") && (
-                    <Row gutter={16}>
-                      <Col span={24}>
-                        <Form.Item
-                          name="notes"
-                          label={
-                            <span>
-                              <FileTextOutlined style={{ color: "#faad14", marginRight: 4 }} />
-                              Lý do thay đổi KTV
-                            </span>
+                  <Row gutter={16}>
+                    <Col span={24}>
+                      <Form.Item
+                        name="notes"
+                        label={
+                          <span>
+                            <FileTextOutlined style={{ color: "#faad14", marginRight: 4 }} />
+                            {selectedRecord?.workOrderId && (selectedRecord.status === "Đang thực hiện" || selectedRecord.workStatus === "inProgress")
+                              ? "Lý do thay đổi KTV"
+                              : "Ghi chú (tùy chọn)"}
+                          </span>
+                        }
+                        rules={
+                          selectedRecord?.workOrderId && (selectedRecord.status === "Đang thực hiện" || selectedRecord.workStatus === "inProgress")
+                            ? [
+                              { required: true, message: "Vui lòng nhập lý do thay đổi KTV" },
+                              { min: 10, message: "Lý do phải có ít nhất 10 ký tự" }
+                            ]
+                            : []
+                        }
+                      >
+                        <TextArea
+                          rows={3}
+                          placeholder={
+                            selectedRecord?.workOrderId && (selectedRecord.status === "Đang thực hiện" || selectedRecord.workStatus === "inProgress")
+                              ? "Ví dụ: KTV cũ bị tai nạn nghề nghiệp, cần thay thế khẩn cấp..."
+                              : "Nhập ghi chú nếu cần (ví dụ: Lý do dời lịch, thay đổi KTV...)"
                           }
-                          rules={[
-                            { required: true, message: "Vui lòng nhập lý do thay đổi KTV" },
-                            { min: 10, message: "Lý do phải có ít nhất 10 ký tự" }
-                          ]}
-                        >
-                          <TextArea
-                            rows={3}
-                            placeholder="Ví dụ: KTV cũ bị tai nạn nghề nghiệp, cần thay thế khẩn cấp..."
-                            showCount
-                            maxLength={500}
-                          />
-                        </Form.Item>
-                      </Col>
-                    </Row>
-                  )}
+                          showCount
+                          maxLength={500}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
                 </Form>
 
                 {/* Template Checklist - Hiển thị ở chế độ Edit để Manager xem trước */}
@@ -2099,7 +2279,7 @@ const WorkScheduleManagement = () => {
               </div>
             )}
 
-            {/* Template Checklist - LUÔN HIỂN THỊ (không phụ thuộc vào isEditMode) */}
+            {/* Template Checklist - LUÔN HIỂN THỊ  */}
             {!isEditMode && templateChecklistItems.length > 0 && (
               <div style={{ marginTop: 24 }}>
                 <Divider orientation="left">

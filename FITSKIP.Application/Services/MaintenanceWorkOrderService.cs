@@ -198,8 +198,19 @@ namespace FITSKIP.Application.Services
                 var scheduledDate = request.ScheduledDate.Value.Date;
                 var today = DateTime.Now.Date;
                 
-
-                if (scheduledDate < today)
+                if (workOrder.Status == "Quá hạn")
+                {
+                    var maxAllowedDate = today.AddDays(2);
+                    if (scheduledDate < today)
+                    {
+                        throw new InvalidOperationException("❌ Ngày bảo trì không được là ngày trong quá khứ!");
+                    }
+                    if (scheduledDate > maxAllowedDate)
+                    {
+                        throw new InvalidOperationException($"❌ Ngày bảo trì quá hạn chỉ được chuyển tối đa 2 ngày kể từ hôm nay ({maxAllowedDate:dd/MM/yyyy})!");
+                    }
+                }
+                else if (scheduledDate < today)
                 {
                     throw new InvalidOperationException("❌ Ngày bảo trì không được là ngày trong quá khứ!");
                 }
@@ -225,7 +236,15 @@ namespace FITSKIP.Application.Services
                     }
                 }
                 
-                if (workOrder.Status != "Overdue" && scheduledDate > workOrder.DueDate.Date)
+                if (workOrder.Status == "Quá hạn")
+                {
+                    var maxAllowedDate = DateTime.Now.Date.AddDays(2);
+                    if (scheduledDate > maxAllowedDate)
+                    {
+                        throw new InvalidOperationException($"Ngày bảo trì quá hạn chỉ được chuyển tối đa đến {maxAllowedDate:dd/MM/yyyy}!");
+                    }
+                }
+                else if (scheduledDate > workOrder.DueDate.Date)
                 {
                     throw new InvalidOperationException($"Ngày bảo trì không được sau ngày đến hạn ({workOrder.DueDate:dd/MM/yyyy})!");
                 }
@@ -256,6 +275,7 @@ namespace FITSKIP.Application.Services
 
             if (request.ScheduledDate.HasValue)
             {
+                var oldScheduledDate = workOrder.ScheduledDate;
                 workOrder.ScheduledDate = request.ScheduledDate.Value.Date;
                 
                 if (workOrder.Status == "Quá hạn")
@@ -263,8 +283,34 @@ namespace FITSKIP.Application.Services
                     bool hasAssigned = !string.IsNullOrEmpty(request.AssignedToElectrical) || 
                                        !string.IsNullOrEmpty(request.AssignedToMechanical);
                     workOrder.Status = "Chờ xử lý";
-                    workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Dời lịch bảo trì quá hạn sang {request.ScheduledDate.Value.Date:dd/MM/yyyy}";
+                    
+                    var autoNote = $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Dời lịch bảo trì quá hạn từ {oldScheduledDate:dd/MM/yyyy} sang {request.ScheduledDate.Value.Date:dd/MM/yyyy}";
+                    if (!string.IsNullOrEmpty(request.Notes))
+                    {
+                        workOrder.Notes = (workOrder.Notes ?? "") + autoNote + $" - Lý do: {request.Notes}";
+                    }
+                    else
+                    {
+                        workOrder.Notes = (workOrder.Notes ?? "") + autoNote;
+                    }
                 }
+                else if (oldScheduledDate != workOrder.ScheduledDate)
+                {
+                    var autoNote = $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Cập nhật ngày bảo trì từ {oldScheduledDate:dd/MM/yyyy} sang {request.ScheduledDate.Value.Date:dd/MM/yyyy}";
+                    if (!string.IsNullOrEmpty(request.Notes))
+                    {
+                        workOrder.Notes = (workOrder.Notes ?? "") + autoNote + $" - Lý do: {request.Notes}";
+                    }
+                    else
+                    {
+                        workOrder.Notes = (workOrder.Notes ?? "") + autoNote;
+                    }
+                }
+            }
+            else if (!string.IsNullOrEmpty(request.Notes))
+            {
+                var autoNote = $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] {request.Notes}";
+                workOrder.Notes = (workOrder.Notes ?? "") + autoNote;
             }
             
             workOrder.AssignedToElectrical = request.AssignedToElectrical;
@@ -273,7 +319,6 @@ namespace FITSKIP.Application.Services
             if (!string.IsNullOrEmpty(request.Status))
                 workOrder.Status = request.Status;
 
-            workOrder.Notes = request.Notes;
             workOrder.UpdatedBy = userId;
             workOrder.UpdatedDate = DateTime.Now;
 
@@ -587,11 +632,11 @@ namespace FITSKIP.Application.Services
             
             if (!string.IsNullOrEmpty(notes))
             {
-                workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Đóng WO: {notes}";
+                workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Đóng WO - {notes}";
             }
             else
             {
-                workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Đóng WO - Đã kiểm tra và quyết toán";
+                workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Đã đóng";
             }
 
             await _workOrderRepository.UpdateAsync(workOrder);
@@ -1093,19 +1138,16 @@ namespace FITSKIP.Application.Services
             var allActivePlans = await _planRepository.GetAllAsync();
             var today = DateTime.Today;
 
-            Console.WriteLine($"[AUTO-CREATE] Checking {allActivePlans.Count(p => p.IsActive)} active plans at {today:yyyy-MM-dd}");
 
             foreach (var plan in allActivePlans.Where(p => p.IsActive))
             {
                 var daysUntilDue = (plan.NextDueDate - today).Days;
 
-                Console.WriteLine($"[AUTO-CREATE] Plan {plan.PlanId}: NextDueDate={plan.NextDueDate:yyyy-MM-dd}, DaysUntil={daysUntilDue}, Reminder={plan.ReminderDaysBefore}");
 
                 if (daysUntilDue <= plan.ReminderDaysBefore && daysUntilDue >= 0)
                 {
                     if (!plan.EquipmentId.HasValue)
                     {
-                        Console.WriteLine($"[WARNING] Plan {plan.PlanId} has no EquipmentId, skipping auto-create WorkOrder");
                         continue;
                     }
 
@@ -1113,20 +1155,16 @@ namespace FITSKIP.Application.Services
                     
                     Console.WriteLine($"[AUTO-CREATE] Plan {plan.PlanId} has {existingWorkOrders.Count()} total WorkOrders");
                     
-                    // ✅ Chỉ kiểm tra WorkOrder ĐANG HOẠT ĐỘNG cho chu kỳ HIỆN TẠI (NextDueDate)
-                    // Không tính các WorkOrder đã đóng/hủy hoặc của chu kỳ cũ
                     var hasActiveWorkOrderForCurrentCycle = existingWorkOrders.Any(wo => 
                         wo.Status != "Đã đóng" && 
                         wo.Status != "Đã hủy" &&
                         wo.DueDate.Date == plan.NextDueDate.Date &&
-                        wo.CreatedDate >= DateTime.Today.AddDays(-plan.ReminderDaysBefore) // Chỉ tính WO tạo trong khoảng reminder
+                        wo.CreatedDate >= DateTime.Today.AddDays(-plan.ReminderDaysBefore) 
                     );
 
-                    Console.WriteLine($"[AUTO-CREATE] Plan {plan.PlanId}: hasActiveWorkOrderForCurrentCycle={hasActiveWorkOrderForCurrentCycle}");
 
                     if (!hasActiveWorkOrderForCurrentCycle)
                     {
-                        // ✅ Generate mã WorkOrder tự động tăng (WO-YYYYMM-XXX)
                         var workOrderCode = await _workOrderRepository.GenerateWorkOrderCodeAsync();
                         
                         var newWorkOrder = new MaintenanceWorkOrder
@@ -1138,7 +1176,7 @@ namespace FITSKIP.Application.Services
                             DueDate = plan.NextDueDate,
                             Status = "Chờ xử lý",
                             Notes = $"[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động tạo WorkOrder từ chu kỳ bảo trì",
-                            CreatedBy = null, // Auto-created, không có user cụ thể
+                            CreatedBy = null, 
                             CreatedDate = DateTime.Now,
                             UpdatedDate = DateTime.Now
                         };
