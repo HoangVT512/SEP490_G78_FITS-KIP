@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace FITSKIP.API.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Quản trị viên,Quản lý kho,Kỹ thuật viên")]
     [ApiController]
     [Route("api/[controller]")]
     public class ReplacementHistoriesController : ControllerBase
@@ -117,6 +117,7 @@ namespace FITSKIP.API.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Quản trị viên,Quản lý kho")]
         public async Task<ActionResult<ReplacementHistoryDTO>> Create([FromBody] CreateReplacementHistoryRequest request, CancellationToken cancellationToken = default)
         {
             try
@@ -183,6 +184,7 @@ namespace FITSKIP.API.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Quản trị viên,Quản lý kho")]
         public async Task<ActionResult<ReplacementHistoryDTO>> Update(int id, [FromBody] UpdateReplacementHistoryRequest request, CancellationToken cancellationToken = default)
         {
             try
@@ -236,6 +238,7 @@ namespace FITSKIP.API.Controllers
         /// Nếu actualQuantityUsed < Quantity (dư): chuyển "Chờ trả lại", chờ QLKT xác nhận
         /// </summary>
         [HttpPut("{id:int}/record-usage")]
+        [Authorize(Roles = "Quản trị viên,Quản lý kho,Kỹ thuật viên")]
         public async Task<ActionResult<ReplacementHistoryDTO>> RecordActualUsage(
             int id,
             [FromBody] RecordUsageRequest request,
@@ -678,6 +681,7 @@ namespace FITSKIP.API.Controllers
         /// Cập nhật thông tin trả lại linh kiện thừa vào kho và trừ số lượng trong SpareParts
         /// </summary>
         [HttpPut("{id}/confirm-return")]
+        [Authorize(Roles = "Quản trị viên,Quản lý kho")]
         public async Task<ActionResult<ReplacementHistoryDTO>> ConfirmReturn(
             int id,
             [FromBody] ReturnConfirmationDto confirmationDto,

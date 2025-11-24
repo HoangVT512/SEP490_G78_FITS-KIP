@@ -7,7 +7,7 @@ namespace FITSKIP.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize]
+[Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
 public class StagesController : ControllerBase
 {
     private readonly IStageService _stageService;

@@ -3,11 +3,13 @@ using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 
 namespace FITSKIP.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Quản trị viên")]
     public class DepartmentsController : ControllerBase
     {
         private readonly IUserService _userService;

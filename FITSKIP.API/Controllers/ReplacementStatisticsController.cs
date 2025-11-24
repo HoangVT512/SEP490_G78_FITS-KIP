@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace FITSKIP.API.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = "Quản trị viên,Quản lý kho,Quản lý kỹ thuật")]
     [ApiController]
     [Route("api/[controller]")]
     public class ReplacementStatisticsController : ControllerBase

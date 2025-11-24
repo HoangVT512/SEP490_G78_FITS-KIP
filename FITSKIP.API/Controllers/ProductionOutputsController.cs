@@ -7,7 +7,7 @@ namespace FITSKIP.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-
+[Authorize]
 public class ProductionOutputsController : ControllerBase
 {
     private readonly IProductionOutputService _productionOutputService;

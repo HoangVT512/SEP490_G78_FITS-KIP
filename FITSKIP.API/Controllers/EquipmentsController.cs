@@ -102,6 +102,7 @@ public class EquipmentsController : ControllerBase
     /// <response code="400">Dữ liệu đầu vào không hợp lệ</response>
     /// <response code="500">Lỗi server nội bộ</response>
     [HttpPost]
+    [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
     [ProducesResponseType(typeof(ApiResponse<EquipmentDTO>), StatusCodes.Status201Created)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status500InternalServerError)]
@@ -162,6 +163,7 @@ public class EquipmentsController : ControllerBase
     /// <response code="404">Không tìm thấy thiết bị</response>
     /// <response code="500">Lỗi server nội bộ</response>
     [HttpPut("{id}")]
+    [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
     [ProducesResponseType(typeof(ApiResponse<EquipmentDTO>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]
@@ -230,6 +232,7 @@ public class EquipmentsController : ControllerBase
     /// <response code="404">Không tìm thấy thiết bị</response>
     /// <response code="500">Lỗi server nội bộ</response>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Quản trị viên")]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ApiResponse), StatusCodes.Status404NotFound)]

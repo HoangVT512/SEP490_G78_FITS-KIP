@@ -284,6 +284,7 @@ public class IncidentsController : ControllerBase
     /// Tạo sự cố mới
     /// </summary>
     [HttpPost]
+    [Authorize] // All authenticated users can report incidents
     public async Task<IActionResult> CreateIncident([FromForm] CreateIncidentRequest request)
     {
         try
@@ -503,7 +504,8 @@ public class IncidentsController : ControllerBase
     /// Cập nhật thông tin sự cố
     /// </summary>
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateIncident(int id, [FromBody] UpdateIncidentRequest request)
+    [Authorize(Roles = "Quản trị viên,Tổ trưởng,Kỹ thuật viên,Quản lý kỹ thuật")]
+    public async Task<IActionResult> UpdateIncident(int id, [FromForm] UpdateIncidentRequest request)
     {
         try
         {
@@ -603,6 +605,7 @@ public class IncidentsController : ControllerBase
     /// Xóa sự cố
     /// </summary>
     [HttpDelete("{id}")]
+    [Authorize(Roles = "Quản trị viên")]
     public async Task<IActionResult> DeleteIncident(int id)
     {
         try
@@ -727,6 +730,7 @@ public class IncidentsController : ControllerBase
     /// Phân công kỹ thuật viên cho sự cố
     /// </summary>
     [HttpPut("{id}/assign-technician")]
+    [Authorize(Roles = "Quản trị viên,Tổ trưởng,Quản lý kỹ thuật")]
     public async Task<IActionResult> AssignTechnician(int id, [FromBody] AssignTechnicianRequest request)
     {
         try

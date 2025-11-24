@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.DTO;
@@ -7,6 +8,7 @@ namespace FITSKIP.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize(Roles = "Quản trị viên,Quản lý kho")]
     public class SparePartsController : ControllerBase
     {
         private readonly ISparePartService _service;
@@ -87,6 +89,7 @@ namespace FITSKIP.API.Controllers
 
         // POST: https://localhost:7003/api/SpareParts
         [HttpPost]
+        [Authorize(Roles = "Quản trị viên,Quản lý kho")]
         public async Task<ActionResult<SparePartDTO>> CreateSparePart([FromBody] CreateSparePartRequest request, CancellationToken cancellationToken = default)
         {
             try
@@ -143,7 +146,8 @@ namespace FITSKIP.API.Controllers
 
         // PUT: https://localhost:7003/api/SpareParts/{id}
         [HttpPut("{id}")]
-        public async Task<IActionResult> UpdateSparePart(int id, [FromBody] UpdateSparePartRequest request, CancellationToken cancellationToken = default)
+        [Authorize(Roles = "Quản trị viên,Quản lý kho")]
+        public async Task<ActionResult<SparePartDTO>> UpdateSparePart(int id, [FromBody] UpdateSparePartRequest request, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -186,6 +190,7 @@ namespace FITSKIP.API.Controllers
 
         // DELETE: https://localhost:7003/api/SpareParts/{id}
         [HttpDelete("{id}")]
+        [Authorize(Roles = "Quản trị viên")]
         public async Task<IActionResult> DeleteSparePart(int id, CancellationToken cancellationToken = default)
         {
             try

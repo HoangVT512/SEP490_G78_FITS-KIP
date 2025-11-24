@@ -1,11 +1,13 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FITSKIP.API.Controllers;
 
 [ApiController]
 [Route("api/admin/dashboard")]
+[Authorize(Roles = "Quản trị viên")]
 public class AdminDashboardController : ControllerBase
 {
     private readonly IUserService userService;

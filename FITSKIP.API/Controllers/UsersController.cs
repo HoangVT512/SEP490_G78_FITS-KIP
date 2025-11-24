@@ -4,6 +4,7 @@ using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Infrastructure.DbContexts;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using OfficeOpenXml;
 using System.Text.RegularExpressions;
@@ -12,6 +13,7 @@ namespace FITSKIP.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Roles = "Quản trị viên")]
 public class UsersController : ControllerBase
 {
     private readonly IUserService userService;

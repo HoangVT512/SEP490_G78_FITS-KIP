@@ -1,6 +1,7 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NUnit.Framework;
 
@@ -8,6 +9,7 @@ namespace FITSKIP.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize(Roles = "Quản trị viên")]
     public class RolesController : ControllerBase
     {
         private readonly IRoleService roleService;
