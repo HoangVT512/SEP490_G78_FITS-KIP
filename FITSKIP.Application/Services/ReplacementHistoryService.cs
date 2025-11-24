@@ -18,25 +18,118 @@ namespace FITSKIP.Application.Services
         {
             _repository = repository;
         }
+
+        // ✅ FIX - LOGIC ĐÚNG
+        private string CalculateStatus(ReplacementHistory rh)
+        {
+            int returned = rh.QuantityToReturn ?? 0;
+
+            // Case 1: Chưa trả lại gì
+            if (returned == 0)
+                return "Đã xuất";
+
+            // Case 2: Đã trả đủ (quantityToReturn == quantity) → Hoàn tất (không cần xác nhận)
+            if (returned == rh.Quantity)
+                return "Hoàn tất";
+
+            // Case 3: Đã trả một phần (0 < quantityToReturn < quantity)
+            if (returned > 0 && returned < rh.Quantity)
+                return "Đã trả một phần";
+
+            // Default: giữ nguyên status cũ
+            return rh.Status;
+        }
         public Task<ReplacementHistory> CreateAsync(ReplacementHistory replacementHistory, CancellationToken cancellationToken = default) => _repository.CreateAsync(replacementHistory, cancellationToken);
 
         public Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default) => _repository.DeleteAsync(id, cancellationToken);
 
-        public Task<IEnumerable<ReplacementHistory>> GetAllAsync(CancellationToken cancellationToken = default) => _repository.GetAllAsync(cancellationToken);
+        public async Task<IEnumerable<ReplacementHistory>> GetAllAsync(CancellationToken cancellationToken = default)
+        {
+            var all = await _repository.GetAllAsync(cancellationToken);
+            // Recalculate status for each record before returning
+            foreach (var rh in all)
+            {
+                rh.Status = CalculateStatus(rh);
+            }
+            return all;
+        }
 
-        public Task<IEnumerable<ReplacementHistory>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default) => _repository.GetByDateRangeAsync(startDate, endDate, cancellationToken);
+        public async Task<IEnumerable<ReplacementHistory>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
+        {
+            var result = await _repository.GetByDateRangeAsync(startDate, endDate, cancellationToken);
+            foreach (var rh in result)
+            {
+                rh.Status = CalculateStatus(rh);
+            }
+            return result;
+        }
 
-        public Task<IEnumerable<ReplacementHistory>> GetByEquipmentIdAsync(int equipmentId, CancellationToken cancellationToken = default) => _repository.GetByEquipmentIdAsync(equipmentId, cancellationToken);
+        public async Task<IEnumerable<ReplacementHistory>> GetByEquipmentIdAsync(int equipmentId, CancellationToken cancellationToken = default)
+        {
+            var result = await _repository.GetByEquipmentIdAsync(equipmentId, cancellationToken);
+            foreach (var rh in result)
+            {
+                rh.Status = CalculateStatus(rh);
+            }
+            return result;
+        }
 
-        public Task<IEnumerable<ReplacementHistory>> GetByIncidentIdAsync(int incidentId, CancellationToken cancellationToken = default) => _repository.GetByIncidentIdAsync(incidentId, cancellationToken);
+        public async Task<IEnumerable<ReplacementHistory>> GetByIncidentIdAsync(int incidentId, CancellationToken cancellationToken = default)
+        {
+            var result = await _repository.GetByIncidentIdAsync(incidentId, cancellationToken);
+            foreach (var rh in result)
+            {
+                rh.Status = CalculateStatus(rh);
+            }
+            return result;
+        }
 
-        public Task<ReplacementHistory> GetByIdAsync(int id, CancellationToken cancellationToken = default) => _repository.GetByIdAsync(id, cancellationToken);
+        public async Task<ReplacementHistory> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            var result = await _repository.GetByIdAsync(id, cancellationToken);
+            result.Status = CalculateStatus(result);
+            return result;
+        }
 
-        public Task<IEnumerable<ReplacementHistory>> GetByPartIdAsync(int partId, CancellationToken cancellationToken = default) => _repository.GetByPartIdAsync(partId, cancellationToken);
+        public async Task<IEnumerable<ReplacementHistory>> GetByPartIdAsync(int partId, CancellationToken cancellationToken = default)
+        {
+            var result = await _repository.GetByPartIdAsync(partId, cancellationToken);
+            foreach (var rh in result)
+            {
+                rh.Status = CalculateStatus(rh);
+            }
+            return result;
+        }
 
-        public Task<IEnumerable<ReplacementHistory>> GetByStatusAsync(string status1, CancellationToken cancellationToken = default) => _repository.GetByStatusAsync(status1, cancellationToken);
+        public async Task<IEnumerable<ReplacementHistory>> GetByStatusAsync(string status, CancellationToken cancellationToken = default)
+        {
+            var all = await _repository.GetAllAsync(cancellationToken);
+            return all.Where(rh =>
+            {
+                int returned = rh.QuantityToReturn ?? 0;
+                switch (status)
+                {
+                    case "Đã xuất":
+                        return returned == 0;
+                    case "Đã trả một phần":
+                        return returned > 0 && returned < rh.Quantity;
+                    case "Hoàn tất":
+                        return returned == rh.Quantity;
+                    default:
+                        return rh.Status == status;
+                }
+            });
+        }
 
-        public Task<IEnumerable<ReplacementHistory>> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default) => _repository.GetByUserIdAsync(userId, cancellationToken);
+        public async Task<IEnumerable<ReplacementHistory>> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default)
+        {
+            var result = await _repository.GetByUserIdAsync(userId, cancellationToken);
+            foreach (var rh in result)
+            {
+                rh.Status = CalculateStatus(rh);
+            }
+            return result;
+        }
 
         public async Task<ReplacementHistory> UpdateAsync(int replacementId, ReplacementHistory replacementHistory, CancellationToken cancellationToken = default)
         {
@@ -51,6 +144,20 @@ namespace FITSKIP.Application.Services
                 throw new ArgumentException($"Lịch sử thay thế với id {replacementId} không tồn tại");
             }
             replacementHistory.ReplacementId = replacementId;
+
+            // Debug logging
+            Console.WriteLine($"=== UpdateAsync Debug ===");
+            Console.WriteLine($"ReplacementId: {replacementId}");
+            Console.WriteLine($"Quantity: {replacementHistory.Quantity}");
+            Console.WriteLine($"QuantityToReturn: {replacementHistory.QuantityToReturn}");
+            Console.WriteLine($"ReturnConfirmedBy: {replacementHistory.ReturnConfirmedBy}");
+            Console.WriteLine($"Old Status: {replacementHistory.Status}");
+
+            replacementHistory.Status = CalculateStatus(replacementHistory);
+
+            Console.WriteLine($"New Status: {replacementHistory.Status}");
+            Console.WriteLine($"===================");
+
             return await _repository.UpdateAsync(replacementHistory, cancellationToken);
         }
 
@@ -76,7 +183,7 @@ namespace FITSKIP.Application.Services
                 {
                     existing.ActualQuantityUsed = confirmationDto.ActualQuantityUsed.Value;
                     existing.QuantityToReturn = null;
-                    existing.Status = "Hoàn thành"; // Đã hoàn thành, không có thừa
+                    existing.Status = "Hoàn tất"; // Đã hoàn thành, không có thừa
                 }
             }
 
@@ -84,10 +191,10 @@ namespace FITSKIP.Application.Services
             existing.ReturnedDate = confirmationDto.ReturnedDate ?? DateTime.Now;
             existing.ReturnConfirmedBy = confirmationDto.ReturnConfirmedBy;
 
-            // Nếu đã xác nhận trả lại, cập nhật status thành "Hoàn thành" (tiếng Việt)
+            // Nếu đã xác nhận trả lại, cập nhật status thành "Hoàn tất"
             if (!string.IsNullOrEmpty(confirmationDto.ReturnConfirmedBy))
             {
-                existing.Status = "Hoàn thành"; // Hoàn thành - status cuối cùng (tiếng Việt)
+                existing.Status = "Hoàn tất"; // Hoàn tất - status cuối cùng
 
                 // ✅ MỚI: Set ReplacedDate = giờ Việt Nam hiện tại khi hoàn thành trả lại
                 if (existing.ReplacedDate == null)
@@ -95,6 +202,8 @@ namespace FITSKIP.Application.Services
                     existing.ReplacedDate = DateTimeHelper.GetVietnamNow();
                 }
             }
+
+            existing.Status = CalculateStatus(existing);
 
             return await _repository.UpdateAsync(existing, cancellationToken);
         }
@@ -112,6 +221,19 @@ namespace FITSKIP.Application.Services
                 r.QuantityToReturn > 0 &&
                 string.IsNullOrEmpty(r.ReturnConfirmedBy)
             ).ToList();
+        }
+
+        /// <summary>
+        /// Cập nhật status cho tất cả bản ghi dựa trên logic mới
+        /// </summary>
+        public async Task UpdateAllStatusesAsync(CancellationToken cancellationToken = default)
+        {
+            var all = await _repository.GetAllAsync(cancellationToken);
+            foreach (var rh in all)
+            {
+                rh.Status = CalculateStatus(rh);
+                await _repository.UpdateAsync(rh, cancellationToken);
+            }
         }
     }
 }

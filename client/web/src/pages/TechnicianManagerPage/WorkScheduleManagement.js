@@ -254,6 +254,8 @@ const WorkScheduleManagement = () => {
         workStatus = "overdue";
       } else if (normalizedStatus === "Hoãn" || normalizedStatus === "Postponed") {
         workStatus = "postponed";
+      } else if (wo.status === "Chờ xử lý" && (wo.assignedToElectrical || wo.assignedToMechanical)) {
+        workStatus = "assigned";
       }
 
       merged.push({

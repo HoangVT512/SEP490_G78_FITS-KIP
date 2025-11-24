@@ -11,14 +11,18 @@ import {
   Space,
   Spin,
   Empty,
+  Progress,
+  Divider,
 } from "antd";
 import {
   InboxOutlined,
   WarningOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  RiseOutlined,
-  FallOutlined,
+  ShoppingOutlined,
+  SwapOutlined,
+  SafetyOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import { sparePartService } from "../../services/sparePartService";
@@ -29,14 +33,18 @@ const WarehouseManagerDashboard = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [spareParts, setSpareParts] = useState([]);
-  const [pendingRequests, setPendingRequests] = useState([]);
-  const [pendingReturns, setPendingReturns] = useState([]);
+  const [allReplacements, setAllReplacements] = useState([]);
+  const [pendingDistributions, setPendingDistributions] = useState([]);
   const [purchaseRequests, setPurchaseRequests] = useState([]);
+  const [topUsedParts, setTopUsedParts] = useState([]);
   const [stats, setStats] = useState({
     totalItems: 0,
     lowStockItems: 0,
-    pendingRequests: 0,
-    pendingReturns: 0,
+    outOfStockItems: 0,
+    pendingDistributions: 0,
+    pendingPurchases: 0,
+    approvedPurchases: 0,
+    totalInventoryValue: 0,
   });
 
   useEffect(() => {
@@ -48,37 +56,56 @@ const WarehouseManagerDashboard = () => {
     try {
       // Fetch spare parts inventory
       const sparePartsData = await sparePartService.getAll();
-      setSpareParts(sparePartsData || []);
+      const activeParts = (sparePartsData || []).filter((p) => p.isActive);
+      setSpareParts(activeParts);
 
-      // Fetch pending spare parts requests
-      const pendingRequestsData = await replacementHistoryService.getByStatus(
-        "Chờ duyệt cấp phát"
-      );
-      setPendingRequests(pendingRequestsData || []);
+      // Fetch all replacement histories to get pending distributions
+      const allReplacementsData = await replacementHistoryService.getAll();
+      setAllReplacements(allReplacementsData || []);
 
-      // Fetch pending returns
-      const pendingReturnsData = await replacementHistoryService.getByStatus(
-        "Đã thay thế"
+      // Filter pending distributions (status: "Chờ duyệt cấp phát")
+      const pendingDist = (allReplacementsData || []).filter(
+        (r) => r.status === "Chờ duyệt cấp phát"
       );
-      setPendingReturns(pendingReturnsData || []);
+      setPendingDistributions(pendingDist);
 
-      // Fetch purchase requests
-      const purchaseRequestsData = await purchaseRequestService.getByStatus(
-        "Pending"
-      );
-      setPurchaseRequests(purchaseRequestsData || []);
+      // Fetch all purchase requests
+      const allPurchaseRequests = await purchaseRequestService.getAll();
+      setPurchaseRequests(allPurchaseRequests || []);
+
+      // Fetch top 5 most used parts
+      const topUsed = await sparePartService.getTop5MostUsed();
+      setTopUsedParts(topUsed || []);
 
       // Calculate statistics
-      const lowStockThreshold = 10;
-      const lowStockCount = (sparePartsData || []).filter(
-        (item) => item.quantity <= lowStockThreshold
+      const lowStockCount = activeParts.filter(
+        (item) => item.quantity > 0 && item.quantity <= item.minQuantity
+      ).length;
+      const outOfStockCount = activeParts.filter(
+        (item) => item.quantity === 0
       ).length;
 
+      const pendingPurchaseCount = (allPurchaseRequests || []).filter(
+        (pr) => pr.status === "Pending"
+      ).length;
+      const approvedPurchaseCount = (allPurchaseRequests || []).filter(
+        (pr) => pr.status === "Approved"
+      ).length;
+
+      // Calculate total inventory value (example: assume no unit price, just count)
+      const totalValue = activeParts.reduce(
+        (sum, part) => sum + part.quantity,
+        0
+      );
+
       setStats({
-        totalItems: (sparePartsData || []).length,
+        totalItems: activeParts.length,
         lowStockItems: lowStockCount,
-        pendingRequests: (pendingRequestsData || []).length,
-        pendingReturns: (pendingReturnsData || []).length,
+        outOfStockItems: outOfStockCount,
+        pendingDistributions: pendingDist.length,
+        pendingPurchases: pendingPurchaseCount,
+        approvedPurchases: approvedPurchaseCount,
+        totalInventoryValue: totalValue,
       });
     } catch (error) {
       console.error("Error fetching dashboard data:", error);
@@ -87,12 +114,130 @@ const WarehouseManagerDashboard = () => {
     }
   };
 
-  const lowStockItems = spareParts
-    .filter((item) => item.quantity <= 10)
+  const criticalStockItems = spareParts
+    .filter((item) => item.quantity === 0 || item.quantity <= item.minQuantity)
     .sort((a, b) => a.quantity - b.quantity)
-    .slice(0, 5);
+    .slice(0, 10);
 
-  const lowStockColumns = [
+  const criticalStockColumns = [
+    {
+      title: "Mã phụ tùng",
+      dataIndex: "partNumber",
+      key: "partNumber",
+      width: "15%",
+      ellipsis: true,
+    },
+    {
+      title: "Tên phụ tùng",
+      dataIndex: "partName",
+      key: "partName",
+      width: "30%",
+      ellipsis: true,
+    },
+    {
+      title: "Số lượng hiện tại",
+      dataIndex: "quantity",
+      key: "quantity",
+      width: "25%",
+      render: (quantity, record) => (
+        <div>
+          <div style={{ marginBottom: 4 }}>
+            <Tag color={quantity === 0 ? "red" : "orange"}>
+              {quantity === 0 ? "Hết hàng" : `${quantity} cái`}
+            </Tag>
+          </div>
+          <div style={{ fontSize: "12px", color: "#999" }}>
+            Tối thiểu: {record.minQuantity} cái
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: "15%",
+      align: "center",
+      render: (status) => (
+        <Tag color={status === "Đủ hàng" ? "green" : "red"}>{status}</Tag>
+      ),
+    },
+    {
+      title: "Vị trí",
+      dataIndex: "location",
+      key: "location",
+      width: "15%",
+      ellipsis: true,
+    },
+  ];
+
+  const pendingDistributionColumns = [
+    {
+      title: "Mã yêu cầu",
+      dataIndex: "replacementId",
+      key: "replacementId",
+      width: 100,
+      render: (id) => `#${id}`,
+    },
+    {
+      title: "Phụ tùng",
+      dataIndex: "partName",
+      key: "partName",
+      ellipsis: true,
+    },
+    {
+      title: "Số lượng",
+      dataIndex: "quantity",
+      key: "quantity",
+      width: 80,
+      render: (qty) => <Tag color="blue">{qty}</Tag>,
+    },
+    {
+      title: "Người yêu cầu",
+      dataIndex: "replacedByName",
+      key: "replacedByName",
+      width: 150,
+      ellipsis: true,
+    },
+    {
+      title: "Ngày yêu cầu",
+      dataIndex: "replacedDate",
+      key: "replacedDate",
+      width: 120,
+      render: (date) =>
+        date ? new Date(date).toLocaleDateString("vi-VN") : "-",
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      width: 120,
+      render: (_, record) => (
+        <Button
+          type="link"
+          size="small"
+          onClick={() =>
+            navigate("/warehouse-manager/incident-distribution", {
+              state: { selectedDistribution: record },
+            })
+          }
+        >
+          Xem chi tiết
+        </Button>
+      ),
+    },
+  ];
+
+  const topUsedPartsColumns = [
+    {
+      title: "Thứ hạng",
+      key: "rank",
+      width: 80,
+      render: (_, __, index) => (
+        <Tag color={index === 0 ? "gold" : index === 1 ? "silver" : "default"}>
+          #{index + 1}
+        </Tag>
+      ),
+    },
     {
       title: "Mã phụ tùng",
       dataIndex: "partNumber",
@@ -103,120 +248,74 @@ const WarehouseManagerDashboard = () => {
       title: "Tên phụ tùng",
       dataIndex: "partName",
       key: "partName",
+      ellipsis: true,
+    },
+    {
+      title: "Số lần sử dụng",
+      dataIndex: "totalReplacementHistory",
+      key: "totalReplacementHistory",
+      width: 120,
+      render: (count) => <Tag color="cyan">{count || 0} lần</Tag>,
+    },
+    {
+      title: "Tồn kho",
+      dataIndex: "quantity",
+      key: "quantity",
+      width: 100,
+      render: (stock) => (
+        <Tag color={stock === 0 ? "red" : stock <= 10 ? "orange" : "green"}>
+          {stock || 0}
+        </Tag>
+      ),
+    },
+  ];
+
+  const purchaseRequestColumns = [
+    {
+      title: "Mã yêu cầu",
+      dataIndex: "requestId",
+      key: "requestId",
+      width: 100,
+      render: (id) => `#${id}`,
+    },
+    {
+      title: "Phụ tùng",
+      dataIndex: "partName",
+      key: "partName",
+      ellipsis: true,
     },
     {
       title: "Số lượng",
       dataIndex: "quantity",
       key: "quantity",
-      width: 100,
-      render: (quantity) => (
-        <Tag color={quantity === 0 ? "red" : "orange"}>
-          {quantity === 0 ? "Hết hàng" : `${quantity} cái`}
-        </Tag>
-      ),
-    },
-    {
-      title: "Vị trí",
-      dataIndex: "location",
-      key: "location",
-      width: 120,
-    },
-  ];
-
-  const pendingRequestColumns = [
-    {
-      title: "Mã phiếu",
-      dataIndex: "historyId",
-      key: "historyId",
-      width: 100,
-    },
-    {
-      title: "Phụ tùng",
-      dataIndex: "partName",
-      key: "partName",
-    },
-    {
-      title: "Số lượng yêu cầu",
-      dataIndex: "quantityRequested",
-      key: "quantityRequested",
-      width: 120,
-      render: (qty) => `${qty} cái`,
-    },
-    {
-      title: "Người yêu cầu",
-      dataIndex: "requestedByName",
-      key: "requestedByName",
-      width: 150,
-    },
-    {
-      title: "Thao tác",
-      key: "action",
-      width: 120,
-      render: (_, record) => (
-        <Button
-          type="link"
-          size="small"
-          onClick={() =>
-            navigate("/warehouse-manager/spare-parts-requests", {
-              state: { selectedRequest: record },
-            })
-          }
-        >
-          Xem chi tiết
-        </Button>
-      ),
-    },
-  ];
-
-  const pendingReturnColumns = [
-    {
-      title: "Mã phiếu",
-      dataIndex: "historyId",
-      key: "historyId",
-      width: 100,
-    },
-    {
-      title: "Phụ tùng",
-      dataIndex: "partName",
-      key: "partName",
-    },
-    {
-      title: "SL xuất",
-      dataIndex: "quantityUsed",
-      key: "quantityUsed",
       width: 80,
-      render: (qty) => `${qty || 0}`,
+      render: (qty) => <Tag color="blue">{qty}</Tag>,
     },
     {
-      title: "SL thực tế",
-      dataIndex: "actualQuantityUsed",
-      key: "actualQuantityUsed",
-      width: 100,
-      render: (qty) => `${qty || 0}`,
-    },
-    {
-      title: "Người thay thế",
-      dataIndex: "replacedByName",
-      key: "replacedByName",
-      width: 150,
-    },
-    {
-      title: "Thao tác",
-      key: "action",
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
       width: 120,
-      render: (_, record) => (
-        <Button
-          type="link"
-          size="small"
-          onClick={() =>
-            navigate("/warehouse-manager/return-confirmation", {
-              state: { selectedReturn: record },
-            })
-          }
-        >
-          Xác nhận trả
-        </Button>
-      ),
+      render: (status) => {
+        const statusConfig = {
+          Pending: { color: "orange", text: "Chờ duyệt" },
+          Approved: { color: "green", text: "Đã duyệt" },
+          Rejected: { color: "red", text: "Từ chối" },
+          Received: { color: "blue", text: "Đã nhận" },
+        };
+        const config = statusConfig[status] || {
+          color: "default",
+          text: status,
+        };
+        return <Tag color={config.color}>{config.text}</Tag>;
+      },
+    },
+    {
+      title: "Lý do",
+      dataIndex: "reason",
+      key: "reason",
+      ellipsis: true,
+      width: 150,
     },
   ];
 
@@ -236,155 +335,425 @@ const WarehouseManagerDashboard = () => {
   }
 
   return (
-    <div>
+    <div style={{ padding: "24px" }}>
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
+        <Col xs={24} sm={12} xl={6}>
+          <Card
+            hoverable
+            style={{
+              borderRadius: "8px",
+              height: "140px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+            }}
+            bodyStyle={{
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+            }}
+          >
             <Statistic
-              title="Tổng số phụ tùng"
+              title={
+                <span style={{ fontSize: "14px", color: "#666" }}>
+                  Tổng số phụ tùng
+                </span>
+              }
               value={stats.totalItems}
-              prefix={<InboxOutlined />}
-              valueStyle={{ color: "#3f8600" }}
+              prefix={
+                <InboxOutlined style={{ fontSize: "24px", color: "#52c41a" }} />
+              }
+              valueStyle={{ color: "#52c41a", fontSize: "32px" }}
             />
+            <div
+              style={{
+                marginTop: "auto",
+                paddingTop: "12px",
+                borderTop: "1px solid #f0f0f0",
+                fontSize: "12px",
+                color: "#999",
+              }}
+            >
+              Tổng số lượng: <strong>{stats.totalInventoryValue}</strong> cái
+            </div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
+        <Col xs={24} sm={12} xl={6}>
+          <Card
+            hoverable
+            onClick={() => navigate("/warehouse-manager/inventory")}
+            style={{
+              borderRadius: "8px",
+              height: "140px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+              cursor: "pointer",
+            }}
+            bodyStyle={{
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+            }}
+          >
             <Statistic
-              title="Phụ tùng sắp hết"
-              value={stats.lowStockItems}
-              prefix={<WarningOutlined />}
-              valueStyle={{ color: "#cf1322" }}
+              title={
+                <span style={{ fontSize: "14px", color: "#666" }}>
+                  Cảnh báo tồn kho
+                </span>
+              }
+              value={stats.lowStockItems + stats.outOfStockItems}
+              prefix={
+                <WarningOutlined
+                  style={{ fontSize: "24px", color: "#ff4d4f" }}
+                />
+              }
+              valueStyle={{ color: "#ff4d4f", fontSize: "32px" }}
             />
+            <div
+              style={{
+                marginTop: "auto",
+                paddingTop: "12px",
+                borderTop: "1px solid #f0f0f0",
+              }}
+            >
+              <Space size={4}>
+                <Tag color="red" style={{ margin: 0 }}>
+                  Hết: {stats.outOfStockItems}
+                </Tag>
+                <Tag color="orange" style={{ margin: 0 }}>
+                  Sắp hết: {stats.lowStockItems}
+                </Tag>
+              </Space>
+            </div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
+        <Col xs={24} sm={12} xl={6}>
+          <Card
+            hoverable
+            onClick={() => navigate("/warehouse-manager/incident-distribution")}
+            style={{
+              borderRadius: "8px",
+              height: "140px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+              cursor: "pointer",
+            }}
+            bodyStyle={{
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+            }}
+          >
             <Statistic
-              title="Yêu cầu chờ duyệt"
-              value={stats.pendingRequests}
-              prefix={<ClockCircleOutlined />}
-              valueStyle={{ color: "#faad14" }}
+              title={
+                <span style={{ fontSize: "14px", color: "#666" }}>
+                  Chờ cấp phát
+                </span>
+              }
+              value={stats.pendingDistributions}
+              prefix={
+                <SwapOutlined style={{ fontSize: "24px", color: "#faad14" }} />
+              }
+              valueStyle={{ color: "#faad14", fontSize: "32px" }}
             />
+            <div
+              style={{
+                marginTop: "auto",
+                paddingTop: "12px",
+                borderTop: "1px solid #f0f0f0",
+                fontSize: "12px",
+                color: "#999",
+              }}
+            >
+              Yêu cầu cấp phát phụ tùng
+            </div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
+        <Col xs={24} sm={12} xl={6}>
+          <Card
+            hoverable
+            onClick={() => navigate("/warehouse-manager/purchase-requests")}
+            style={{
+              borderRadius: "8px",
+              height: "140px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+              cursor: "pointer",
+            }}
+            bodyStyle={{
+              padding: "20px",
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
+            }}
+          >
             <Statistic
-              title="Chờ xác nhận trả"
-              value={stats.pendingReturns}
-              prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: "#1890ff" }}
+              title={
+                <span style={{ fontSize: "14px", color: "#666" }}>
+                  Yêu cầu mua hàng
+                </span>
+              }
+              value={stats.pendingPurchases + stats.approvedPurchases}
+              prefix={
+                <ShoppingOutlined
+                  style={{ fontSize: "24px", color: "#1890ff" }}
+                />
+              }
+              valueStyle={{ color: "#1890ff", fontSize: "32px" }}
             />
+            <div
+              style={{
+                marginTop: "auto",
+                paddingTop: "12px",
+                borderTop: "1px solid #f0f0f0",
+              }}
+            >
+              <Space size={4}>
+                <Tag color="orange" style={{ margin: 0 }}>
+                  Chờ: {stats.pendingPurchases}
+                </Tag>
+                <Tag color="green" style={{ margin: 0 }}>
+                  Duyệt: {stats.approvedPurchases}
+                </Tag>
+              </Space>
+            </div>
           </Card>
         </Col>
       </Row>
 
-      {/* Low Stock Alert */}
-      {stats.lowStockItems > 0 && (
+      {/* Critical Stock Alert */}
+      {(stats.outOfStockItems > 0 || stats.lowStockItems > 0) && (
         <Alert
-          message="Cảnh báo tồn kho"
-          description={`Có ${stats.lowStockItems} phụ tùng sắp hết hoặc đã hết hàng. Vui lòng kiểm tra và tạo yêu cầu mua hàng.`}
+          message={
+            <Space>
+              <WarningOutlined />
+              <strong>Cảnh báo tồn kho nghiêm trọng</strong>
+            </Space>
+          }
+          description={
+            <div>
+              <div style={{ marginBottom: 8 }}>
+                {stats.outOfStockItems > 0 && (
+                  <div style={{ marginBottom: 4 }}>
+                    • <strong>{stats.outOfStockItems}</strong> phụ tùng đã hết
+                    hàng
+                  </div>
+                )}
+                {stats.lowStockItems > 0 && (
+                  <div>
+                    • <strong>{stats.lowStockItems}</strong> phụ tùng sắp hết
+                    (dưới mức tối thiểu)
+                  </div>
+                )}
+              </div>
+              <div style={{ color: "#666", fontSize: "12px" }}>
+                Vui lòng kiểm tra kho và tạo yêu cầu mua hàng nếu cần thiết
+              </div>
+            </div>
+          }
           type="warning"
           showIcon
-          icon={<WarningOutlined />}
-          style={{ marginBottom: 24 }}
+          style={{
+            marginBottom: 24,
+            borderRadius: "8px",
+            border: "1px solid #ffa940",
+          }}
           action={
-            <Button
-              size="small"
-              onClick={() => navigate("/warehouse-manager/inventory")}
-            >
-              Xem chi tiết
-            </Button>
+            <Space>
+              <Button
+                size="small"
+                onClick={() => navigate("/warehouse-manager/inventory")}
+              >
+                Xem kho
+              </Button>
+              <Button
+                size="small"
+                type="primary"
+                danger
+                onClick={() => navigate("/warehouse-manager/purchase-requests")}
+              >
+                Tạo yêu cầu mua
+              </Button>
+            </Space>
           }
         />
       )}
 
-      {/* Low Stock Items Table */}
+      {/* Critical Stock Items Table */}
       <Card
-        title="Phụ tùng sắp hết hàng"
+        title={
+          <Space>
+            <SafetyOutlined style={{ color: "#ff4d4f", fontSize: "18px" }} />
+            <span style={{ fontSize: "16px", fontWeight: 500 }}>
+              Phụ tùng cần chú ý ({criticalStockItems.length})
+            </span>
+          </Space>
+        }
         extra={
           <Button
             type="link"
             onClick={() => navigate("/warehouse-manager/inventory")}
+            icon={<InboxOutlined />}
           >
-            Xem tất cả
+            Xem tất cả tồn kho
           </Button>
         }
-        style={{ marginBottom: 24 }}
+        style={{
+          marginBottom: 24,
+          borderRadius: "8px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+        }}
+        bodyStyle={{ padding: "16px" }}
       >
-        {lowStockItems.length > 0 ? (
+        {criticalStockItems.length > 0 ? (
           <Table
-            dataSource={lowStockItems}
-            columns={lowStockColumns}
+            dataSource={criticalStockItems}
+            columns={criticalStockColumns}
             rowKey="partId"
             pagination={false}
-            size="small"
+            size="middle"
+            scroll={{ x: 800 }}
+            style={{ marginTop: "8px" }}
           />
         ) : (
-          <Empty description="Không có phụ tùng sắp hết hàng" />
+          <Empty
+            description="Tất cả phụ tùng đều ở mức tồn kho an toàn"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            style={{ padding: "40px 0" }}
+          />
         )}
       </Card>
 
-      {/* Pending Requests and Returns */}
-      <Row gutter={[16, 16]}>
-        <Col xs={24} lg={12}>
+      {/* Top Used Parts & Pending Distributions */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={24} xl={12}>
           <Card
-            title="Yêu cầu phụ tùng chờ duyệt"
-            extra={
-              <Button
-                type="link"
-                onClick={() =>
-                  navigate("/warehouse-manager/spare-parts-requests")
-                }
-              >
-                Xem tất cả
-              </Button>
+            title={
+              <Space>
+                <CheckCircleOutlined
+                  style={{ color: "#52c41a", fontSize: "18px" }}
+                />
+                <span style={{ fontSize: "16px", fontWeight: 500 }}>
+                  Top 5 phụ tùng được sử dụng nhiều nhất
+                </span>
+              </Space>
             }
+            style={{
+              height: "100%",
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+            }}
+            bodyStyle={{ padding: "16px" }}
           >
-            {pendingRequests.length > 0 ? (
+            {topUsedParts.length > 0 ? (
               <Table
-                dataSource={pendingRequests.slice(0, 5)}
-                columns={pendingRequestColumns}
-                rowKey="historyId"
+                dataSource={topUsedParts}
+                columns={topUsedPartsColumns}
+                rowKey="partId"
                 pagination={false}
-                size="small"
+                size="middle"
+                scroll={{ x: 600 }}
+                style={{ marginTop: "8px" }}
               />
             ) : (
-              <Empty description="Không có yêu cầu chờ duyệt" />
+              <Empty
+                description="Chưa có dữ liệu sử dụng"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ padding: "40px 0" }}
+              />
             )}
           </Card>
         </Col>
 
-        <Col xs={24} lg={12}>
+        <Col xs={24} xl={12}>
           <Card
-            title="Chờ xác nhận trả lại"
+            title={
+              <Space>
+                <ClockCircleOutlined
+                  style={{ color: "#faad14", fontSize: "18px" }}
+                />
+                <span style={{ fontSize: "16px", fontWeight: 500 }}>
+                  Yêu cầu cấp phát chờ duyệt ({stats.pendingDistributions})
+                </span>
+              </Space>
+            }
             extra={
               <Button
                 type="link"
                 onClick={() =>
-                  navigate("/warehouse-manager/return-confirmation")
+                  navigate("/warehouse-manager/incident-distribution")
                 }
+                icon={<SwapOutlined />}
               >
                 Xem tất cả
               </Button>
             }
+            style={{
+              height: "100%",
+              borderRadius: "8px",
+              boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+            }}
+            bodyStyle={{ padding: "16px" }}
           >
-            {pendingReturns.length > 0 ? (
+            {pendingDistributions.length > 0 ? (
               <Table
-                dataSource={pendingReturns.slice(0, 5)}
-                columns={pendingReturnColumns}
-                rowKey="historyId"
+                dataSource={pendingDistributions.slice(0, 5)}
+                columns={pendingDistributionColumns}
+                rowKey="replacementId"
                 pagination={false}
-                size="small"
+                size="middle"
+                scroll={{ x: 700 }}
+                style={{ marginTop: "8px" }}
               />
             ) : (
-              <Empty description="Không có phụ tùng chờ xác nhận trả" />
+              <Empty
+                description="Không có yêu cầu cấp phát chờ duyệt"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ padding: "40px 0" }}
+              />
             )}
           </Card>
         </Col>
       </Row>
+
+      {/* Purchase Requests */}
+      {purchaseRequests.length > 0 && (
+        <Card
+          title={
+            <Space>
+              <ShoppingOutlined
+                style={{ color: "#1890ff", fontSize: "18px" }}
+              />
+              <span style={{ fontSize: "16px", fontWeight: 500 }}>
+                Yêu cầu mua hàng gần đây
+              </span>
+            </Space>
+          }
+          extra={
+            <Button
+              type="link"
+              onClick={() => navigate("/warehouse-manager/purchase-requests")}
+              icon={<ShoppingOutlined />}
+            >
+              Xem tất cả
+            </Button>
+          }
+          style={{
+            borderRadius: "8px",
+            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+          }}
+          bodyStyle={{ padding: "16px" }}
+        >
+          <Table
+            dataSource={purchaseRequests.slice(0, 8)}
+            columns={purchaseRequestColumns}
+            rowKey="requestId"
+            pagination={false}
+            size="middle"
+            scroll={{ x: 800 }}
+            style={{ marginTop: "8px" }}
+          />
+        </Card>
+      )}
     </div>
   );
 };

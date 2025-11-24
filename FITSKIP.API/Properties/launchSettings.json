@@ -9,34 +9,14 @@
     }
   },
   "profiles": {
-    "https": {
+    "FITSKIP.API": {
       "commandName": "Project",
       "dotnetRunMessages": true,
       "launchBrowser": true,
       "launchUrl": "swagger",
-      "applicationUrl": "https://localhost:7003;http://localhost:5201",
+      "applicationUrl": "https://localhost:7003",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
-      }
-    },
-    "http": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": true,
-      "launchUrl": "swagger",
-      "applicationUrl": "http://0.0.0.0:5201",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
-      }
-    },
-    "Testing": {
-      "commandName": "Project",
-      "dotnetRunMessages": true,
-      "launchBrowser": true,
-      "launchUrl": "swagger",
-      "applicationUrl": "http://0.0.0.0:5201",
-      "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Testing"
       }
     },
     "IIS Express": {

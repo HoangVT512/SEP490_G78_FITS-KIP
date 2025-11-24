@@ -31,5 +31,10 @@ namespace FITSKIP.Application.Interfaces
         /// Lấy danh sách các lần thay thế cần trả lại linh kiện (có số lượng thừa)
         /// </summary>
         Task<IEnumerable<ReplacementHistory>> GetPendingReturnAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Cập nhật status cho tất cả bản ghi dựa trên logic mới
+        /// </summary>
+        Task UpdateAllStatusesAsync(CancellationToken cancellationToken = default);
     }
 }

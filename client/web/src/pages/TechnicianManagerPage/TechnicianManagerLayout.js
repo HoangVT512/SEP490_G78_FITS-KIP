@@ -175,12 +175,12 @@ const TechnicianManagerLayout = () => {
       label: "Kế hoạch bảo trì",
       onClick: () => navigate("/technician-manager/maintenance-plans"),
     },
-    {
-      key: "replacement-history",
-      icon: <FileTextOutlined />,
-      label: "Lịch sử thay thế",
-      onClick: () => navigate("/technician-manager/replacement-history"),
-    },
+    // {
+    //   key: "replacement-history",
+    //   icon: <FileTextOutlined />,
+    //   label: "Lịch sử thay thế",
+    //   onClick: () => navigate("/technician-manager/replacement-history"),
+    // },
     // {
     //   key: "returns",
     //   icon: <EditOutlined />,
