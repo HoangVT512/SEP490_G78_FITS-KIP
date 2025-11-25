@@ -1,10 +1,12 @@
-using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using FITSKIP.Domain.Entities;
 
 namespace FITSKIP.Infrastructure.DbContexts;
 
-public class TestDbContext : IdentityDbContext<User>
+public partial class TestDbContext : IdentityDbContext<User>
 {
     public TestDbContext()
     {
@@ -16,41 +18,62 @@ public class TestDbContext : IdentityDbContext<User>
     }
 
     public virtual DbSet<Department> Departments { get; set; }
+
     public virtual DbSet<Equipment> Equipment { get; set; }
+
     public virtual DbSet<IncidentHistory> IncidentHistories { get; set; }
+
+    public virtual DbSet<IncidentShift> IncidentShifts { get; set; }
+
+    public virtual DbSet<IncidentImage> IncidentImages { get; set; }
+
     public virtual DbSet<Line> Lines { get; set; }
+
     public virtual DbSet<Notification> Notifications { get; set; }
+
     public virtual DbSet<MaintenancePlan> MaintenancePlans { get; set; }
+
     public virtual DbSet<MaintenanceChecklistItem> MaintenanceChecklistItems { get; set; }
+
+    public virtual DbSet<MaintenanceTemplate> MaintenanceTemplates { get; set; }
+
+    public virtual DbSet<MaintenanceTemplateItem> MaintenanceTemplateItems { get; set; }
+
+    public virtual DbSet<MaintenanceWorkOrder> MaintenanceWorkOrders { get; set; }
+
     public virtual DbSet<ProductionOutput> ProductionOutputs { get; set; }
+
     public virtual DbSet<PurchaseRequest> PurchaseRequests { get; set; }
+
     public virtual DbSet<ReplacementHistory> ReplacementHistories { get; set; }
+
     public virtual DbSet<Shift> Shifts { get; set; }
+
     public virtual DbSet<SparePart> SpareParts { get; set; }
+
     public virtual DbSet<Stage> Stages { get; set; }
+
     public virtual DbSet<StopType> StopTypes { get; set; }
+
     public virtual DbSet<UserLine> UserLines { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         if (!optionsBuilder.IsConfigured)
         {
-            // Use test connection string for design-time operations
             optionsBuilder.UseSqlServer("Server=.;User Id=sa;Password=123;Database=SEP490_G78_FITSKIP_TEST;TrustServerCertificate=True;");
         }
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        base.OnModelCreating(modelBuilder); // Important: Call base để Identity có thể configure
+        base.OnModelCreating(modelBuilder);
 
-        // Copy the same model configuration from FitskipDbContext
         modelBuilder.Ignore<Microsoft.AspNetCore.Identity.IdentityUserToken<string>>();
         modelBuilder.Ignore<Microsoft.AspNetCore.Identity.IdentityUserLogin<string>>();
         modelBuilder.Ignore<Microsoft.AspNetCore.Identity.IdentityUserClaim<string>>();
         modelBuilder.Ignore<Microsoft.AspNetCore.Identity.IdentityUserRole<string>>();
 
-        // Configure custom User properties and relationship with Role
         modelBuilder.Entity<User>(entity =>
         {
             entity.Property(e => e.FullName).HasMaxLength(250);
@@ -73,10 +96,10 @@ public class TestDbContext : IdentityDbContext<User>
             entity.Ignore(e => e.MaintenancePlans);
         });
 
-        // Department configuration
         modelBuilder.Entity<Department>(entity =>
         {
             entity.HasKey(e => e.DepartmentId).HasName("PK__Departme__B2079BCDAEAF02C2");
+
             entity.Property(e => e.DepartmentId).HasColumnName("DepartmentID");
             entity.Property(e => e.DepartmentName).HasMaxLength(100);
             entity.Property(e => e.Description).HasMaxLength(500);
@@ -90,10 +113,10 @@ public class TestDbContext : IdentityDbContext<User>
                 .HasConstraintName("FK__Departmen__Manag__619B8048");
         });
 
-        // Copy all entity configurations from FitskipDbContext
         modelBuilder.Entity<Equipment>(entity =>
         {
             entity.HasKey(e => e.EquipmentId).HasName("PK__Equipmen__34474599BD4FBDFE");
+
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
             entity.Property(e => e.EquipmentCode).HasMaxLength(50);
             entity.Property(e => e.EquipmentName).HasMaxLength(255);
@@ -111,7 +134,9 @@ public class TestDbContext : IdentityDbContext<User>
         modelBuilder.Entity<IncidentHistory>(entity =>
         {
             entity.HasKey(e => e.IncidentId).HasName("PK__Incident__5F46CAB00C9D9F0A");
+
             entity.ToTable("IncidentHistory");
+
             entity.Property(e => e.IncidentId).HasColumnName("IncidentID");
             entity.Property(e => e.Duration).HasColumnType("decimal(10, 2)");
             entity.Property(e => e.EndTime).HasColumnType("datetime");
@@ -133,14 +158,39 @@ public class TestDbContext : IdentityDbContext<User>
             entity.HasOne(d => d.Type).WithMany(p => p.IncidentHistories)
                 .HasForeignKey(d => d.TypeId)
                 .HasConstraintName("FK__IncidentH__TypeI__7F2BE32F");
+
+            entity.HasMany(d => d.IncidentShifts)
+                .WithOne(e => e.Incident)
+                .HasForeignKey(e => e.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasMany(d => d.IncidentImages)
+                .WithOne(e => e.Incident)
+                .HasForeignKey(e => e.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<IncidentImage>(entity =>
+        {
+            entity.HasKey(e => e.ImageId).HasName("PK__Incident__7516F4EC");
+
+            entity.ToTable("IncidentImages");
+
+            entity.Property(e => e.ImageId).HasColumnName("ImageID");
+            entity.Property(e => e.IncidentId).HasColumnName("IncidentID");
+            entity.Property(e => e.ImageUrl).HasMaxLength(1000).IsRequired();
+            entity.Property(e => e.OrderIndex).HasDefaultValue(0);
+            entity.Property(e => e.UploadedAt).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
         });
 
         modelBuilder.Entity<Line>(entity =>
         {
             entity.HasKey(e => e.LineId).HasName("PK__Lines__2EAE64C9765DBF83");
+
             entity.Property(e => e.LineId).HasColumnName("LineID");
             entity.Property(e => e.DepartmentId).HasColumnName("DepartmentID");
             entity.Property(e => e.LineName).HasMaxLength(250);
+            entity.Property(e => e.LineCode).HasMaxLength(50);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
 
             entity.HasOne(d => d.Department).WithMany(p => p.Lines)
@@ -154,34 +204,171 @@ public class TestDbContext : IdentityDbContext<User>
         modelBuilder.Entity<MaintenancePlan>(entity =>
         {
             entity.HasKey(e => e.PlanId).HasName("PK__Maintena__755C22D75A5E8C31");
+
             entity.Property(e => e.PlanId).HasColumnName("PlanID");
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
+            entity.Property(e => e.TemplateId).HasColumnName("TemplateID");
             entity.Property(e => e.IntervalType).HasMaxLength(20);
+            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Pending");
+            entity.Property(e => e.CreatedBy).HasMaxLength(450);
+            entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.StartDate).HasColumnType("datetime");
+            entity.Property(e => e.NextDueDate).HasColumnType("datetime");
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.ReminderDaysBefore).HasDefaultValue(3);
 
             entity.HasOne(d => d.Equipment).WithMany()
                 .HasForeignKey(d => d.EquipmentId)
-                .HasConstraintName("FK__MaintenanPlan__Equip__1234567");
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_MaintenancePlans_Equipment");
 
-            // AssignedTo, AssignedToUser removed - now using Assignments
-#pragma warning disable CS0618 // Obsolete
-            entity.Ignore(e => e.ChecklistItems); // Obsolete - use WorkOrders
+            entity.HasOne(d => d.Template).WithMany(p => p.MaintenancePlans)
+                .HasForeignKey(d => d.TemplateId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_MaintenancePlans_Templates");
+
+            entity.HasOne(d => d.CreatedByUser).WithMany()
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenancePlans_CreatedBy");
+
+#pragma warning disable CS0618
+            entity.Ignore(e => e.ChecklistItems);
 #pragma warning restore CS0618
+        });
+
+        modelBuilder.Entity<MaintenanceTemplate>(entity =>
+        {
+            entity.HasKey(e => e.TemplateId).HasName("PK__Maintenance__TemplateID");
+
+            entity.Property(e => e.TemplateId).HasColumnName("TemplateID");
+            entity.Property(e => e.StageId).HasColumnName("StageID");
+            entity.Property(e => e.TemplateName).HasMaxLength(200).IsRequired();
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.CreatedBy).HasMaxLength(450);
+            entity.Property(e => e.UpdatedBy).HasMaxLength(450);
+            entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedDate).HasColumnType("datetime");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            entity.HasOne(d => d.Stage).WithMany()
+                .HasForeignKey(d => d.StageId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MaintenanceTemplates_Stages");
+
+            entity.HasOne(d => d.CreatedByUser).WithMany()
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenanceTemplates_CreatedBy");
+
+            entity.HasOne(d => d.UpdatedByUser).WithMany()
+                .HasForeignKey(d => d.UpdatedBy)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenanceTemplates_UpdatedBy");
+        });
+
+        modelBuilder.Entity<MaintenanceTemplateItem>(entity =>
+        {
+            entity.HasKey(e => e.ItemId).HasName("PK__MaintenanceTemplateItem__ItemID");
+
+            entity.Property(e => e.ItemId).HasColumnName("ItemID");
+            entity.Property(e => e.TemplateId).HasColumnName("TemplateID");
+            entity.Property(e => e.Category).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.StepName).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.StepDescription).HasMaxLength(1000);
+            entity.Property(e => e.RequiredRole).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.IsRequired).HasDefaultValue(true);
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+
+            entity.HasOne(d => d.Template).WithMany(p => p.TemplateItems)
+                .HasForeignKey(d => d.TemplateId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MaintenanceTemplateItems_Templates");
+        });
+
+        modelBuilder.Entity<MaintenanceWorkOrder>(entity =>
+        {
+            entity.HasKey(e => e.WorkOrderId).HasName("PK__MaintenanceWorkOrder__WorkOrderID");
+
+            entity.Property(e => e.WorkOrderId).HasColumnName("WorkOrderID");
+            entity.Property(e => e.WorkOrderCode).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.PlanId).HasColumnName("PlanID");
+            entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
+            entity.Property(e => e.AssignedDate).HasColumnType("datetime").IsRequired(false);
+            entity.Property(e => e.ScheduledDate).HasColumnType("datetime");
+            entity.Property(e => e.DueDate).HasColumnType("datetime");
+            entity.Property(e => e.AssignedToElectrical).HasMaxLength(450);
+            entity.Property(e => e.AssignedToMechanical).HasMaxLength(450);
+            entity.Property(e => e.Status).HasMaxLength(50).HasDefaultValue("Pending");
+            entity.Property(e => e.PostponedDueDate).HasColumnType("datetime");
+            entity.Property(e => e.PostponedReason).HasMaxLength(500);
+            entity.Property(e => e.PostponedDate).HasColumnType("datetime");
+            entity.Property(e => e.StartedDate).HasColumnType("datetime");
+            entity.Property(e => e.CompletedDate).HasColumnType("datetime");
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+            entity.Property(e => e.CreatedBy).HasMaxLength(450);
+            entity.Property(e => e.UpdatedBy).HasMaxLength(450);
+            entity.Property(e => e.CreatedDate).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
+            entity.Property(e => e.UpdatedDate).HasColumnType("datetime");
+
+            entity.HasOne(d => d.Plan).WithMany(p => p.WorkOrders)
+                .HasForeignKey(d => d.PlanId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MaintenanceWorkOrders_Plans");
+
+            entity.HasOne(d => d.Equipment).WithMany()
+                .HasForeignKey(d => d.EquipmentId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MaintenanceWorkOrders_Equipment");
+
+            entity.HasOne(d => d.ElectricalTechnician).WithMany()
+                .HasForeignKey(d => d.AssignedToElectrical)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenanceWorkOrders_ElectricalTech");
+
+            entity.HasOne(d => d.MechanicalTechnician).WithMany()
+                .HasForeignKey(d => d.AssignedToMechanical)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenanceWorkOrders_MechanicalTech");
+
+            entity.HasOne(d => d.CreatedByUser).WithMany()
+                .HasForeignKey(d => d.CreatedBy)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenanceWorkOrders_CreatedBy");
+
+            entity.HasOne(d => d.UpdatedByUser).WithMany()
+                .HasForeignKey(d => d.UpdatedBy)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_MaintenanceWorkOrders_UpdatedBy");
         });
 
         modelBuilder.Entity<MaintenanceChecklistItem>(entity =>
         {
             entity.HasKey(e => e.ChecklistId).HasName("PK__Maintena__26C4E2F5A1234567");
+
             entity.Property(e => e.ChecklistId).HasColumnName("ChecklistID");
-#pragma warning disable CS0618 // Obsolete
-            entity.Property(e => e.PlanId).HasColumnName("PlanID");
-#pragma warning restore CS0618
-
-            entity.Property(e => e.StepName).HasMaxLength(200);
+            entity.Property(e => e.WorkOrderId).HasColumnName("WorkOrderID");
+            entity.Property(e => e.Category).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.StepName).HasMaxLength(500).IsRequired();
+            entity.Property(e => e.StepDescription).HasMaxLength(1000);
+            entity.Property(e => e.RequiredRole).HasMaxLength(50).IsRequired();
+            entity.Property(e => e.IsChecked).HasDefaultValue(false);
+            entity.Property(e => e.CompletedBy).HasMaxLength(450);
             entity.Property(e => e.CompletedDate).HasColumnType("datetime");
-            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
 
-#pragma warning disable CS0618 // Obsolete
+            entity.HasOne(d => d.WorkOrder).WithMany(p => p.ChecklistItems)
+                .HasForeignKey(d => d.WorkOrderId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_MaintenanceChecklistItems_WorkOrders");
+
+            entity.HasOne(d => d.CompletedByUser).WithMany()
+                .HasForeignKey(d => d.CompletedBy)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_MaintenanceChecklistItems_CompletedBy");
+
+#pragma warning disable CS0618
+            entity.Property(e => e.PlanId).HasColumnName("PlanID");
             entity.Ignore(e => e.Plan);
 #pragma warning restore CS0618
         });
@@ -189,14 +376,15 @@ public class TestDbContext : IdentityDbContext<User>
         modelBuilder.Entity<ProductionOutput>(entity =>
         {
             entity.HasKey(e => e.OutputId).HasName("PK__Producti__CE7609460B69FF1F");
+
             entity.Property(e => e.OutputId).HasColumnName("OutputID");
             entity.Property(e => e.LineId).HasColumnName("LineID");
             entity.Property(e => e.ShiftId).HasColumnName("ShiftID");
             entity.Property(e => e.Date).HasColumnType("datetime");
             entity.Property(e => e.SlotTime).HasMaxLength(50);
-            entity.Property(e => e.LoadingTime).HasColumnType("decimal(10, 2)");
-            entity.Property(e => e.TargetAmount).HasMaxLength(50);
-            entity.Property(e => e.ResultAmount).HasMaxLength(50);
+            entity.Property(e => e.LoadingTime).HasColumnType("int");
+            entity.Property(e => e.TargetAmount).HasColumnType("int");
+            entity.Property(e => e.ResultAmount).HasColumnType("int");
             entity.Property(e => e.OEE).HasColumnType("decimal(5, 2)");
             entity.Property(e => e.CreatedAt).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
@@ -209,12 +397,13 @@ public class TestDbContext : IdentityDbContext<User>
             entity.HasOne(d => d.Shift).WithMany()
                 .HasForeignKey(d => d.ShiftId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Productio__Shift__0A9D95DB");
+                .HasConstraintName("FK__Productio__ShiftID__0A9D95DB");
         });
 
         modelBuilder.Entity<PurchaseRequest>(entity =>
         {
             entity.HasKey(e => e.RequestId).HasName("PK__Purchase__33A8519A9AC26C34");
+
             entity.Property(e => e.RequestId).HasColumnName("RequestID");
             entity.Property(e => e.ApprovedAt).HasColumnType("datetime");
             entity.Property(e => e.RejectedAt).HasColumnType("datetime");
@@ -249,6 +438,7 @@ public class TestDbContext : IdentityDbContext<User>
         modelBuilder.Entity<ReplacementHistory>(entity =>
         {
             entity.HasKey(e => e.ReplacementId).HasName("PK__Replacem__55AB07E93456789A");
+
             entity.Property(e => e.ReplacementId).HasColumnName("ReplacementID");
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
             entity.Property(e => e.PartId).HasColumnName("PartID");
@@ -276,6 +466,7 @@ public class TestDbContext : IdentityDbContext<User>
         modelBuilder.Entity<Shift>(entity =>
         {
             entity.HasKey(e => e.ShiftId).HasName("PK__Shifts__C0A838E1E127179C");
+
             entity.Property(e => e.ShiftId).HasColumnName("ShiftID");
             entity.Property(e => e.ShiftName).HasMaxLength(50);
         });
@@ -283,18 +474,22 @@ public class TestDbContext : IdentityDbContext<User>
         modelBuilder.Entity<SparePart>(entity =>
         {
             entity.HasKey(e => e.PartId).HasName("PK__SparePar__7C3F0D30890EDD23");
+
             entity.Property(e => e.PartId).HasColumnName("PartID");
-            entity.Property(e => e.Location).HasMaxLength(100);
-            entity.Property(e => e.PartName).HasMaxLength(100);
             entity.Property(e => e.PartNumber).HasMaxLength(50);
+            entity.Property(e => e.PartName).HasMaxLength(100);
+            entity.Property(e => e.PartType).HasMaxLength(100);
+            entity.Property(e => e.Location).HasMaxLength(100);
+            entity.Property(e => e.DateAdded).HasColumnType("datetime").HasDefaultValueSql("GETDATE()");
             entity.Property(e => e.Status)
                 .HasMaxLength(50)
-                .HasDefaultValue("Available");
+                .HasDefaultValue("Đủ hàng");
         });
 
         modelBuilder.Entity<Stage>(entity =>
         {
             entity.HasKey(e => e.StageId).HasName("PK__Stages__03EB7AF84C50ECAB");
+
             entity.Property(e => e.StageId).HasColumnName("StageID");
             entity.Property(e => e.LineId).HasColumnName("LineID");
             entity.Property(e => e.StageName).HasMaxLength(100);
@@ -309,7 +504,9 @@ public class TestDbContext : IdentityDbContext<User>
         modelBuilder.Entity<StopType>(entity =>
         {
             entity.HasKey(e => e.TypeId).HasName("PK__StopType__516F0395AE2FC0CE");
+
             entity.ToTable("StopType");
+
             entity.Property(e => e.TypeId).HasColumnName("TypeID");
             entity.Property(e => e.TypeName).HasMaxLength(250);
         });
@@ -317,6 +514,7 @@ public class TestDbContext : IdentityDbContext<User>
         modelBuilder.Entity<UserLine>(entity =>
         {
             entity.HasKey(e => e.UserLineId).HasName("PK__UserLine__3B1F2081CE44FE03");
+
             entity.Property(e => e.UserLineId).HasColumnName("UserLineID");
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
@@ -338,6 +536,7 @@ public class TestDbContext : IdentityDbContext<User>
         modelBuilder.Entity<Notification>(entity =>
         {
             entity.HasKey(e => e.NotificationId).HasName("PK__Notification__NotificationID");
+
             entity.Property(e => e.NotificationId).HasColumnName("NotificationID");
             entity.Property(e => e.UserId).HasMaxLength(450);
             entity.Property(e => e.Message).HasMaxLength(1000).IsRequired();
@@ -350,5 +549,33 @@ public class TestDbContext : IdentityDbContext<User>
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_Notifications_Users_UserId");
         });
+
+        modelBuilder.Entity<IncidentShift>(entity =>
+        {
+            entity.HasKey(e => e.IncidentShiftId).HasName("PK__IncidentShift__IncidentShiftID");
+
+            entity.ToTable("IncidentShifts");
+
+            entity.Property(e => e.IncidentShiftId).HasColumnName("IncidentShiftID");
+            entity.Property(e => e.IncidentId).HasColumnName("IncidentID");
+            entity.Property(e => e.ShiftId).HasColumnName("ShiftID");
+            entity.Property(e => e.StartTime).HasColumnType("datetime");
+            entity.Property(e => e.EndTime).HasColumnType("datetime");
+
+            entity.HasOne(d => d.Incident).WithMany(p => p.IncidentShifts)
+                .HasForeignKey(d => d.IncidentId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_IncidentShift_IncidentHistory_IncidentID");
+
+            entity.HasOne(d => d.Shift).WithMany(p => p.IncidentShifts)
+                .HasForeignKey(d => d.ShiftId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_IncidentShift_Shifts_ShiftID");
+        });
+
+        OnModelCreatingPartial(modelBuilder);
     }
+
+    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }
+
