@@ -1160,8 +1160,6 @@ namespace FITSKIP.Application.Services
 
                     var existingWorkOrders = await _workOrderRepository.GetByPlanIdAsync(plan.PlanId);
                     
-                    Console.WriteLine($"[AUTO-CREATE] Plan {plan.PlanId} - NextDueDate: {plan.NextDueDate:dd/MM/yyyy}, Checking for existing WO...");
-                    
                     // ✅ QUAN TRỌNG: Chỉ check WO có DueDate = NextDueDate (không phân biệt status)
                     // Nếu đã có bất kỳ WO nào với DueDate này => KHÔNG TẠO MỚI
                     var hasWorkOrderForThisCycle = existingWorkOrders.Any(wo => 
@@ -1170,12 +1168,10 @@ namespace FITSKIP.Application.Services
 
                     if (hasWorkOrderForThisCycle)
                     {
-                        Console.WriteLine($"[AUTO-CREATE] ⏭️  Plan {plan.PlanId} đã có WO cho chu kỳ {plan.NextDueDate:dd/MM/yyyy}, bỏ qua");
                         continue;
                     }
 
                     // ✅ Tạo WO mới cho chu kỳ này
-                    Console.WriteLine($"[AUTO-CREATE] ✨ Tạo WO mới cho Plan {plan.PlanId}, chu kỳ {plan.NextDueDate:dd/MM/yyyy}");
                     
                     var workOrderCode = await _workOrderRepository.GenerateWorkOrderCodeAsync();
 
@@ -1194,8 +1190,6 @@ namespace FITSKIP.Application.Services
                     };
 
                     var createdWorkOrder = await _workOrderRepository.CreateAsync(newWorkOrder);
-
-                    Console.WriteLine($"[AUTO-CREATE] ✅ Created WorkOrder {createdWorkOrder.WorkOrderCode} for Plan {plan.PlanId}");
 
                     if (plan.TemplateId.HasValue)
                     {
