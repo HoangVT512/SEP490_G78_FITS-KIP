@@ -724,15 +724,18 @@ namespace FITSKIP.Application.Services
 
             await _workOrderRepository.UpdateAsync(workOrder);
 
-
+            // ✅ Khi HỦY WO: Chuyển chu kỳ sang NextDueDate (bỏ qua chu kỳ hiện tại)
             if (shouldUpdateCycle)
             {
                 var plan = await _planRepository.GetByIdAsync(workOrder.PlanId);
                 if (plan != null && plan.IsActive)
                 {
-                    var nextDueDate = CalculateNextDueDate(workOrder.DueDate, plan.IntervalType, plan.IntervalValue);
+                    // ✅ QUAN TRỌNG: Tính từ NextDueDate hiện tại, không dùng DueDate của WO đang hủy
+                    var nextDueDate = CalculateNextDueDate(plan.NextDueDate, plan.IntervalType, plan.IntervalValue);
                     plan.NextDueDate = nextDueDate;
-                    plan.Status = "Active";
+                    
+                    workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Chu kỳ tiếp theo: {nextDueDate:dd/MM/yyyy}";
+                    await _workOrderRepository.UpdateAsync(workOrder);
                     
                     await _planRepository.UpdateAsync(plan);
                     
@@ -753,9 +756,11 @@ namespace FITSKIP.Application.Services
             if (plan == null)
                 throw new InvalidOperationException($"❌ Không tìm thấy kế hoạch bảo trì");
 
-
             // ✅ Validate: Ngày hoãn phải SAU ngày đến hạn hiện tại
-            if (request.NewScheduledDate.Date <= workOrder.DueDate.Date)
+            // ⚠️ NGOẠI LỆ: Nếu WO đã quá hạn (Status = "Quá hạn"), KHÔNG cần check DueDate cũ
+            var isOverdue = workOrder.Status?.Trim().ToLower() == "quá hạn";
+            
+            if (!isOverdue && request.NewScheduledDate.Date <= workOrder.DueDate.Date)
             {
                 throw new InvalidOperationException($"❌ Ngày hoãn phải sau ngày đến hạn hiện tại ({workOrder.DueDate:dd/MM/yyyy})");
             }
@@ -1132,18 +1137,20 @@ namespace FITSKIP.Application.Services
 
         /// <summary>
         /// ✅ TỰ ĐỘNG TẠO WORKORDER khi đến số ngày ReminderDaysBefore trước NextDueDate
+        /// Logic: Chỉ tạo WO MỚI khi:
+        /// - Đến đúng thời điểm (daysUntilDue <= ReminderDaysBefore)
+        /// - Chưa có WO nào cho chu kỳ NextDueDate này (kiểm tra theo DueDate)
         /// </summary>
         public async Task CreateAutoWorkOrdersAsync()
         {
             var allActivePlans = await _planRepository.GetAllAsync();
             var today = DateTime.Today;
 
-
             foreach (var plan in allActivePlans.Where(p => p.IsActive))
             {
                 var daysUntilDue = (plan.NextDueDate - today).Days;
 
-
+                // ✅ Chỉ tạo khi đến thời điểm reminder (ví dụ: 3 ngày trước NextDueDate)
                 if (daysUntilDue <= plan.ReminderDaysBefore && daysUntilDue >= 0)
                 {
                     if (!plan.EquipmentId.HasValue)
@@ -1153,70 +1160,68 @@ namespace FITSKIP.Application.Services
 
                     var existingWorkOrders = await _workOrderRepository.GetByPlanIdAsync(plan.PlanId);
                     
-                    Console.WriteLine($"[AUTO-CREATE] Plan {plan.PlanId} has {existingWorkOrders.Count()} total WorkOrders");
-                    
-                    var hasActiveWorkOrderForCurrentCycle = existingWorkOrders.Any(wo => 
-                        wo.Status != "Đã đóng" && 
-                        wo.Status != "Đã hủy" &&
-                        wo.DueDate.Date == plan.NextDueDate.Date &&
-                        wo.CreatedDate >= DateTime.Today.AddDays(-plan.ReminderDaysBefore) 
+                    // ✅ QUAN TRỌNG: Chỉ check WO có DueDate = NextDueDate (không phân biệt status)
+                    // Nếu đã có bất kỳ WO nào với DueDate này => KHÔNG TẠO MỚI
+                    var hasWorkOrderForThisCycle = existingWorkOrders.Any(wo => 
+                        wo.DueDate.Date == plan.NextDueDate.Date
                     );
 
-
-                    if (!hasActiveWorkOrderForCurrentCycle)
+                    if (hasWorkOrderForThisCycle)
                     {
-                        var workOrderCode = await _workOrderRepository.GenerateWorkOrderCodeAsync();
-                        
-                        var newWorkOrder = new MaintenanceWorkOrder
+                        continue;
+                    }
+
+                    // ✅ Tạo WO mới cho chu kỳ này
+                    
+                    var workOrderCode = await _workOrderRepository.GenerateWorkOrderCodeAsync();
+
+                    var newWorkOrder = new MaintenanceWorkOrder
+                    {
+                        PlanId = plan.PlanId,
+                        EquipmentId = plan.EquipmentId.Value,
+                        WorkOrderCode = workOrderCode,
+                        ScheduledDate = plan.NextDueDate,
+                        DueDate = plan.NextDueDate,
+                        Status = "Chờ xử lý",
+                        Notes = $"[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động tạo WorkOrder từ chu kỳ bảo trì",
+                        CreatedBy = null, 
+                        CreatedDate = DateTime.Now,
+                        UpdatedDate = DateTime.Now
+                    };
+
+                    var createdWorkOrder = await _workOrderRepository.CreateAsync(newWorkOrder);
+
+                    if (plan.TemplateId.HasValue)
+                    {
+                        var template = await _templateRepository.GetByIdAsync(plan.TemplateId.Value);
+                        if (template?.TemplateItems != null)
                         {
-                            PlanId = plan.PlanId,
-                            EquipmentId = plan.EquipmentId.Value,
-                            WorkOrderCode = workOrderCode,
-                            ScheduledDate = plan.NextDueDate,
-                            DueDate = plan.NextDueDate,
-                            Status = "Chờ xử lý",
-                            Notes = $"[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động tạo WorkOrder từ chu kỳ bảo trì",
-                            CreatedBy = null, 
-                            CreatedDate = DateTime.Now,
-                            UpdatedDate = DateTime.Now
-                        };
-
-                        var createdWorkOrder = await _workOrderRepository.CreateAsync(newWorkOrder);
-
-                        Console.WriteLine($"[AUTO-CREATE] ✅ Created WorkOrder {createdWorkOrder.WorkOrderCode} for Plan {plan.PlanId}");
-
-                        if (plan.TemplateId.HasValue)
-                        {
-                            var template = await _templateRepository.GetByIdAsync(plan.TemplateId.Value);
-                            if (template?.TemplateItems != null)
+                            foreach (var templateItem in template.TemplateItems.OrderBy(ti => ti.OrderIndex))
                             {
-                                foreach (var templateItem in template.TemplateItems.OrderBy(ti => ti.OrderIndex))
+                                var checklistItem = new MaintenanceChecklistItem
                                 {
-                                    var checklistItem = new MaintenanceChecklistItem
-                                    {
-                                        WorkOrderId = createdWorkOrder.WorkOrderId,
-                                        Category = templateItem.Category,
-                                        OrderIndex = templateItem.OrderIndex,
-                                        StepName = templateItem.StepName,
-                                        StepDescription = templateItem.StepDescription,
-                                        RequiredRole = templateItem.RequiredRole,
-                                        IsChecked = false
-                                    };
-                                    await _checklistRepository.CreateAsync(checklistItem);
-                                }
+                                    WorkOrderId = createdWorkOrder.WorkOrderId,
+                                    Category = templateItem.Category,
+                                    OrderIndex = templateItem.OrderIndex,
+                                    StepName = templateItem.StepName,
+                                    StepDescription = templateItem.StepDescription,
+                                    RequiredRole = templateItem.RequiredRole,
+                                    IsChecked = false
+                                };
+                                await _checklistRepository.CreateAsync(checklistItem);
                             }
                         }
+                    }
 
-                        var techManagers = await _userRepository.GetUsersByRoleAsync("TechManager");
-                        foreach (var manager in techManagers)
+                    var techManagers = await _userRepository.GetUsersByRoleAsync("TechManager");
+                    foreach (var manager in techManagers)
+                    {
+                        await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
                         {
-                            await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
-                            {
-                                UserId = manager.Id,
-                                Title = "📋 WorkOrder mới được tạo tự động",
-                                Message = $"Phiếu bảo trì #{newWorkOrder.WorkOrderCode} cho thiết bị {plan.Equipment?.EquipmentName} đã được tạo. Vui lòng phân công kỹ thuật viên."
-                            });
-                        }
+                            UserId = manager.Id,
+                            Title = "📋 WorkOrder mới được tạo tự động",
+                            Message = $"Phiếu bảo trì #{newWorkOrder.WorkOrderCode} cho thiết bị {plan.Equipment?.EquipmentName} đã được tạo. Vui lòng phân công kỹ thuật viên."
+                        });
                     }
                 }
             }
