@@ -108,7 +108,7 @@ const PurchaseRequestManagement = () => {
     signalRService.onDataUpdated(handleDataUpdate);
 
     return () => {
-      signalRService.offDataUpdated();
+      signalRService.offDataUpdated(handleDataUpdate);
     };
   }, []);
 
@@ -252,27 +252,37 @@ const PurchaseRequestManagement = () => {
       const partId = values.partNumber;
 
       console.log("Extracted partId:", partId, typeof partId);
-      console.log("Available parts sample:", availableParts.slice(0, 3).map(p => ({
-        id: p.id,
-        partId: p.partId,
-        PartId: p.PartId,
-        partNumber: p.partNumber,
-        partName: p.partName
-      })));
+      console.log(
+        "Available parts sample:",
+        availableParts.slice(0, 3).map((p) => ({
+          id: p.id,
+          partId: p.partId,
+          PartId: p.PartId,
+          partNumber: p.partNumber,
+          partName: p.partName,
+        }))
+      );
 
       if (!partId || partId === null || partId === undefined) {
         throw new Error("Phụ tùng không hợp lệ - partId is null/undefined");
       }
 
       // Validate that the partId exists in availableParts
-      const selectedPart = availableParts.find(p => {
+      const selectedPart = availableParts.find((p) => {
         const pId = p.partId || p.PartId || p.id;
-        console.log(`Comparing partId ${partId} (${typeof partId}) with p.id ${pId} (${typeof pId})`);
+        console.log(
+          `Comparing partId ${partId} (${typeof partId}) with p.id ${pId} (${typeof pId})`
+        );
         return pId == partId; // Use loose equality to handle type differences
       });
       if (!selectedPart) {
-        console.log("Available parts IDs:", availableParts.map(p => p.partId || p.PartId || p.id));
-        throw new Error("Phụ tùng không hợp lệ - không tìm thấy trong danh sách");
+        console.log(
+          "Available parts IDs:",
+          availableParts.map((p) => p.partId || p.PartId || p.id)
+        );
+        throw new Error(
+          "Phụ tùng không hợp lệ - không tìm thấy trong danh sách"
+        );
       }
 
       // Backend expects { partId, quantity, reason }
@@ -488,9 +498,7 @@ const PurchaseRequestManagement = () => {
       <Form.Item
         name="quantity"
         label={
-          <span style={{ fontWeight: "600", fontSize: "14px" }}>
-            Số lượng
-          </span>
+          <span style={{ fontWeight: "600", fontSize: "14px" }}>Số lượng</span>
         }
         rules={[
           { required: true, message: "Vui lòng nhập số lượng" },
@@ -522,7 +530,11 @@ const PurchaseRequestManagement = () => {
     <Card
       title="Danh sách yêu cầu"
       className={styles.tableCard}
-      style={{ borderRadius: "8px", border: "1px solid #e8e8e8", margin: "20px 0px" }}
+      style={{
+        borderRadius: "8px",
+        border: "1px solid #e8e8e8",
+        margin: "20px 0px",
+      }}
       extra={
         <Button
           type="primary"
@@ -579,7 +591,7 @@ const PurchaseRequestManagement = () => {
           }}
           style={{ borderRadius: "6px" }}
           locale={{
-            emptyText: "Không có yêu cầu mua hàng nào"
+            emptyText: "Không có yêu cầu mua hàng nào",
           }}
         />
       </Space>
@@ -591,9 +603,16 @@ const PurchaseRequestManagement = () => {
       {/* Statistics */}
       <Row gutter={[16, 16]} className={styles.statsRow}>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #e8e8e8" }}>
+          <Card
+            className={styles.statsCard}
+            style={{ borderRadius: "8px", border: "1px solid #e8e8e8" }}
+          >
             <Statistic
-              title={<span style={{ color: "#283652", fontWeight: "600" }}>Tổng yêu cầu</span>}
+              title={
+                <span style={{ color: "#283652", fontWeight: "600" }}>
+                  Tổng yêu cầu
+                </span>
+              }
               value={stats.total}
               prefix={<InboxOutlined style={{ color: "#283652" }} />}
               valueStyle={{
@@ -605,9 +624,16 @@ const PurchaseRequestManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #ffe58f" }}>
+          <Card
+            className={styles.statsCard}
+            style={{ borderRadius: "8px", border: "1px solid #ffe58f" }}
+          >
             <Statistic
-              title={<span style={{ color: "#faad14", fontWeight: "600" }}>Chờ duyệt</span>}
+              title={
+                <span style={{ color: "#faad14", fontWeight: "600" }}>
+                  Chờ duyệt
+                </span>
+              }
               value={stats.pending}
               prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />}
               valueStyle={{
@@ -619,9 +645,16 @@ const PurchaseRequestManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #b7eb8f" }}>
+          <Card
+            className={styles.statsCard}
+            style={{ borderRadius: "8px", border: "1px solid #b7eb8f" }}
+          >
             <Statistic
-              title={<span style={{ color: "#52c41a", fontWeight: "600" }}>Đã duyệt</span>}
+              title={
+                <span style={{ color: "#52c41a", fontWeight: "600" }}>
+                  Đã duyệt
+                </span>
+              }
               value={stats.approved}
               prefix={<CheckOutlined style={{ color: "#52c41a" }} />}
               valueStyle={{
@@ -633,9 +666,16 @@ const PurchaseRequestManagement = () => {
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
-          <Card className={styles.statsCard} style={{ borderRadius: "8px", border: "1px solid #ffccc7" }}>
+          <Card
+            className={styles.statsCard}
+            style={{ borderRadius: "8px", border: "1px solid #ffccc7" }}
+          >
             <Statistic
-              title={<span style={{ color: "#ff4d4f", fontWeight: "600" }}>Từ chối</span>}
+              title={
+                <span style={{ color: "#ff4d4f", fontWeight: "600" }}>
+                  Từ chối
+                </span>
+              }
               value={stats.rejected}
               prefix={<CloseOutlined style={{ color: "#ff4d4f" }} />}
               valueStyle={{
@@ -654,16 +694,18 @@ const PurchaseRequestManagement = () => {
       {/* Create/Edit Request Modal */}
       <Modal
         title={
-          <div style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}>
+          <div
+            style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}
+          >
             {selectedRequest
               ? `Chỉnh sửa yêu cầu REQ${String(
-                selectedRequest.requestId
-              ).padStart(3, "0")}`
+                  selectedRequest.requestId
+                ).padStart(3, "0")}`
               : "Tạo yêu cầu mua hàng mới"}
           </div>
         }
         open={isModalVisible}
-        onOk={() => form.submit()}  // ✅ Gọi form.submit()
+        onOk={() => form.submit()} // ✅ Gọi form.submit()
         onCancel={() => {
           setIsModalVisible(false);
           form.resetFields();
@@ -682,7 +724,7 @@ const PurchaseRequestManagement = () => {
             fontWeight: "500",
             minWidth: "120px",
           },
-          htmlType: "submit",  // ✅ Thêm dòng này
+          htmlType: "submit", // ✅ Thêm dòng này
           loading: loading,
         }}
         cancelButtonProps={{
@@ -705,17 +747,19 @@ const PurchaseRequestManagement = () => {
       <Modal
         title={
           <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-            <div style={{
-              width: "40px",
-              height: "40px",
-              borderRadius: "50%",
-              backgroundColor: "#283652",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "white",
-              fontSize: "18px"
-            }}>
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                backgroundColor: "#283652",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "white",
+                fontSize: "18px",
+              }}
+            >
               <InboxOutlined />
             </div>
             <div>
@@ -729,7 +773,8 @@ const PurchaseRequestManagement = () => {
                   fontWeight: "normal",
                 }}
               >
-                REQ{String(selectedRequest?.requestId).padStart(3, "0")} • {selectedRequest?.partName}
+                REQ{String(selectedRequest?.requestId).padStart(3, "0")} •{" "}
+                {selectedRequest?.partName}
               </div>
             </div>
           </div>
@@ -813,10 +858,10 @@ const PurchaseRequestManagement = () => {
                     selectedRequest.status === "Chờ duyệt"
                       ? "warning"
                       : selectedRequest.status === "Đã duyệt"
-                        ? "success"
-                        : selectedRequest.status === "Đã nhập"
-                          ? "processing"
-                          : "error"
+                      ? "success"
+                      : selectedRequest.status === "Đã nhập"
+                      ? "processing"
+                      : "error"
                   }
                 >
                   {selectedRequest.status}

@@ -26,7 +26,7 @@ import {
   ClockCircleOutlined,
   CheckOutlined,
   CloseOutlined,
-  ReloadOutlined
+  ReloadOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styles from "../../styles/pages/PurchaseApproval.module.css";
@@ -70,10 +70,10 @@ const PurchaseApproval = () => {
           it.status === "Pending"
             ? "Chờ duyệt"
             : it.status === "Approved"
-              ? "Đã duyệt"
-              : it.status === "Rejected"
-                ? "Từ chối"
-                : it.status || "",
+            ? "Đã duyệt"
+            : it.status === "Rejected"
+            ? "Từ chối"
+            : it.status || "",
         requestedBy: it.requestedByName || it.requestedBy || "",
         totalAmount: it.totalAmount || 0,
       }));
@@ -117,7 +117,7 @@ const PurchaseApproval = () => {
     signalRService.onDataUpdated(handleDataUpdate);
 
     return () => {
-      signalRService.offDataUpdated();
+      signalRService.offDataUpdated(handleDataUpdate);
     };
   }, [filterStatus]);
 
@@ -162,7 +162,11 @@ const PurchaseApproval = () => {
         let color = "warning";
         if (status === "Đã duyệt") color = "success";
         if (status === "Từ chối") color = "error";
-        return <Tag color={color} className={styles.statusTag}>{status}</Tag>;
+        return (
+          <Tag color={color} className={styles.statusTag}>
+            {status}
+          </Tag>
+        );
       },
     },
     {
@@ -295,13 +299,21 @@ const PurchaseApproval = () => {
             style={{
               borderRadius: "12px",
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-              border: "1px solid #f0f0f0"
+              border: "1px solid #f0f0f0",
             }}
           >
             <Statistic
-              title={<span style={{ color: "#666", fontSize: "14px", fontWeight: "500" }}>Tổng yêu cầu</span>}
+              title={
+                <span
+                  style={{ color: "#666", fontSize: "14px", fontWeight: "500" }}
+                >
+                  Tổng yêu cầu
+                </span>
+              }
               value={stats.total}
-              prefix={<InboxOutlined style={{ color: "#283652", fontSize: "20px" }} />}
+              prefix={
+                <InboxOutlined style={{ color: "#283652", fontSize: "20px" }} />
+              }
               valueStyle={{
                 color: "#283652",
                 fontSize: "32px",
@@ -316,13 +328,23 @@ const PurchaseApproval = () => {
             style={{
               borderRadius: "12px",
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-              border: "1px solid #fff7e6"
+              border: "1px solid #fff7e6",
             }}
           >
             <Statistic
-              title={<span style={{ color: "#666", fontSize: "14px", fontWeight: "500" }}>Chờ duyệt</span>}
+              title={
+                <span
+                  style={{ color: "#666", fontSize: "14px", fontWeight: "500" }}
+                >
+                  Chờ duyệt
+                </span>
+              }
               value={stats.pending}
-              prefix={<ClockCircleOutlined style={{ color: "#faad14", fontSize: "20px" }} />}
+              prefix={
+                <ClockCircleOutlined
+                  style={{ color: "#faad14", fontSize: "20px" }}
+                />
+              }
               valueStyle={{
                 color: "#faad14",
                 fontSize: "32px",
@@ -337,13 +359,21 @@ const PurchaseApproval = () => {
             style={{
               borderRadius: "12px",
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-              border: "1px solid #f6ffed"
+              border: "1px solid #f6ffed",
             }}
           >
             <Statistic
-              title={<span style={{ color: "#666", fontSize: "14px", fontWeight: "500" }}>Đã duyệt</span>}
+              title={
+                <span
+                  style={{ color: "#666", fontSize: "14px", fontWeight: "500" }}
+                >
+                  Đã duyệt
+                </span>
+              }
               value={stats.approved}
-              prefix={<CheckOutlined style={{ color: "#52c41a", fontSize: "20px" }} />}
+              prefix={
+                <CheckOutlined style={{ color: "#52c41a", fontSize: "20px" }} />
+              }
               valueStyle={{
                 color: "#52c41a",
                 fontSize: "32px",
@@ -358,13 +388,21 @@ const PurchaseApproval = () => {
             style={{
               borderRadius: "12px",
               boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
-              border: "1px solid #fff1f0"
+              border: "1px solid #fff1f0",
             }}
           >
             <Statistic
-              title={<span style={{ color: "#666", fontSize: "14px", fontWeight: "500" }}>Từ chối</span>}
+              title={
+                <span
+                  style={{ color: "#666", fontSize: "14px", fontWeight: "500" }}
+                >
+                  Từ chối
+                </span>
+              }
               value={stats.rejected}
-              prefix={<CloseOutlined style={{ color: "#ff4d4f", fontSize: "20px" }} />}
+              prefix={
+                <CloseOutlined style={{ color: "#ff4d4f", fontSize: "20px" }} />
+              }
               valueStyle={{
                 color: "#ff4d4f",
                 fontSize: "32px",
@@ -377,7 +415,9 @@ const PurchaseApproval = () => {
 
       <Card
         title={
-          <div style={{ fontSize: "20px", fontWeight: "600", color: "#283652" }}>
+          <div
+            style={{ fontSize: "20px", fontWeight: "600", color: "#283652" }}
+          >
             Danh sách yêu cầu mua hàng
           </div>
         }
@@ -386,7 +426,12 @@ const PurchaseApproval = () => {
         className={styles.mainCard}
       >
         <Space direction="vertical" size="large" style={{ width: "100%" }}>
-          <Row gutter={16} justify="space-between" align="middle" className={styles.filterSection}>
+          <Row
+            gutter={16}
+            justify="space-between"
+            align="middle"
+            className={styles.filterSection}
+          >
             <Col xs={24} lg={16} xl={14}>
               <Space size="large" wrap>
                 <Search
@@ -401,7 +446,7 @@ const PurchaseApproval = () => {
                     width: "160px",
                     borderRadius: "8px",
                     height: "40px",
-                    maxWidth: "100%"
+                    maxWidth: "100%",
                   }}
                   placeholder="Lọc theo trạng thái"
                   value={filterStatus}
@@ -424,7 +469,7 @@ const PurchaseApproval = () => {
                   height: "40px",
                   fontSize: "16px",
                   minWidth: "120px",
-                  borderRadius: "8px"
+                  borderRadius: "8px",
                 }}
                 //className={styles.refreshButton}
               >
@@ -443,7 +488,7 @@ const PurchaseApproval = () => {
               pageSize: 10,
               showSizeChanger: true,
               showTotal: (total) => `Tổng ${total} yêu cầu`,
-              className: styles.pagination
+              className: styles.pagination,
             }}
             style={{ borderRadius: "8px" }}
             className={styles.dataTable}
@@ -454,7 +499,9 @@ const PurchaseApproval = () => {
       {/* Detail Modal */}
       <Modal
         title={
-          <div style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}>
+          <div
+            style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}
+          >
             Chi tiết yêu cầu mua hàng
           </div>
         }
@@ -531,27 +578,49 @@ const PurchaseApproval = () => {
               style={{
                 marginBottom: "24px",
                 borderRadius: "8px",
-                background: "#fafafa"
+                background: "#fafafa",
               }}
               className={styles.infoCard}
             >
               <Row gutter={16}>
                 <Col span={12}>
                   <div style={{ marginBottom: "12px" }}>
-                    <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>Mã yêu cầu</div>
-                    <div style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        color: "#666",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      Mã yêu cầu
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "18px",
+                        fontWeight: "600",
+                        color: "#283652",
+                      }}
+                    >
                       REQ{String(selectedRequest.requestId).padStart(3, "0")}
                     </div>
                   </div>
                   <div style={{ marginBottom: "12px" }}>
-                    <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>Trạng thái</div>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        color: "#666",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      Trạng thái
+                    </div>
                     <Tag
                       color={
                         selectedRequest.status === "Chờ duyệt"
                           ? "warning"
                           : selectedRequest.status === "Đã duyệt"
-                            ? "success"
-                            : "error"
+                          ? "success"
+                          : "error"
                       }
                       style={{ fontSize: "14px", padding: "4px 12px" }}
                       className={styles.statusTag}
@@ -562,15 +631,33 @@ const PurchaseApproval = () => {
                 </Col>
                 <Col span={12}>
                   <div style={{ marginBottom: "12px" }}>
-                    <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>Người yêu cầu</div>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        color: "#666",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      Người yêu cầu
+                    </div>
                     <div style={{ fontSize: "16px", fontWeight: "500" }}>
                       {selectedRequest.requestedBy}
                     </div>
                   </div>
                   <div style={{ marginBottom: "12px" }}>
-                    <div style={{ fontSize: "14px", color: "#666", marginBottom: "4px" }}>Ngày yêu cầu</div>
+                    <div
+                      style={{
+                        fontSize: "14px",
+                        color: "#666",
+                        marginBottom: "4px",
+                      }}
+                    >
+                      Ngày yêu cầu
+                    </div>
                     <div style={{ fontSize: "16px", fontWeight: "500" }}>
-                      {dayjs(selectedRequest.createdAt || selectedRequest.requestDate).format("DD/MM/YYYY HH:mm")}
+                      {dayjs(
+                        selectedRequest.createdAt || selectedRequest.requestDate
+                      ).format("DD/MM/YYYY HH:mm")}
                     </div>
                   </div>
                 </Col>
@@ -587,19 +674,25 @@ const PurchaseApproval = () => {
                 width: 140,
                 fontSize: "14px",
                 color: "#666",
-                padding: "12px 16px"
+                padding: "12px 16px",
               }}
               contentStyle={{
                 fontSize: "14px",
                 padding: "12px 16px",
                 background: "#fafafa",
                 borderRadius: "4px",
-                margin: "4px"
+                margin: "4px",
               }}
               className={styles.descriptionItem}
             >
               <Descriptions.Item label="Mã phụ tùng" span={1}>
-                <span style={{ fontSize: "16px", fontWeight: "600", color: "#283652" }}>
+                <span
+                  style={{
+                    fontSize: "16px",
+                    fontWeight: "600",
+                    color: "#283652",
+                  }}
+                >
                   {selectedRequest.partNumber}
                 </span>
               </Descriptions.Item>
@@ -609,12 +702,22 @@ const PurchaseApproval = () => {
                 </span>
               </Descriptions.Item>
               <Descriptions.Item label="Số lượng yêu cầu" span={1}>
-                <span style={{ fontSize: "18px", fontWeight: "700", color: "#1890ff" }}>
+                <span
+                  style={{
+                    fontSize: "18px",
+                    fontWeight: "700",
+                    color: "#1890ff",
+                  }}
+                >
                   {selectedRequest.quantity}
                 </span>
               </Descriptions.Item>
               <Descriptions.Item label="Lý do yêu cầu" span={1}>
-                {selectedRequest.reason || <span style={{ color: "#999", fontStyle: "italic" }}>Không có lý do</span>}
+                {selectedRequest.reason || (
+                  <span style={{ color: "#999", fontStyle: "italic" }}>
+                    Không có lý do
+                  </span>
+                )}
               </Descriptions.Item>
 
               {selectedPartDetails && (
@@ -629,11 +732,12 @@ const PurchaseApproval = () => {
                             ? "#ff4d4f"
                             : selectedPartDetails.quantity <
                               selectedPartDetails.minQuantity
-                              ? "#faad14"
-                              : "#52c41a",
+                            ? "#faad14"
+                            : "#52c41a",
                       }}
                     >
-                      {selectedPartDetails.quantity} {selectedPartDetails.unit || "cái"}
+                      {selectedPartDetails.quantity}{" "}
+                      {selectedPartDetails.unit || "cái"}
                     </span>
                   </Descriptions.Item>
                   <Descriptions.Item label="Trạng thái kho" span={1}>
@@ -643,8 +747,8 @@ const PurchaseApproval = () => {
                           ? "error"
                           : selectedPartDetails.quantity <
                             selectedPartDetails.minQuantity
-                            ? "warning"
-                            : "success"
+                          ? "warning"
+                          : "success"
                       }
                       style={{ fontSize: "14px" }}
                     >
@@ -652,12 +756,13 @@ const PurchaseApproval = () => {
                         ? "Hết hàng"
                         : selectedPartDetails.quantity <
                           selectedPartDetails.minQuantity
-                          ? "Sắp hết"
-                          : "Còn hàng"}
+                        ? "Sắp hết"
+                        : "Còn hàng"}
                     </Tag>
                   </Descriptions.Item>
                   <Descriptions.Item label="Mức tối thiểu" span={1}>
-                    {selectedPartDetails.minQuantity || 0} {selectedPartDetails.unit || "cái"}
+                    {selectedPartDetails.minQuantity || 0}{" "}
+                    {selectedPartDetails.unit || "cái"}
                   </Descriptions.Item>
                   <Descriptions.Item label="Đơn vị tính" span={1}>
                     {selectedPartDetails.unit || "cái"}
@@ -668,10 +773,13 @@ const PurchaseApproval = () => {
               {selectedRequest.approvedBy && (
                 <>
                   <Descriptions.Item label="Người duyệt" span={1}>
-                    {selectedRequest.approvedByName || selectedRequest.approvedBy}
+                    {selectedRequest.approvedByName ||
+                      selectedRequest.approvedBy}
                   </Descriptions.Item>
                   <Descriptions.Item label="Ngày duyệt" span={1}>
-                    {dayjs(selectedRequest.approvedAt).format("DD/MM/YYYY HH:mm")}
+                    {dayjs(selectedRequest.approvedAt).format(
+                      "DD/MM/YYYY HH:mm"
+                    )}
                   </Descriptions.Item>
                 </>
               )}
@@ -679,17 +787,22 @@ const PurchaseApproval = () => {
               {selectedRequest.rejectedBy && (
                 <>
                   <Descriptions.Item label="Người từ chối" span={1}>
-                    {selectedRequest.rejectedByName || selectedRequest.rejectedBy}
+                    {selectedRequest.rejectedByName ||
+                      selectedRequest.rejectedBy}
                   </Descriptions.Item>
                   <Descriptions.Item label="Ngày từ chối" span={1}>
-                    {dayjs(selectedRequest.rejectedAt).format("DD/MM/YYYY HH:mm")}
+                    {dayjs(selectedRequest.rejectedAt).format(
+                      "DD/MM/YYYY HH:mm"
+                    )}
                   </Descriptions.Item>
                 </>
               )}
 
-              {(selectedRequest.approvalNotes || selectedRequest.rejectionReason) && (
+              {(selectedRequest.approvalNotes ||
+                selectedRequest.rejectionReason) && (
                 <Descriptions.Item label="Ghi chú" span={2}>
-                  {selectedRequest.approvalNotes || selectedRequest.rejectionReason}
+                  {selectedRequest.approvalNotes ||
+                    selectedRequest.rejectionReason}
                 </Descriptions.Item>
               )}
             </Descriptions>
@@ -700,7 +813,9 @@ const PurchaseApproval = () => {
       {/* Approve Modal */}
       <Modal
         title={
-          <div style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}>
+          <div
+            style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}
+          >
             Duyệt yêu cầu mua hàng
           </div>
         }
@@ -714,14 +829,23 @@ const PurchaseApproval = () => {
         className={styles.approveModal}
       >
         <div style={{ marginBottom: "16px" }}>
-          <div style={{ fontSize: "16px", fontWeight: "500", marginBottom: "8px" }}>
+          <div
+            style={{ fontSize: "16px", fontWeight: "500", marginBottom: "8px" }}
+          >
             Thông tin yêu cầu:
           </div>
-          <div style={{ background: "#f5f5f5", padding: "16px", borderRadius: "8px" }}>
+          <div
+            style={{
+              background: "#f5f5f5",
+              padding: "16px",
+              borderRadius: "8px",
+            }}
+          >
             <Row gutter={16}>
               <Col span={12}>
                 <div style={{ marginBottom: "8px" }}>
-                  <strong>Mã yêu cầu:</strong> REQ{String(selectedRequest?.requestId).padStart(3, "0")}
+                  <strong>Mã yêu cầu:</strong> REQ
+                  {String(selectedRequest?.requestId).padStart(3, "0")}
                 </div>
                 <div style={{ marginBottom: "8px" }}>
                   <strong>Phụ tùng:</strong> {selectedRequest?.partName}
@@ -794,7 +918,9 @@ const PurchaseApproval = () => {
       {/* Reject Modal */}
       <Modal
         title={
-          <div style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}>
+          <div
+            style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}
+          >
             Từ chối yêu cầu mua hàng
           </div>
         }
@@ -808,14 +934,24 @@ const PurchaseApproval = () => {
         className={styles.rejectModal}
       >
         <div style={{ marginBottom: "16px" }}>
-          <div style={{ fontSize: "16px", fontWeight: "500", marginBottom: "8px" }}>
+          <div
+            style={{ fontSize: "16px", fontWeight: "500", marginBottom: "8px" }}
+          >
             Thông tin yêu cầu:
           </div>
-          <div style={{ background: "#fff2f0", padding: "16px", borderRadius: "8px", border: "1px solid #ffccc7" }}>
+          <div
+            style={{
+              background: "#fff2f0",
+              padding: "16px",
+              borderRadius: "8px",
+              border: "1px solid #ffccc7",
+            }}
+          >
             <Row gutter={16}>
               <Col span={12}>
                 <div style={{ marginBottom: "8px" }}>
-                  <strong>Mã yêu cầu:</strong> REQ{String(selectedRequest?.requestId).padStart(3, "0")}
+                  <strong>Mã yêu cầu:</strong> REQ
+                  {String(selectedRequest?.requestId).padStart(3, "0")}
                 </div>
                 <div style={{ marginBottom: "8px" }}>
                   <strong>Phụ tùng:</strong> {selectedRequest?.partName}

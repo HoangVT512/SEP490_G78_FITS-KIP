@@ -64,7 +64,59 @@ class SignalRService {
       // Start connection
       await this.connection.start();
       this.isConnected = true;
-      console.log("✅ SignalR Connected successfully! ConnectionId:", this.connection.connectionId);
+      console.log(
+        "✅ SignalR Connected successfully! ConnectionId:",
+        this.connection.connectionId
+      );
+
+      // Re-attach listeners if any exist
+      if (this.listeners.receiveNotification.length > 0) {
+        console.log(
+          `📡 Re-attaching ReceiveNotification listeners (${this.listeners.receiveNotification.length})`
+        );
+        this.connection.on("ReceiveNotification", (notification) => {
+          console.log(`📨 [SignalR Service] ReceiveNotification event fired`);
+          this.listeners.receiveNotification.forEach((cb) => {
+            try {
+              cb(notification);
+            } catch (e) {
+              console.error(e);
+            }
+          });
+        });
+      }
+
+      if (this.listeners.dataUpdated.length > 0) {
+        console.log(
+          `📡 Re-attaching DataUpdated listeners (${this.listeners.dataUpdated.length})`
+        );
+        this.connection.on("DataUpdated", (data) => {
+          console.log("Data updated:", data);
+          this.listeners.dataUpdated.forEach((cb) => {
+            try {
+              cb(data);
+            } catch (e) {
+              console.error(e);
+            }
+          });
+        });
+      }
+
+      if (this.listeners.replacementApproved.length > 0) {
+        console.log(
+          `📡 Re-attaching ReplacementApproved listeners (${this.listeners.replacementApproved.length})`
+        );
+        this.connection.on("ReplacementApproved", (data) => {
+          console.log(`📨 [SignalR Service] ReplacementApproved event fired`);
+          this.listeners.replacementApproved.forEach((cb) => {
+            try {
+              cb(data);
+            } catch (e) {
+              console.error(e);
+            }
+          });
+        });
+      }
 
       return this.connection;
     } catch (error) {
@@ -77,34 +129,45 @@ class SignalRService {
   // Đăng ký lắng nghe thông báo
   onReceiveNotification(callback) {
     if (!this.connection) {
-      console.warn("⚠️ Cannot set up ReceiveNotification listener - no connection");
+      console.warn(
+        "⚠️ Cannot set up ReceiveNotification listener - no connection"
+      );
       return;
     }
 
     // Check if this callback already exists
     if (this.listeners.receiveNotification.includes(callback)) {
-      console.log("📡 ReceiveNotification listener already registered, skipping");
+      console.log(
+        "📡 ReceiveNotification listener already registered, skipping"
+      );
       return;
     }
 
     // Add to tracking
     this.listeners.receiveNotification.push(callback);
-    
+
     // Remove ALL existing event handlers first
     this.connection.off("ReceiveNotification");
-    
+
     // Set up new consolidated handler that calls all registered callbacks
-    console.log(`📡 Setting up ReceiveNotification listener (${this.listeners.receiveNotification.length} callbacks)`);
+    console.log(
+      `📡 Setting up ReceiveNotification listener (${this.listeners.receiveNotification.length} callbacks)`
+    );
     this.connection.on("ReceiveNotification", (notification) => {
-      console.log(`📨 [SignalR Service] ReceiveNotification event fired, calling ${this.listeners.receiveNotification.length} callback(s)`);
-      
+      console.log(
+        `📨 [SignalR Service] ReceiveNotification event fired, calling ${this.listeners.receiveNotification.length} callback(s)`
+      );
+
       // Call all registered callbacks
       this.listeners.receiveNotification.forEach((cb, index) => {
         try {
           console.log(`  └─ Calling callback #${index + 1}`);
           cb(notification);
         } catch (error) {
-          console.error(`Error in ReceiveNotification callback #${index + 1}:`, error);
+          console.error(
+            `Error in ReceiveNotification callback #${index + 1}:`,
+            error
+          );
         }
       });
     });
@@ -118,7 +181,9 @@ class SignalRService {
         const index = this.listeners.receiveNotification.indexOf(callback);
         if (index > -1) {
           this.listeners.receiveNotification.splice(index, 1);
-          console.log(`🔇 Removed specific ReceiveNotification callback (${this.listeners.receiveNotification.length} remaining)`);
+          console.log(
+            `🔇 Removed specific ReceiveNotification callback (${this.listeners.receiveNotification.length} remaining)`
+          );
         }
       } else {
         // Remove all callbacks
@@ -197,55 +262,107 @@ class SignalRService {
 
   // Đăng ký lắng nghe cập nhật dữ liệu
   onDataUpdated(callback) {
+    // Add to tracking regardless of connection state
+    if (!this.listeners.dataUpdated.includes(callback)) {
+      this.listeners.dataUpdated.push(callback);
+    }
+
     if (this.connection) {
       // Remove existing listeners first to prevent duplicates
       this.connection.off("DataUpdated");
 
+      console.log(
+        `📡 Setting up DataUpdated listener (${this.listeners.dataUpdated.length} callbacks)`
+      );
       this.connection.on("DataUpdated", (data) => {
         console.log("Data updated:", data);
-        callback(data);
+        // Call all registered callbacks
+        this.listeners.dataUpdated.forEach((cb) => {
+          try {
+            cb(data);
+          } catch (error) {
+            console.error("Error in DataUpdated callback:", error);
+          }
+        });
       });
+    } else {
+      console.log("⚠️ Connection not ready, queued DataUpdated listener");
     }
   }
 
   // Hủy đăng ký lắng nghe cập nhật dữ liệu
-  offDataUpdated() {
+  offDataUpdated(callback) {
+    if (callback) {
+      const index = this.listeners.dataUpdated.indexOf(callback);
+      if (index > -1) {
+        this.listeners.dataUpdated.splice(index, 1);
+      }
+    } else {
+      this.listeners.dataUpdated = [];
+    }
+
     if (this.connection) {
-      this.connection.off("DataUpdated");
+      if (this.listeners.dataUpdated.length === 0) {
+        this.connection.off("DataUpdated");
+      } else {
+        // Re-register with remaining callbacks
+        this.connection.off("DataUpdated");
+        this.connection.on("DataUpdated", (data) => {
+          console.log("Data updated:", data);
+          this.listeners.dataUpdated.forEach((cb) => {
+            try {
+              cb(data);
+            } catch (error) {
+              console.error("Error in DataUpdated callback:", error);
+            }
+          });
+        });
+      }
     }
   }
 
   // Đăng ký lắng nghe thông báo duyệt cấp phát linh kiện
   onReplacementApproved(callback) {
     if (!this.connection) {
-      console.warn("⚠️ Cannot set up ReplacementApproved listener - no connection");
+      console.warn(
+        "⚠️ Cannot set up ReplacementApproved listener - no connection"
+      );
       return;
     }
 
     // Check if this callback already exists
     if (this.listeners.replacementApproved.includes(callback)) {
-      console.log("📡 ReplacementApproved listener already registered, skipping");
+      console.log(
+        "📡 ReplacementApproved listener already registered, skipping"
+      );
       return;
     }
 
     // Add to tracking
     this.listeners.replacementApproved.push(callback);
-    
+
     // Remove ALL existing event handlers first
     this.connection.off("ReplacementApproved");
-    
+
     // Set up new consolidated handler that calls all registered callbacks
-    console.log(`📡 Setting up ReplacementApproved listener (${this.listeners.replacementApproved.length} callbacks)`);
+    console.log(
+      `📡 Setting up ReplacementApproved listener (${this.listeners.replacementApproved.length} callbacks)`
+    );
     this.connection.on("ReplacementApproved", (data) => {
-      console.log(`📨 [SignalR Service] ReplacementApproved event fired, calling ${this.listeners.replacementApproved.length} callback(s)`);
-      
+      console.log(
+        `📨 [SignalR Service] ReplacementApproved event fired, calling ${this.listeners.replacementApproved.length} callback(s)`
+      );
+
       // Call all registered callbacks
       this.listeners.replacementApproved.forEach((cb, index) => {
         try {
           console.log(`  └─ Calling callback #${index + 1}`);
           cb(data);
         } catch (error) {
-          console.error(`Error in ReplacementApproved callback #${index + 1}:`, error);
+          console.error(
+            `Error in ReplacementApproved callback #${index + 1}:`,
+            error
+          );
         }
       });
     });
@@ -259,7 +376,9 @@ class SignalRService {
         const index = this.listeners.replacementApproved.indexOf(callback);
         if (index > -1) {
           this.listeners.replacementApproved.splice(index, 1);
-          console.log(`🔇 Removed specific ReplacementApproved callback (${this.listeners.replacementApproved.length} remaining)`);
+          console.log(
+            `🔇 Removed specific ReplacementApproved callback (${this.listeners.replacementApproved.length} remaining)`
+          );
         }
       } else {
         // Remove all callbacks

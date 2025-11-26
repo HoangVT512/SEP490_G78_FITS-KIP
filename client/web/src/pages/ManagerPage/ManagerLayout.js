@@ -107,7 +107,16 @@ const ManagerLayout = () => {
           // Tăng số lượng notification badge
           setNotificationCount((prev) => prev + 1);
 
-          // Chỉ cập nhật badge, không hiển thị toast hay notification popup
+          // Hiển thị toast notification
+          const content = `${
+            notificationData.title ? notificationData.title + ": " : ""
+          }${notificationData.message}`;
+          const type = notificationData.type || "info";
+
+          if (type === "success") antdMessage.success(content);
+          else if (type === "warning") antdMessage.warning(content);
+          else if (type === "error") antdMessage.error(content);
+          else antdMessage.info(content);
         });
 
         // Lắng nghe broadcast (thông báo cho tất cả)
@@ -117,7 +126,16 @@ const ManagerLayout = () => {
           // Tăng số lượng notification badge
           setNotificationCount((prev) => prev + 1);
 
-          // Chỉ cập nhật badge, không hiển thị toast hay notification popup
+          // Hiển thị toast notification
+          const content = `${
+            broadcastData.title ? broadcastData.title + ": " : ""
+          }${broadcastData.message}`;
+          const type = broadcastData.type || "info";
+
+          if (type === "success") antdMessage.success(content);
+          else if (type === "warning") antdMessage.warning(content);
+          else if (type === "error") antdMessage.error(content);
+          else antdMessage.info(content);
         });
 
         console.log("✅ SignalR initialized successfully!");

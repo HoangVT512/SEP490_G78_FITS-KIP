@@ -108,7 +108,7 @@ const PurchaseRequestManagement = () => {
     signalRService.onDataUpdated(handleDataUpdate);
 
     return () => {
-      signalRService.offDataUpdated();
+      signalRService.offDataUpdated(handleDataUpdate);
     };
   }, []);
 

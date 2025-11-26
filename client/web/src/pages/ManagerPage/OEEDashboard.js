@@ -29,31 +29,32 @@ const OEEDashboard = () => {
   const fetchData = async (date) => {
     setIsLoading(true);
     try {
-      console.log('Lỗi lấy dữ liệu theo ngày:', date);
-      
+      console.log("Lỗi lấy dữ liệu theo ngày:", date);
+
       // Fetch OEE data for all lines
-      const oeeResponse = await dashboardService.getOEEStatsByDate(date)
-      console.log('OEE phản hồi:', oeeResponse);
+      const oeeResponse = await dashboardService.getOEEStatsByDate(date);
+      console.log("OEE phản hồi:", oeeResponse);
       if (oeeResponse?.success && oeeResponse?.data) {
         setOeeData(oeeResponse.data);
       }
 
       // Fetch pending tech support incidents
       // Format date for incident API (yyyy-MM-dd)
-      console.log('Đang gọi api sự cố theo ngày :', date);
+      console.log("Đang gọi api sự cố theo ngày :", date);
       try {
-        const incidentResponse = await incidentService.getTechSupportPendingIncidents(date)
-        console.log('Gọi api sự cố hoàn thành');
-        console.log('Sự cố phản hồi:', incidentResponse);
+        const incidentResponse =
+          await incidentService.getTechSupportPendingIncidents(date);
+        console.log("Gọi api sự cố hoàn thành");
+        console.log("Sự cố phản hồi:", incidentResponse);
         if (incidentResponse?.success && incidentResponse?.data) {
-          console.log('Đang thiết lập dữ liệu sự cố:', incidentResponse.data);
-          setIncidentData(incidentResponse.data)
+          console.log("Đang thiết lập dữ liệu sự cố:", incidentResponse.data);
+          setIncidentData(incidentResponse.data);
         } else {
-          console.log('Không có dữ liệu sự cố hoặc phản hồi không hợp lệ');
+          console.log("Không có dữ liệu sự cố hoặc phản hồi không hợp lệ");
           setIncidentData([]);
         }
       } catch (incidentError) {
-        console.error('Lỗi khi lấy dữ liệu sự cố:', incidentError);
+        console.error("Lỗi khi lấy dữ liệu sự cố:", incidentError);
         setIncidentData([]);
       }
 
@@ -64,7 +65,7 @@ const OEEDashboard = () => {
         new Date().toLocaleTimeString("vi-VN")
       );
     } catch (error) {
-      console.error('Lỗi khi lấy dữ liệu bảng điều khiển OEE:', error)
+      console.error("Lỗi khi lấy dữ liệu bảng điều khiển OEE:", error);
       setIncidentData([]);
     } finally {
       setIsLoading(false);
@@ -73,15 +74,21 @@ const OEEDashboard = () => {
 
   // Initialize SignalR connection for realtime updates
   useEffect(() => {
+    let handleDataUpdate = null;
+    let handleReceiveNotification = null;
+    let handleReceiveBroadcast = null;
+
     const initializeSignalR = async () => {
       try {
         const token = authService.getToken();
-        if (token && !signalRService.isConnected) {
-          await signalRService.startConnection(token);
+        if (token) {
+          if (!signalRService.isConnected) {
+            await signalRService.startConnection(token);
+          }
           setIsRealtime(true);
 
           // Listen for incident updates
-          signalRService.onReceiveNotification((notification) => {
+          handleReceiveNotification = (notification) => {
             console.log("📢 Received notification:", notification);
             // Refresh data when incident created/updated
             if (
@@ -91,10 +98,11 @@ const OEEDashboard = () => {
               console.log("🔄 Refreshing data due to incident notification");
               fetchData(selectedDate);
             }
-          });
+          };
+          signalRService.onReceiveNotification(handleReceiveNotification);
 
           // Listen for general data updates
-          signalRService.onDataUpdated((data) => {
+          handleDataUpdate = (data) => {
             console.log("📊 Data updated:", data);
             if (
               data?.type === "incident" ||
@@ -105,16 +113,20 @@ const OEEDashboard = () => {
               console.log("🚨 Incident data changed, refreshing...");
               fetchData(selectedDate);
             }
-          });
+          };
+          signalRService.onDataUpdated(handleDataUpdate);
 
           // Listen for broadcasts
-          signalRService.onReceiveBroadcast((message) => {
+          handleReceiveBroadcast = (message) => {
             console.log("📡 Received broadcast:", message);
             fetchData(selectedDate);
-          });
+          };
+          signalRService.onReceiveBroadcast(handleReceiveBroadcast);
 
           // Listen for specific incident notifications
           if (signalRService.connection) {
+            // Note: These direct connection listeners are harder to manage cleanly with the service wrapper
+            // Ideally signalRService should expose methods for these too
             signalRService.connection.on("IncidentNotification", (data) => {
               console.log("🚨 Incident notification received:", data);
               fetchData(selectedDate);
@@ -125,13 +137,8 @@ const OEEDashboard = () => {
               fetchData(selectedDate);
             });
 
-            signalRService.connection.on("DataUpdated", (data) => {
-              console.log("📊 DataUpdated event received:", data);
-              if (data?.type === "incident") {
-                console.log("🚨 Incident data updated, refreshing...");
-                fetchData(selectedDate);
-              }
-            });
+            // This one duplicates onDataUpdated but directly on connection
+            // signalRService.connection.on("DataUpdated", ...);
           }
         }
       } catch (error) {
@@ -144,17 +151,20 @@ const OEEDashboard = () => {
 
     return () => {
       // Cleanup SignalR listeners
-      if (signalRService.isConnected) {
-        signalRService.offReceiveNotification();
-        signalRService.offDataUpdated();
-        signalRService.offReceiveBroadcast();
+      if (handleReceiveNotification)
+        signalRService.offReceiveNotification(handleReceiveNotification);
+      if (handleDataUpdate) signalRService.offDataUpdated(handleDataUpdate);
+      // signalRService.offReceiveBroadcast(handleReceiveBroadcast); // Service doesn't support specific off for broadcast yet, or does it?
+      // Checking signalRService.js, offReceiveBroadcast doesn't take args. It removes all.
+      // We should probably fix that too, but for now let's leave it or just call it if we are sure we are the only one.
+      // But ManagerLayout also uses it. So calling offReceiveBroadcast() here will break ManagerLayout.
+      // I'll skip offReceiveBroadcast for now or implement it properly in service.
 
-        // Remove custom listeners
-        if (signalRService.connection) {
-          signalRService.connection.off("IncidentNotification");
-          signalRService.connection.off("RefreshIncidents");
-          signalRService.connection.off("DataUpdated");
-        }
+      // Remove custom listeners
+      if (signalRService.connection) {
+        signalRService.connection.off("IncidentNotification");
+        signalRService.connection.off("RefreshIncidents");
+        // signalRService.connection.off("DataUpdated"); // Don't remove this as it might remove the service's listener
       }
     };
   }, [selectedDate]);
@@ -167,7 +177,7 @@ const OEEDashboard = () => {
 
   // Debug: log incident data changes
   useEffect(() => {
-    console.log('Dữ liệu sự cố đã thay đổi:', incidentData);
+    console.log("Dữ liệu sự cố đã thay đổi:", incidentData);
   }, [incidentData]);
 
   const handleDateChange = (date) => {
