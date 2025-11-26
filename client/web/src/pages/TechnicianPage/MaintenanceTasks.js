@@ -352,12 +352,12 @@ const MaintenanceTasks = () => {
       render: (_, record) => {
         if (!record) return null;
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const displayDate = record.rescheduledDate || record.scheduledDate;
-        const scheduledDate = new Date(displayDate);
-        scheduledDate.setHours(0, 0, 0, 0);
-        const isScheduledDateReached = scheduledDate <= today;
+        // ✅ Validation 2 & 4: Cho phép làm bình thường khi quá hạn, bỏ reschedule
+        const myStatus = getMyStatus(record);
+        const canExecute = myStatus === "Chờ xử lý" || 
+                          myStatus === "Đang thực hiện" || 
+                          myStatus === "Quá hạn" ||  // ✅ Cho phép làm khi quá hạn
+                          record.status === "Hoãn";
 
         const items = [
           {
@@ -366,16 +366,13 @@ const MaintenanceTasks = () => {
             label: "Chi tiết",
             onClick: () => handleViewDetail(record),
           },
-          isScheduledDateReached && {
+          {
             key: "history",
             icon: <FileTextOutlined />,
             label: "Lịch sử linh kiện",
             onClick: () => handleViewSparePartsHistory(record),
           },
-          isScheduledDateReached &&
-            (getMyStatus(record) === "Chờ xử lý" ||
-              getMyStatus(record) === "Đang thực hiện" ||
-              record.status === "Hoãn") && {
+          canExecute && {
             key: "execute",
             icon: <CheckCircleOutlined />,
             label: "Thực hiện",
@@ -1181,7 +1178,7 @@ const MaintenanceTasks = () => {
                                     >
                                       <Text
                                         type="secondary"
-                                        style={{ fontSize: 11 }}
+                                        style={{ fontSize: 11, whiteSpace: "pre-wrap" }}
                                       >
                                         📝 Ghi chú: {item.notes}
                                       </Text>
@@ -1292,7 +1289,7 @@ const MaintenanceTasks = () => {
                                 >
                                   <Text
                                     type="secondary"
-                                    style={{ fontSize: 11 }}
+                                    style={{ fontSize: 11, whiteSpace: "pre-wrap" }}
                                   >
                                     📝 Ghi chú: {item.notes}
                                   </Text>
@@ -1396,11 +1393,13 @@ const MaintenanceTasks = () => {
               </Descriptions.Item>
               <Descriptions.Item label="Ngày phân công" span={1}>
                 {selectedWorkOrder.assignedDate
-                  ? dayjs(selectedWorkOrder.assignedDate).format("DD/MM/YYYY")
+                  ? dayjs(selectedWorkOrder.assignedDate).format("DD/MM/YYYY HH:mm")
                   : "-"}
               </Descriptions.Item>
               <Descriptions.Item label="Ngày thực hiện" span={1}>
-                {dayjs(selectedWorkOrder.scheduledDate).format("DD/MM/YYYY")}
+                {selectedWorkOrder.scheduledDate
+                  ? dayjs(selectedWorkOrder.scheduledDate).format("DD/MM/YYYY")
+                  : "-"}
               </Descriptions.Item>
               {selectedWorkOrder.startedDate && (
                 <Descriptions.Item label="Bắt đầu lúc" span={1}>
@@ -1414,11 +1413,6 @@ const MaintenanceTasks = () => {
                   {dayjs(selectedWorkOrder.completedDate).format(
                     "DD/MM/YYYY HH:mm"
                   )}
-                </Descriptions.Item>
-              )}
-              {selectedWorkOrder.notes && (
-                <Descriptions.Item label="Ghi chú" span={2}>
-                  {selectedWorkOrder.notes}
                 </Descriptions.Item>
               )}
             </Descriptions>

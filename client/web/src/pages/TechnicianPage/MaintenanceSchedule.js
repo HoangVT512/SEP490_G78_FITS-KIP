@@ -19,6 +19,13 @@ import {
   message,
   Typography,
   ConfigProvider,
+  Descriptions,
+  Divider,
+  Progress,
+  List as AntList,
+  Checkbox,
+  Alert,
+  Input,
 } from "antd";
 import viVN from "antd/locale/vi_VN";
 import {
@@ -31,13 +38,22 @@ import {
   ReloadOutlined,
   FilterOutlined,
   EyeOutlined,
+  ThunderboltOutlined,
+  PlayCircleOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import isBetween from "dayjs/plugin/isBetween";
 import localeData from "dayjs/plugin/localeData";
 import "dayjs/locale/vi";
-import { getMyWorkOrders } from "../../services/maintenanceService";
+import {
+  getMyWorkOrders,
+  startWorkOrder,
+  updateChecklistItem,
+  completeWorkOrder,
+} from "../../services/maintenanceService";
+import { authService } from "../../services/authService";
 import styles from "../../styles/pages/MaintenanceSchedule.module.css";
 
 dayjs.extend(isBetween);
@@ -55,6 +71,15 @@ const MaintenanceSchedule = () => {
   const [loading, setLoading] = useState(false);
   const [workOrders, setWorkOrders] = useState([]);
   const [filterStatus, setFilterStatus] = useState("all");
+  const [detailModalVisible, setDetailModalVisible] = useState(false);
+  const [selectedWorkOrder, setSelectedWorkOrder] = useState(null);
+  const [startingWork, setStartingWork] = useState(false);
+  const [checklistModalVisible, setChecklistModalVisible] = useState(false);
+  const [checklistNotes, setChecklistNotes] = useState({});
+  const [updatingChecklist, setUpdatingChecklist] = useState(false);
+
+  const currentUser = authService.getStoredUser();
+  const currentUserId = currentUser?.id || currentUser?.userId;
 
   useEffect(() => {
     fetchWorkOrders();
@@ -86,6 +111,28 @@ const MaintenanceSchedule = () => {
 
       const dateKey = dayjs(displayDate).format("YYYY-MM-DD");
 
+      // ✅ Xác định KTV hiện tại là Electrical hay Mechanical
+      const isElectrical = wo.assignedToElectrical === currentUserId;
+      const isMechanical = wo.assignedToMechanical === currentUserId;
+
+      // ✅ Tính checklist items CHỈ của KTV hiện tại
+      let myTotalItems = 0;
+      let myCompletedItems = 0;
+      let myProgress = 0;
+
+      if (wo.checklistItems && wo.checklistItems.length > 0) {
+        // Lọc checklist items của KTV hiện tại
+        const myItems = wo.checklistItems.filter((item) => {
+          if (isElectrical && item.category === "Electrical") return true;
+          if (isMechanical && item.category === "Mechanical") return true;
+          return false;
+        });
+
+        myTotalItems = myItems.length;
+        myCompletedItems = myItems.filter((item) => item.isChecked).length;
+        myProgress = myTotalItems > 0 ? Math.round((myCompletedItems / myTotalItems) * 100) : 0;
+      }
+
       const schedule = {
         key: wo.workOrderId,
         workOrderId: wo.workOrderId,
@@ -102,9 +149,9 @@ const MaintenanceSchedule = () => {
         scheduledDate: wo.scheduledDate,
         dueDate: wo.dueDate,
         completedDate: wo.completedDate,
-        progress: wo.completionPercentage || 0,
-        totalItems: wo.totalChecklistItems || 0,
-        checkedItems: wo.completedChecklistItems || 0,
+        progress: myProgress, // ✅ Tiến độ của KTV hiện tại
+        totalItems: myTotalItems, // ✅ Số checklist của KTV hiện tại
+        checkedItems: myCompletedItems, // ✅ Số đã hoàn thành của KTV hiện tại
         notes: wo.notes,
         isOverdue: wo.isOverdue || false,
       };
@@ -205,14 +252,9 @@ const MaintenanceSchedule = () => {
     );
   };
 
-  // Handle date select
+  // Handle date select - chỉ highlight ngày, không mở modal
   const onDateSelect = (date) => {
     setSelectedDate(date);
-    const schedules = getSchedulesForDate(date);
-    if (schedules.length > 0) {
-      setSelectedSchedules(schedules);
-      setModalVisible(true);
-    }
   };
 
   // Get monthly statistics
@@ -264,8 +306,168 @@ const MaintenanceSchedule = () => {
   };
 
   // Handle view work order detail
-  const handleViewDetail = (workOrderId) => {
-    navigate("/technician/maintenance-tasks");
+  const handleViewDetail = async (workOrderId) => {
+    try {
+      setLoading(true);
+      const fullWorkOrder = workOrders.find(wo => wo.workOrderId === workOrderId);
+      if (fullWorkOrder) {
+        setSelectedWorkOrder(fullWorkOrder);
+        setDetailModalVisible(true);
+        setModalVisible(false);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      message.error("Không thể tải chi tiết công việc");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get my task type
+  const getMyTaskType = (workOrder) => {
+    const isElectrical = workOrder.assignedToElectrical === currentUserId;
+    const isMechanical = workOrder.assignedToMechanical === currentUserId;
+    
+    if (isElectrical && isMechanical) return "Both";
+    if (isElectrical) return "Electrical";
+    if (isMechanical) return "Mechanical";
+    return "None";
+  };
+
+  // Get my checklist items
+  const getMyChecklistItems = (workOrder) => {
+    if (!workOrder || !workOrder.checklistItems) return [];
+    
+    const taskType = getMyTaskType(workOrder);
+    if (taskType === "Both") return workOrder.checklistItems;
+    
+    return workOrder.checklistItems.filter(item => {
+      if (taskType === "Electrical") return item.category === "Electrical";
+      if (taskType === "Mechanical") return item.category === "Mechanical";
+      return false;
+    });
+  };
+
+  // Handle start work
+  const handleStartWork = async () => {
+    if (!selectedWorkOrder) return;
+    
+    // Đóng detail modal và mở checklist modal
+    setDetailModalVisible(false);
+    setChecklistModalVisible(true);
+    
+    // Khởi tạo notes từ checklist items hiện có
+    const notes = {};
+    const items = getMyChecklistItems(selectedWorkOrder);
+    items.forEach((item) => {
+      notes[item.checklistId] = item.notes || "";
+    });
+    setChecklistNotes(notes);
+  };
+
+  // Handle note change
+  const handleNoteChange = (checklistId, value) => {
+    setChecklistNotes((prev) => ({
+      ...prev,
+      [checklistId]: value,
+    }));
+  };
+
+  // Handle check item
+  const handleCheckItem = async (item, checked) => {
+    try {
+      setUpdatingChecklist(true);
+
+      // Nếu đang tick item và work order đang Pending → Tự động chuyển sang InProgress
+      if (checked && selectedWorkOrder.status === "Chờ xử lý") {
+        await startWorkOrder(selectedWorkOrder.workOrderId);
+        message.success("Đã bắt đầu thực hiện công việc!");
+      }
+
+      // Lấy note từ state (đã nhập sẵn)
+      const notes = checklistNotes[item.checklistId] || "";
+
+      // Cập nhật checklist item
+      await updateChecklistItem(item.checklistId, {
+        isChecked: checked,
+        notes: notes,
+      });
+
+      message.success(
+        checked ? "Đã hoàn thành bước này!" : "Đã bỏ tick bước này!"
+      );
+
+      // Reload work orders để cập nhật UI
+      await fetchWorkOrders();
+
+      // Reload selected work order để cập nhật modal
+      const response = await getMyWorkOrders();
+      const orders = response?.data || [];
+      const updatedWorkOrder = orders.find(
+        (wo) => wo.workOrderId === selectedWorkOrder.workOrderId
+      );
+      if (updatedWorkOrder) {
+        setSelectedWorkOrder(updatedWorkOrder);
+      }
+    } catch (error) {
+      message.error("Cập nhật checklist thất bại: " + error.message);
+    } finally {
+      setUpdatingChecklist(false);
+    }
+  };
+
+  // Handle complete from checklist
+  const handleCompleteFromChecklist = async () => {
+    const myItems = getMyChecklistItems(selectedWorkOrder);
+    const allCompleted = myItems.every((item) => item.isChecked);
+    if (!allCompleted) {
+      message.warning(
+        "Vui lòng hoàn thành tất cả các bước trước khi kết thúc!"
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const checklistItems = myItems.map((item) => ({
+        checklistId: item.checklistId,
+        isChecked: true,
+        notes: item.notes || "",
+      }));
+
+      const completionData = {
+        checklistItems: checklistItems,
+        overallNotes: "",
+      };
+
+      await completeWorkOrder(selectedWorkOrder.workOrderId, completionData);
+
+      message.success("Hoàn thành phần công việc của bạn thành công!");
+      setChecklistModalVisible(false);
+      setChecklistNotes({});
+      fetchWorkOrders();
+    } catch (error) {
+      message.error("Hoàn thành nhiệm vụ thất bại: " + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Check if can start work
+  const canStartWork = (workOrder) => {
+    if (!workOrder) return false;
+    const status = workOrder.status;
+    
+    // Không cho phép nếu đã hủy hoặc đã đóng
+    return status !== "Đã hủy" && status !== "Đã đóng";
+  };
+
+  // Check if scheduled date is today
+  const isScheduledToday = (workOrder) => {
+    if (!workOrder || !workOrder.scheduledDate) return false;
+    const today = dayjs().startOf('day');
+    const scheduledDate = dayjs(workOrder.scheduledDate).startOf('day');
+    return scheduledDate.isSame(today);
   };
 
   return (
@@ -469,7 +671,11 @@ const MaintenanceSchedule = () => {
                     color: color,
                     dot: icon,
                     children: (
-                      <div className={styles.timelineItem}>
+                      <div 
+                        className={styles.timelineItem}
+                        onClick={() => handleViewDetail(schedule.workOrderId)}
+                        style={{ cursor: 'pointer' }}
+                      >
                         <div style={{ marginBottom: 8 }}>
                           <Space>
                             <Tag
@@ -677,6 +883,557 @@ const MaintenanceSchedule = () => {
             </List.Item>
           )}
         />
+      </Modal>
+
+      {/* Detail Modal - giống MaintenanceTasks */}
+      <Modal
+        title={
+          <Space>
+            <FileTextOutlined />
+            <span>Chi tiết phiếu bảo trì</span>
+          </Space>
+        }
+        open={detailModalVisible}
+        onCancel={() => setDetailModalVisible(false)}
+        footer={[
+          isScheduledToday(selectedWorkOrder) && canStartWork(selectedWorkOrder) && (
+            <Button
+              key="start"
+              type="primary"
+              icon={<PlayCircleOutlined />}
+              onClick={handleStartWork}
+              style={{
+                height: "40px",
+                fontSize: "16px",
+                minWidth: "140px",
+                marginRight: "auto",
+              }}
+            >
+              Thực hiện
+            </Button>
+          ),
+          <Button
+            key="close"
+            onClick={() => setDetailModalVisible(false)}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
+            Đóng
+          </Button>,
+        ]}
+        width={900}
+      >
+        {selectedWorkOrder && (
+          <div>
+            <Descriptions bordered column={2} size="small">
+              <Descriptions.Item label="Mã phiếu" span={1}>
+                <strong>{selectedWorkOrder.workOrderCode}</strong>
+              </Descriptions.Item>
+              <Descriptions.Item label="Trạng thái" span={1}>
+                {selectedWorkOrder.status === "Đang thực hiện" ? (
+                  <Tag icon={<PlayCircleOutlined />} color="processing">
+                    Đang thực hiện
+                  </Tag>
+                ) : selectedWorkOrder.status === "Chờ xử lý" ? (
+                  <Tag icon={<ClockCircleOutlined />} color="warning">
+                    Chờ xử lý
+                  </Tag>
+                ) : selectedWorkOrder.status === "Hoàn thành" ? (
+                  <Tag icon={<CheckCircleOutlined />} color="success">
+                    Hoàn thành
+                  </Tag>
+                ) : selectedWorkOrder.status === "Quá hạn" ? (
+                  <Tag icon={<WarningOutlined />} color="error">
+                    Quá hạn
+                  </Tag>
+                ) : (
+                  <Tag>{selectedWorkOrder.status}</Tag>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Thiết bị" span={2}>
+                <strong>{selectedWorkOrder.equipmentCode}</strong> - {selectedWorkOrder.equipmentName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Vị trí" span={2}>
+                {selectedWorkOrder.lineName} / {selectedWorkOrder.stageName}
+              </Descriptions.Item>
+              <Descriptions.Item label="Loại công việc" span={1}>
+                {getMyTaskType(selectedWorkOrder) === "Electrical" ? (
+                  <Tag icon={<ThunderboltOutlined />} color="blue">
+                    Điện
+                  </Tag>
+                ) : getMyTaskType(selectedWorkOrder) === "Mechanical" ? (
+                  <Tag icon={<ToolOutlined />} color="green">
+                    Cơ khí
+                  </Tag>
+                ) : (
+                  <Tag color="purple">Cả Điện & Cơ khí</Tag>
+                )}
+              </Descriptions.Item>
+              <Descriptions.Item label="Ngày phân công" span={1}>
+                {selectedWorkOrder.assignedDate
+                  ? dayjs(selectedWorkOrder.assignedDate).format("DD/MM/YYYY HH:mm")
+                  : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="Ngày thực hiện" span={1}>
+                {selectedWorkOrder.scheduledDate
+                  ? dayjs(selectedWorkOrder.scheduledDate).format("DD/MM/YYYY")
+                  : "-"}
+              </Descriptions.Item>
+              {selectedWorkOrder.startedDate && (
+                <Descriptions.Item label="Bắt đầu lúc" span={1}>
+                  {dayjs(selectedWorkOrder.startedDate).format("DD/MM/YYYY HH:mm")}
+                </Descriptions.Item>
+              )}
+              {selectedWorkOrder.completedDate && (
+                <Descriptions.Item label="Hoàn thành lúc" span={2}>
+                  {dayjs(selectedWorkOrder.completedDate).format("DD/MM/YYYY HH:mm")}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+
+            {getMyChecklistItems(selectedWorkOrder).length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                <Divider>Danh sách công việc của bạn</Divider>
+                <AntList
+                  dataSource={getMyChecklistItems(selectedWorkOrder)}
+                  renderItem={(item, index) => (
+                    <AntList.Item>
+                      <AntList.Item.Meta
+                        avatar={
+                          <Badge
+                            count={index + 1}
+                            style={{
+                              backgroundColor: getMyTaskType(selectedWorkOrder) === "Electrical"
+                                ? "#1890ff"
+                                : getMyTaskType(selectedWorkOrder) === "Mechanical"
+                                ? "#52c41a"
+                                : "#722ed1",
+                            }}
+                          />
+                        }
+                        title={
+                          <Checkbox checked={item.isChecked} disabled>
+                            {item.stepName}
+                          </Checkbox>
+                        }
+                        description={
+                          <div>
+                            {item.stepDescription && (
+                              <Text type="secondary" style={{ fontSize: "12px", display: "block", marginBottom: 4 }}>
+                                {item.stepDescription}
+                              </Text>
+                            )}
+                            {item.notes && (
+                              <Text style={{ fontSize: "12px", color: "#1890ff", whiteSpace: "pre-wrap" }}>
+                                📝 Ghi chú: {item.notes}
+                              </Text>
+                            )}
+                          </div>
+                        }
+                      />
+                    </AntList.Item>
+                  )}
+                />
+                <div style={{ marginTop: 16 }}>
+                  <Progress
+                    percent={Math.round(
+                      (getMyChecklistItems(selectedWorkOrder).filter((i) => i.isChecked).length /
+                        getMyChecklistItems(selectedWorkOrder).length) *
+                        100
+                    )}
+                    status="active"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+
+      {/* Checklist Modal - Thực hiện công việc bảo trì */}
+      <Modal
+        title={
+          <Space>
+            <CheckCircleOutlined />
+            <span>Thực hiện công việc bảo trì</span>
+          </Space>
+        }
+        open={checklistModalVisible}
+        onCancel={() => {
+          setChecklistModalVisible(false);
+          setChecklistNotes({});
+        }}
+        footer={[
+          <Button
+            key="close"
+            onClick={() => {
+              setChecklistModalVisible(false);
+              setChecklistNotes({});
+            }}
+            style={{
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
+            Đóng
+          </Button>,
+          <Button
+            key="complete"
+            type="primary"
+            icon={<CheckCircleOutlined />}
+            onClick={handleCompleteFromChecklist}
+            disabled={
+              !selectedWorkOrder ||
+              !getMyChecklistItems(selectedWorkOrder).every(
+                (item) => item.isChecked
+              )
+            }
+            style={{
+              backgroundColor: "#283652",
+              borderColor: "#283652",
+              color: "#fff",
+              height: "40px",
+              fontSize: "16px",
+              minWidth: "120px",
+            }}
+          >
+            Hoàn thành công việc
+          </Button>,
+        ]}
+        width={1200}
+      >
+        {selectedWorkOrder && (
+          <div>
+            <Alert
+              message={
+                <div>
+                  <Row gutter={16}>
+                    <Col span={12}>
+                      <div>
+                        <strong>Thiết bị:</strong>{" "}
+                        {selectedWorkOrder.equipmentCode} -{" "}
+                        {selectedWorkOrder.equipmentName}
+                      </div>
+                      <div>
+                        <strong>Vị trí:</strong> {selectedWorkOrder.lineName} /{" "}
+                        {selectedWorkOrder.stageName}
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div>
+                        <strong>Loại công việc:</strong>{" "}
+                        {getMyTaskType(selectedWorkOrder) === "Electrical" ? (
+                          <Tag icon={<ThunderboltOutlined />} color="blue">
+                            Điện
+                          </Tag>
+                        ) : getMyTaskType(selectedWorkOrder) ===
+                          "Mechanical" ? (
+                          <Tag icon={<ToolOutlined />} color="green">
+                            Cơ khí
+                          </Tag>
+                        ) : (
+                          <Tag color="purple">Cả Điện & Cơ khí</Tag>
+                        )}
+                      </div>
+                      <div>
+                        <strong>Ngày thực hiện:</strong>{" "}
+                        {dayjs(selectedWorkOrder.scheduledDate).format(
+                          "DD/MM/YYYY"
+                        )}
+                      </div>
+                    </Col>
+                  </Row>
+                </div>
+              }
+              type="info"
+              style={{ marginBottom: 16 }}
+            />
+
+            {(() => {
+              const myItems = getMyChecklistItems(selectedWorkOrder);
+              const total = myItems.length;
+              const completed = myItems.filter((item) => item.isChecked).length;
+              const percent =
+                total > 0 ? Math.round((completed / total) * 100) : 0;
+              return (
+                <div style={{ marginBottom: 16 }}>
+                  <Progress
+                    percent={percent}
+                    status={
+                      percent === 100
+                        ? "success"
+                        : completed > 0
+                          ? "active"
+                          : "normal"
+                    }
+                  />
+                  <div
+                    style={{
+                      textAlign: "center",
+                      fontSize: "12px",
+                      color: "#888",
+                      marginTop: 4,
+                    }}
+                  >
+                    {completed} / {total} bước đã hoàn thành
+                  </div>
+                </div>
+              );
+            })()}
+
+            <Divider>Lưu ý</Divider>
+
+            <Alert
+              message="Lưu ý"
+              description="Nhập ghi chú (nếu cần) vào ô bên dưới mỗi bước, sau đó tick vào checkbox để hoàn thành. Khi tick bước đầu tiên, công việc sẽ tự động chuyển sang trạng thái 'Đang thực hiện'."
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+
+            {/* Checklist Items with Note Input */}
+            {getMyTaskType(selectedWorkOrder) === "Both" ? (
+              <Row gutter={16}>
+                <Col span={12}>
+                  <Card
+                    title={
+                      <>
+                        <ThunderboltOutlined style={{ color: "#1890ff" }} />{" "}
+                        Công việc Điện
+                      </>
+                    }
+                    size="small"
+                    style={{ maxHeight: 500, overflow: "auto" }}
+                  >
+                    <AntList
+                      dataSource={getMyChecklistItems(selectedWorkOrder).filter(
+                        (item) => item.category === "Electrical"
+                      )}
+                      renderItem={(item, index) => (
+                        <AntList.Item
+                          style={{ display: "block", paddingBottom: 16 }}
+                        >
+                          <Row gutter={8} align="top">
+                            <Col flex="none">
+                              <Badge
+                                count={index + 1}
+                                style={{ backgroundColor: "#1890ff" }}
+                              />
+                            </Col>
+                            <Col flex="auto">
+                              <Checkbox
+                                checked={item.isChecked}
+                                onChange={(e) =>
+                                  handleCheckItem(item, e.target.checked)
+                                }
+                                disabled={updatingChecklist || item.isChecked}
+                                style={{
+                                  textDecoration: item.isChecked
+                                    ? "line-through"
+                                    : "none",
+                                  fontWeight: 500,
+                                  marginBottom: 8,
+                                }}
+                              >
+                                {item.stepName}
+                              </Checkbox>
+                              {item.stepDescription && (
+                                <div style={{ marginBottom: 8 }}>
+                                  <Text
+                                    type="secondary"
+                                    style={{ fontSize: 12 }}
+                                  >
+                                    {item.stepDescription}
+                                  </Text>
+                                </div>
+                              )}
+                              {!item.isChecked ? (
+                                <Input.TextArea
+                                  placeholder="Nhập ghi chú cho bước này (tùy chọn)..."
+                                  rows={2}
+                                  value={checklistNotes[item.checklistId] || ""}
+                                  onChange={(e) =>
+                                    handleNoteChange(
+                                      item.checklistId,
+                                      e.target.value
+                                    )
+                                  }
+                                />
+                              ) : (
+                                item.notes && (
+                                  <div style={{ marginTop: 4 }}>
+                                    <Text
+                                      type="secondary"
+                                      style={{ fontSize: 12 }}
+                                    >
+                                      📝 {item.notes}
+                                    </Text>
+                                  </div>
+                                )
+                              )}
+                            </Col>
+                          </Row>
+                        </AntList.Item>
+                      )}
+                    />
+                  </Card>
+                </Col>
+                <Col span={12}>
+                  <Card
+                    title={
+                      <>
+                        <ToolOutlined style={{ color: "#52c41a" }} /> Công việc
+                        Cơ khí
+                      </>
+                    }
+                    size="small"
+                    style={{ maxHeight: 500, overflow: "auto" }}
+                  >
+                    <AntList
+                      dataSource={getMyChecklistItems(selectedWorkOrder).filter(
+                        (item) => item.category === "Mechanical"
+                      )}
+                      renderItem={(item, index) => (
+                        <AntList.Item
+                          style={{ display: "block", paddingBottom: 16 }}
+                        >
+                          <Row gutter={8} align="top">
+                            <Col flex="none">
+                              <Badge
+                                count={index + 1}
+                                style={{ backgroundColor: "#52c41a" }}
+                              />
+                            </Col>
+                            <Col flex="auto">
+                              <Checkbox
+                                checked={item.isChecked}
+                                onChange={(e) =>
+                                  handleCheckItem(item, e.target.checked)
+                                }
+                                disabled={updatingChecklist || item.isChecked}
+                                style={{
+                                  textDecoration: item.isChecked
+                                    ? "line-through"
+                                    : "none",
+                                  fontWeight: 500,
+                                  marginBottom: 8,
+                                }}
+                              >
+                                {item.stepName}
+                              </Checkbox>
+                              {item.stepDescription && (
+                                <div style={{ marginBottom: 8 }}>
+                                  <Text
+                                    type="secondary"
+                                    style={{ fontSize: 12 }}
+                                  >
+                                    {item.stepDescription}
+                                  </Text>
+                                </div>
+                              )}
+                              {!item.isChecked ? (
+                                <Input.TextArea
+                                  placeholder="Nhập ghi chú cho bước này (tùy chọn)..."
+                                  rows={2}
+                                  value={checklistNotes[item.checklistId] || ""}
+                                  onChange={(e) =>
+                                    handleNoteChange(
+                                      item.checklistId,
+                                      e.target.value
+                                    )
+                                  }
+                                />
+                              ) : (
+                                item.notes && (
+                                  <div style={{ marginTop: 4 }}>
+                                    <Text
+                                      type="secondary"
+                                      style={{ fontSize: 12 }}
+                                    >
+                                      📝 {item.notes}
+                                    </Text>
+                                  </div>
+                                )
+                              )}
+                            </Col>
+                          </Row>
+                        </AntList.Item>
+                      )}
+                    />
+                  </Card>
+                </Col>
+              </Row>
+            ) : (
+              <AntList
+                dataSource={getMyChecklistItems(selectedWorkOrder)}
+                renderItem={(item, index) => (
+                  <AntList.Item style={{ display: "block", paddingBottom: 16 }}>
+                    <Row gutter={8} align="top">
+                      <Col flex="none">
+                        <Badge
+                          count={index + 1}
+                          style={{
+                            backgroundColor:
+                              item.category === "Electrical"
+                                ? "#1890ff"
+                                : "#52c41a",
+                          }}
+                        />
+                      </Col>
+                      <Col flex="auto">
+                        <Checkbox
+                          checked={item.isChecked}
+                          onChange={(e) =>
+                            handleCheckItem(item, e.target.checked)
+                          }
+                          disabled={updatingChecklist || item.isChecked}
+                          style={{
+                            textDecoration: item.isChecked
+                              ? "line-through"
+                              : "none",
+                            fontWeight: 500,
+                            marginBottom: 8,
+                          }}
+                        >
+                          {item.stepName}
+                        </Checkbox>
+                        {item.stepDescription && (
+                          <div style={{ marginBottom: 8 }}>
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              {item.stepDescription}
+                            </Text>
+                          </div>
+                        )}
+                        {!item.isChecked ? (
+                          <Input.TextArea
+                            placeholder="Nhập ghi chú cho bước này (tùy chọn)..."
+                            rows={2}
+                            value={checklistNotes[item.checklistId] || ""}
+                            onChange={(e) =>
+                              handleNoteChange(item.checklistId, e.target.value)
+                            }
+                          />
+                        ) : (
+                          item.notes && (
+                            <div style={{ marginTop: 4 }}>
+                              <Text type="secondary" style={{ fontSize: 12 }}>
+                                📝 {item.notes}
+                              </Text>
+                            </div>
+                          )
+                        )}
+                      </Col>
+                    </Row>
+                  </AntList.Item>
+                )}
+              />
+            )}
+          </div>
+        )}
       </Modal>
     </div>
     </Spin>
