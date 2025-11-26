@@ -617,10 +617,6 @@ const MaintenanceTasks = () => {
         notes: notes,
       });
 
-      message.success(
-        checked ? "Đã hoàn thành bước này!" : "Đã bỏ tick bước này!"
-      );
-
       // Reload work orders để cập nhật UI
       await fetchWorkOrders();
 
@@ -632,6 +628,23 @@ const MaintenanceTasks = () => {
       );
       if (updatedWorkOrder) {
         setSelectedWorkOrder(updatedWorkOrder);
+        
+        // Kiểm tra nếu đây là bước cuối cùng
+        if (checked) {
+          const myItems = getMyChecklistItems(updatedWorkOrder);
+          const allCompleted = myItems.every((item) => item.isChecked);
+          if (allCompleted) {
+            message.success("Công việc hoàn thành. Tất cả mục kiểm tra đã xong.");
+          } else {
+            message.success("Đã hoàn thành bước này!");
+          }
+        } else {
+          message.success("Đã bỏ tick bước này!");
+        }
+      } else {
+        message.success(
+          checked ? "Đã hoàn thành bước này!" : "Đã bỏ tick bước này!"
+        );
       }
     } catch (error) {
       message.error("Cập nhật checklist thất bại: " + error.message);
@@ -666,7 +679,7 @@ const MaintenanceTasks = () => {
 
       await completeWorkOrder(selectedWorkOrder.workOrderId, completionData);
 
-      message.success("Hoàn thành phần công việc của bạn thành công!");
+      message.success("Công việc hoàn thành. Tất cả mục kiểm tra đã xong.");
       setChecklistModalVisible(false);
       setChecklistNotes({});
       fetchWorkOrders();
