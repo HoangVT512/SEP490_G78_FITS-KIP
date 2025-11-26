@@ -573,7 +573,7 @@ public class IncidentService : IIncidentService
                     // Clear existing incident shifts
                     // Note: The repository will handle the cascading delete when we save
                     existingIncident.IncidentShifts.Clear();
-                    
+
                     // Create new incident shifts
                     await CreateIncidentShiftsAsync(existingIncident, cancellationToken);
                     Console.WriteLine($"✅ Prepared {existingIncident.IncidentShifts.Count} IncidentShifts for incident {id}");
@@ -589,7 +589,7 @@ public class IncidentService : IIncidentService
 
             // Save all changes (incident + shifts + images) in one transaction
             var updatedIncident = await _incidentRepository.UpdateAsync(existingIncident, cancellationToken);
-            
+
             // Gửi notification CHỈ KHI status hoặc IsTechSupport THAY ĐỔI thành "Chờ xử lý" + true
             // Tránh gửi duplicate notification khi update các field khác
             var shouldSendNotification = updatedIncident != null
@@ -1067,6 +1067,23 @@ public class IncidentService : IIncidentService
                         notificationMessage = $"Có sự cố cần hỗ trợ - Dây chuyền: {line?.LineName ?? "Chưa xác định"}";
                     }
 
+                    // 1. Create notification in database
+                    try
+                    {
+                        await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
+                        {
+                            UserId = manager.Id,
+                            Title = "Sự cố cần hỗ trợ",
+                            Message = notificationMessage
+                        });
+                        Console.WriteLine($"   ✅ Database notification created for manager: {manager.FullName}");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"   ❌ Error creating database notification: {ex.Message}");
+                    }
+
+                    // 2. Send realtime notification
                     // Send ONLY realtime notification (no database notification, no title)
                     await _notificationService.SendNotificationToUserAsync(
                         manager.Id,

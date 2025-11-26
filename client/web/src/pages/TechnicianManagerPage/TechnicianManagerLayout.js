@@ -131,8 +131,17 @@ const TechnicianManagerLayout = () => {
             fetchNotifications();
           }
 
-          // Note: Toast message removed to avoid duplicate notifications
-          // User can see notifications in the notification drawer (bell icon)
+          // Show toast notification
+          if (notificationData && notificationData.message) {
+            antdMessage.open({
+              type: "info",
+              content: notificationData.message,
+              duration: 5,
+              style: {
+                marginTop: "20px",
+              },
+            });
+          }
         };
 
         // Lắng nghe thông báo cá nhân (listener được track trong service để tránh duplicate)
