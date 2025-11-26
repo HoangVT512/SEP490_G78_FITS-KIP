@@ -683,7 +683,7 @@ namespace FITSKIP.API.Controllers
         /// Lấy tất cả phiếu bảo trì
         /// </summary>
         [HttpGet("work-orders")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật,Quản lý kho")]
+        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật,Quản lý kho,Quản lý")]
         public async Task<IActionResult> GetAllWorkOrders()
         {
             try
@@ -1123,7 +1123,7 @@ namespace FITSKIP.API.Controllers
         /// Lấy danh sách TẤT CẢ kỹ thuật viên (có EmployeeCode)
         /// </summary>
         [HttpGet("technicians")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
+        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật,Quản lý")]
         public async Task<IActionResult> GetAllTechnicians()
         {
             try

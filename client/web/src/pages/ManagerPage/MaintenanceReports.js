@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Card,
   Row,
@@ -10,6 +10,8 @@ import {
   Select,
   Space,
   Button,
+  Spin,
+  message,
 } from "antd";
 import {
   CheckCircleOutlined,
@@ -19,82 +21,168 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import styles from "../../styles/pages/MaintenanceReports.module.css";
+import {
+  getAllWorkOrders,
+  getAllTechnicians,
+} from "../../services/maintenanceService";
 
 const { RangePicker } = DatePicker;
 const { Option } = Select;
 
 const MaintenanceReports = () => {
+  const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState([
     dayjs().subtract(30, "day"),
     dayjs(),
   ]);
   const [selectedTechnician, setSelectedTechnician] = useState("all");
+  const [technicians, setTechnicians] = useState([]);
+  const [allWorkOrders, setAllWorkOrders] = useState([]);
+  const [statistics, setStatistics] = useState({
+    totalCompleted: 0,
+    onTime: 0,
+    overdue: 0,
+    completionRate: 0,
+  });
+  const [overdueData, setOverdueData] = useState([]);
+  const [technicianPerformance, setTechnicianPerformance] = useState([]);
 
-  // Mock statistics
-  const statistics = {
-    totalCompleted: 45,
-    onTime: 38,
-    overdue: 7,
-    completionRate: 84.4,
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  useEffect(() => {
+    if (allWorkOrders.length > 0) {
+      calculateStatistics();
+    }
+  }, [dateRange, selectedTechnician, allWorkOrders]);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+
+      // Fetch all work orders and technicians
+      const [workOrdersRes, techniciansRes] = await Promise.all([
+        getAllWorkOrders(),
+        getAllTechnicians(),
+      ]);
+
+      setAllWorkOrders(workOrdersRes?.data || workOrdersRes || []);
+      setTechnicians(techniciansRes?.data || techniciansRes || []);
+    } catch (error) {
+      console.error("Error fetching maintenance reports data:", error);
+      message.error("Không thể tải dữ liệu báo cáo bảo trì");
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // Mock overdue maintenance
-  const overdueData = [
-    {
-      id: 1,
-      equipmentId: "EQ001",
-      equipmentName: "Máy dập 01",
-      planType: "Bảo trì định kỳ",
-      scheduledDate: "2025-01-05",
-      assignedTo: "Nguyễn Văn A",
-      daysOverdue: 5,
-      priority: "High",
-    },
-    {
-      id: 2,
-      equipmentId: "EQ003",
-      equipmentName: "Băng tải B",
-      planType: "Kiểm tra an toàn",
-      scheduledDate: "2025-01-08",
-      assignedTo: "Trần Thị B",
-      daysOverdue: 2,
-      priority: "Medium",
-    },
-  ];
+  const calculateStatistics = () => {
+    // Filter by date range and technician
+    let filteredOrders = allWorkOrders.filter((wo) => {
+      const completedDate = wo.completedDate ? dayjs(wo.completedDate) : null;
+      const isInDateRange =
+        completedDate &&
+        completedDate.isAfter(dateRange[0]) &&
+        completedDate.isBefore(dateRange[1].add(1, "day"));
 
-  // Mock technician performance
-  const technicianPerformance = [
-    {
-      id: 1,
-      name: "Nguyễn Văn A",
-      totalAssigned: 15,
-      completed: 13,
-      onTime: 11,
-      overdue: 2,
-      completionRate: 86.7,
-      onTimeRate: 84.6,
-    },
-    {
-      id: 2,
-      name: "Trần Thị B",
-      totalAssigned: 12,
-      completed: 10,
-      onTime: 9,
-      overdue: 1,
-      completionRate: 83.3,
-      onTimeRate: 90.0,
-    },
-    {
-      id: 3,
-      name: "Phạm Văn C",
-      totalAssigned: 18,
-      completed: 15,
-      onTime: 13,
-      overdue: 2,
-      completionRate: 83.3,
-      onTimeRate: 86.7,
-    },
-  ];
+      const matchesTechnician =
+        selectedTechnician === "all" ||
+        wo.assignedToElectrical === selectedTechnician ||
+        wo.assignedToMechanical === selectedTechnician;
+
+      return isInDateRange && matchesTechnician;
+    });
+
+    // Calculate statistics
+    const completedOrders = filteredOrders.filter(
+      (wo) => wo.status === "Completed"
+    );
+    const totalCompleted = completedOrders.length;
+    const onTime = completedOrders.filter((wo) => {
+      const completed = dayjs(wo.completedDate);
+      const due = dayjs(wo.dueDate);
+      return completed.isBefore(due) || completed.isSame(due, "day");
+    }).length;
+    const overdue = totalCompleted - onTime;
+    const completionRate =
+      totalCompleted > 0 ? (onTime / totalCompleted) * 100 : 0;
+
+    setStatistics({
+      totalCompleted,
+      onTime,
+      overdue,
+      completionRate: parseFloat(completionRate.toFixed(1)),
+    });
+
+    // Calculate overdue work orders (pending or in progress past due date)
+    const today = dayjs();
+    const overdueOrders = allWorkOrders
+      .filter((wo) => {
+        const dueDate = dayjs(wo.dueDate);
+        const isPastDue = dueDate.isBefore(today, "day");
+        const isNotCompleted =
+          wo.status !== "Completed" && wo.status !== "Cancelled";
+        return isPastDue && isNotCompleted;
+      })
+      .map((wo) => ({
+        id: wo.workOrderId,
+        equipmentId: wo.equipment?.equipmentId || "N/A",
+        equipmentName: wo.equipment?.equipmentName || "N/A",
+        planType: wo.plan?.planType || "Bảo trì định kỳ",
+        scheduledDate: wo.scheduledDate,
+        assignedTo:
+          wo.electricalTechnician?.fullName ||
+          wo.mechanicalTechnician?.fullName ||
+          "Chưa giao",
+        daysOverdue: today.diff(dayjs(wo.dueDate), "day"),
+      }));
+
+    setOverdueData(overdueOrders);
+
+    // Calculate technician performance
+    const techPerformance = technicians
+      .map((tech) => {
+        const techOrders = allWorkOrders.filter(
+          (wo) =>
+            wo.assignedToElectrical === tech.id ||
+            wo.assignedToMechanical === tech.id
+        );
+
+        const totalAssigned = techOrders.length;
+        const completed = techOrders.filter(
+          (wo) => wo.status === "Completed"
+        ).length;
+        const onTimeCount = techOrders.filter((wo) => {
+          if (wo.status !== "Completed") return false;
+          const completedDate = dayjs(wo.completedDate);
+          const dueDate = dayjs(wo.dueDate);
+          return (
+            completedDate.isBefore(dueDate) ||
+            completedDate.isSame(dueDate, "day")
+          );
+        }).length;
+        const overdueCount = completed - onTimeCount;
+
+        const completionRate =
+          totalAssigned > 0 ? (completed / totalAssigned) * 100 : 0;
+        const onTimeRate = completed > 0 ? (onTimeCount / completed) * 100 : 0;
+
+        return {
+          id: tech.id,
+          name: tech.fullName || tech.userName,
+          totalAssigned,
+          completed,
+          onTime: onTimeCount,
+          overdue: overdueCount,
+          completionRate: parseFloat(completionRate.toFixed(1)),
+          onTimeRate: parseFloat(onTimeRate.toFixed(1)),
+        };
+      })
+      .filter((tp) => tp.totalAssigned > 0); // Only show technicians with assigned work
+
+    setTechnicianPerformance(techPerformance);
+  };
 
   const overdueColumns = [
     {
@@ -218,126 +306,130 @@ const MaintenanceReports = () => {
 
   return (
     <div className={styles.container}>
-      <Card title="Báo cáo bảo trì" bordered={false}>
-        <Space
-          direction="vertical"
-          size="large"
-          style={{ width: "100%", marginBottom: 24 }}
-        >
-          <Row gutter={16}>
-            <Col xs={24} md={12}>
-              <RangePicker
-                value={dateRange}
-                onChange={setDateRange}
-                format="DD/MM/YYYY"
-                style={{ width: "100%" }}
-              />
+      <Spin spinning={loading}>
+        <Card title="Báo cáo bảo trì" bordered={false}>
+          <Space
+            direction="vertical"
+            size="large"
+            style={{ width: "100%", marginBottom: 24 }}
+          >
+            <Row gutter={16}>
+              <Col xs={24} md={12}>
+                <RangePicker
+                  value={dateRange}
+                  onChange={setDateRange}
+                  format="DD/MM/YYYY"
+                  style={{ width: "100%" }}
+                />
+              </Col>
+              <Col xs={24} md={8}>
+                <Select
+                  style={{ width: "100%" }}
+                  placeholder="Chọn kỹ thuật viên"
+                  value={selectedTechnician}
+                  onChange={setSelectedTechnician}
+                >
+                  <Option value="all">Tất cả kỹ thuật viên</Option>
+                  {technicians.map((tech) => (
+                    <Option key={tech.id} value={tech.id}>
+                      {tech.fullName || tech.userName}
+                    </Option>
+                  ))}
+                </Select>
+              </Col>
+              <Col xs={24} md={4}>
+                <Button
+                  type="primary"
+                  icon={<DownloadOutlined />}
+                  onClick={handleExportReport}
+                  block
+                >
+                  Xuất báo cáo
+                </Button>
+              </Col>
+            </Row>
+          </Space>
+
+          {/* Statistics Overview */}
+          <Row gutter={16} style={{ marginBottom: 24 }}>
+            <Col xs={24} sm={12} md={6}>
+              <Card>
+                <Statistic
+                  title="Tổng hoàn thành"
+                  value={statistics.totalCompleted}
+                  prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
+                  valueStyle={{ color: "#52c41a" }}
+                />
+              </Card>
             </Col>
-            <Col xs={24} md={8}>
-              <Select
-                style={{ width: "100%" }}
-                placeholder="Chọn kỹ thuật viên"
-                value={selectedTechnician}
-                onChange={setSelectedTechnician}
-              >
-                <Option value="all">Tất cả kỹ thuật viên</Option>
-                <Option value="1">Nguyễn Văn A</Option>
-                <Option value="2">Trần Thị B</Option>
-                <Option value="3">Phạm Văn C</Option>
-              </Select>
+            <Col xs={24} sm={12} md={6}>
+              <Card>
+                <Statistic
+                  title="Đúng hạn"
+                  value={statistics.onTime}
+                  prefix={<ClockCircleOutlined style={{ color: "#1890ff" }} />}
+                  valueStyle={{ color: "#1890ff" }}
+                />
+              </Card>
             </Col>
-            <Col xs={24} md={4}>
-              <Button
-                type="primary"
-                icon={<DownloadOutlined />}
-                onClick={handleExportReport}
-                block
-              >
-                Xuất báo cáo
-              </Button>
+            <Col xs={24} sm={12} md={6}>
+              <Card>
+                <Statistic
+                  title="Trễ hạn"
+                  value={statistics.overdue}
+                  prefix={
+                    <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
+                  }
+                  valueStyle={{ color: "#ff4d4f" }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Card>
+                <Statistic
+                  title="Tỷ lệ hoàn thành"
+                  value={statistics.completionRate}
+                  suffix="%"
+                  valueStyle={{
+                    color:
+                      statistics.completionRate >= 85
+                        ? "#52c41a"
+                        : statistics.completionRate >= 70
+                        ? "#1890ff"
+                        : "#ff4d4f",
+                  }}
+                />
+              </Card>
             </Col>
           </Row>
-        </Space>
 
-        {/* Statistics Overview */}
-        <Row gutter={16} style={{ marginBottom: 24 }}>
-          <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic
-                title="Tổng hoàn thành"
-                value={statistics.totalCompleted}
-                prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
-                valueStyle={{ color: "#52c41a" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic
-                title="Đúng hạn"
-                value={statistics.onTime}
-                prefix={<ClockCircleOutlined style={{ color: "#1890ff" }} />}
-                valueStyle={{ color: "#1890ff" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic
-                title="Trễ hạn"
-                value={statistics.overdue}
-                prefix={
-                  <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
-                }
-                valueStyle={{ color: "#ff4d4f" }}
-              />
-            </Card>
-          </Col>
-          <Col xs={24} sm={12} md={6}>
-            <Card>
-              <Statistic
-                title="Tỷ lệ hoàn thành"
-                value={statistics.completionRate}
-                suffix="%"
-                valueStyle={{
-                  color:
-                    statistics.completionRate >= 85
-                      ? "#52c41a"
-                      : statistics.completionRate >= 70
-                      ? "#1890ff"
-                      : "#ff4d4f",
-                }}
-              />
-            </Card>
-          </Col>
-        </Row>
+          {/* Overdue Maintenance */}
+          <Card
+            title="Bảo trì trễ hạn"
+            style={{ marginBottom: 24 }}
+            headStyle={{ backgroundColor: "#fff2e8", color: "#ff4d4f" }}
+          >
+            <Table
+              columns={overdueColumns}
+              dataSource={overdueData}
+              rowKey="id"
+              pagination={false}
+              scroll={{ x: 900 }}
+            />
+          </Card>
 
-        {/* Overdue Maintenance */}
-        <Card
-          title="Bảo trì trễ hạn"
-          style={{ marginBottom: 24 }}
-          headStyle={{ backgroundColor: "#fff2e8", color: "#ff4d4f" }}
-        >
-          <Table
-            columns={overdueColumns}
-            dataSource={overdueData}
-            rowKey="id"
-            pagination={false}
-            scroll={{ x: 900 }}
-          />
+          {/* Technician Performance */}
+          <Card title="Hiệu suất kỹ thuật viên">
+            <Table
+              columns={performanceColumns}
+              dataSource={technicianPerformance}
+              rowKey="id"
+              pagination={false}
+              scroll={{ x: 1000 }}
+            />
+          </Card>
         </Card>
-
-        {/* Technician Performance */}
-        <Card title="Hiệu suất kỹ thuật viên">
-          <Table
-            columns={performanceColumns}
-            dataSource={technicianPerformance}
-            rowKey="id"
-            pagination={false}
-            scroll={{ x: 1000 }}
-          />
-        </Card>
-      </Card>
+      </Spin>
     </div>
   );
 };
