@@ -102,11 +102,11 @@ const AdminLayout = () => {
       icon: <EditOutlined />,
       label: "Hướng dẫn sử dụng",
     },
-    {
-      key: "reports",
-      icon: <BarChartOutlined />,
-      label: "Báo cáo & Thống kê",
-    },
+    // {
+    //   key: "reports",
+    //   icon: <BarChartOutlined />,
+    //   label: "Báo cáo & Thống kê",
+    // },
     {
       key: "settings",
       icon: <SettingOutlined />,
