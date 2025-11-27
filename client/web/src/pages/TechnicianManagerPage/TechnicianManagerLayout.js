@@ -133,8 +133,10 @@ const TechnicianManagerLayout = () => {
             fetchNotifications();
           }
 
-          // Note: Toast message removed to avoid duplicate notifications
-          // User can see notifications in the notification drawer (bell icon)
+          // Hiển thị toast message ở giữa màn hình (giống login/logout)
+          const title = notificationData.Title || notificationData.title;
+          const msg = notificationData.Message || notificationData.message;
+          antdMessage.info(title ? `${title}: ${msg}` : msg, 5);
         };
 
         // Lắng nghe thông báo cá nhân (listener được track trong service để tránh duplicate)
@@ -176,13 +178,13 @@ const TechnicianManagerLayout = () => {
       icon: <SafetyOutlined />,
       label: "Kế hoạch bảo trì",
       onClick: () => navigate("/technician-manager/maintenance-plans"),
-    }, 
+    },
     {
       key: "guide",
       icon: <BookOutlined />,
       label: "Hướng dẫn sử dụng",
       onClick: () => navigate("/technician-manager/user-guide"),
-    }
+    },
     // {
     //   key: "replacement-history",
     //   icon: <FileTextOutlined />,
