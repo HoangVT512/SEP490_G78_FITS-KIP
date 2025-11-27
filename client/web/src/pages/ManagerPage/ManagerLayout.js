@@ -109,7 +109,10 @@ const ManagerLayout = () => {
           // Tăng số lượng notification badge
           setNotificationCount((prev) => prev + 1);
 
-          // Chỉ cập nhật badge, không hiển thị toast hay notification popup
+          // Hiển thị toast message ở giữa màn hình (giống login/logout)
+          const title = notificationData.Title || notificationData.title;
+          const msg = notificationData.Message || notificationData.message;
+          antdMessage.info(title ? `${title}: ${msg}` : msg, 5);
         });
 
         // Lắng nghe broadcast (thông báo cho tất cả)
@@ -119,7 +122,10 @@ const ManagerLayout = () => {
           // Tăng số lượng notification badge
           setNotificationCount((prev) => prev + 1);
 
-          // Chỉ cập nhật badge, không hiển thị toast hay notification popup
+          // Hiển thị toast message ở giữa màn hình (giống login/logout)
+          const title = broadcastData.Title || broadcastData.title;
+          const msg = broadcastData.Message || broadcastData.message;
+          antdMessage.info(title ? `${title}: ${msg}` : msg, 5);
         });
 
         console.log("✅ SignalR initialized successfully!");
