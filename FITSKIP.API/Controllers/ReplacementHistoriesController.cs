@@ -170,15 +170,19 @@ namespace FITSKIP.API.Controllers
             catch (KeyNotFoundException ex)
             {
                 // Return BadRequest so client sees a readable validation error
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new { success = false, message = $"Error: {ex.Message}" });
             }
             catch (InvalidOperationException ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new { success = false, message = $"Error: {ex.Message}" });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { success = false, message = $"Error: {ex.Message}" });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, "Internal server error");
+                return StatusCode(500, new { success = false, message = "Internal server error", details = ex.Message });
             }
         }
 
@@ -218,15 +222,15 @@ namespace FITSKIP.API.Controllers
             }
             catch (KeyNotFoundException ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new { success = false, message = $"Error: {ex.Message}" });
             }
             catch (ArgumentException ex)
             {
-                return BadRequest(new { message = ex.Message });
+                return BadRequest(new { success = false, message = $"Error: {ex.Message}" });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Internal server error", error = ex.Message });
+                return StatusCode(500, new { success = false, message = "Internal server error", details = ex.Message });
             }
         }
 

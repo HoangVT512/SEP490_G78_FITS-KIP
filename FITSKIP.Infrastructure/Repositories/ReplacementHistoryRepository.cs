@@ -64,30 +64,47 @@ namespace FITSKIP.Infrastructure.Repositories
         {
             using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
 
-            try
-            {
+            
                 // Validate Equipment exists (if provided)
                 if (replacementHistory.EquipmentId.HasValue)
                 {
                     var equipment = await _context.Equipment.FindAsync(new object[] { replacementHistory.EquipmentId.Value }, cancellationToken);
                     if (equipment == null)
                     {
-                        throw new KeyNotFoundException($"Thiết bị với ID {replacementHistory.EquipmentId.Value} không tồn tại.");
+                        throw new ArgumentException($"Thiết bị với ID {replacementHistory.EquipmentId.Value} không tồn tại.");
                     }
                 }
+            // Validate Incident exists (if provided)
+            if (replacementHistory.IncidentId.HasValue)
+            {
+                var incident = await _context.IncidentHistories.FindAsync(new object[] { replacementHistory.IncidentId.Value }, cancellationToken);
+                if (incident == null)
+                {
+                    throw new ArgumentException($"Sự cố với ID {replacementHistory.IncidentId.Value} không tồn tại.");
+                }
+            }
+            // Validate workOrder exists (if provided)
+            if (replacementHistory.WorkOrderId.HasValue)
+            {
+                var workOrder = await _context.MaintenanceWorkOrders.FindAsync(new object[] { replacementHistory.WorkOrderId.Value }, cancellationToken);
+                if (workOrder == null)
+                {
+                    throw new ArgumentException($"Lệnh làm việc với ID {replacementHistory.WorkOrderId.Value} không tồn tại.");
+                }
+            }
 
-                // Validate Part exists
-                var part = await _context.SpareParts.FindAsync(new object[] { replacementHistory.PartId }, cancellationToken);
+            // Validate Part exists
+            var part = await _context.SpareParts.FindAsync(new object[] { replacementHistory.PartId }, cancellationToken);
                 if (part == null)
                 {
-                    throw new KeyNotFoundException($"SparePart với ID {replacementHistory.PartId} không tồn tại.");
+                    throw new ArgumentException($"SparePart với ID {replacementHistory.PartId} không tồn tại.");
                 }
 
                 // Validate User exists
                 var user = await _context.Users.FindAsync(new object[] { replacementHistory.ReplacedBy }, cancellationToken);
                 if (user == null)
                 {
-                    throw new KeyNotFoundException($"Người dùng có ID {replacementHistory.ReplacedBy} không tồn tại.");
+                    throw new ArgumentException($"Người dùng có ID {replacementHistory.ReplacedBy} không tồn tại.");
                 }
 
                 // Create replacement history
@@ -113,20 +130,14 @@ namespace FITSKIP.Infrastructure.Repositories
 
 
                 return replacementHistory;
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                throw new Exception("Đã xảy ra lỗi khi tạo lịch sử thay thế.", ex);
-            }
+            
         }
 
         public async Task<ReplacementHistory> UpdateAsync(ReplacementHistory replacementHistory, CancellationToken cancellationToken = default)
         {
             using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
 
-            try
-            {
+            
                 var existingHistory = await _context.ReplacementHistories.FindAsync(new object[] { replacementHistory.ReplacementId }, cancellationToken);
                 if (existingHistory == null)
                 {
@@ -142,7 +153,24 @@ namespace FITSKIP.Infrastructure.Repositories
                         throw new KeyNotFoundException($"Thiết bị với ID {replacementHistory.EquipmentId.Value} không tồn tại.");
                     }
                 }
-
+                // Validate Incident exists (if provided)
+                if (replacementHistory.IncidentId.HasValue)
+                {
+                    var incident = await _context.IncidentHistories.FindAsync(new object[] { replacementHistory.IncidentId.Value }, cancellationToken);
+                    if (incident == null)
+                    {
+                        throw new ArgumentException($"Sự cố với ID {replacementHistory.IncidentId.Value} không tồn tại.");
+                    }
+                }
+                // Validate workOrder exists (if provided)
+                if (replacementHistory.WorkOrderId.HasValue)
+                {
+                    var workOrder = await _context.MaintenanceWorkOrders.FindAsync(new object[] { replacementHistory.WorkOrderId.Value }, cancellationToken);
+                    if (workOrder == null)
+                    {
+                        throw new ArgumentException($"Lệnh làm việc với ID {replacementHistory.WorkOrderId.Value} không tồn tại.");
+                    }
+                }
                 // Validate Part exists
                 var part = await _context.SpareParts.FindAsync(new object[] { replacementHistory.PartId }, cancellationToken);
                 if (part == null)
@@ -230,12 +258,7 @@ namespace FITSKIP.Infrastructure.Repositories
 
 
                 return existingHistory;
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                throw new Exception($"Đã xảy ra lỗi khi cập nhật lịch sử thay thế với ID {replacementHistory.ReplacementId}.", ex);
-            }
+            
         }
 
         public async Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default)
