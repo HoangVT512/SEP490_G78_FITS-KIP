@@ -115,28 +115,91 @@ const TechnicianManagerLayout = () => {
         }
 
         // Define notification handler
-        notificationHandler = (notificationData) => {
+        notificationHandler = async (notificationData) => {
           console.log(
             "📩 [TechnicianManagerLayout] Received notification:",
             notificationData
           );
+          console.log(
+            "📩 Full notification data:",
+            JSON.stringify(notificationData, null, 2)
+          );
 
-          // Tăng số lượng notification badge NGAY LẬP TỨC
-          setNotificationCount((prev) => {
-            const newCount = prev + 1;
-            console.log(`📊 Badge count updated: ${prev} -> ${newCount}`);
-            return newCount;
-          });
+          // Lấy message từ notification
+          const title =
+            notificationData?.Title || notificationData?.title || "";
+          const msg =
+            notificationData?.Message || notificationData?.message || "";
+          const notificationType =
+            notificationData?.Type || notificationData?.type || "";
 
-          // Tự động refresh danh sách nếu drawer đang mở
-          if (notificationDrawerOpen) {
-            fetchNotifications();
+          console.log("📩 Toast - Title:", title);
+          console.log("📩 Toast - Message:", msg);
+          console.log("📩 Toast - Type:", notificationType);
+
+          // Chỉ hiển thị toast nếu có nội dung thực sự (không phải notification trống cho OEE Dashboard)
+          if (title || msg) {
+            // Tăng số lượng notification badge
+            setNotificationCount((prev) => {
+              const newCount = prev + 1;
+              console.log(`📊 Badge count updated: ${prev} -> ${newCount}`);
+              return newCount;
+            });
+
+            // Tự động refresh danh sách nếu drawer đang mở
+            if (notificationDrawerOpen) {
+              fetchNotifications();
+            }
+
+            // Tạo content hiển thị
+            const toastContent = title && msg ? `${msg}` : msg || title;
+
+            console.log("📩 Toast content:", toastContent);
+
+            // Hiển thị toast
+            antdMessage.info({
+              content: toastContent,
+              duration: 5,
+            });
+          } else if (notificationType === "incident") {
+            // Notification trống nhưng type là incident
+            // Fetch notification mới nhất từ DB để lấy thông tin chi tiết
+            try {
+              const latestNotifications =
+                await notificationService.getNotifications(false);
+              const latestIncidentNotification = latestNotifications?.find(
+                (n) =>
+                  n.message?.includes("Có sự cố") || n.title?.includes("sự cố")
+              );
+
+              if (latestIncidentNotification) {
+                setNotificationCount((prev) => prev + 1);
+                antdMessage.info({
+                  content:
+                    latestIncidentNotification.message ||
+                    "Có sự cố mới cần hỗ trợ kỹ thuật",
+                  duration: 5,
+                });
+              } else {
+                setNotificationCount((prev) => prev + 1);
+                antdMessage.info({
+                  content: "Có sự cố mới cần hỗ trợ kỹ thuật",
+                  duration: 5,
+                });
+              }
+            } catch (error) {
+              console.error("Error fetching latest notification:", error);
+              setNotificationCount((prev) => prev + 1);
+              antdMessage.info({
+                content: "Có sự cố mới cần hỗ trợ kỹ thuật",
+                duration: 5,
+              });
+            }
+          } else {
+            console.log(
+              "📩 Skipping empty notification (for OEE Dashboard refresh)"
+            );
           }
-
-          // Hiển thị toast message ở giữa màn hình (giống login/logout)
-          const title = notificationData.Title || notificationData.title;
-          const msg = notificationData.Message || notificationData.message;
-          antdMessage.info(title ? `${title}: ${msg}` : msg, 5);
         };
 
         // Lắng nghe thông báo cá nhân (listener được track trong service để tránh duplicate)
