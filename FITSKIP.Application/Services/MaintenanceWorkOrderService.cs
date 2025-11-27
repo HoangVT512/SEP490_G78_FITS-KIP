@@ -1180,12 +1180,14 @@ namespace FITSKIP.Application.Services
 
             foreach (var workOrder in allWorkOrders)
             {
-                // ✅ LUÔN CHECK DUEDATE GỐC (không dùng PostponedDueDate)
-                // Vì theo validation mới: khi hoãn chỉ đổi ScheduledDate, giữ nguyên DueDate
-                DateTime effectiveDueDate = workOrder.DueDate;
+                // ✅ LOGIC MỚI: Nếu đã hoãn thì check PostponedDueDate, nếu không thì check DueDate
+                // Trường hợp hoãn => nếu ngày hôm nay sau ngày hoãn thì mới là quá hạn
+                // Còn không hoãn thì check ngày đến hạn để suy ra trạng thái
+                DateTime effectiveDueDate = workOrder.PostponedDueDate.HasValue 
+                    ? workOrder.PostponedDueDate.Value 
+                    : workOrder.DueDate;
 
-                // ✅ Đánh dấu quá hạn nếu qua DueDate gốc
-                // KHÔNG check status "Hoãn" vì kể cả khi hoãn, nếu qua DueDate gốc vẫn là quá hạn
+                // ✅ Đánh dấu quá hạn nếu qua effective due date (hoặc postponed hoặc original)
                 if (workOrder.Status != "Hoàn thành" && 
                     workOrder.Status != "Đã đóng" && 
                     workOrder.Status != "Đã hủy" && 
@@ -1193,7 +1195,8 @@ namespace FITSKIP.Application.Services
                     effectiveDueDate.Date < today)
                 {
                     workOrder.Status = "Quá hạn";
-                    workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động đánh dấu quá hạn (DueDate: {effectiveDueDate:dd/MM/yyyy})";
+                    var dateType = workOrder.PostponedDueDate.HasValue ? "PostponedDueDate" : "DueDate";
+                    workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động đánh dấu quá hạn ({dateType}: {effectiveDueDate:dd/MM/yyyy})";
                     await _workOrderRepository.UpdateAsync(workOrder);
                 }
 

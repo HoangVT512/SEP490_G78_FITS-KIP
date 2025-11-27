@@ -658,6 +658,14 @@ const WorkScheduleManagement = () => {
       } else {
         // ===== TẠO WORKORDER MỚI TỪ PLAN =====
 
+        // ✅ Validate ngày không được trùng ngày bắt đầu chu kỳ (startDate)
+        const planStartDate = dayjs(selectedRecord.startDate).startOf('day');
+        if (scheduledDate.isSame(planStartDate, 'day')) {
+          message.error(`❌ Không thể giao việc đúng ngày bắt đầu chu kỳ (${planStartDate.format('DD/MM/YYYY')})! Vui lòng chọn ngày khác.`);
+          setLoading(false);
+          return;
+        }
+
         // Validate ngày không được sau dueDate của Plan
         const planDueDate = selectedRecord.postponedDueDate
           ? dayjs(selectedRecord.postponedDueDate).endOf('day')
@@ -715,8 +723,10 @@ const WorkScheduleManagement = () => {
         }
         
         // Hoãn WorkOrder - gửi NewScheduledDate (chỉ update ScheduledDate, giữ DueDate)
+        // ✅ Chuyển sang giờ Việt Nam (UTC+7) để tránh lệch múi giờ
+        const vietnamDate = values.newScheduledDate.add(7, 'hour').toISOString();
         await postponeWorkOrder(selectedRecord.workOrderId, {
-          newScheduledDate: values.newScheduledDate.toISOString(),
+          newScheduledDate: vietnamDate,
           reason: values.reason,
         });
         message.success(`✅ Hoãn phiếu bảo trì đến ngày ${values.newScheduledDate.format('DD/MM/YYYY')}! (Ngày đến hạn gốc được giữ nguyên để theo dõi)`);
@@ -1112,6 +1122,25 @@ const WorkScheduleManagement = () => {
       },
     },
     {
+      title: "Ngày thực hiện",
+      key: "scheduledDate",
+      width: 120,
+      render: (_, record) => {
+        if (record.type === "plan" || !record.scheduledDate) {
+          return (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Chưa lên lịch
+            </Text>
+          );
+        }
+        return (
+          <div>
+            <div>{dayjs(record.scheduledDate).format("DD/MM/YYYY")}</div>
+          </div>
+        );
+      },
+    },
+    {
       title: "Người phụ trách",
       key: "assignedTechnicians",
       width: 160,
@@ -1342,7 +1371,7 @@ const WorkScheduleManagement = () => {
           <div style={{ flex: '1 1 200px' }}>
             <Card bordered={true}>
               <Statistic
-                title="Chờ giao việc"
+                title="Chờ xử lý"
                 value={stats.pendingCount}
                 prefix={<ClockCircleOutlined />}
                 valueStyle={{ color: "#faad14" }}
@@ -1644,23 +1673,25 @@ const WorkScheduleManagement = () => {
                   Đóng
                 </Button>,
 
-                // ✅ NÚT CHUYỂN LỊCH CHO OVERDUE:
-                // WorkOrder quá hạn (Overdue) → Hiện nút "Chuyển lịch" để update ngày và KTV
-                (selectedRecord.workStatus === "overdue" || selectedRecord.status === "Overdue") && (
+                // ✅ NÚT GIAO VIỆC CHO OVERDUE CHƯA CÓ KTV:
+                // WorkOrder quá hạn chưa có KTV → Hiện nút "Giao việc"
+                (selectedRecord.workStatus === "overdue" || selectedRecord.status === "Overdue") &&
+                !selectedRecord.electricalTechnicianName &&
+                !selectedRecord.mechanicalTechnicianName && (
                   <Button
-                    key="reschedule"
+                    key="assign-overdue"
                     type="primary"
-                    icon={<EditOutlined />}
+                    icon={<UserAddOutlined />}
                     onClick={() => handleAssignWork(selectedRecord)}
                     style={{
-                      backgroundColor: "#1890ff",
-                      borderColor: "#1890ff",
+                      backgroundColor: "#283652",
+                      borderColor: "#283652",
                       height: "40px",
                       fontSize: "16px",
                       minWidth: "120px",
                     }}
                   >
-                    Chuyển lịch
+                    Giao việc
                   </Button>
                 ),
 
