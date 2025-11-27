@@ -1088,6 +1088,16 @@ public class IncidentService : IIncidentService
             );
             Console.WriteLine($"   ✅ Realtime notification sent to TechnicalManagers group");
 
+            // 3. GỬI REALTIME đến group Managers để OEE Dashboard cập nhật hình giọt nước
+            await _notificationService.SendNotificationToGroupAsync(
+                "Managers",
+                "", // Không cần title
+                "", // Không cần message - chỉ cần trigger refresh
+                "incident",
+                "incident" // dataType = "incident" để OEE Dashboard reload
+            );
+            Console.WriteLine($"   ✅ Realtime notification sent to Managers group for OEE Dashboard");
+
             Console.WriteLine($"   ✅ Notifications sent successfully to {technicalManagers.Count} managers");
         }
         catch (Exception ex)
