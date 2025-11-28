@@ -2,6 +2,7 @@ using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using FITSKIP.Domain.Exceptions;
 using Microsoft.AspNetCore.Http;
 
 namespace FITSKIP.Application.Services;
@@ -58,11 +59,17 @@ public class IncidentService : IIncidentService
             var validatedEquipment = await _equipmentRepository.GetByIdAsync(request.EquipmentId.Value, cancellationToken);
             if (validatedEquipment == null)
             {
-                throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId.Value}");
+                throw new IncidentValidationException(
+                    $"Không tìm thấy thiết bị với ID: {request.EquipmentId.Value}",
+                    "EQUIPMENT_NOT_FOUND",
+                    new { EquipmentId = request.EquipmentId.Value });
             }
             if (!validatedEquipment.IsActive)
             {
-                throw new InvalidOperationException($"Thiết bị với ID: {request.EquipmentId.Value} đã bị vô hiệu hóa");
+                throw new IncidentValidationException(
+                    $"Thiết bị với ID: {request.EquipmentId.Value} đã bị vô hiệu hóa",
+                    "EQUIPMENT_INACTIVE",
+                    new { EquipmentId = request.EquipmentId.Value });
             }
         }
 
@@ -72,11 +79,17 @@ public class IncidentService : IIncidentService
             var line = await _lineRepository.GetByIdAsync(request.LineId.Value, cancellationToken);
             if (line == null)
             {
-                throw new InvalidOperationException($"Không tìm thấy dây chuyền với ID: {request.LineId.Value}");
+                throw new IncidentValidationException(
+                    $"Không tìm thấy dây chuyền với ID: {request.LineId.Value}",
+                    "LINE_NOT_FOUND",
+                    new { LineId = request.LineId.Value });
             }
             if (!line.IsActive)
             {
-                throw new InvalidOperationException($"Dây chuyền với ID: {request.LineId.Value} đã bị vô hiệu hóa");
+                throw new IncidentValidationException(
+                    $"Dây chuyền với ID: {request.LineId.Value} đã bị vô hiệu hóa",
+                    "LINE_INACTIVE",
+                    new { LineId = request.LineId.Value });
             }
         }
 
@@ -90,12 +103,18 @@ public class IncidentService : IIncidentService
         {
             if (request.EndTime.Value <= startTime)
             {
-                throw new InvalidOperationException("Thời gian kết thúc phải sau thời gian bắt đầu");
+                throw new IncidentValidationException(
+                    "Thời gian kết thúc phải sau thời gian bắt đầu",
+                    "INCIDENT_ENDTIME_BEFORE_STARTTIME",
+                    new { StartTime = startTime, EndTime = request.EndTime.Value });
             }
 
             if (request.EndTime.Value > DateTime.Now)
             {
-                throw new InvalidOperationException("Thời gian kết thúc không thể trong tương lai");
+                throw new IncidentValidationException(
+                    "Thời gian kết thúc không thể trong tương lai",
+                    "INCIDENT_ENDTIME_IN_FUTURE",
+                    new { EndTime = request.EndTime.Value, Now = DateTime.Now });
             }
         }
 
@@ -126,7 +145,14 @@ public class IncidentService : IIncidentService
 
             if (overlappingIncidents.Any())
             {
-                throw new InvalidOperationException("Thời gian báo cáo sự cố trùng với sự cố khác trên cùng dây chuyền");
+                throw new IncidentValidationException(
+                    "Thời gian báo cáo sự cố trùng với sự cố khác trên cùng dây chuyền",
+                    "INCIDENT_TIME_OVERLAP",
+                    new { 
+                        LineId = request.LineId.Value,
+                        StartTime = startTime,
+                        EndTime = request.EndTime
+                    });
             }
         }
 
@@ -409,11 +435,11 @@ public class IncidentService : IIncidentService
                 var validatedEquipment = await _equipmentRepository.GetByIdAsync(request.EquipmentId.Value, cancellationToken);
                 if (validatedEquipment == null)
                 {
-                    throw new InvalidOperationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId.Value}");
+                    throw new IncidentValidationException($"Không tìm thấy thiết bị với ID: {request.EquipmentId.Value}", "INCIDENT_VALIDATION_ERROR");
                 }
                 if (!validatedEquipment.IsActive)
                 {
-                    throw new InvalidOperationException($"Thiết bị với ID: {request.EquipmentId.Value} đã bị vô hiệu hóa");
+                    throw new IncidentValidationException($"Thiết bị với ID: {request.EquipmentId.Value} đã bị vô hiệu hóa", "INCIDENT_VALIDATION_ERROR");
                 }
             }
 
@@ -423,18 +449,18 @@ public class IncidentService : IIncidentService
                 var line = await _lineRepository.GetByIdAsync(request.LineId.Value, cancellationToken);
                 if (line == null)
                 {
-                    throw new InvalidOperationException($"Không tìm thấy dây chuyền với ID: {request.LineId.Value}");
+                    throw new IncidentValidationException($"Không tìm thấy dây chuyền với ID: {request.LineId.Value}", "INCIDENT_VALIDATION_ERROR");
                 }
                 if (!line.IsActive)
                 {
-                    throw new InvalidOperationException($"Dây chuyền với ID: {request.LineId.Value} đã bị vô hiệu hóa");
+                    throw new IncidentValidationException($"Dây chuyền với ID: {request.LineId.Value} đã bị vô hiệu hóa", "INCIDENT_VALIDATION_ERROR");
                 }
             }
 
             // Validate start time
             if (request.StartTime > DateTime.Now)
             {
-                throw new InvalidOperationException("Thời gian bắt đầu không thể trong tương lai");
+                throw new IncidentValidationException($"Thời gian bắt đầu không thể trong tương lai", "INCIDENT_VALIDATION_ERROR");
             }
 
             // Validate end time if provided
@@ -442,12 +468,12 @@ public class IncidentService : IIncidentService
             {
                 if (request.EndTime.Value <= request.StartTime)
                 {
-                    throw new InvalidOperationException("Thời gian kết thúc phải sau thời gian bắt đầu");
+                    throw new IncidentValidationException($"Thời gian kết thúc phải sau thời gian bắt đầu", "INCIDENT_VALIDATION_ERROR");
                 }
 
                 if (request.EndTime.Value > DateTime.Now)
                 {
-                    throw new InvalidOperationException("Thời gian kết thúc không thể trong tương lai");
+                    throw new IncidentValidationException($"Thời gian kết thúc không thể trong tương lai", "INCIDENT_VALIDATION_ERROR");
                 }
             }
 
@@ -478,7 +504,7 @@ public class IncidentService : IIncidentService
 
                 if (overlappingIncidents.Any())
                 {
-                    throw new InvalidOperationException("Thời gian báo cáo sự cố trùng với sự cố khác trên cùng dây chuyền");
+                    throw new IncidentValidationException($"Thời gian báo cáo sự cố trùng với sự cố khác trên cùng dây chuyền", "INCIDENT_VALIDATION_ERROR");
                 }
             }
 
@@ -650,18 +676,18 @@ public class IncidentService : IIncidentService
         var incident = await _incidentRepository.GetByIdAsync(id, cancellationToken);
         if (incident == null)
         {
-            throw new InvalidOperationException("Không tìm thấy sự cố với ID đã cho.");
+            throw new IncidentValidationException($"Không tìm thấy sự cố với ID đã cho.", "INCIDENT_VALIDATION_ERROR");
         }
 
         // Validate deletion rules
         if (incident.Status == "Hoàn thành" && !string.IsNullOrEmpty(incident.AssignedTo))
         {
-            throw new InvalidOperationException("Không thể xóa sự cố đã hoàn thành và đã phân công kỹ thuật viên.");
+            throw new IncidentValidationException($"Không thể xóa sự cố đã hoàn thành và đã phân công kỹ thuật viên.", "INCIDENT_VALIDATION_ERROR");
         }
 
         if (incident.Status == "Đang xử lý" || !string.IsNullOrEmpty(incident.AssignedTo))
         {
-            throw new InvalidOperationException("Sự cố đang có kỹ thuật viên xử lý, không thể xóa.");
+            throw new IncidentValidationException($"Sự cố đang có kỹ thuật viên xử lý, không thể xóa.", "INCIDENT_VALIDATION_ERROR");
         }
 
         // DEL-01: Cho phép xóa sự cố hoàn thành không có KTV
@@ -740,7 +766,7 @@ public class IncidentService : IIncidentService
             var line = await _lineRepository.GetByIdAsync(lineId.Value, cancellationToken);
             if (line == null || !line.IsActive)
             {
-                throw new InvalidOperationException($"Không tìm thấy chuyền sản xuất với ID: {lineId.Value} hoặc chuyền đã bị vô hiệu hóa");
+                throw new IncidentValidationException($"Không tìm thấy chuyền sản xuất với ID: {lineId.Value} hoặc chuyền đã bị vô hiệu hóa", "INCIDENT_VALIDATION_ERROR");
             }
         }
 
@@ -1126,11 +1152,11 @@ public class IncidentService : IIncidentService
         }
         catch (ArgumentException ex)
         {
-            throw new InvalidOperationException($"Lỗi upload ảnh: {ex.Message}");
+            throw new IncidentValidationException($"Lỗi upload ảnh: {ex.Message}", "INCIDENT_VALIDATION_ERROR");
         }
         catch (Exception ex)
         {
-            throw new InvalidOperationException($"Có lỗi xảy ra khi upload ảnh: {ex.Message}");
+            throw new IncidentValidationException($"Có lỗi xảy ra khi upload ảnh: {ex.Message}", "INCIDENT_VALIDATION_ERROR");
         }
     }
 

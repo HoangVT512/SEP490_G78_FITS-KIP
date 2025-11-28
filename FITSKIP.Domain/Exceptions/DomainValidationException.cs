@@ -93,6 +93,14 @@ public class NotificationValidationException : DomainValidationException
     }
 }
 
+public class IncidentValidationException : DomainValidationException
+{
+    public IncidentValidationException(string message, string errorCode = "INCIDENT_VALIDATION_ERROR", object? errorData = null)
+        : base(message, errorCode, errorData)
+    {
+    }
+}
+
 public class DashboardValidationException : DomainValidationException
 {
     public DashboardValidationException(string message, string errorCode = "DASHBOARD_VALIDATION_ERROR", object? errorData = null)

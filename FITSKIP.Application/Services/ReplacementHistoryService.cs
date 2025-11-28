@@ -148,12 +148,18 @@ namespace FITSKIP.Application.Services
         public async Task<ReplacementHistory> UpdateAsync(int replacementId, ReplacementHistory replacementHistory, CancellationToken cancellationToken = default)
         {
             if (replacementHistory.Quantity < 0)
-                throw new ArgumentException("Số lượng phải lớn hơn 0");
+                throw new ReplacementHistoryValidationException(
+                    "Số lượng phải lớn hơn 0",
+                    "REPLACEMENT_HISTORY_QUANTITY_INVALID",
+                    new { Quantity = replacementHistory.Quantity });
 
             var exists = await _repository.ExistsAsync(replacementId);
             if (!exists)
             {
-                throw new ArgumentException($"Lịch sử thay thế với id {replacementId} không tồn tại");
+                throw new ReplacementHistoryValidationException(
+                    $"Lịch sử thay thế với id {replacementId} không tồn tại",
+                    "REPLACEMENT_HISTORY_NOT_FOUND",
+                    new { ReplacementId = replacementId });
             }
             replacementHistory.ReplacementId = replacementId;
 
@@ -180,7 +186,10 @@ namespace FITSKIP.Application.Services
         {
             var existing = await _repository.GetByIdAsync(replacementId, cancellationToken);
             if (existing == null)
-                throw new ArgumentException($"Lịch sử thay thế với id {replacementId} không tồn tại");
+                throw new ReplacementHistoryValidationException(
+                    $"Lịch sử thay thế với id {replacementId} không tồn tại",
+                    "REPLACEMENT_HISTORY_NOT_FOUND",
+                    new { ReplacementId = replacementId });
 
             // Tính số lượng thừa
             if (confirmationDto.ActualQuantityUsed.HasValue)
