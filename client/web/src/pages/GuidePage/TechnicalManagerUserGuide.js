@@ -175,18 +175,21 @@ const TechnicalManagerUserGuide = () => {
                                     <Button
                                         key={section.id}
                                         type="text"
-                                        block
                                         onClick={() => scrollToSection(section.id)}
                                         style={{
                                             textAlign: 'left',
                                             height: 'auto',
                                             padding: '8px 12px',
-                                            whiteSpace: 'normal'
+                                            whiteSpace: 'normal',
+                                            width: '100%',
+                                            justifyContent: 'flex-start',
+                                            border: 'none',
+                                            background: 'transparent'
                                         }}
                                     >
-                                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                                            <span style={{ fontSize: 20 }}>{section.icon}</span>
-                                            <div style={{ flex: 1 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
+                                            <span style={{ fontSize: 20, flexShrink: 0 }}>{section.icon}</span>
+                                            <div style={{ flex: 1, textAlign: 'left' }}>
                                                 <div style={{ fontWeight: 500, fontSize: 14 }}>
                                                     {index + 1}. {section.title}
                                                 </div>
@@ -292,7 +295,6 @@ const TechnicalManagerUserGuide = () => {
                                                                         alt={step.title}
                                                                         style={{
                                                                             width: '100%',
-                                                                            maxWidth: 800,
                                                                             borderRadius: 8,
                                                                             border: '1px solid #e8e8e8',
                                                                             boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
