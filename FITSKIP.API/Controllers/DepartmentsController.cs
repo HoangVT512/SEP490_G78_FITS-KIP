@@ -41,7 +41,7 @@ namespace FITSKIP.API.Controllers
         public async Task<ActionResult<DepartmentDTO>> GetById(int id, CancellationToken cancellationToken)
         {
             var item = await departmentService.GetByIdAsync(id, cancellationToken);
-            if (item == null) return NotFound();
+            if (item == null) return NotFound(new { message = "Phòng ban không tồn tại" });
             return Ok(item);
         }
 
