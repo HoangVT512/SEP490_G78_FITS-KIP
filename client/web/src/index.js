@@ -3,8 +3,16 @@ import ReactDOM from "react-dom/client";
 import { ConfigProvider } from "antd";
 import App from "./App";
 import "./styles/global/variables.css";
+import guideStorage from "./utils/guideStorage";
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
+// Initialize IndexedDB for guide storage
+guideStorage.init().then(() => {
+  console.log('Guide storage initialized successfully');
+}).catch((error) => {
+  console.error('Failed to initialize guide storage:', error);
+});
+
+const root = ReactDOM.createRoot(document.getElementById("root"));     
 root.render(
   <React.StrictMode>
     <ConfigProvider

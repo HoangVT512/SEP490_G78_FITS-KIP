@@ -535,7 +535,7 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("WorkOrderId"));
 
-                    b.Property<DateTime>("AssignedDate")
+                    b.Property<DateTime?>("AssignedDate")
                         .HasColumnType("datetime");
 
                     b.Property<string>("AssignedToElectrical")

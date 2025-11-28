@@ -16,6 +16,7 @@ namespace FITSKIP.Application.Interfaces
         // Real-time notification methods
         Task SendNotificationToUserAsync(string userId, string title, string message, string type = "info");
         Task SendNotificationToGroupAsync(string groupName, string title, string message, string type = "info");
+        Task SendNotificationToGroupWithDataAsync(string groupName, object notificationData);
         Task SendNotificationToAllAsync(string title, string message, string type = "info");
         Task SendNotificationToRoleAsync(string roleName, string message, string type = "info");
 

@@ -251,7 +251,7 @@ namespace FITSKIP.API.Controllers
 
         /// <summary>
         /// Ghi nhận số lượng thực tế sử dụng và cập nhật trạng thái
-        /// Nếu actualQuantityUsed == Quantity (dùng đủ): tự động chuyển "Hoàn thành" và trừ kho luôn
+        /// Nếu actualQuantityUsed == Quantity (dùng đủ): tự động chuyển "Hoàn tất" và trừ kho luôn
         /// Nếu actualQuantityUsed < Quantity (dư): chuyển "Chờ trả lại", chờ QLKT xác nhận
         /// </summary>
         [HttpPut("{id:int}/record-usage")]
@@ -278,18 +278,18 @@ namespace FITSKIP.API.Controllers
 
                 var toReturn = existing.Quantity - request.ActualQuantityUsed;
                 existing.QuantityToReturn = toReturn > 0 ? toReturn : 0;
-                existing.Status = request.Status; // "Chờ trả lại" or "Hoàn thành"
+                existing.Status = request.Status; // "Chờ trả lại" or "Hoàn tất"
 
-                // ✅ MỚI: Khi ghi nhận hoàn thành (Status = "Hoàn thành"), set ReplacedDate = giờ Việt Nam hiện tại
-                if (request.Status == "Hoàn thành" && existing.ReplacedDate == null)
+                // ✅ MỚI: Khi ghi nhận hoàn tất (Status = "Hoàn tất"), set ReplacedDate = giờ Việt Nam hiện tại
+                if (request.Status == "Hoàn tất" && existing.ReplacedDate == null)
                 {
                     existing.ReplacedDate = DateTimeHelper.GetVietnamNow();
                 }
 
                 var result = await _service.UpdateAsync(id, existing, cancellationToken);
 
-                // Nếu status = "Hoàn thành" (dùng đủ), tự động trừ kho luôn
-                if (result.Status == "Hoàn thành" && result.PartId > 0 && result.ActualQuantityUsed.HasValue && result.ActualQuantityUsed.Value > 0)
+                // Nếu status = "Hoàn tất" (dùng đủ), tự động trừ kho luôn
+                if (result.Status == "Hoàn tất" && result.PartId > 0 && result.ActualQuantityUsed.HasValue && result.ActualQuantityUsed.Value > 0)
                 {
                     var sparePart = await _context.SpareParts.FindAsync(new object[] { result.PartId }, cancellationToken: cancellationToken);
                     if (sparePart != null)
@@ -380,18 +380,18 @@ namespace FITSKIP.API.Controllers
                     existing.QuantityToReturn = toReturn > 0 ? toReturn : 0;
 
                     // Determine status based on usage
-                    existing.Status = toReturn > 0 ? "Chờ trả lại" : "Hoàn thành";
+                    existing.Status = toReturn > 0 ? "Chờ trả lại" : "Hoàn tất";
 
-                    // ✅ MỚI: Khi ghi nhận hoàn thành (dùng hết), set ReplacedDate = giờ Việt Nam hiện tại
-                    if (existing.Status == "Hoàn thành" && existing.ReplacedDate == null)
+                    // ✅ MỚI: Khi ghi nhận hoàn tất (dùng hết), set ReplacedDate = giờ Việt Nam hiện tại
+                    if (existing.Status == "Hoàn tất" && existing.ReplacedDate == null)
                     {
                         existing.ReplacedDate = DateTimeHelper.GetVietnamNow();
                     }
 
                     var result = await _service.UpdateAsync(item.ReplacementId, existing, cancellationToken);
 
-                    // Nếu status = "Hoàn thành" (dùng đủ), tự động trừ kho luôn
-                    if (result.Status == "Hoàn thành" && result.PartId > 0 && result.ActualQuantityUsed.HasValue && result.ActualQuantityUsed.Value > 0)
+                    // Nếu status = "Hoàn tất" (dùng đủ), tự động trừ kho luôn
+                    if (result.Status == "Hoàn tất" && result.PartId > 0 && result.ActualQuantityUsed.HasValue && result.ActualQuantityUsed.Value > 0)
                     {
                         var sparePart = await _context.SpareParts.FindAsync(new object[] { result.PartId }, cancellationToken: cancellationToken);
                         if (sparePart != null)
@@ -795,117 +795,19 @@ namespace FITSKIP.API.Controllers
         }
 
         /// <summary>
-        /// Gửi yêu cầu linh kiện từ phiếu bảo trì (từ kỹ thuật viên)
-        /// Tạo các record ReplacementHistory với status "Chờ duyệt cấp phát"
+        /// Cập nhật status cho tất cả bản ghi dựa trên logic mới
         /// </summary>
-        [HttpPost("request-from-maintenance")]
-        public async Task<ActionResult<List<ReplacementHistoryDTO>>> RequestSparePartsFromMaintenance(
-            [FromBody] MaintenanceSparePartRequestDto request,
-            CancellationToken cancellationToken = default)
+        [HttpPost("update-all-statuses")]
+        public async Task<IActionResult> UpdateAllStatuses(CancellationToken cancellationToken = default)
         {
             try
             {
-                if (!ModelState.IsValid)
-                    return BadRequest(ModelState);
-
-                if (request.Items == null || !request.Items.Any())
-                    return BadRequest(new { message = "Danh sách linh kiện không được trống" });
-
-                // Kiểm tra WorkOrder tồn tại
-                var workOrder = await _context.MaintenanceWorkOrders
-                    .FirstOrDefaultAsync(wo => wo.WorkOrderId == request.WorkOrderId, cancellationToken);
-                if (workOrder == null)
-                    return NotFound(new { message = $"Phiếu bảo trì với ID {request.WorkOrderId} không tồn tại" });
-
-                // Kiểm tra người yêu cầu tồn tại
-                var requestedUser = await _context.Users
-                    .FirstOrDefaultAsync(u => u.Id == request.RequestedBy, cancellationToken);
-                if (requestedUser == null)
-                    return NotFound(new { message = $"Người dùng với ID {request.RequestedBy} không tồn tại" });
-
-                var createdReplacements = new List<ReplacementHistoryDTO>();
-
-                // Tạo ReplacementHistory cho mỗi linh kiện
-                foreach (var item in request.Items)
-                {
-                    // Tìm spare part theo tên
-                    var sparePart = await _context.SpareParts
-                        .FirstOrDefaultAsync(sp => sp.PartName == item.PartName, cancellationToken);
-
-                    if (sparePart == null)
-                        return BadRequest(new { message = $"Linh kiện '{item.PartName}' không tồn tại trong hệ thống" });
-
-                    // Tạo ReplacementHistory mới
-                    var replacementHistory = new ReplacementHistory
-                    {
-                        WorkOrderId = request.WorkOrderId,
-                        PartId = sparePart.PartId,
-                        EquipmentId = workOrder.EquipmentId,
-                        Quantity = item.Quantity,
-                        ReplacedDate = request.RequestDate,
-                        ReplacedBy = request.RequestedBy,
-                        Status = "Chờ duyệt cấp phát", // Trạng thái mặc định
-                    };
-
-                    await _service.CreateAsync(replacementHistory, cancellationToken);
-
-                    // Map to DTO for response
-                    var dto = new ReplacementHistoryDTO
-                    {
-                        ReplacementID = replacementHistory.ReplacementId,
-                        EquipmentID = replacementHistory.EquipmentId,
-                        WorkOrderId = replacementHistory.WorkOrderId,
-                        PartID = replacementHistory.PartId,
-                        PartName = sparePart.PartName,
-                        PartNumber = sparePart.PartNumber,
-                        EquipmentName = workOrder.Equipment?.EquipmentName,
-                        EquipmentCode = workOrder.Equipment?.EquipmentCode,
-                        ReplacedBy = replacementHistory.ReplacedBy,
-                        ReplacedByUserName = requestedUser.UserName,
-                        ReplacedByFullName = requestedUser.FullName,
-                        ReplacedByEmployeeCode = requestedUser.EmployeeCode,
-                        ReplacedByEmail = requestedUser.Email,
-                        Quantity = replacementHistory.Quantity,
-                        ReplacedDate = replacementHistory.ReplacedDate,
-                        Status = replacementHistory.Status
-                    };
-
-                    createdReplacements.Add(dto);
-                }
-
-                // Gửi SignalR notification cho QLKT về yêu cầu linh kiện
-                try
-                {
-                    await _notificationHubContext.Clients.All.SendAsync(
-                        "SparePartRequest",
-                        new
-                        {
-                            workOrderId = request.WorkOrderId,
-                            count = createdReplacements.Count,
-                            requestedBy = requestedUser.UserName,
-                            requestedDate = request.RequestDate,
-                            timestamp = DateTime.Now
-                        }
-                    );
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Error sending SignalR notification: {ex.Message}");
-                }
-
-                return Ok(new
-                {
-                    message = $"Gửi yêu cầu {createdReplacements.Count} linh kiện thành công!",
-                    data = createdReplacements
-                });
-            }
-            catch (KeyNotFoundException ex)
-            {
-                return BadRequest(new { message = ex.Message });
+                await _service.UpdateAllStatusesAsync(cancellationToken);
+                return Ok(new { message = "Đã cập nhật status cho tất cả bản ghi" });
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Internal server error", error = ex.Message });
+                return StatusCode(500, new { message = "Lỗi khi cập nhật status", error = ex.Message });
             }
         }
     }

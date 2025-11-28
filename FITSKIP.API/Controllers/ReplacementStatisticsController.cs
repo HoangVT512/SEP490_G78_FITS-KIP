@@ -36,13 +36,13 @@ namespace FITSKIP.API.Controllers
         {
             try
             {
-                // Lấy tất cả replacement history có status = "Hoàn thành"
+                // Lấy tất cả replacement history có status = "Hoàn tất"
                 var replacementHistories = await _context.ReplacementHistories
                     .Include(r => r.Part)
                     .Include(r => r.Equipment)
                         .ThenInclude(e => e.Stage)
                             .ThenInclude(s => s.Line)
-                    .Where(r => r.Status == "Hoàn thành" && r.ActualQuantityUsed.HasValue)
+                    .Where(r => r.Status == "Hoàn tất" && r.ActualQuantityUsed.HasValue)
                     .ToListAsync(cancellationToken);
 
                 // Group theo PartId, Equipment, Stage, Line

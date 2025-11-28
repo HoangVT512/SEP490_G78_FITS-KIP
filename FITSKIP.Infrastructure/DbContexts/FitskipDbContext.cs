@@ -314,7 +314,7 @@ public partial class FitskipDbContext : IdentityDbContext<User>
             entity.Property(e => e.WorkOrderCode).HasMaxLength(50).IsRequired();
             entity.Property(e => e.PlanId).HasColumnName("PlanID");
             entity.Property(e => e.EquipmentId).HasColumnName("EquipmentID");
-            entity.Property(e => e.AssignedDate).HasColumnType("datetime");
+            entity.Property(e => e.AssignedDate).HasColumnType("datetime").IsRequired(false);
             entity.Property(e => e.ScheduledDate).HasColumnType("datetime");
             entity.Property(e => e.DueDate).HasColumnType("datetime");
             entity.Property(e => e.AssignedToElectrical).HasMaxLength(450);

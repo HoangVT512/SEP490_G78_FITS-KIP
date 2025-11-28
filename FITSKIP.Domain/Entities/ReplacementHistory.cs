@@ -32,6 +32,11 @@ public partial class ReplacementHistory
     public int? ActualQuantityUsed { get; set; }
 
     /// <summary>
+    /// Số lượng đang sử dụng = Đã xuất - Đã trả
+    /// </summary>
+    public int CurrentQuantityInUse => (ActualQuantityUsed ?? 0) - (QuantityToReturn ?? 0);
+
+    /// <summary>
     /// Số lượng thừa cần trả lại kho (nếu ActualQuantityUsed < Quantity)
     /// </summary>
     public int? QuantityToReturn { get; set; }

@@ -29,6 +29,11 @@ namespace FITSKIP.Domain.DTO
         public int? QuantityToReturn { get; set; }
 
         /// <summary>
+        /// Số lượng đang sử dụng = Đã xuất - Đã trả
+        /// </summary>
+        public int CurrentQuantityInUse => (ActualQuantityUsed ?? 0) - (QuantityToReturn ?? 0);
+
+        /// <summary>
         /// Ngày trả lại
         /// </summary>
         public DateTime? ReturnedDate { get; set; }

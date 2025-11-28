@@ -31,180 +31,118 @@ namespace FITSKIP.Application.Services
             IUserRepository userRepository)
         {
             _repository = repository;
-            _equipmentRepository = equipmentRepository;
-            _incidentRepository = incidentRepository;
-            _workOrderRepository = workOrderRepository;
-            _sparePartRepository = sparePartRepository;
-            _userRepository = userRepository;
         }
-        // Validation-enabled methods
-        public async Task<ReplacementHistory> CreateAsync(CreateReplacementHistoryRequest request, CancellationToken cancellationToken = default)
+
+        // ✅ FIX - LOGIC ĐÚNG
+        private string CalculateStatus(ReplacementHistory rh)
         {
-            // Validate quantity
-            ValidateQuantity(request.Quantity);
+            int returned = rh.QuantityToReturn ?? 0;
 
-            // Validate part ID existence
-            await ValidatePartIdAsync(request.PartId, cancellationToken);
+            // Case 1: Chưa trả lại gì
+            if (returned == 0)
+                return "Đã xuất";
 
-            // Validate replaced by user existence
-            await ValidateReplacedByAsync(request.ReplacedBy, cancellationToken);
+            // Case 2: Đã trả đủ (quantityToReturn == quantity) → Hoàn tất (không cần xác nhận)
+            if (returned == rh.Quantity)
+                return "Hoàn tất";
 
-            // Validate equipment ID if provided
-            if (request.EquipmentId.HasValue)
-            {
-                await ValidateEquipmentIdAsync(request.EquipmentId.Value, cancellationToken);
-            }
+            // Case 3: Đã trả một phần (0 < quantityToReturn < quantity)
+            if (returned > 0 && returned < rh.Quantity)
+                return "Đã trả một phần";
 
-            // Validate incident ID if provided
-            if (request.IncidentId.HasValue)
-            {
-                await ValidateIncidentIdAsync(request.IncidentId.Value, cancellationToken);
-            }
-
-            // Validate work order ID if provided
-            if (request.WorkOrderId.HasValue)
-            {
-                await ValidateWorkOrderIdAsync(request.WorkOrderId.Value, cancellationToken);
-            }
-
-            // Validate status
-            ValidateStatus(request.Status);
-
-            // Validate remarks if provided
-            if (!string.IsNullOrWhiteSpace(request.Remarks))
-            {
-                ValidateRemarks(request.Remarks);
-            }
-
-            // Validate replaced date if provided (should be nullable in DTO based on entity)
-            if (request.ReplacedDate.HasValue && request.ReplacedDate != DateTime.MinValue)
-            {
-                ValidateReplacedDate(request.ReplacedDate.Value);
-            }
-
-            var replacementHistory = new ReplacementHistory
-            {
-                EquipmentId = request.EquipmentId,
-                IncidentId = request.IncidentId,
-                WorkOrderId = request.WorkOrderId,
-                PartId = request.PartId,
-                Quantity = request.Quantity,
-                ReplacedDate = request.ReplacedDate == default(DateTime) ? null : request.ReplacedDate,
-                ReplacedBy = request.ReplacedBy,
-                Status = request.Status,
-                Remarks = request.Remarks
-            };
-
-            return await _repository.CreateAsync(replacementHistory, cancellationToken);
+            // Default: giữ nguyên status cũ
+            return rh.Status;
         }
-
         public Task<ReplacementHistory> CreateAsync(ReplacementHistory replacementHistory, CancellationToken cancellationToken = default) => _repository.CreateAsync(replacementHistory, cancellationToken);
 
         public Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default) => _repository.DeleteAsync(id, cancellationToken);
 
-        public Task<IEnumerable<ReplacementHistory>> GetAllAsync(CancellationToken cancellationToken = default) => _repository.GetAllAsync(cancellationToken);
-
-        public Task<IEnumerable<ReplacementHistory>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default) => _repository.GetByDateRangeAsync(startDate, endDate, cancellationToken);
-
-        public Task<IEnumerable<ReplacementHistory>> GetByEquipmentIdAsync(int equipmentId, CancellationToken cancellationToken = default) => _repository.GetByEquipmentIdAsync(equipmentId, cancellationToken);
-
-        public Task<IEnumerable<ReplacementHistory>> GetByIncidentIdAsync(int incidentId, CancellationToken cancellationToken = default) => _repository.GetByIncidentIdAsync(incidentId, cancellationToken);
-
-        public Task<ReplacementHistory> GetByIdAsync(int id, CancellationToken cancellationToken = default) => _repository.GetByIdAsync(id, cancellationToken);
-
-        public Task<IEnumerable<ReplacementHistory>> GetByPartIdAsync(int partId, CancellationToken cancellationToken = default) => _repository.GetByPartIdAsync(partId, cancellationToken);
-
-        public Task<IEnumerable<ReplacementHistory>> GetByStatusAsync(string status1, CancellationToken cancellationToken = default) => _repository.GetByStatusAsync(status1, cancellationToken);
-
-        public Task<IEnumerable<ReplacementHistory>> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default) => _repository.GetByUserIdAsync(userId, cancellationToken);
-
-        public async Task<ReplacementHistory> UpdateAsync(int replacementId, UpdateReplacementHistoryRequest request, CancellationToken cancellationToken = default)
+        public async Task<IEnumerable<ReplacementHistory>> GetAllAsync(CancellationToken cancellationToken = default)
         {
-            // Check if replacement history exists
-            var existing = await _repository.GetByIdAsync(replacementId, cancellationToken);
-            if (existing == null)
+            var all = await _repository.GetAllAsync(cancellationToken);
+            // Recalculate status for each record before returning
+            foreach (var rh in all)
             {
-                throw new ReplacementHistoryValidationException(
-                    $"Lịch sử thay thế với ID {replacementId} không tồn tại",
-                    "REPLACEMENT_HISTORY_NOT_FOUND",
-                    new { ReplacementId = replacementId });
+                rh.Status = CalculateStatus(rh);
             }
+            return all;
+        }
 
-            // Validate quantity
-            ValidateQuantity(request.Quantity);
-
-            // Validate part ID existence
-            await ValidatePartIdAsync(request.PartId, cancellationToken);
-
-            // Validate replaced by user existence
-            await ValidateReplacedByAsync(request.ReplacedBy, cancellationToken);
-
-            // Validate equipment ID if provided
-            if (request.EquipmentId.HasValue)
+        public async Task<IEnumerable<ReplacementHistory>> GetByDateRangeAsync(DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default)
+        {
+            var result = await _repository.GetByDateRangeAsync(startDate, endDate, cancellationToken);
+            foreach (var rh in result)
             {
-                await ValidateEquipmentIdAsync(request.EquipmentId.Value, cancellationToken);
+                rh.Status = CalculateStatus(rh);
             }
+            return result;
+        }
 
-            // Validate incident ID if provided
-            if (request.IncidentId.HasValue)
+        public async Task<IEnumerable<ReplacementHistory>> GetByEquipmentIdAsync(int equipmentId, CancellationToken cancellationToken = default)
+        {
+            var result = await _repository.GetByEquipmentIdAsync(equipmentId, cancellationToken);
+            foreach (var rh in result)
             {
-                await ValidateIncidentIdAsync(request.IncidentId.Value, cancellationToken);
+                rh.Status = CalculateStatus(rh);
             }
+            return result;
+        }
 
-            // Validate work order ID if provided
-            if (request.WorkOrderId.HasValue)
+        public async Task<IEnumerable<ReplacementHistory>> GetByIncidentIdAsync(int incidentId, CancellationToken cancellationToken = default)
+        {
+            var result = await _repository.GetByIncidentIdAsync(incidentId, cancellationToken);
+            foreach (var rh in result)
             {
-                await ValidateWorkOrderIdAsync(request.WorkOrderId.Value, cancellationToken);
+                rh.Status = CalculateStatus(rh);
             }
+            return result;
+        }
 
-            // Validate status
-            ValidateStatus(request.Status);
+        public async Task<ReplacementHistory> GetByIdAsync(int id, CancellationToken cancellationToken = default)
+        {
+            var result = await _repository.GetByIdAsync(id, cancellationToken);
+            result.Status = CalculateStatus(result);
+            return result;
+        }
 
-            // Validate remarks if provided
-            if (!string.IsNullOrWhiteSpace(request.Remarks))
+        public async Task<IEnumerable<ReplacementHistory>> GetByPartIdAsync(int partId, CancellationToken cancellationToken = default)
+        {
+            var result = await _repository.GetByPartIdAsync(partId, cancellationToken);
+            foreach (var rh in result)
             {
-                ValidateRemarks(request.Remarks);
+                rh.Status = CalculateStatus(rh);
             }
+            return result;
+        }
 
-            // Validate replaced date
-            ValidateReplacedDate(request.ReplacedDate);
-
-            // Validate actual quantity used if provided
-            if (request.ActualQuantityUsed.HasValue)
+        public async Task<IEnumerable<ReplacementHistory>> GetByStatusAsync(string status, CancellationToken cancellationToken = default)
+        {
+            var all = await _repository.GetAllAsync(cancellationToken);
+            return all.Where(rh =>
             {
-                ValidateActualQuantityUsed(request.ActualQuantityUsed.Value, request.Quantity);
+                int returned = rh.QuantityToReturn ?? 0;
+                switch (status)
+                {
+                    case "Đã xuất":
+                        return returned == 0;
+                    case "Đã trả một phần":
+                        return returned > 0 && returned < rh.Quantity;
+                    case "Hoàn tất":
+                        return returned == rh.Quantity;
+                    default:
+                        return rh.Status == status;
+                }
+            });
+        }
+
+        public async Task<IEnumerable<ReplacementHistory>> GetByUserIdAsync(string userId, CancellationToken cancellationToken = default)
+        {
+            var result = await _repository.GetByUserIdAsync(userId, cancellationToken);
+            foreach (var rh in result)
+            {
+                rh.Status = CalculateStatus(rh);
             }
-
-            // Validate quantity to return if provided
-            if (request.QuantityToReturn.HasValue)
-            {
-                ValidateQuantityToReturn(request.QuantityToReturn.Value);
-            }
-
-            // Business rule: If actual quantity used is provided, quantity to return should be calculated
-            if (request.ActualQuantityUsed.HasValue && !request.QuantityToReturn.HasValue)
-            {
-                var calculatedQuantityToReturn = request.Quantity - request.ActualQuantityUsed.Value;
-                request.QuantityToReturn = calculatedQuantityToReturn > 0 ? calculatedQuantityToReturn : (int?)null;
-            }
-
-            var updatedHistory = new ReplacementHistory
-            {
-                ReplacementId = replacementId,
-                EquipmentId = request.EquipmentId,
-                IncidentId = request.IncidentId,
-                WorkOrderId = request.WorkOrderId,
-                PartId = request.PartId,
-                Quantity = request.Quantity,
-                ReplacedDate = request.ReplacedDate,
-                ReplacedBy = request.ReplacedBy,
-                Status = request.Status,
-                Remarks = request.Remarks,
-                ActualQuantityUsed = request.ActualQuantityUsed,
-                QuantityToReturn = request.QuantityToReturn
-            };
-
-            return await _repository.UpdateAsync(updatedHistory, cancellationToken);
+            return result;
         }
 
         public async Task<ReplacementHistory> UpdateAsync(int replacementId, ReplacementHistory replacementHistory, CancellationToken cancellationToken = default)
@@ -218,6 +156,20 @@ namespace FITSKIP.Application.Services
                 throw new ArgumentException($"Lịch sử thay thế với id {replacementId} không tồn tại");
             }
             replacementHistory.ReplacementId = replacementId;
+
+            // Debug logging
+            Console.WriteLine($"=== UpdateAsync Debug ===");
+            Console.WriteLine($"ReplacementId: {replacementId}");
+            Console.WriteLine($"Quantity: {replacementHistory.Quantity}");
+            Console.WriteLine($"QuantityToReturn: {replacementHistory.QuantityToReturn}");
+            Console.WriteLine($"ReturnConfirmedBy: {replacementHistory.ReturnConfirmedBy}");
+            Console.WriteLine($"Old Status: {replacementHistory.Status}");
+
+            replacementHistory.Status = CalculateStatus(replacementHistory);
+
+            Console.WriteLine($"New Status: {replacementHistory.Status}");
+            Console.WriteLine($"===================");
+
             return await _repository.UpdateAsync(replacementHistory, cancellationToken);
         }
 
@@ -243,7 +195,7 @@ namespace FITSKIP.Application.Services
                 {
                     existing.ActualQuantityUsed = confirmationDto.ActualQuantityUsed.Value;
                     existing.QuantityToReturn = null;
-                    existing.Status = "Hoàn thành"; // Đã hoàn thành, không có thừa
+                    existing.Status = "Hoàn tất"; // Đã hoàn thành, không có thừa
                 }
             }
 
@@ -251,10 +203,10 @@ namespace FITSKIP.Application.Services
             existing.ReturnedDate = confirmationDto.ReturnedDate ?? DateTime.Now;
             existing.ReturnConfirmedBy = confirmationDto.ReturnConfirmedBy;
 
-            // Nếu đã xác nhận trả lại, cập nhật status thành "Hoàn thành" (tiếng Việt)
+            // Nếu đã xác nhận trả lại, cập nhật status thành "Hoàn tất"
             if (!string.IsNullOrEmpty(confirmationDto.ReturnConfirmedBy))
             {
-                existing.Status = "Hoàn thành"; // Hoàn thành - status cuối cùng (tiếng Việt)
+                existing.Status = "Hoàn tất"; // Hoàn tất - status cuối cùng
 
                 // ✅ MỚI: Set ReplacedDate = giờ Việt Nam hiện tại khi hoàn thành trả lại
                 if (existing.ReplacedDate == null)
@@ -262,6 +214,8 @@ namespace FITSKIP.Application.Services
                     existing.ReplacedDate = DateTimeHelper.GetVietnamNow();
                 }
             }
+
+            existing.Status = CalculateStatus(existing);
 
             return await _repository.UpdateAsync(existing, cancellationToken);
         }
@@ -281,177 +235,16 @@ namespace FITSKIP.Application.Services
             ).ToList();
         }
 
-        private void ValidateQuantity(int quantity)
+        /// <summary>
+        /// Cập nhật status cho tất cả bản ghi dựa trên logic mới
+        /// </summary>
+        public async Task UpdateAllStatusesAsync(CancellationToken cancellationToken = default)
         {
-            if (quantity <= 0)
+            var all = await _repository.GetAllAsync(cancellationToken);
+            foreach (var rh in all)
             {
-                throw new ReplacementHistoryValidationException(
-                    "Số lượng phải lớn hơn 0",
-                    "REPLACEMENT_HISTORY_QUANTITY_INVALID",
-                    new { Quantity = quantity });
-            }
-
-            if (quantity > 10000)
-            {
-                throw new ReplacementHistoryValidationException(
-                    "Số lượng không được vượt quá 10.000",
-                    "REPLACEMENT_HISTORY_QUANTITY_TOO_LARGE",
-                    new { MaxQuantity = 10000, ActualQuantity = quantity });
-            }
-        }
-
-        private async Task ValidatePartIdAsync(int partId, CancellationToken cancellationToken)
-        {
-            var exists = await _sparePartRepository.ExistsAsync(partId, cancellationToken);
-            if (!exists)
-            {
-                throw new ReplacementHistoryValidationException(
-                    $"Không tìm thấy phụ tùng với ID {partId}",
-                    "SPARE_PART_NOT_FOUND",
-                    new { PartId = partId });
-            }
-        }
-
-        private async Task ValidateReplacedByAsync(string replacedBy, CancellationToken cancellationToken)
-        {
-            if (string.IsNullOrWhiteSpace(replacedBy))
-            {
-                throw new ReplacementHistoryValidationException(
-                    "Người thay thế không được để trống",
-                    "REPLACEMENT_HISTORY_REPLACED_BY_REQUIRED");
-            }
-
-            var user = await _userRepository.GetUserByIdAsync(replacedBy, cancellationToken);
-            if (user == null)
-            {
-                throw new ReplacementHistoryValidationException(
-                    $"Không tìm thấy người dùng với ID {replacedBy}",
-                    "USER_NOT_FOUND",
-                    new { UserId = replacedBy });
-            }
-        }
-
-        private async Task ValidateEquipmentIdAsync(int equipmentId, CancellationToken cancellationToken)
-        {
-            var equipment = await _equipmentRepository.GetByIdAsync(equipmentId, cancellationToken);
-            if (equipment == null)
-            {
-                throw new ReplacementHistoryValidationException(
-                    $"Không tìm thấy thiết bị với ID {equipmentId}",
-                    "EQUIPMENT_NOT_FOUND",
-                    new { EquipmentId = equipmentId });
-            }
-        }
-
-        private async Task ValidateIncidentIdAsync(int incidentId, CancellationToken cancellationToken)
-        {
-            var incident = await _incidentRepository.GetByIdAsync(incidentId, cancellationToken);
-            if (incident == null)
-            {
-                throw new ReplacementHistoryValidationException(
-                    $"Không tìm thấy sự cố với ID {incidentId}",
-                    "INCIDENT_NOT_FOUND",
-                    new { IncidentId = incidentId });
-            }
-        }
-
-        private async Task ValidateWorkOrderIdAsync(int workOrderId, CancellationToken cancellationToken)
-        {
-            var workOrder = await _workOrderRepository.GetByIdAsync(workOrderId);
-            if (workOrder == null)
-            {
-                throw new ReplacementHistoryValidationException(
-                    $"Không tìm thấy lệnh bảo trì với ID {workOrderId}",
-                    "WORK_ORDER_NOT_FOUND",
-                    new { WorkOrderId = workOrderId });
-            }
-        }
-
-        private void ValidateStatus(string status)
-        {
-            if (string.IsNullOrWhiteSpace(status))
-            {
-                throw new ReplacementHistoryValidationException(
-                    "Trạng thái không được để trống",
-                    "REPLACEMENT_HISTORY_STATUS_REQUIRED");
-            }
-
-            // Allow common status values
-            var allowedStatuses = new[] { "Chờ duyệt cấp phát", "Đã cấp phát", "Hoàn thành", "Đã hủy", "Chờ trả lại" };
-            if (!allowedStatuses.Contains(status.Trim()))
-            {
-                throw new ReplacementHistoryValidationException(
-                    $"Trạng thái '{status}' không hợp lệ. Các trạng thái hợp lệ: {string.Join(", ", allowedStatuses)}",
-                    "REPLACEMENT_HISTORY_STATUS_INVALID",
-                    new { Status = status, AllowedStatuses = allowedStatuses });
-            }
-        }
-
-        private void ValidateRemarks(string remarks)
-        {
-            if (remarks.Length > 500)
-            {
-                throw new ReplacementHistoryValidationException(
-                    "Ghi chú không được vượt quá 500 ký tự",
-                    "REPLACEMENT_HISTORY_REMARKS_TOO_LONG",
-                    new { MaxLength = 500, ActualLength = remarks.Length });
-            }
-        }
-
-        private void ValidateReplacedDate(DateTime replacedDate)
-        {
-            if (replacedDate > DateTime.Now.AddHours(1)) // Allow 1 hour in future for timezone differences
-            {
-                throw new ReplacementHistoryValidationException(
-                    "Ngày thay thế không được ở tương lai",
-                    "REPLACEMENT_HISTORY_DATE_IN_FUTURE",
-                    new { ReplacedDate = replacedDate });
-            }
-
-            if (replacedDate < new DateTime(2000, 1, 1))
-            {
-                throw new ReplacementHistoryValidationException(
-                    "Ngày thay thế không được nhỏ hơn năm 2000",
-                    "REPLACEMENT_HISTORY_DATE_TOO_OLD",
-                    new { ReplacedDate = replacedDate, MinDate = new DateTime(2000, 1, 1) });
-            }
-        }
-
-        private void ValidateActualQuantityUsed(int actualQuantityUsed, int requestedQuantity)
-        {
-            if (actualQuantityUsed < 0)
-            {
-                throw new ReplacementHistoryValidationException(
-                    "Số lượng thực tế sử dụng không được âm",
-                    "REPLACEMENT_HISTORY_ACTUAL_QUANTITY_NEGATIVE",
-                    new { ActualQuantityUsed = actualQuantityUsed });
-            }
-
-            if (actualQuantityUsed > requestedQuantity * 2) // Allow reasonable overage
-            {
-                throw new ReplacementHistoryValidationException(
-                    "Số lượng thực tế sử dụng không được vượt quá 2 lần số lượng yêu cầu",
-                    "REPLACEMENT_HISTORY_ACTUAL_QUANTITY_TOO_LARGE",
-                    new { ActualQuantityUsed = actualQuantityUsed, RequestedQuantity = requestedQuantity, MaxAllowed = requestedQuantity * 2 });
-            }
-        }
-
-        private void ValidateQuantityToReturn(int quantityToReturn)
-        {
-            if (quantityToReturn < 0)
-            {
-                throw new ReplacementHistoryValidationException(
-                    "Số lượng cần trả lại không được âm",
-                    "REPLACEMENT_HISTORY_RETURN_QUANTITY_NEGATIVE",
-                    new { QuantityToReturn = quantityToReturn });
-            }
-
-            if (quantityToReturn > 10000)
-            {
-                throw new ReplacementHistoryValidationException(
-                    "Số lượng cần trả lại không được vượt quá 10.000",
-                    "REPLACEMENT_HISTORY_RETURN_QUANTITY_TOO_LARGE",
-                    new { MaxQuantity = 10000, ActualQuantity = quantityToReturn });
+                rh.Status = CalculateStatus(rh);
+                await _repository.UpdateAsync(rh, cancellationToken);
             }
         }
     }

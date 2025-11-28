@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace FITSKIP.Infrastructure.Migrations
 {
     [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251120100244_InitialCreate")]
+    [Migration("20251125021714_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -538,7 +538,7 @@ namespace FITSKIP.Infrastructure.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("WorkOrderId"));
 
-                    b.Property<DateTime>("AssignedDate")
+                    b.Property<DateTime?>("AssignedDate")
                         .HasColumnType("datetime");
 
                     b.Property<string>("AssignedToElectrical")

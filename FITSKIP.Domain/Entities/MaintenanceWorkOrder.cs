@@ -17,7 +17,7 @@ public partial class MaintenanceWorkOrder
 
     public int EquipmentId { get; set; }
 
-    public DateTime AssignedDate { get; set; }
+    public DateTime? AssignedDate { get; set; }
 
     /// <summary>
     /// Ngày dự định bảo trì - Ngày máy sẽ dừng để bảo trì

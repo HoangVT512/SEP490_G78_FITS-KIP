@@ -25,6 +25,7 @@ import {
   SafetyOutlined,
   EditOutlined,
   CheckCircleOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -36,10 +37,11 @@ import styles from "../../styles/pages/TechnicianManagerLayout.module.css";
 import TechnicianManagerDashboard from "./TechnicianManagerDashboard";
 import IncidentManagement from "./IncidentList";
 import MaintenancePlanManagement from "./MaintenanceManagement";
-import NotificationsList from "../ManagerPage/NotificationsList";
+import NotificationsList from "./NotificationsList";
 import ReplacementReturnPage from "./ReplacementReturnPage";
 import ReplacementHistoryPage from "./ReplacementHistoryPage";
 import KtvReturnConfirmPage from "../TechnicianPage/KtvReturnConfirmPage";
+import TechnicalManagerUserGuide from "../GuidePage/TechnicalManagerUserGuide";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -174,13 +176,19 @@ const TechnicianManagerLayout = () => {
       icon: <SafetyOutlined />,
       label: "Kế hoạch bảo trì",
       onClick: () => navigate("/technician-manager/maintenance-plans"),
-    },
+    }, 
     {
-      key: "replacement-history",
-      icon: <FileTextOutlined />,
-      label: "Lịch sử thay thế",
-      onClick: () => navigate("/technician-manager/replacement-history"),
-    },
+      key: "guide",
+      icon: <BookOutlined />,
+      label: "Hướng dẫn sử dụng",
+      onClick: () => navigate("/technician-manager/user-guide"),
+    }
+    // {
+    //   key: "replacement-history",
+    //   icon: <FileTextOutlined />,
+    //   label: "Lịch sử thay thế",
+    //   onClick: () => navigate("/technician-manager/replacement-history"),
+    // },
     // {
     //   key: "returns",
     //   icon: <EditOutlined />,
@@ -228,6 +236,8 @@ const TechnicianManagerLayout = () => {
       return <KtvReturnConfirmPage />;
     } else if (path.includes("notifications")) {
       return <NotificationsList />;
+    } else if (path.includes("user-guide")) {
+      return <TechnicalManagerUserGuide />;
     }
 
     return <TechnicianManagerDashboard />;

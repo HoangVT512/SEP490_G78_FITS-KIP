@@ -31,20 +31,23 @@ import {
 import styles from "../../styles/pages/TechnicianDashboard.module.css";
 import { useSignalR } from "../../contexts/SignalRContext";
 import { getMyWorkOrders } from "../../services/maintenanceService";
+import { incidentService } from "../../services/incidentService";
 import dayjs from "dayjs";
 
 const TechnicianDashboard = () => {
   const [loading, setLoading] = useState(false);
   const { isConnected, subscribe } = useSignalR();
-  
-  // State cho Work Orders
+
+  // State cho Work Orders và Incidents
   const [myWorkOrders, setMyWorkOrders] = useState([]);
+  const [myIncidents, setMyIncidents] = useState([]);
+
   const [dashboardStats, setDashboardStats] = useState({
-    totalWorkOrders: 0,
-    pendingWorkOrders: 0,
-    inProgressWorkOrders: 0,
-    completedWorkOrders: 0,
-    overdueWorkOrders: 0,
+    totalTasks: 0,
+    pendingTasks: 0,
+    inProgressTasks: 0,
+    completedTasks: 0,
+    overdueTasks: 0,
     todaySchedule: 0,
   });
 
@@ -53,37 +56,82 @@ const TechnicianDashboard = () => {
 
   // Load initial data
   useEffect(() => {
-    loadMyWorkOrders();
+    loadDashboardData();
   }, []);
 
-  const loadMyWorkOrders = async () => {
+  const loadDashboardData = async () => {
     setLoading(true);
     try {
-      const response = await getMyWorkOrders();
-      const workOrders = response?.data || [];
+      const [woResponse, incResponse] = await Promise.all([
+        getMyWorkOrders(),
+        incidentService.getAssignedToMe(),
+      ]);
+
+      const workOrders = woResponse?.data || woResponse?.Data || [];
+      // incidentService.getAssignedToMe() already returns the data array (or unwraps .data)
+      // so we should check if incResponse is an array, otherwise look for .data
+      const incidents = Array.isArray(incResponse)
+        ? incResponse
+        : incResponse?.data || incResponse?.Data || [];
+
       setMyWorkOrders(workOrders);
-      
+      setMyIncidents(incidents);
+
       // Calculate stats
+      const allTasks = [
+        ...workOrders.map((w) => ({ ...w, type: "maintenance" })),
+        ...incidents.map((i) => ({ ...i, type: "incident" })),
+      ];
+
       const stats = {
-        totalWorkOrders: workOrders.length,
-        pendingWorkOrders: workOrders.filter(wo => wo.status === 'Pending').length,
-        inProgressWorkOrders: workOrders.filter(wo => wo.status === 'InProgress').length,
-        completedWorkOrders: workOrders.filter(wo => wo.status === 'Completed').length,
-        overdueWorkOrders: workOrders.filter(wo => wo.status === 'Overdue').length,
-        todaySchedule: workOrders.filter(wo => dayjs(wo.dueDate).isSame(dayjs(), 'day')).length,
+        totalTasks: allTasks.length,
+        pendingTasks: allTasks.filter(
+          (t) => t.status === "Pending" || t.status === "Chờ xử lý"
+        ).length,
+        inProgressTasks: allTasks.filter(
+          (t) => t.status === "InProgress" || t.status === "Đang xử lý"
+        ).length,
+        completedTasks: allTasks.filter(
+          (t) => t.status === "Completed" || t.status === "Hoàn thành"
+        ).length,
+        overdueTasks: workOrders.filter((wo) => wo.status === "Overdue").length, // Incidents don't usually have "Overdue" status in the same way
+        todaySchedule: workOrders.filter((wo) =>
+          dayjs(wo.dueDate).isSame(dayjs(), "day")
+        ).length,
       };
       setDashboardStats(stats);
-      
+
+      // Populate recent activities from data
+      const activities = allTasks
+        .sort((a, b) => {
+          const dateA = a.createdDate || a.assignedDate;
+          const dateB = b.createdDate || b.assignedDate;
+          return dayjs(dateB).valueOf() - dayjs(dateA).valueOf();
+        })
+        .slice(0, 10)
+        .map((task) => ({
+          type: task.type === "incident" ? "assigned" : "assigned",
+          title:
+            task.type === "incident" ? "Sự cố được giao" : "Công việc bảo trì",
+          description: `${
+            task.equipmentCode || task.equipment?.equipmentCode
+          } - ${task.issue || task.taskName || "Bảo trì định kỳ"}`,
+          time: dayjs(task.createdDate || task.assignedDate).format(
+            "DD/MM/YYYY HH:mm"
+          ),
+        }));
+
+      setRecentActivities(activities);
     } catch (error) {
-      console.error("Load work orders error:", error);
-      message.error("Không thể tải danh sách công việc: " + error.message);
+      console.error("Load dashboard data error:", error);
+      message.error("Không thể tải dữ liệu dashboard: " + error.message);
     } finally {
       setLoading(false);
     }
   };
 
   // ===== REAL-TIME SIGNALR INTEGRATION =====
-  
+
   useEffect(() => {
     if (!isConnected) return;
 
@@ -92,74 +140,36 @@ const TechnicianDashboard = () => {
     // 1. Lắng nghe khi được giao Work Order mới
     const unsubscribeAssigned = subscribe("WorkOrderAssigned", (workOrder) => {
       console.log("📢 Technician received: New Work Order assigned", workOrder);
-      
-      // Thêm vào danh sách
-      setMyWorkOrders((prev) => [workOrder, ...prev]);
-      
-      // Cập nhật stats
-      setDashboardStats((prev) => ({
-        ...prev,
-        totalWorkOrders: prev.totalWorkOrders + 1,
-        pendingWorkOrders: prev.pendingWorkOrders + 1,
-      }));
-      
-      // Thêm vào activities
-      addActivity({
-        type: "assigned",
-        title: "Nhận công việc mới",
-        description: `${workOrder.equipmentName} - ${workOrder.equipmentCode}`,
-        time: "Vừa xong",
-      });
-      
-      // Reload để đảm bảo dữ liệu đồng bộ
-      setTimeout(() => loadMyWorkOrders(), 2000);
+      loadDashboardData();
     });
 
     // 2. Lắng nghe khi Work Order bị hủy
-    const unsubscribeCancelled = subscribe("WorkOrderCancelled", (workOrder) => {
-      console.log("📢 Technician received: Work Order cancelled", workOrder);
-      
-      // Cập nhật trạng thái
-      setMyWorkOrders((prev) =>
-        prev.map((wo) =>
-          wo.workOrderId === workOrder.workOrderId
-            ? { ...wo, status: "Cancelled", cancelReason: workOrder.reason }
-            : wo
-        )
-      );
-      
-      // Thêm vào activities
-      addActivity({
-        type: "cancelled",
-        title: "Công việc bị hủy",
-        description: `${workOrder.equipmentName} - ${workOrder.reason}`,
-        time: "Vừa xong",
-      });
-      
-      // Reload stats
-      loadMyWorkOrders();
-    });
+    const unsubscribeCancelled = subscribe(
+      "WorkOrderCancelled",
+      (workOrder) => {
+        console.log("📢 Technician received: Work Order cancelled", workOrder);
+        loadDashboardData();
+      }
+    );
 
     // 3. Lắng nghe khi có Work Order mới được tạo (cho tất cả technicians)
     const unsubscribeNewWO = subscribe("NewWorkOrderCreated", (workOrder) => {
       console.log("📢 Technician received: New Work Order created", workOrder);
-      
-      // Kiểm tra xem có phải công việc của mình không
-      // (Backend sẽ gửi đến đúng người được giao)
-      loadMyWorkOrders();
+      loadDashboardData();
     });
 
     // 4. Lắng nghe khi TechManager cập nhật phân công
-    const unsubscribeReassigned = subscribe("WorkOrderReassigned", (workOrder) => {
-      console.log("📢 Technician received: Work Order reassigned", workOrder);
-      
-      message.info({
-        content: `Công việc ${workOrder.equipmentName} đã được phân công lại`,
-        duration: 5,
-      });
-      
-      loadMyWorkOrders();
-    });
+    const unsubscribeReassigned = subscribe(
+      "WorkOrderReassigned",
+      (workOrder) => {
+        console.log("📢 Technician received: Work Order reassigned", workOrder);
+        message.info({
+          content: `Công việc ${workOrder.equipmentName} đã được phân công lại`,
+          duration: 5,
+        });
+        loadDashboardData();
+      }
+    );
 
     // Cleanup
     return () => {
@@ -172,15 +182,19 @@ const TechnicianDashboard = () => {
   }, [isConnected, subscribe]);
 
   // ===== AUTO REFRESH khi có thay đổi =====
-  
+
   useEffect(() => {
     if (!isConnected) return;
 
     const unsubscribeDataUpdate = subscribe("DataUpdated", (data) => {
       console.log("📢 Technician received: Data updated", data.type);
-      
-      if (data.type === "WorkOrder" || data.type === "MaintenanceAssignment") {
-        loadMyWorkOrders();
+
+      if (
+        data.type === "WorkOrder" ||
+        data.type === "MaintenanceAssignment" ||
+        data.type === "incident"
+      ) {
+        loadDashboardData();
       }
     });
 
@@ -193,18 +207,26 @@ const TechnicianDashboard = () => {
   };
 
   const handleRefresh = () => {
-    loadMyWorkOrders();
+    loadDashboardData();
   };
 
   // Get work orders for today
-  const todayWorkOrders = myWorkOrders.filter(wo => 
-    dayjs(wo.dueDate).isSame(dayjs(), 'day') && 
-    wo.status !== 'Completed' && 
-    wo.status !== 'Cancelled'
+  const todayWorkOrders = myWorkOrders.filter(
+    (wo) =>
+      dayjs(wo.dueDate).isSame(dayjs(), "day") &&
+      wo.status !== "Completed" &&
+      wo.status !== "Cancelled"
   );
 
   // Get pending work orders
-  const pendingWorkOrders = myWorkOrders.filter(wo => wo.status === 'Pending').slice(0, 5);
+  const pendingWorkOrders = myWorkOrders
+    .filter((wo) => wo.status === "Pending")
+    .slice(0, 5);
+
+  // Get pending incidents
+  const pendingIncidents = myIncidents
+    .filter((inc) => inc.status === "Chờ xử lý" || inc.status === "Đang xử lý")
+    .slice(0, 5);
 
   const workOrderColumns = [
     {
@@ -248,10 +270,14 @@ const TechnicianDashboard = () => {
       key: "dueDate",
       width: 130,
       render: (date) => {
-        const isToday = dayjs(date).isSame(dayjs(), 'day');
-        const isPast = dayjs(date).isBefore(dayjs(), 'day');
+        const isToday = dayjs(date).isSame(dayjs(), "day");
+        const isPast = dayjs(date).isBefore(dayjs(), "day");
         return (
-          <div style={{ color: isPast ? '#ff4d4f' : isToday ? '#faad14' : 'inherit' }}>
+          <div
+            style={{
+              color: isPast ? "#ff4d4f" : isToday ? "#faad14" : "inherit",
+            }}
+          >
             {dayjs(date).format("DD/MM/YYYY")}
           </div>
         );
@@ -264,11 +290,31 @@ const TechnicianDashboard = () => {
       width: 120,
       render: (status) => {
         const statusConfig = {
-          Pending: { color: "gold", icon: <ClockCircleOutlined />, text: "Chờ xử lý" },
-          InProgress: { color: "blue", icon: <ClockCircleOutlined />, text: "Đang thực hiện" },
-          Completed: { color: "green", icon: <CheckCircleOutlined />, text: "Hoàn thành" },
-          Cancelled: { color: "red", icon: <WarningOutlined />, text: "Đã hủy" },
-          Overdue: { color: "error", icon: <WarningOutlined />, text: "Quá hạn" },
+          Pending: {
+            color: "gold",
+            icon: <ClockCircleOutlined />,
+            text: "Chờ xử lý",
+          },
+          InProgress: {
+            color: "blue",
+            icon: <ClockCircleOutlined />,
+            text: "Đang thực hiện",
+          },
+          Completed: {
+            color: "green",
+            icon: <CheckCircleOutlined />,
+            text: "Hoàn thành",
+          },
+          Cancelled: {
+            color: "red",
+            icon: <WarningOutlined />,
+            text: "Đã hủy",
+          },
+          Overdue: {
+            color: "error",
+            icon: <WarningOutlined />,
+            text: "Quá hạn",
+          },
         };
         const config = statusConfig[status] || statusConfig.Pending;
         return (
@@ -280,45 +326,87 @@ const TechnicianDashboard = () => {
     },
   ];
 
+  const incidentColumns = [
+    {
+      title: "Mã sự cố",
+      dataIndex: "incidentId",
+      key: "incidentId",
+      width: 100,
+      render: (id) => `INC${String(id).padStart(3, "0")}`,
+    },
+    {
+      title: "Thiết bị",
+      key: "equipment",
+      width: 150,
+      render: (record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.equipmentCode}</div>
+          <div style={{ fontSize: "12px", color: "#888" }}>
+            {record.equipmentName}
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Vấn đề",
+      dataIndex: "issue",
+      key: "issue",
+      ellipsis: true,
+    },
+    {
+      title: "Ngày báo cáo",
+      dataIndex: "createdDate",
+      key: "createdDate",
+      width: 130,
+      render: (date) => dayjs(date).format("DD/MM/YYYY HH:mm"),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 120,
+      render: (status) => {
+        const colorMap = {
+          "Chờ xử lý": "warning",
+          "Đang xử lý": "processing",
+          "Hoàn thành": "success",
+        };
+        return <Tag color={colorMap[status] || "default"}>{status}</Tag>;
+      },
+    },
+  ];
+
   return (
     <div className={styles.dashboard}>
       {/* Real-time Connection Status */}
-      <div style={{ position: 'fixed', top: 70, right: 20, zIndex: 1000 }}>
-        <Badge 
-          status={isConnected ? "processing" : "default"} 
-          text={
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              {isConnected ? "Real-time: Kết nối" : "Real-time: Ngắt kết nối"}
-              {isConnected && <WifiOutlined style={{ color: '#52c41a' }} />}
-            </span>
-          } 
-        />
-      </div>
-
-      {/* Header Actions */}
-      <div className={styles.headerActions}>
-        <Button
-          icon={<ReloadOutlined />}
-          onClick={handleRefresh}
-          loading={loading}
-        >
-          Làm mới
-        </Button>
-      </div>
+      {isConnected && (
+        <div style={{ position: "fixed", top: 70, right: 20, zIndex: 1000 }}>
+          <Badge
+            status="processing"
+            text={
+              <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                Real-time: Kết nối
+                <WifiOutlined style={{ color: "#52c41a" }} />
+              </span>
+            }
+          />
+        </div>
+      )}
 
       {/* Statistics Cards */}
       <Row gutter={[16, 16]} className={styles.statsRow}>
         <Col xs={24} sm={12} lg={6}>
           <Card bordered={false} className={styles.statCard}>
             <Statistic
-              title="Tổng công việc"
-              value={dashboardStats.totalWorkOrders}
+              title="Tổng nhiệm vụ"
+              value={dashboardStats.totalTasks}
               prefix={<ToolOutlined />}
               valueStyle={{ color: "#1890ff" }}
             />
-            <div className={styles.statFooter}>
+            <div className={styles.statFooter} style={{ marginTop: "auto" }}>
               <span>
-                Đang làm: {dashboardStats.inProgressWorkOrders} | Chờ: {dashboardStats.pendingWorkOrders}
+                Đang làm: {dashboardStats.inProgressTasks} | Chờ:{" "}
+                {dashboardStats.pendingTasks}
               </span>
             </div>
           </Card>
@@ -328,12 +416,12 @@ const TechnicianDashboard = () => {
           <Card bordered={false} className={styles.statCard}>
             <Statistic
               title="Chờ xử lý"
-              value={dashboardStats.pendingWorkOrders}
+              value={dashboardStats.pendingTasks}
               prefix={<ClockCircleOutlined />}
               valueStyle={{ color: "#faad14" }}
             />
-            <div className={styles.statFooter}>
-              <span>Công việc cần bắt đầu</span>
+            <div className={styles.statFooter} style={{ marginTop: "auto" }}>
+              <span>Nhiệm vụ cần bắt đầu</span>
             </div>
           </Card>
         </Col>
@@ -346,7 +434,7 @@ const TechnicianDashboard = () => {
               prefix={<CalendarOutlined />}
               valueStyle={{ color: "#722ed1" }}
             />
-            <div className={styles.statFooter}>
+            <div className={styles.statFooter} style={{ marginTop: "auto" }}>
               <span>Nhiệm vụ cần thực hiện trong ngày</span>
             </div>
           </Card>
@@ -356,27 +444,32 @@ const TechnicianDashboard = () => {
           <Card bordered={false} className={styles.statCard}>
             <Statistic
               title="Đã hoàn thành"
-              value={dashboardStats.completedWorkOrders}
+              value={dashboardStats.completedTasks}
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: "#52c41a" }}
-              suffix={`/ ${dashboardStats.totalWorkOrders}`}
+              suffix={`/ ${dashboardStats.totalTasks}`}
             />
             <Progress
-              percent={dashboardStats.totalWorkOrders > 0 
-                ? Math.round((dashboardStats.completedWorkOrders / dashboardStats.totalWorkOrders) * 100)
-                : 0
+              percent={
+                dashboardStats.totalTasks > 0
+                  ? Math.round(
+                      (dashboardStats.completedTasks /
+                        dashboardStats.totalTasks) *
+                        100
+                    )
+                  : 0
               }
               size="small"
-              style={{ marginTop: 8 }}
+              style={{ marginTop: "auto" }}
             />
           </Card>
         </Col>
       </Row>
 
       {/* Alert for overdue tasks */}
-      {dashboardStats.overdueWorkOrders > 0 && (
+      {dashboardStats.overdueTasks > 0 && (
         <Alert
-          message={`Bạn có ${dashboardStats.overdueWorkOrders} công việc quá hạn`}
+          message={`Bạn có ${dashboardStats.overdueTasks} công việc quá hạn`}
           description="Vui lòng ưu tiên hoàn thành các công việc quá hạn."
           type="error"
           showIcon
@@ -394,8 +487,8 @@ const TechnicianDashboard = () => {
             title={
               <Space>
                 <ClockCircleOutlined />
-                <span>Công việc chờ xử lý</span>
-                <Badge count={dashboardStats.pendingWorkOrders} />
+                <span>Công việc bảo trì chờ xử lý</span>
+                <Badge count={pendingWorkOrders.length} />
               </Space>
             }
             extra={
@@ -404,6 +497,7 @@ const TechnicianDashboard = () => {
               </Button>
             }
             bordered={false}
+            style={{ marginBottom: 16 }}
           >
             {pendingWorkOrders.length > 0 ? (
               <Table
@@ -413,10 +507,45 @@ const TechnicianDashboard = () => {
                 scroll={{ x: 800 }}
                 size="small"
                 loading={loading}
+                rowKey="workOrderId"
               />
             ) : (
-              <Empty 
-                description="Không có công việc chờ xử lý" 
+              <Empty
+                description="Không có công việc chờ xử lý"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+              />
+            )}
+          </Card>
+
+          {/* Pending Incidents */}
+          <Card
+            title={
+              <Space>
+                <WarningOutlined />
+                <span>Sự cố chờ xử lý</span>
+                <Badge count={pendingIncidents.length} />
+              </Space>
+            }
+            extra={
+              <Button type="link" onClick={() => {}}>
+                Xem tất cả
+              </Button>
+            }
+            bordered={false}
+          >
+            {pendingIncidents.length > 0 ? (
+              <Table
+                columns={incidentColumns}
+                dataSource={pendingIncidents}
+                pagination={false}
+                scroll={{ x: 800 }}
+                size="small"
+                loading={loading}
+                rowKey="incidentId"
+              />
+            ) : (
+              <Empty
+                description="Không có sự cố chờ xử lý"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
               />
             )}
@@ -481,8 +610,8 @@ const TechnicianDashboard = () => {
                 })}
               />
             ) : (
-              <Empty 
-                description="Chưa có hoạt động nào" 
+              <Empty
+                description="Chưa có hoạt động nào"
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
               />
             )}
@@ -516,6 +645,7 @@ const TechnicianDashboard = () => {
                 scroll={{ x: 800 }}
                 size="small"
                 loading={loading}
+                rowKey="workOrderId"
               />
             ) : (
               <Empty description="Không có lịch làm việc nào hôm nay" />

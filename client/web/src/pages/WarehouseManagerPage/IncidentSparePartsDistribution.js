@@ -88,9 +88,8 @@ const IncidentSparePartsDistribution = () => {
   // State cho statistics
   const [statistics, setStatistics] = useState({
     total: 0,
-    distributed: 0,
-    returned: 0,
-    pendingReturn: 0,
+    inUse: 0,
+    completed: 0,
   });
 
   // Filter states
@@ -115,47 +114,53 @@ const IncidentSparePartsDistribution = () => {
     try {
       const allReplacements = await replacementHistoryService.getAll();
 
-      // Get both "Đã xuất" and "Đã trả lại" statuses
-      const exportedReplacements = (allReplacements || []).filter(
-        (r) => r.status === "Đã xuất" || r.status === "Đã trả lại"
+      // Get all replacement histories with any status
+      const allReplacementsFiltered = (allReplacements || []).filter(
+        (r) =>
+          r.status === "Đã xuất" ||
+          r.status === "Đã trả một phần" ||
+          r.status === "Hoàn tất"
       );
 
-      const formattedDistributions = exportedReplacements.map((replacement) => {
-        const distributionType = replacement.incidentId
-          ? "incident"
-          : "maintenance";
-        const recordId = replacement.incidentId || replacement.workOrderId;
+      const formattedDistributions = allReplacementsFiltered.map(
+        (replacement) => {
+          const distributionType = replacement.incidentId
+            ? "incident"
+            : "maintenance";
+          const recordId = replacement.incidentId || replacement.workOrderId;
 
-        return {
-          id: replacement.replacementID,
-          distributionType: distributionType,
-          recordId: recordId,
-          recordName: replacement.equipmentName || "",
-          recordCode: replacement.equipmentCode || "",
-          technicianName:
-            replacement.replacedByFullName ||
-            replacement.replacedByUserName ||
-            "",
-          technicianCode: replacement.replacedByEmployeeCode || "",
-          distributedAt: replacement.replacedDate,
-          distributedBy:
-            replacement.replacedByFullName ||
-            replacement.replacedByUserName ||
-            "",
-          items: [
-            {
-              partId: replacement.partID,
-              partName: replacement.partName || "",
-              partNumber: replacement.partNumber || "",
-              quantity: replacement.quantity,
-              actualQuantityUsed: replacement.actualQuantityUsed || 0,
-              quantityToReturn: replacement.quantityToReturn || 0,
-            },
-          ],
-          notes: replacement.remarks || "",
-          status: replacement.status || "Đã xuất",
-        };
-      });
+          return {
+            id: replacement.replacementID,
+            distributionType: distributionType,
+            recordId: recordId,
+            recordName: replacement.equipmentName || "",
+            recordCode: replacement.equipmentCode || "",
+            technicianName:
+              replacement.replacedByFullName ||
+              replacement.replacedByUserName ||
+              "",
+            technicianCode: replacement.replacedByEmployeeCode || "",
+            distributedAt: replacement.replacedDate,
+            distributedBy:
+              replacement.replacedByFullName ||
+              replacement.replacedByUserName ||
+              "",
+            returnDate: replacement.returnedDate, // Thêm trường ngày trả lại
+            items: [
+              {
+                partId: replacement.partID,
+                partName: replacement.partName || "",
+                partNumber: replacement.partNumber || "",
+                quantity: replacement.quantity,
+                actualQuantityUsed: replacement.actualQuantityUsed || 0,
+                quantityToReturn: replacement.quantityToReturn || 0,
+              },
+            ],
+            notes: replacement.remarks || "",
+            status: replacement.status || "Đã xuất",
+          };
+        }
+      );
 
       setDistributions(formattedDistributions);
       const grouped = groupDistributions(formattedDistributions);
@@ -172,8 +177,10 @@ const IncidentSparePartsDistribution = () => {
   const calculateStatistics = (distributions) => {
     const stats = {
       total: distributions.length,
-      exported: distributions.filter((d) => d.status === "Đã xuất").length,
-      returned: distributions.filter((d) => d.status === "Đã trả lại").length,
+      inUse: distributions.filter(
+        (d) => d.status === "Đã xuất" || d.status === "Đã trả một phần"
+      ).length,
+      completed: distributions.filter((d) => d.status === "Hoàn tất").length,
     };
     setStatistics(stats);
   };
@@ -230,7 +237,11 @@ const IncidentSparePartsDistribution = () => {
   const fetchSpareParts = async () => {
     try {
       const data = await sparePartService.getAll();
-      setSpareParts(data || []);
+      // Chỉ lấy phụ tùng có trạng thái hoạt động (isActive = true hoặc 1)
+      const activeSpareParts = (data || []).filter(
+        (sparePart) => sparePart.isActive === true || sparePart.isActive === 1
+      );
+      setSpareParts(activeSpareParts);
     } catch (error) {
       console.error("Error fetching spare parts:", error);
     }
@@ -542,6 +553,22 @@ const IncidentSparePartsDistribution = () => {
         return;
       }
 
+      // Check for duplicate spare parts
+      const partIds = selectedDistributions.map((item) => item.partId);
+      const hasDuplicates = partIds.some(
+        (id, index) => partIds.indexOf(id) !== index
+      );
+      if (hasDuplicates) {
+        const duplicateIndex = partIds.findIndex(
+          (id, index) => partIds.indexOf(id) !== index
+        );
+        const duplicateItem = selectedDistributions[duplicateIndex];
+        const name = duplicateItem ? duplicateItem.partName : "không xác định";
+        message.error(`Phụ tùng ${name} đã được thêm vào phiếu cấp phát`);
+        setLoading(false);
+        return;
+      }
+
       const invalidParts = selectedDistributions.some((part) => !part.partId);
       if (invalidParts) {
         message.warning("Vui lòng chọn phụ tùng cho tất cả các dòng");
@@ -794,32 +821,18 @@ const IncidentSparePartsDistribution = () => {
         console.log("Item workOrderId from returnItems:", item.workOrderId);
         console.log("Item incidentId from returnItems:", item.incidentId);
 
-        // Update only the return-related fields, keep everything else
-        // IMPORTANT: Use workOrderId and incidentId from item (stored when opening return modal)
-        // because backend API doesn't return these fields in getById
-        const updateData = {
-          partId: existingRecord.partID || existingRecord.partId,
-          equipmentId: existingRecord.equipmentID || existingRecord.equipmentId,
-          incidentId: item.incidentId || existingRecord.incidentId || null,
-          workOrderId: item.workOrderId || existingRecord.workOrderId || null,
-          quantity: existingRecord.quantity, // Keep original exported quantity
-          replacedDate: existingRecord.replacedDate, // Keep original date
-          replacedBy: existingRecord.replacedBy, // Keep original technician
-          status: "Đã trả lại", // Update status to returned
-          remarks:
-            existingRecord.remarks ||
-            values.returnNotes ||
-            `Trả lại ${item.quantityToReturn} phụ tùng`,
-          actualQuantityUsed: actualQuantityUsed, // Actual quantity used (đã dùng thực tế)
-          quantityToReturn: item.quantityToReturn, // Quantity being returned (số lượng trả lại)
-          returnedDate: dayjs().format("YYYY-MM-DDTHH:mm:ss"), // Return date (ngày trả lại)
-          returnConfirmedBy: currentUserId, // Warehouse manager who confirmed (người xác nhận)
+        // Prepare confirmation data for confirm-return API
+        const confirmationData = {
+          actualQuantityUsed: actualQuantityUsed,
+          returnedDate: dayjs().format("YYYY-MM-DDTHH:mm:ss"),
+          returnConfirmedBy: currentUserId,
         };
 
-        console.log("Update data being sent:", updateData);
-        console.log("WorkOrderId in update:", updateData.workOrderId);
-        console.log("IncidentId in update:", updateData.incidentId);
-        return replacementHistoryService.update(item.replacementId, updateData);
+        console.log("Confirmation data being sent:", confirmationData);
+        return replacementHistoryService.confirmReturn(
+          item.replacementId,
+          confirmationData
+        );
       });
 
       // Execute all updates
@@ -960,7 +973,7 @@ const IncidentSparePartsDistribution = () => {
       ),
     },
     {
-      title: "Số lượng",
+      title: "Số PT cấp phát",
       key: "totalItemsCount",
       width: 130,
       align: "center",
@@ -1048,12 +1061,12 @@ const IncidentSparePartsDistribution = () => {
         id: dist.id,
         distributedAt: dist.distributedAt,
         distributedBy: dist.distributedBy,
+        returnDate: dist.returnDate, // Thêm trường ngày trả lại
         items: dist.items,
         notes: dist.notes,
-        status: dist.status, // Add status to distribution record
+        status: dist.status, // Giữ status per distribution
       });
 
-      // Track all statuses for this record
       acc[key].allStatuses.add(dist.status);
 
       dist.items?.forEach((item) => {
@@ -1061,12 +1074,9 @@ const IncidentSparePartsDistribution = () => {
           (i) => i.partId === item.partId
         );
         if (existingItem) {
-          // Always add quantity regardless of status (quantity is the exported amount)
           existingItem.quantity += item.quantity || 0;
-          // Add returned quantity
           existingItem.quantityToReturn =
             (existingItem.quantityToReturn || 0) + (item.quantityToReturn || 0);
-          // Add actual used quantity
           existingItem.actualQuantityUsed =
             (existingItem.actualQuantityUsed || 0) +
             (item.actualQuantityUsed || 0);
@@ -1082,7 +1092,7 @@ const IncidentSparePartsDistribution = () => {
       return acc;
     }, {});
 
-    // Convert to array and determine primary status for each group
+    // Sửa logic aggregate: Ưu tiên status per record, aggregate chỉ khi tất cả đều giống nhau
     return Object.values(grouped).map((group) => {
       const totalQuantity = group.allItems.reduce(
         (sum, item) => sum + (item.quantity || 0),
@@ -1099,17 +1109,16 @@ const IncidentSparePartsDistribution = () => {
         0
       );
 
-      // Determine primary status based on allStatuses
-      // If all distributions have status "Đã trả lại", then the group status is "Đã trả lại"
-      // Otherwise, check if everything is returned (totalUsed === 0)
-      let primaryStatus = "Đã xuất";
+      // ✅ Sửa: Aggregate dựa trên status của từng distribution record
+      const allStatuses = Array.from(group.allStatuses);
+      let primaryStatus = "Đã xuất"; // Mặc định
 
-      const allReturned = Array.from(group.allStatuses).every(
-        (status) => status === "Đã trả lại"
-      );
-
-      if (allReturned || (totalQuantity > 0 && totalUsed === 0)) {
-        primaryStatus = "Đã trả lại";
+      if (allStatuses.length > 0) {
+        if (allStatuses.every((s) => s === "Hoàn tất")) {
+          primaryStatus = "Hoàn tất"; // Tất cả đều hoàn tất
+        } else if (allStatuses.some((s) => s === "Đã trả một phần")) {
+          primaryStatus = "Đã trả một phần"; // Có ít nhất một trả một phần
+        } // Ngược lại: "Đã xuất"
       }
 
       return {
@@ -1117,7 +1126,8 @@ const IncidentSparePartsDistribution = () => {
         totalQuantity,
         totalReturned,
         totalUsed,
-        status: primaryStatus,
+        status: primaryStatus, // Aggregate status
+        distributionStatuses: allStatuses, // Thêm list status per distribution để hiển thị
       };
     });
   };
@@ -1138,23 +1148,28 @@ const IncidentSparePartsDistribution = () => {
     setDetailModalVisible(true);
   }, []);
 
-  // Tab "Sự cố" và "Bảo trì" chỉ hiển thị những phiếu chưa trả hoàn toàn (còn đang sử dụng)
+  // Tab "Sự cố" và "Bảo trì" hiển thị những phiếu có ít nhất một phụ tùng chưa trả lại (có status "Đã xuất")
   const incidentDistributions = filteredDistributionsList.filter(
-    (d) => d.distributionType === "incident" && d.status === "Đã xuất"
+    (d) =>
+      d.distributionType === "incident" &&
+      d.distributionStatuses?.includes("Đã xuất")
   );
   const maintenanceDistributions = filteredDistributionsList.filter(
-    (d) => d.distributionType === "maintenance" && d.status === "Đã xuất"
+    (d) =>
+      d.distributionType === "maintenance" &&
+      d.distributionStatuses?.includes("Đã xuất")
   );
 
   // Hàm render expandable row cho trả lại vật tư
   const renderReturnExpandRow = (record) => {
     if (expandedReturnRow !== record.recordId) return null;
 
-    // Filter only "Đã xuất" distributions (not returned yet)
+    // Filter only distributions that can still return items
+    // - "Đã xuất": chưa trả gì, có thể trả
+    // - "Đã trả một phần": đã trả một phần, có thể trả thêm
+    // - "Hoàn tất": đã trả hết, KHÔNG thể trả thêm
     const activeDistributions =
-      record.distributions?.filter(
-        (dist) => dist.status === "Đã xuất" || !dist.status
-      ) || [];
+      record.distributions?.filter((dist) => dist.status === "Đã xuất") || [];
 
     console.log("Active distributions for return:", activeDistributions);
 
@@ -1473,10 +1488,10 @@ const IncidentSparePartsDistribution = () => {
             <Statistic
               title={
                 <span style={{ fontSize: "13px", color: "#52c41a" }}>
-                  Đã xuất
+                  Đã xuất (sử dụng)
                 </span>
               }
-              value={statistics.exported}
+              value={statistics.inUse}
               prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
               valueStyle={{ color: "#52c41a", fontSize: "24px" }}
             />
@@ -1487,10 +1502,10 @@ const IncidentSparePartsDistribution = () => {
             <Statistic
               title={
                 <span style={{ fontSize: "13px", color: "#722ed1" }}>
-                  Đã trả lại
+                  Hoàn tất
                 </span>
               }
-              value={statistics.returned}
+              value={statistics.completed}
               prefix={<InboxOutlined style={{ color: "#722ed1" }} />}
               valueStyle={{ color: "#722ed1", fontSize: "24px" }}
             />
@@ -1545,7 +1560,10 @@ const IncidentSparePartsDistribution = () => {
                 allowClear
               >
                 <Select.Option value="Đã xuất">Đã xuất</Select.Option>
-                <Select.Option value="Đã trả lại">Đã trả lại</Select.Option>
+                <Select.Option value="Đã trả một phần">
+                  Đã trả một phần
+                </Select.Option>
+                <Select.Option value="Hoàn tất">Hoàn tất</Select.Option>
               </Select>
             </Col>
             <Col xs={24} sm={24} md={8}>
@@ -1719,7 +1737,7 @@ const IncidentSparePartsDistribution = () => {
                       ),
                     },
                     {
-                      title: "Số lượng",
+                      title: "Tổng SL đã xuất",
                       key: "totalItemsCount",
                       width: 130,
                       align: "center",
@@ -1744,9 +1762,13 @@ const IncidentSparePartsDistribution = () => {
                             color: "green",
                             icon: <CheckCircleOutlined />,
                           },
-                          "Đã trả lại": {
-                            color: "purple",
-                            icon: <InboxOutlined />,
+                          "Đã trả một phần": {
+                            color: "orange",
+                            icon: <ClockCircleOutlined />,
+                          },
+                          "Hoàn tất": {
+                            color: "blue",
+                            icon: <CheckCircleOutlined />,
                           },
                         };
                         const config = statusConfig[status] || {
@@ -2055,100 +2077,84 @@ const IncidentSparePartsDistribution = () => {
               }
               description={
                 <div style={{ lineHeight: "1.8" }}>
-                  <Row gutter={[16, 8]}>
-                    <Col span={12}>
-                      <div style={{ display: "flex", flexWrap: "wrap" }}>
-                        <strong style={{ minWidth: 80, flexShrink: 0 }}>
-                          Thiết bị:
-                        </strong>
-                        <span style={{ flex: 1, paddingLeft: 8 }}>
-                          {selectedRecord.equipmentName ||
-                            selectedRecord.equipment?.equipmentName}{" "}
-                          (
-                          {selectedRecord.equipmentCode ||
-                            selectedRecord.equipment?.equipmentCode}
-                          )
-                        </span>
-                      </div>
-                    </Col>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        distributionType === "maintenance"
+                          ? "max-content 1fr max-content 1fr max-content 1fr"
+                          : "max-content 1fr max-content 1fr",
+                      gap: "8px 16px",
+                      alignItems: "start",
+                    }}
+                  >
+                    <strong>Thiết bị:</strong>
+                    <span>
+                      {selectedRecord.equipmentName ||
+                        selectedRecord.equipment?.equipmentName}{" "}
+                      (
+                      {selectedRecord.equipmentCode ||
+                        selectedRecord.equipment?.equipmentCode}
+                      )
+                    </span>
+
                     {distributionType === "maintenance" ? (
                       <>
-                        <Col span={12}>
-                          <div style={{ display: "flex", flexWrap: "wrap" }}>
-                            <strong style={{ minWidth: 120, flexShrink: 0 }}>
-                              KTV Cơ khí:
-                            </strong>
-                            <span style={{ flex: 1, paddingLeft: 8 }}>
-                              {selectedRecord.mechanicalTechnicianName ||
-                                selectedRecord.mechanicalTechnician?.fullName ||
-                                selectedRecord.mechanicalTechnician?.name || (
-                                  <span style={{ color: "#999" }}>
-                                    Chưa phân công
-                                  </span>
-                                )}
-                            </span>
-                          </div>
-                        </Col>
-                        <Col span={12}>
-                          <div style={{ display: "flex", flexWrap: "wrap" }}>
-                            <strong style={{ minWidth: 120, flexShrink: 0 }}>
-                              KTV Điện:
-                            </strong>
-                            <span style={{ flex: 1, paddingLeft: 8 }}>
-                              {selectedRecord.electricalTechnicianName ||
-                                selectedRecord.electricalTechnician?.fullName ||
-                                selectedRecord.electricalTechnician?.name || (
-                                  <span style={{ color: "#999" }}>
-                                    Chưa phân công
-                                  </span>
-                                )}
-                            </span>
-                          </div>
-                        </Col>
+                        <strong>KTV Cơ khí:</strong>
+                        <span>
+                          {selectedRecord.mechanicalTechnicianName ||
+                            selectedRecord.mechanicalTechnician?.fullName ||
+                            selectedRecord.mechanicalTechnician?.name || (
+                              <span style={{ color: "#999" }}>
+                                Chưa phân công
+                              </span>
+                            )}
+                        </span>
+
+                        <strong>KTV Điện:</strong>
+                        <span>
+                          {selectedRecord.electricalTechnicianName ||
+                            selectedRecord.electricalTechnician?.fullName ||
+                            selectedRecord.electricalTechnician?.name || (
+                              <span style={{ color: "#999" }}>
+                                Chưa phân công
+                              </span>
+                            )}
+                        </span>
                       </>
                     ) : (
-                      <Col span={12}>
-                        <div style={{ display: "flex", flexWrap: "wrap" }}>
-                          <strong style={{ minWidth: 100, flexShrink: 0 }}>
-                            Kỹ thuật viên:
-                          </strong>
-                          <span style={{ flex: 1, paddingLeft: 8 }}>
-                            {selectedRecord.assignedToName || "Chưa phân công"}
-                          </span>
-                        </div>
-                      </Col>
-                    )}
-                    <Col span={12}>
-                      <div style={{ display: "flex", flexWrap: "wrap" }}>
-                        <strong style={{ minWidth: 80, flexShrink: 0 }}>
-                          Dây chuyền:
-                        </strong>
-                        <span style={{ flex: 1, paddingLeft: 8 }}>
-                          {selectedRecord.lineName ||
-                            selectedRecord.equipment?.line?.lineName ||
-                            "N/A"}
+                      <>
+                        <strong>Kỹ thuật viên:</strong>
+                        <span>
+                          {selectedRecord.assignedToName || "Chưa phân công"}
                         </span>
-                      </div>
-                    </Col>
+                      </>
+                    )}
+
+                    <strong>Dây chuyền:</strong>
+                    <span>
+                      {selectedRecord.lineName ||
+                        selectedRecord.equipment?.line?.lineName ||
+                        "N/A"}
+                    </span>
+
                     {(selectedRecord.startTime ||
                       selectedRecord.scheduledDate) && (
-                      <Col span={12}>
-                        <div style={{ display: "flex", flexWrap: "wrap" }}>
-                          <strong style={{ minWidth: 100, flexShrink: 0 }}>
-                            {distributionType === "incident"
-                              ? "Thời gian bắt đầu:"
-                              : "Ngày lên kế hoạch:"}
-                          </strong>
-                          <span style={{ flex: 1, paddingLeft: 8 }}>
-                            {dayjs(
-                              selectedRecord.startTime ||
-                                selectedRecord.scheduledDate
-                            ).format("DD/MM/YYYY HH:mm")}
-                          </span>
-                        </div>
-                      </Col>
+                      <>
+                        <strong>
+                          {distributionType === "incident"
+                            ? "Thời gian bắt đầu:"
+                            : "Ngày thực hiện:"}
+                        </strong>
+                        <span>
+                          {dayjs(
+                            selectedRecord.startTime ||
+                              selectedRecord.scheduledDate
+                          ).format("DD/MM/YYYY")}
+                        </span>
+                      </>
                     )}
-                  </Row>
+                  </div>
                 </div>
               }
               type="success"
@@ -2569,15 +2575,17 @@ const IncidentSparePartsDistribution = () => {
 
             {selectedDistributionDetail.distributions?.some(
               (d) => d.returnDate
-            ) && (
-              <Descriptions.Item label="Ngày trả lại" span={2}>
-                {dayjs(
-                  selectedDistributionDetail.distributions.find(
-                    (d) => d.returnDate
-                  ).returnDate
-                ).format("DD/MM/YYYY HH:mm")}
-              </Descriptions.Item>
-            )}
+            ) &&
+              (selectedDistributionDetail.status === "Hoàn tất" ||
+                selectedDistributionDetail.status === "Đã trả một phần") && (
+                <Descriptions.Item label="Ngày trả lại" span={2}>
+                  {dayjs(
+                    selectedDistributionDetail.distributions.find(
+                      (d) => d.returnDate
+                    ).returnDate
+                  ).format("DD/MM/YYYY HH:mm")}
+                </Descriptions.Item>
+              )}
 
             {selectedDistributionDetail.notes && (
               <Descriptions.Item label="Ghi chú" span={2}>

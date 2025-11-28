@@ -13,5 +13,6 @@ public interface IIncidentRepository
     Task<IReadOnlyList<IncidentHistory>> GetByLineIdAsync(int lineId, DateTime startDate, DateTime endDate, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<IncidentHistory>> GetIncidentsByLineDateShiftSlotAsync(int lineId, DateTime date, int shiftId, DateTime startTime, DateTime endTime, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<dynamic>> GetStopTypesAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<IncidentHistory>> GetOverlappingIncidentsAsync(int lineId, DateTime date, DateTime startTime, DateTime endTime, int? excludeIncidentId = null, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<IncidentShift>> GetIncidentShiftsAsync(int incidentId, CancellationToken cancellationToken = default);
 }

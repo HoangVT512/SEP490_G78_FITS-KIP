@@ -236,7 +236,7 @@ namespace FITSKIP.Domain.DTO
         public string? LineName { get; set; }
         
         // Dates
-        public DateTime AssignedDate { get; set; }
+        public DateTime? AssignedDate { get; set; }
         public DateTime ScheduledDate { get; set; } // Ngày dự định bảo trì (ngày máy dừng)
         public DateTime DueDate { get; set; }
         public DateTime? StartedDate { get; set; }
@@ -282,6 +282,12 @@ namespace FITSKIP.Domain.DTO
         // Calculated
         public int DaysUntilDue { get; set; }
         public bool IsOverdue { get; set; }
+        
+        // Reminder
+        public int ReminderDaysBefore { get; set; } // Số ngày thông báo trước hạn (từ Plan)
+        
+        // Plan info (để validate postpone)
+        public DateTime? PlanNextDueDate { get; set; } // NextDueDate của Plan - dùng để validate không cho hoãn quá chu kỳ tiếp theo
     }
 
     public class CreateMaintenanceWorkOrderRequest
