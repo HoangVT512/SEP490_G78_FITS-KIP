@@ -29,6 +29,7 @@ import {
   SafetyOutlined,
   EditOutlined,
   ShoppingOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -50,6 +51,7 @@ import ManagerIncidentList from "./ManagerIncidentList";
 import NotificationsList from "./NotificationsList";
 import OEEDashboard from "./OEEDashboard";
 import DowntimeChartDashboard from "./DowntimeChartDashboard";
+import ManagerUserGuide from "../GuidePage/ManagerUserGuide";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -107,16 +109,14 @@ const ManagerLayout = () => {
           // Tăng số lượng notification badge
           setNotificationCount((prev) => prev + 1);
 
-          // Hiển thị toast notification
-          const content = `${
-            notificationData.title ? notificationData.title + ": " : ""
-          }${notificationData.message}`;
-          const type = notificationData.type || "info";
-
-          if (type === "success") antdMessage.success(content);
-          else if (type === "warning") antdMessage.warning(content);
-          else if (type === "error") antdMessage.error(content);
-          else antdMessage.info(content);
+          // Không hiển thị toast trên trang OEE Dashboard (chỉ cần realtime data, không cần toast)
+          const currentPath = window.location.pathname;
+          if (!currentPath.includes("/manager/oee")) {
+            // Hiển thị toast message ở giữa màn hình (giống login/logout)
+            const title = notificationData.Title || notificationData.title;
+            const msg = notificationData.Message || notificationData.message;
+            antdMessage.info(title ? `${title}: ${msg}` : msg, 5);
+          }
         });
 
         // Lắng nghe broadcast (thông báo cho tất cả)
@@ -126,16 +126,14 @@ const ManagerLayout = () => {
           // Tăng số lượng notification badge
           setNotificationCount((prev) => prev + 1);
 
-          // Hiển thị toast notification
-          const content = `${
-            broadcastData.title ? broadcastData.title + ": " : ""
-          }${broadcastData.message}`;
-          const type = broadcastData.type || "info";
-
-          if (type === "success") antdMessage.success(content);
-          else if (type === "warning") antdMessage.warning(content);
-          else if (type === "error") antdMessage.error(content);
-          else antdMessage.info(content);
+          // Không hiển thị toast trên trang OEE Dashboard (chỉ cần realtime data, không cần toast)
+          const currentPath = window.location.pathname;
+          if (!currentPath.includes("/manager/oee")) {
+            // Hiển thị toast message ở giữa màn hình (giống login/logout)
+            const title = broadcastData.Title || broadcastData.title;
+            const msg = broadcastData.Message || broadcastData.message;
+            antdMessage.info(title ? `${title}: ${msg}` : msg, 5);
+          }
         });
 
         console.log("✅ SignalR initialized successfully!");
@@ -182,6 +180,8 @@ const ManagerLayout = () => {
       setSelectedKey("oee");
     } else if (path.includes("/incidents")) {
       setSelectedKey("incidents");
+    } else if (path.includes("/user-guide")) {
+      setSelectedKey("user-guide");
     } else {
       setSelectedKey("dashboard");
     }
@@ -218,6 +218,8 @@ const ManagerLayout = () => {
       return <ManagerIncidentList />;
     } else if (path === "/manager" || path.includes("/dashboard")) {
       return <ManagerDashboard />;
+    } else if (path.includes("/user-guide")) {
+      return <ManagerUserGuide />;
     }
 
     // Default to dashboard
@@ -280,6 +282,11 @@ const ManagerLayout = () => {
       icon: <FileTextOutlined />,
       label: "Báo cáo sản lượng",
     },
+    {
+      key: "user-guide",
+      icon: <BookOutlined />,
+      label: "Hướng dẫn sử dụng",
+    },
     // {
     //   key: "incidents",
     //   icon: <WarningOutlined />,
@@ -326,6 +333,9 @@ const ManagerLayout = () => {
         break;
       case "incidents":
         navigate("/manager/incidents");
+        break;
+      case "user-guide":
+        navigate("/manager/user-guide");
         break;
       default:
         navigate("/manager/dashboard");

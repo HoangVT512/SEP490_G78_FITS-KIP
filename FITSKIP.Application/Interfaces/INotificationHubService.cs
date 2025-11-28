@@ -2,10 +2,10 @@ namespace FITSKIP.Application.Interfaces
 {
     public interface INotificationHubService
     {
-        Task SendToUserAsync(string userId, object data);
-        Task SendToGroupAsync(string groupName, object data);
+        Task SendToUserAsync(string userId, object data, string dataType = "incident");
+        Task SendToGroupAsync(string groupName, object data, string dataType = "incident");
         Task SendToAllAsync(object data);
-        
+
         // Maintenance Real-time Notifications
         Task SendWorkOrderAssignedAsync(string technicianId, object workOrderData);
         Task SendWorkOrderStartedAsync(object workOrderData);

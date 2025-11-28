@@ -15,7 +15,7 @@ namespace FITSKIP.API.Services
             _logger = logger;
         }
 
-        public async Task SendToUserAsync(string userId, object data)
+        public async Task SendToUserAsync(string userId, object data, string dataType = "incident")
         {
             _logger.LogInformation($"📤 Sending notification to user: {userId}");
             _logger.LogInformation($"   Data: {System.Text.Json.JsonSerializer.Serialize(data)}");
@@ -27,11 +27,11 @@ namespace FITSKIP.API.Services
 
             // Also send DataUpdated for auto-refresh
             await _hubContext.Clients.Group($"user_{userId}")
-                .SendAsync("DataUpdated", new { type = "incident", action = "created", data = data });
-            _logger.LogInformation($"   ✅ Sent DataUpdated event to user {userId}");
+                .SendAsync("DataUpdated", new { type = dataType, action = "created", data = data });
+            _logger.LogInformation($"   ✅ Sent DataUpdated event to user {userId} with type: {dataType}");
         }
 
-        public async Task SendToGroupAsync(string groupName, object data)
+        public async Task SendToGroupAsync(string groupName, object data, string dataType = "incident")
         {
             _logger.LogInformation($"📢 Sending notification to group: {groupName}");
             _logger.LogInformation($"   Data: {System.Text.Json.JsonSerializer.Serialize(data)}");
@@ -43,8 +43,8 @@ namespace FITSKIP.API.Services
 
             // Also send DataUpdated for auto-refresh
             await _hubContext.Clients.Group(groupName)
-                .SendAsync("DataUpdated", new { type = "incident", action = "created", data = data });
-            _logger.LogInformation($"   ✅ Sent DataUpdated event to group {groupName}");
+                .SendAsync("DataUpdated", new { type = dataType, action = "created", data = data });
+            _logger.LogInformation($"   ✅ Sent DataUpdated event to group {groupName} with type: {dataType}");
         }
 
         public async Task SendToAllAsync(object data)
@@ -92,10 +92,10 @@ namespace FITSKIP.API.Services
         public async Task SendWorkOrderAssignedAsync(string technicianId, object workOrderData)
         {
             _logger.LogInformation($"📋 Sending WorkOrderAssigned to technician: {technicianId}");
-            
+
             await _hubContext.Clients.Group($"user_{technicianId}")
                 .SendAsync("WorkOrderAssigned", workOrderData);
-            
+
             _logger.LogInformation($"✅ Sent WorkOrderAssigned to technician {technicianId}");
         }
 
@@ -105,11 +105,11 @@ namespace FITSKIP.API.Services
         public async Task SendWorkOrderStartedAsync(object workOrderData)
         {
             _logger.LogInformation($"▶️ Broadcasting WorkOrderStarted to TechnicalManagers");
-            
+
             // Gửi đến tất cả TechManager
             await _hubContext.Clients.Group("TechnicalManagers")
                 .SendAsync("WorkOrderStarted", workOrderData);
-            
+
             _logger.LogInformation($"✅ Broadcasted WorkOrderStarted");
         }
 
@@ -119,10 +119,10 @@ namespace FITSKIP.API.Services
         public async Task SendWorkOrderCompletedAsync(object workOrderData)
         {
             _logger.LogInformation($"✅ Broadcasting WorkOrderCompleted to TechnicalManagers");
-            
+
             await _hubContext.Clients.Group("TechnicalManagers")
                 .SendAsync("WorkOrderCompleted", workOrderData);
-            
+
             _logger.LogInformation($"✅ Broadcasted WorkOrderCompleted");
         }
 
@@ -132,24 +132,24 @@ namespace FITSKIP.API.Services
         public async Task SendWorkOrderProgressUpdatedAsync(object progressData)
         {
             _logger.LogInformation($"🔄 Sending WorkOrderProgressUpdated");
-            
+
             // Sử dụng JSON để parse data an toàn
             try
             {
                 var jsonData = System.Text.Json.JsonSerializer.Serialize(progressData);
                 var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(jsonData);
-                
+
                 if (dict != null && dict.ContainsKey("otherTechnicianId"))
                 {
                     var otherTechId = dict["otherTechnicianId"].GetString();
-                    
+
                     if (!string.IsNullOrEmpty(otherTechId))
                     {
                         _logger.LogInformation($"   Sending to technician: {otherTechId}");
-                        
+
                         await _hubContext.Clients.Group($"user_{otherTechId}")
                             .SendAsync("WorkOrderProgressUpdated", progressData);
-                        
+
                         _logger.LogInformation($"✅ Sent WorkOrderProgressUpdated to technician {otherTechId}");
                     }
                 }
@@ -158,11 +158,11 @@ namespace FITSKIP.API.Services
             {
                 _logger.LogWarning($"⚠️ Failed to parse otherTechnicianId: {ex.Message}");
             }
-            
+
             // Cũng gửi đến TechManager để họ thấy tiến độ
             await _hubContext.Clients.Group("TechnicalManagers")
                 .SendAsync("WorkOrderProgressUpdated", progressData);
-            
+
             _logger.LogInformation($"✅ Broadcasted WorkOrderProgressUpdated to TechnicalManagers");
         }
 
@@ -172,10 +172,10 @@ namespace FITSKIP.API.Services
         public async Task SendWorkOrderCancelledAsync(string technicianId, object workOrderData)
         {
             _logger.LogInformation($"❌ Sending WorkOrderCancelled to technician: {technicianId}");
-            
+
             await _hubContext.Clients.Group($"user_{technicianId}")
                 .SendAsync("WorkOrderCancelled", workOrderData);
-            
+
             _logger.LogInformation($"✅ Sent WorkOrderCancelled to technician {technicianId}");
         }
 
@@ -185,10 +185,10 @@ namespace FITSKIP.API.Services
         public async Task SendChecklistItemUpdatedAsync(object checklistData)
         {
             _logger.LogInformation($"☑️ Broadcasting ChecklistItemUpdated to TechnicalManagers");
-            
+
             await _hubContext.Clients.Group("TechnicalManagers")
                 .SendAsync("ChecklistItemUpdated", checklistData);
-            
+
             _logger.LogInformation($"✅ Broadcasted ChecklistItemUpdated");
         }
 
@@ -198,10 +198,10 @@ namespace FITSKIP.API.Services
         public async Task SendNewWorkOrderCreatedAsync(string technicianId, object workOrderData)
         {
             _logger.LogInformation($"🆕 Sending NewWorkOrderCreated to technician: {technicianId}");
-            
+
             await _hubContext.Clients.Group($"user_{technicianId}")
                 .SendAsync("NewWorkOrderCreated", workOrderData);
-            
+
             _logger.LogInformation($"✅ Sent NewWorkOrderCreated to technician {technicianId}");
         }
 
@@ -211,10 +211,10 @@ namespace FITSKIP.API.Services
         public async Task SendMaintenancePostponedAsync(object planData)
         {
             _logger.LogInformation($"⏰ Broadcasting MaintenancePostponed to TechnicalManagers");
-            
+
             await _hubContext.Clients.Group("TechnicalManagers")
                 .SendAsync("MaintenancePostponed", planData);
-            
+
             _logger.LogInformation($"✅ Broadcasted MaintenancePostponed");
         }
 
@@ -224,10 +224,10 @@ namespace FITSKIP.API.Services
         public async Task SendTechnicianRequestHelpAsync(object requestData)
         {
             _logger.LogInformation($"🆘 Broadcasting TechnicianRequestHelp to TechnicalManagers");
-            
+
             await _hubContext.Clients.Group("TechnicalManagers")
                 .SendAsync("TechnicianRequestHelp", requestData);
-            
+
             _logger.LogInformation($"✅ Broadcasted TechnicianRequestHelp");
         }
 
@@ -237,11 +237,11 @@ namespace FITSKIP.API.Services
         public async Task SendDataUpdatedAsync(string dataType, object data)
         {
             _logger.LogInformation($"🔄 Broadcasting DataUpdated: {dataType}");
-            
+
             // Gửi đến TechnicalManagers
             await _hubContext.Clients.Group("TechnicalManagers")
                 .SendAsync("DataUpdated", new { type = dataType, data = data, timestamp = DateTime.UtcNow });
-            
+
             _logger.LogInformation($"✅ Broadcasted DataUpdated: {dataType}");
         }
 
@@ -251,21 +251,21 @@ namespace FITSKIP.API.Services
         public async Task SendWorkOrderReassignedAsync(string oldTechnicianId, string newTechnicianId, object workOrderData)
         {
             _logger.LogInformation($"🔄 Sending WorkOrderReassigned - Old: {oldTechnicianId}, New: {newTechnicianId}");
-            
+
             // Thông báo cho KTV cũ
             if (!string.IsNullOrEmpty(oldTechnicianId))
             {
                 await _hubContext.Clients.Group($"user_{oldTechnicianId}")
                     .SendAsync("WorkOrderUnassigned", workOrderData);
             }
-            
+
             // Thông báo cho KTV mới
             if (!string.IsNullOrEmpty(newTechnicianId))
             {
                 await _hubContext.Clients.Group($"user_{newTechnicianId}")
                     .SendAsync("WorkOrderAssigned", workOrderData);
             }
-            
+
             _logger.LogInformation($"✅ Sent WorkOrderReassigned notifications");
         }
 
@@ -276,12 +276,12 @@ namespace FITSKIP.API.Services
         {
             _logger.LogInformation($"✅ Broadcasting ReplacementApproved to Technicians");
             _logger.LogInformation($"   Data: {System.Text.Json.JsonSerializer.Serialize(replacementData)}");
-            
+
             // Gửi đến tất cả Technicians (group "Technicians")
             await _hubContext.Clients.Group("Technicians")
                 .SendAsync("ReplacementApproved", replacementData);
-            
+
             _logger.LogInformation($"✅ Broadcasted ReplacementApproved to Technicians");
         }
     }
-}   
+}

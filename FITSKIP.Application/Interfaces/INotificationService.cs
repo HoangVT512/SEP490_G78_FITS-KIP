@@ -14,8 +14,8 @@ namespace FITSKIP.Application.Interfaces
         Task DeleteAllReadNotificationsAsync(string userId);
 
         // Real-time notification methods
-        Task SendNotificationToUserAsync(string userId, string title, string message, string type = "info");
-        Task SendNotificationToGroupAsync(string groupName, string title, string message, string type = "info");
+        Task SendNotificationToUserAsync(string userId, string title, string message, string type = "info", string dataType = "incident");
+        Task SendNotificationToGroupAsync(string groupName, string title, string message, string type = "info", string dataType = "incident");
         Task SendNotificationToGroupWithDataAsync(string groupName, object notificationData);
         Task SendNotificationToAllAsync(string title, string message, string type = "info");
         Task SendNotificationToRoleAsync(string roleName, string message, string type = "info");

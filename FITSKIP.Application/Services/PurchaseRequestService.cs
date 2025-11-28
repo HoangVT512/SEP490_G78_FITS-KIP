@@ -115,7 +115,8 @@ public class PurchaseRequestService : IPurchaseRequestService
             "Managers",
             "Đơn yêu cầu mua hàng mới",
             $"Có một đơn yêu cầu mua hàng mới từ {user.FullName} (Mã: {createdRequest.RequestId})",
-            "info"
+            "info",
+            "purchaseRequest"
         );
 
         return PurchaseRequestDTO.FromEntity(createdRequest);

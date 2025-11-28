@@ -24,6 +24,7 @@ import {
   EditOutlined,
   AppstoreOutlined,
   SwapOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -37,6 +38,7 @@ import ReplacementComponents from "./ReplacementComponents";
 import IncidentManagement from "./IncidentManagement";
 import EFormSystem from "./EFormSystem";
 import DowntimeChartDashboard from "../ManagerPage/DowntimeChartDashboard";
+import TeamLeaderUserGuide from "../GuidePage/TeamLeaderUserGuide";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -80,6 +82,8 @@ const TeamLeaderLayout = () => {
       setSelectedKey("line-monitoring");
     } else if (path.includes("/reports")) {
       setSelectedKey("reports");
+    } else if (path.includes("/user-guide")) {
+      setSelectedKey("user-guide");
     } else {
       setSelectedKey("dashboard");
     }
@@ -113,6 +117,8 @@ const TeamLeaderLayout = () => {
       return <DowntimeChartDashboard />;
     } else if (path === "/team-leader" || path.includes("/dashboard")) {
       return <TeamLeaderDashboard />;
+    } else if (path.includes("/user-guide")) {
+      return <TeamLeaderUserGuide />;
     }
 
     // Default to dashboard
@@ -140,11 +146,11 @@ const TeamLeaderLayout = () => {
     //   icon: <BarChartOutlined />,
     //   label: "Quản lý sản xuất",
     // },
-    {
-      key: "equipment",
-      icon: <ToolOutlined />,
-      label: "Quản lý thiết bị",
-    },
+    //{
+    //  key: "equipment",
+    //  icon: <ToolOutlined />,
+    //  label: "Quản lý thiết bị",
+    //},
     // {
     //   key: "replacement",
     //   icon: <SwapOutlined />,
@@ -154,6 +160,11 @@ const TeamLeaderLayout = () => {
       key: "incidents",
       icon: <WarningOutlined />,
       label: "Quản lý sự cố",
+    },
+    {
+      key: "user-guide",
+      icon: <BookOutlined />,
+      label: "Hướng dẫn sử dụng",
     },
     // {
     //   key: "reports",
@@ -188,6 +199,9 @@ const TeamLeaderLayout = () => {
         break;
       case "reports":
         navigate("/team-leader/reports");
+        break;
+      case "user-guide":
+        navigate("/team-leader/user-guide");
         break;
       default:
         navigate("/team-leader/dashboard");

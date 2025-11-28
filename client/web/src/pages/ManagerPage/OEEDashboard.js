@@ -104,13 +104,15 @@ const OEEDashboard = () => {
           // Listen for general data updates
           handleDataUpdate = (data) => {
             console.log("📊 Data updated:", data);
+            // Reload khi có sự cố hoặc sản lượng mới
             if (
               data?.type === "incident" ||
+              data?.type === "production" ||
               data?.action === "created" ||
               data?.action === "updated" ||
               data?.action === "deleted"
             ) {
-              console.log("🚨 Incident data changed, refreshing...");
+              console.log("🚨 Data changed, refreshing OEE Dashboard...");
               fetchData(selectedDate);
             }
           };

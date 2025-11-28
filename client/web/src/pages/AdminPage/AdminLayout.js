@@ -39,6 +39,7 @@ import RoleManagement from "../AdminPage/RoleManagement";
 import EquipmentManagement from "../AdminPage/EquipmentManagement";
 import SystemSettings from "../AdminPage/SystemSettings";
 import AdminReports from "../AdminPage/AdminReports";
+import AdminGuidePanel from "../GuidePage/AdminGuidePanel";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -97,10 +98,15 @@ const AdminLayout = () => {
       label: "Quản lý vai trò",
     },
     {
-      key: "reports",
-      icon: <BarChartOutlined />,
-      label: "Báo cáo & Thống kê",
+      key: "guide",
+      icon: <EditOutlined />,
+      label: "Hướng dẫn sử dụng",
     },
+    // {
+    //   key: "reports",
+    //   icon: <BarChartOutlined />,
+    //   label: "Báo cáo & Thống kê",
+    // },
     {
       key: "settings",
       icon: <SettingOutlined />,
@@ -160,6 +166,8 @@ const AdminLayout = () => {
         return <EquipmentManagement showHeader={false} />;
       case "roles":
         return <RoleManagement showHeader={false} />;
+      case "guide":
+        return <AdminGuidePanel />;
       case "reports":
         return <AdminReports showHeader={false} />;
       case "settings":

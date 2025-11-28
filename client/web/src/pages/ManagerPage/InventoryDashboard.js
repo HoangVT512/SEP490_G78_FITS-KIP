@@ -1,246 +1,236 @@
 import React, { useState, useEffect } from "react";
-import {
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Progress,
-  Table,
-  Tag,
-  Spin,
-  message,
-} from "antd";
+import { Card, Row, Col, Statistic, Table, Tag, Spin, message } from "antd";
 import {
   InboxOutlined,
   WarningOutlined,
-  RiseOutlined,
-  DollarOutlined,
+  AppstoreOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import { Pie, Column } from "@ant-design/plots";
-import dayjs from "dayjs";
 import styles from "../../styles/pages/InventoryDashboard.module.css";
 import { sparePartService } from "../../services/sparePartService";
 
 const InventoryDashboard = () => {
   const [loading, setLoading] = useState(true);
+  const [spareParts, setSpareParts] = useState([]);
+  const [allParts, setAllParts] = useState([]);
   const [statistics, setStatistics] = useState({
     totalItems: 0,
     lowStockItems: 0,
+    totalQuantity: 0,
     activeItems: 0,
-    inactiveItems: 0,
   });
-  const [lowStockData, setLowStockData] = useState([]);
-  const [categoryData, setCategoryData] = useState([]);
-  const [usageTrendData, setUsageTrendData] = useState([]);
+  const [top5StockData, setTop5StockData] = useState([]);
+  const [statusData, setStatusData] = useState([]);
 
+  // Fetch data from API
   useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch all spare parts (including inactive)
+        const parts = await sparePartService.getAll();
+        const allPartsArray = Array.isArray(parts) ? parts : [];
+        setAllParts(allPartsArray);
+
+        const activeParts = allPartsArray.filter((p) => p.isActive);
+        const inactiveParts = allPartsArray.filter((p) => !p.isActive);
+        setSpareParts(activeParts);
+
+        // Calculate statistics
+        const totalItems = allPartsArray.length;
+        const lowStockItems = activeParts.filter(
+          (p) => p.quantity < p.minQuantity
+        ).length;
+        const totalQuantity = activeParts.reduce(
+          (sum, p) => sum + (p.quantity || 0),
+          0
+        );
+        const activeItems = activeParts.length;
+
+        setStatistics({
+          totalItems,
+          lowStockItems,
+          totalQuantity,
+          activeItems,
+        });
+
+        // Calculate status distribution (Active vs Inactive)
+        const statusDistribution = [
+          { status: "Đang hoạt động", count: activeParts.length },
+          { status: "Ngưng hoạt động", count: inactiveParts.length },
+        ];
+        setStatusData(statusDistribution);
+
+        // Get top 5 spare parts with highest stock quantity
+        const top5Stock = [...activeParts]
+          .sort((a, b) => b.quantity - a.quantity)
+          .slice(0, 5)
+          .map((p) => ({
+            partName:
+              p.partName?.length > 20
+                ? p.partName.substring(0, 20) + "..."
+                : p.partName,
+            quantity: p.quantity || 0,
+          }));
+        setTop5StockData(top5Stock);
+      } catch (error) {
+        console.error("Error fetching inventory data:", error);
+        message.error("Không thể tải dữ liệu tồn kho");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchData();
   }, []);
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-
-      // 1. Fetch all spare parts
-      const allParts = await sparePartService.getAll();
-
-      // Calculate statistics from allParts
-      const totalItems = allParts.length;
-      const lowStockItemsList = allParts.filter(
-        (p) => p.quantity <= p.minQuantity
-      );
-      const lowStockCount = lowStockItemsList.length;
-
-      // Calculate active/inactive count
-      const activeCount = allParts.filter((p) => p.isActive).length;
-      const inactiveCount = allParts.filter((p) => !p.isActive).length;
-
-      // Calculate parts quantity distribution (top parts by quantity in stock)
-      const partsWithQuantity = allParts
-        .filter((p) => p.quantity > 0)
-        .map((p) => ({
-          type: p.partName,
-          value: p.quantity,
-        }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 10); // Top 10 parts with highest quantity
-
-      const categoryChartData = partsWithQuantity;
-
-      // Calculate status distribution for chart
-      const statusMap = {};
-      allParts.forEach((p) => {
-        const status = p.status || "Chưa xác định";
-        statusMap[status] = (statusMap[status] || 0) + 1;
-      });
-
-      const statusChartData = Object.keys(statusMap).map((status) => ({
-        name: status,
-        value: statusMap[status],
-      }));
-
-      setStatistics({
-        totalItems,
-        lowStockItems: lowStockCount,
-        activeItems: activeCount,
-        inactiveItems: inactiveCount,
-      });
-
-      setLowStockData(
-        allParts.map((item) => ({
-          id: item.partId,
-          partNumber: item.partNumber,
-          partName: item.partName,
-          partType: item.partType,
-          currentStock: item.quantity,
-          minStock: item.minQuantity,
-          location: item.location,
-          dateAdded: item.dateAdded,
-          status: item.status,
-          isActive: item.isActive,
-        }))
-      );
-
-      setCategoryData(categoryChartData);
-      setUsageTrendData(statusChartData);
-    } catch (error) {
-      console.error("Error fetching inventory dashboard data:", error);
-      message.error("Không thể tải dữ liệu báo cáo kho");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const lowStockColumns = [
+  // Table columns for spare parts list
+  const sparePartsColumns = [
     {
-      title: "Mã phụ tùng",
+      title: "Mã",
       dataIndex: "partNumber",
       key: "partNumber",
-      width: 120,
-      sorter: (a, b) => a.partNumber.localeCompare(b.partNumber),
+      width: 80,
     },
     {
       title: "Tên phụ tùng",
       dataIndex: "partName",
       key: "partName",
-      width: 200,
-      sorter: (a, b) => a.partName.localeCompare(b.partName),
+      width: 180,
+      ellipsis: true,
     },
     {
       title: "Loại",
       dataIndex: "partType",
       key: "partType",
-      width: 100,
-      filters: [...new Set(lowStockData.map((item) => item.partType))].map(
-        (type) => ({ text: type || "Khác", value: type })
-      ),
-      onFilter: (value, record) => record.partType === value,
+      width: 120,
+      ellipsis: true,
+      render: (type) => type || "-",
     },
     {
       title: "Số lượng",
-      dataIndex: "currentStock",
-      key: "currentStock",
-      width: 100,
+      dataIndex: "quantity",
+      key: "quantity",
+      width: 90,
       align: "center",
-      sorter: (a, b) => a.currentStock - b.currentStock,
-      render: (stock, record) => (
-        <span
-          style={{
-            color:
-              stock <= record.minStock
-                ? "#ff4d4f"
-                : stock <= record.minStock * 1.5
-                ? "#faad14"
-                : "#52c41a",
-            fontWeight: "bold",
-          }}
-        >
-          {stock}
-        </span>
-      ),
+      render: (qty, record) => {
+        const isLow = qty < record.minQuantity;
+        return (
+          <span
+            style={{ color: isLow ? "#ff4d4f" : "#52c41a", fontWeight: "bold" }}
+          >
+            {qty}
+          </span>
+        );
+      },
     },
     {
       title: "Tối thiểu",
-      dataIndex: "minStock",
-      key: "minStock",
-      width: 100,
+      dataIndex: "minQuantity",
+      key: "minQuantity",
+      width: 80,
       align: "center",
-      sorter: (a, b) => a.minStock - b.minStock,
     },
     {
       title: "Vị trí",
       dataIndex: "location",
       key: "location",
-      width: 120,
+      width: 80,
+      render: (loc) => loc || "-",
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       width: 120,
-      filters: [...new Set(lowStockData.map((item) => item.status))].map(
-        (status) => ({ text: status || "N/A", value: status })
-      ),
-      onFilter: (value, record) => record.status === value,
-      render: (status) => (
-        <Tag
-          color={
-            status === "Còn hàng"
-              ? "success"
-              : status === "Hết hàng"
-              ? "error"
-              : "default"
-          }
-        >
-          {status || "N/A"}
-        </Tag>
-      ),
-    },
-    {
-      title: "Hoạt động",
-      dataIndex: "isActive",
-      key: "isActive",
-      width: 100,
-      align: "center",
-      filters: [
-        { text: "Đang hoạt động", value: true },
-        { text: "Ngừng hoạt động", value: false },
-      ],
-      onFilter: (value, record) => record.isActive === value,
-      render: (isActive) => (
-        <Tag color={isActive ? "success" : "default"}>
-          {isActive ? "Hoạt động" : "Ngừng"}
-        </Tag>
-      ),
+      render: (status, record) => {
+        // Ưu tiên hiển thị status từ DB, nếu không có thì tính theo quantity
+        if (status) {
+          // Status từ DB: "Đủ hàng", "Sắp hết", "Hết hàng"
+          const isWarning = status === "Sắp hết";
+          const isDanger = status === "Hết hàng";
+          return (
+            <Tag color={isDanger ? "error" : isWarning ? "warning" : "success"}>
+              {status}
+            </Tag>
+          );
+        }
+        // Fallback: tính theo quantity nếu chưa có status
+        if (record.quantity === 0) {
+          return <Tag color="error">Hết hàng</Tag>;
+        } else if (record.quantity <= record.minQuantity) {
+          return <Tag color="warning">Sắp hết</Tag>;
+        }
+        return <Tag color="success">Đủ hàng</Tag>;
+      },
     },
   ];
 
-  const pieConfig = {
-    data: categoryData,
-    angleField: "value",
-    colorField: "type",
-    radius: 0.8,
-    legend: {
-      position: "bottom",
+  // Màu sắc khác nhau cho từng thanh bar
+  const barColors = ["#1890ff", "#52c41a", "#faad14", "#722ed1", "#13c2c2"];
+
+  const barConfig = {
+    data: top5StockData,
+    xField: "partName",
+    yField: "quantity",
+    colorField: "partName",
+    legend: false,
+    height: 250,
+    style: {
+      fill: ({ partName }) => {
+        const index = top5StockData.findIndex((d) => d.partName === partName);
+        return barColors[index % barColors.length];
+      },
+    },
+    label: {
+      text: "quantity",
+      position: "inside",
+      style: {
+        fill: "#fff",
+        fontWeight: "bold",
+      },
+    },
+    axis: {
+      x: {
+        labelFormatter: (text) =>
+          text?.length > 12 ? text.substring(0, 12) + "..." : text,
+      },
+      y: {
+        title: "Số lượng",
+      },
     },
   };
 
-  const columnConfig = {
-    data: usageTrendData,
-    xField: "name",
-    yField: "value",
-    label: {
-      position: "top",
-      style: {
-        fill: "#000000",
-        opacity: 0.6,
+  const pieConfig = {
+    data: statusData,
+    angleField: "count",
+    colorField: "status",
+    radius: 0.7,
+    innerRadius: 0.4,
+    height: 250,
+    scale: {
+      color: {
+        range: ["#52c41a", "#ff4d4f"],
       },
     },
-    xAxis: {
-      label: {
-        autoHide: false,
-        autoRotate: true,
+    legend: {
+      color: {
+        position: "bottom",
+        layout: { justifyContent: "center" },
       },
+    },
+    label: {
+      text: (d) => `${d.status}: ${d.count}`,
+      position: "outside",
+      style: {
+        fontWeight: "bold",
+        fontSize: 12,
+      },
+    },
+    tooltip: {
+      title: "status",
     },
   };
 
@@ -273,20 +263,22 @@ const InventoryDashboard = () => {
             <Col xs={24} sm={12} md={6}>
               <Card>
                 <Statistic
-                  title="Đang hoạt động"
-                  value={statistics.activeItems}
-                  prefix={<RiseOutlined style={{ color: "#52c41a" }} />}
+                  title="Tổng số lượng"
+                  value={statistics.totalQuantity}
+                  prefix={<AppstoreOutlined style={{ color: "#52c41a" }} />}
+                  suffix="cái"
                   valueStyle={{ color: "#52c41a" }}
+                  precision={0}
                 />
               </Card>
             </Col>
             <Col xs={24} sm={12} md={6}>
               <Card>
                 <Statistic
-                  title="Ngừng hoạt động"
-                  value={statistics.inactiveItems}
-                  prefix={<DollarOutlined style={{ color: "#8c8c8c" }} />}
-                  valueStyle={{ color: "#8c8c8c" }}
+                  title="Đang hoạt động"
+                  value={statistics.activeItems}
+                  prefix={<CheckCircleOutlined style={{ color: "#722ed1" }} />}
+                  valueStyle={{ color: "#722ed1" }}
                 />
               </Card>
             </Col>
@@ -295,29 +287,56 @@ const InventoryDashboard = () => {
           {/* Charts */}
           <Row gutter={16} style={{ marginBottom: 24 }}>
             <Col xs={24} md={12}>
-              <Card title="Top 10 Linh kiện có số lượng lớn nhất trong kho">
-                <Pie {...pieConfig} />
+              <Card
+                title="Top 5 phụ tùng tồn kho nhiều nhất"
+                style={{ height: 350 }}
+              >
+                {top5StockData.length > 0 ? (
+                  <div style={{ height: 260 }}>
+                    <Column {...barConfig} />
+                  </div>
+                ) : (
+                  <div
+                    style={{ textAlign: "center", padding: 50, color: "#999" }}
+                  >
+                    Chưa có dữ liệu
+                  </div>
+                )}
               </Card>
             </Col>
             <Col xs={24} md={12}>
-              <Card title="Phân bố theo trạng thái">
-                <Column {...columnConfig} />
+              <Card
+                title="Phân bố theo trạng thái hoạt động"
+                style={{ height: 350 }}
+              >
+                {statusData.length > 0 ? (
+                  <div style={{ height: 260 }}>
+                    <Pie {...pieConfig} />
+                  </div>
+                ) : (
+                  <div
+                    style={{ textAlign: "center", padding: 50, color: "#999" }}
+                  >
+                    Không có dữ liệu
+                  </div>
+                )}
               </Card>
             </Col>
           </Row>
 
-          {/* Spare Parts Inventory List */}
+          {/* Spare Parts List */}
           <Card title="Danh sách phụ tùng trong kho">
             <Table
-              columns={lowStockColumns}
-              dataSource={lowStockData}
-              rowKey="id"
+              columns={sparePartsColumns}
+              dataSource={spareParts}
+              rowKey="partId"
               pagination={{
                 pageSize: 10,
                 showSizeChanger: true,
                 showTotal: (total) => `Tổng ${total} phụ tùng`,
               }}
-              scroll={{ x: 1200 }}
+              size="small"
+              scroll={{ x: 800 }}
             />
           </Card>
         </Card>
