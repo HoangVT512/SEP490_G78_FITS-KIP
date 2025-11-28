@@ -112,13 +112,11 @@ namespace FITSKIP.Application.Services
                             // Normalize category
                             if (category.Equals("Electrical", StringComparison.OrdinalIgnoreCase))
                                 category = "Electrical";
-                            else if (category.Equals("Mechanical", StringComparison.OrdinalIgnoreCase))
-                                category = "Mechanical";
                             else
-                                category = "General";
+                                category = "Mechanical";
+                            
                         }
 
-                        // Tạo unique key cho template (StageName + TemplateName)
                         var templateKey = $"{stageName}_{templateName}";
 
                         // Nếu template chưa tồn tại, tạo mới
@@ -141,7 +139,6 @@ namespace FITSKIP.Application.Services
                             {
                                 "Electrical" => "Electrical",
                                 "Mechanical" => "Mechanical",
-                                _ => null // General không yêu cầu role cụ thể
                             };
 
                             templates[templateKey].TemplateItems.Add(new CreateTemplateItemRequest
@@ -222,11 +219,11 @@ namespace FITSKIP.Application.Services
 
                 // Add instructions - ✅ SỬA hướng dẫn
                 var instructionRow = worksheet.Dimension.Rows + 2;
-                worksheet.Cells[instructionRow, 1].Value = "HƯỚNG DẪN:";
+                worksheet.Cells[instructionRow, 1].Value = "HƯỚNG DẪN: (LƯU Ý: xóa hướng dẫn trước khi import)";
                 worksheet.Cells[instructionRow, 1].Style.Font.Bold = true;
                 worksheet.Cells[instructionRow + 1, 1].Value = "- Mỗi dòng là 1 bước kiểm tra (checklist item)";
                 worksheet.Cells[instructionRow + 2, 1].Value = "- Các dòng có cùng 'Tên công đoạn' và 'Tên mẫu bảo trì' sẽ được gom thành 1 template";
-                worksheet.Cells[instructionRow + 3, 1].Value = "- Loại: nhập 'Electrical' (điện), 'Mechanical' (cơ), hoặc 'General' (chung)"; // ✅ SỬA
+                worksheet.Cells[instructionRow + 3, 1].Value = "- Loại: nhập 'Electrical' (điện), 'Mechanical' (cơ)";
                 worksheet.Cells[instructionRow + 4, 1].Value = "- Thứ tự: số nguyên dương (1, 2, 3,...)";
                 worksheet.Cells[instructionRow + 5, 1].Value = "- Mô tả chi tiết bước: Hướng dẫn cụ thể cách thực hiện bước kiểm tra"; // ✅ THÊM
 
@@ -360,12 +357,11 @@ namespace FITSKIP.Application.Services
                 worksheet.Cells[5, 3].Value = "Mechanical";
                 worksheet.Cells[5, 4].Value = 4;
 
-                // Auto-fit columns
                 worksheet.Cells[worksheet.Dimension.Address].AutoFitColumns();
 
                 // Add instructions
                 var instructionRow = worksheet.Dimension.Rows + 2;
-                worksheet.Cells[instructionRow, 1].Value = "HƯỚNG DẪN:";
+                worksheet.Cells[instructionRow, 1].Value = "HƯỚNG DẪN: (LƯU Ý: xóa hướng dẫn trước khi import)";
                 worksheet.Cells[instructionRow, 1].Style.Font.Bold = true;
                 worksheet.Cells[instructionRow + 1, 1].Value = "- Mỗi dòng là 1 bước kiểm tra (checklist item)";
                 worksheet.Cells[instructionRow + 2, 1].Value = "- Loại công việc: nhập 'Electrical' (điện) hoặc 'Mechanical' (cơ)";
