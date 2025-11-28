@@ -193,34 +193,70 @@ namespace FITSKIP.Application.Services
             if (workOrder == null)
                 throw new InvalidOperationException($"Không tìm thấy phiếu bảo trì với ID: {workOrderId}");
 
+            // ✅ #4: Validate không cho update WO đã hoàn thành/đóng/hủy
+            if (workOrder.Status == "Hoàn thành" || workOrder.Status == "Đã đóng")
+            {
+                throw new InvalidOperationException(
+                    $"❌ Không thể cập nhật phiếu bảo trì đã {workOrder.Status.ToLower()}. " +
+                    $"Vui lòng tạo phiếu bảo trì mới nếu cần."
+                );
+            }
+
+            if (workOrder.Status == "Đã hủy")
+            {
+                throw new InvalidOperationException("❌ Không thể cập nhật phiếu bảo trì đã hủy!");
+            }
+
             if (request.ScheduledDate.HasValue)
             {
                 var scheduledDate = request.ScheduledDate.Value.Date;
                 var today = DateTime.Now.Date;
+                var plan = await _planRepository.GetByIdAsync(workOrder.PlanId);
                 
-                if (workOrder.Status == "Quá hạn")
-                {
-                    var maxAllowedDate = today.AddDays(2);
-                    if (scheduledDate < today)
-                    {
-                        throw new InvalidOperationException("❌ Ngày bảo trì không được là ngày trong quá khứ!");
-                    }
-                    if (scheduledDate > maxAllowedDate)
-                    {
-                        throw new InvalidOperationException($"❌ Ngày bảo trì quá hạn chỉ được chuyển tối đa 2 ngày kể từ hôm nay ({maxAllowedDate:dd/MM/yyyy})!");
-                    }
-                }
-                else if (scheduledDate < today)
+                // ✅ Validate ngày không được quá khứ
+                if (scheduledDate < today)
                 {
                     throw new InvalidOperationException("❌ Ngày bảo trì không được là ngày trong quá khứ!");
                 }
 
-                var plan = await _planRepository.GetByIdAsync(workOrder.PlanId);
+                // ✅ TIER 2: Quá hạn CHƯA giao việc → Giới hạn từ hôm nay đến trước NextDueDate
+                if (workOrder.Status == "Quá hạn")
+                {
+                    bool hasAssigned = !string.IsNullOrEmpty(request.AssignedToElectrical) || 
+                                      !string.IsNullOrEmpty(request.AssignedToMechanical);
+                    
+                    // Chưa có KTV được giao → Áp dụng giới hạn
+                    if (!hasAssigned)
+                    {
+                        if (plan != null)
+                        {
+                            // Tính max date = NextDueDate (chu kỳ tiếp theo)
+                            DateTime maxAllowedDate = plan.NextDueDate.Date;
+                            
+                            if (scheduledDate >= maxAllowedDate)
+                            {
+                                throw new InvalidOperationException(
+                                    $"❌ Phiếu quá hạn chưa giao việc chỉ được phép giao từ hôm nay ({today:dd/MM/yyyy}) đến trước chu kỳ tiếp theo ({maxAllowedDate:dd/MM/yyyy})."
+                                );
+                            }
+                        }
+                    }
+                    // Đã có KTV → Không giới hạn (TIER 1: làm bình thường)
+                }
+                // Không quá hạn → Check thông thường
+                else if (scheduledDate > workOrder.DueDate.Date)
+                {
+                    throw new InvalidOperationException($"❌ Ngày bảo trì không được sau ngày đến hạn ({workOrder.DueDate:dd/MM/yyyy})!");
+                }
+
+                // Check duplicate WO
                 if (plan != null)
                 {
                     var allWorkOrders = await _workOrderRepository.GetByPlanIdAsync(workOrder.PlanId);
+                    
+                    // Check duplicate completed WO
                     var duplicateCompletedWO = allWorkOrders.FirstOrDefault(wo =>
-                        wo.WorkOrderId != workOrderId && // Không tính chính WO này
+                        wo.WorkOrderId != workOrderId &&
                         wo.Status == "Hoàn thành" &&
                         wo.CompletedDate.HasValue &&
                         wo.CompletedDate.Value.Date == scheduledDate
@@ -234,19 +270,23 @@ namespace FITSKIP.Application.Services
                             $"(Phiếu #{duplicateCompletedWO.WorkOrderCode}). Vui lòng chọn ngày khác."
                         );
                     }
-                }
-                
-                if (workOrder.Status == "Quá hạn")
-                {
-                    var maxAllowedDate = DateTime.Now.Date.AddDays(2);
-                    if (scheduledDate > maxAllowedDate)
+                    
+                    // ✅ #6: Check duplicate active WO (chưa hoàn thành)
+                    var duplicateActiveWO = allWorkOrders.FirstOrDefault(wo =>
+                        wo.WorkOrderId != workOrderId &&
+                        wo.Status != "Hoàn thành" &&
+                        wo.Status != "Đã hủy" &&
+                        wo.Status != "Đã đóng" &&
+                        wo.ScheduledDate.Date == scheduledDate
+                    );
+
+                    if (duplicateActiveWO != null)
                     {
-                        throw new InvalidOperationException($"Ngày bảo trì quá hạn chỉ được chuyển tối đa đến {maxAllowedDate:dd/MM/yyyy}!");
+                        throw new InvalidOperationException(
+                            $"❌ Đã có phiếu bảo trì #{duplicateActiveWO.WorkOrderCode} được lên lịch vào ngày {scheduledDate:dd/MM/yyyy}. " +
+                            $"Không thể có 2 phiếu bảo trì cùng ngày cho 1 thiết bị!"
+                        );
                     }
-                }
-                else if (scheduledDate > workOrder.DueDate.Date)
-                {
-                    throw new InvalidOperationException($"Ngày bảo trì không được sau ngày đến hạn ({workOrder.DueDate:dd/MM/yyyy})!");
                 }
             }
             
@@ -272,30 +312,47 @@ namespace FITSKIP.Application.Services
             var oldElectrical = workOrder.AssignedToElectrical;
             var oldMechanical = workOrder.AssignedToMechanical;
 
+            // ✅ Lưu ngày phân công khi lần đầu giao việc
+            var hadTechnicianBefore = !string.IsNullOrEmpty(oldElectrical) || !string.IsNullOrEmpty(oldMechanical);
+            bool hasAssignedNow = !string.IsNullOrEmpty(request.AssignedToElectrical) || 
+                                  !string.IsNullOrEmpty(request.AssignedToMechanical);
+            
+            if (!hadTechnicianBefore && hasAssignedNow)
+            {
+                // Lần đầu giao việc → Cập nhật AssignedDate
+                workOrder.AssignedDate = DateTime.Now;
+            }
+
 
             if (request.ScheduledDate.HasValue)
             {
                 var oldScheduledDate = workOrder.ScheduledDate;
+                
                 workOrder.ScheduledDate = request.ScheduledDate.Value.Date;
                 
-                if (workOrder.Status == "Quá hạn")
+                // ✅ Khi giao việc cho WO quá hạn → Chuyển về "Chờ xử lý"
+                if (workOrder.Status == "Quá hạn" && hasAssignedNow)
                 {
-                    bool hasAssigned = !string.IsNullOrEmpty(request.AssignedToElectrical) || 
-                                       !string.IsNullOrEmpty(request.AssignedToMechanical);
                     workOrder.Status = "Chờ xử lý";
-                    
-                    var autoNote = $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Dời lịch bảo trì quá hạn từ {oldScheduledDate:dd/MM/yyyy} sang {request.ScheduledDate.Value.Date:dd/MM/yyyy}";
+                }
+                
+                // ✅ Phân biệt: Lần đầu giao việc vs Cập nhật ngày
+                if (!hadTechnicianBefore && hasAssignedNow)
+                {
+                    // Lần đầu giao việc → Ghi "Ngày làm việc"
+                    var autoNote = $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Ngày làm việc: {request.ScheduledDate.Value.Date:dd/MM/yyyy}";
                     if (!string.IsNullOrEmpty(request.Notes))
                     {
-                        workOrder.Notes = (workOrder.Notes ?? "") + autoNote + $" - Lý do: {request.Notes}";
+                        workOrder.Notes = (workOrder.Notes ?? "") + autoNote + $" - Ghi chú: {request.Notes}";
                     }
                     else
                     {
                         workOrder.Notes = (workOrder.Notes ?? "") + autoNote;
                     }
                 }
-                else if (oldScheduledDate != workOrder.ScheduledDate)
+                else if (hadTechnicianBefore && oldScheduledDate != workOrder.ScheduledDate)
                 {
+                    // Đã có KTV + đổi ngày → Ghi "Cập nhật ngày bảo trì"
                     var autoNote = $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Cập nhật ngày bảo trì từ {oldScheduledDate:dd/MM/yyyy} sang {request.ScheduledDate.Value.Date:dd/MM/yyyy}";
                     if (!string.IsNullOrEmpty(request.Notes))
                     {
@@ -689,6 +746,12 @@ namespace FITSKIP.Application.Services
             if (workOrder == null)
                 throw new InvalidOperationException($"Work order not found: {workOrderId}");
 
+            // ✅ #2: Validate lý do hủy không được trống
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                throw new InvalidOperationException("❌ Phải nhập lý do hủy phiếu bảo trì!");
+            }
+
 
             if (workOrder.Status == "Đang thực hiện")
             {
@@ -714,7 +777,7 @@ namespace FITSKIP.Application.Services
             var shouldUpdateCycle = workOrder.Status != "Đã hủy";
             
             workOrder.Status = "Đã hủy";
-            workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Cancelled: {reason}";
+            workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Quản lý Kỹ thuật hủy bảo trì lần này. Lý do: {reason}";
             workOrder.UpdatedDate = DateTime.Now;
             
 
@@ -724,15 +787,18 @@ namespace FITSKIP.Application.Services
 
             await _workOrderRepository.UpdateAsync(workOrder);
 
-
+            // ✅ Khi HỦY WO: Chuyển chu kỳ sang NextDueDate (bỏ qua chu kỳ hiện tại)
             if (shouldUpdateCycle)
             {
                 var plan = await _planRepository.GetByIdAsync(workOrder.PlanId);
                 if (plan != null && plan.IsActive)
                 {
-                    var nextDueDate = CalculateNextDueDate(workOrder.DueDate, plan.IntervalType, plan.IntervalValue);
+                    // ✅ QUAN TRỌNG: Tính từ NextDueDate hiện tại, không dùng DueDate của WO đang hủy
+                    var nextDueDate = CalculateNextDueDate(plan.NextDueDate, plan.IntervalType, plan.IntervalValue);
                     plan.NextDueDate = nextDueDate;
-                    plan.Status = "Active";
+                    
+                    workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Chu kỳ tiếp theo chuyển sang: {nextDueDate:dd/MM/yyyy}";
+                    await _workOrderRepository.UpdateAsync(workOrder);
                     
                     await _planRepository.UpdateAsync(plan);
                     
@@ -753,9 +819,24 @@ namespace FITSKIP.Application.Services
             if (plan == null)
                 throw new InvalidOperationException($"❌ Không tìm thấy kế hoạch bảo trì");
 
+            // ✅ #3: Validate lý do hoãn không được trống
+            if (string.IsNullOrWhiteSpace(request.Reason))
+            {
+                throw new InvalidOperationException("❌ Phải nhập lý do hoãn phiếu bảo trì!");
+            }
 
-            // ✅ Validate: Ngày hoãn phải SAU ngày đến hạn hiện tại
-            if (request.NewScheduledDate.Date <= workOrder.DueDate.Date)
+            // ✅ #5: Validate không cho hoãn WO đã hoàn thành/đóng/hủy
+            if (workOrder.Status == "Hoàn thành" || workOrder.Status == "Đã đóng" || workOrder.Status == "Đã hủy")
+            {
+                throw new InvalidOperationException(
+                    $"❌ Không thể hoãn phiếu bảo trì đã {workOrder.Status.ToLower()}!"
+                );
+            }
+
+            // ⚠️ NGOẠI LỆ: Nếu WO đã quá hạn (Status = "Quá hạn"), KHÔNG cần check DueDate cũ
+            var isOverdue = workOrder.Status?.Trim().ToLower() == "quá hạn";
+            
+            if (!isOverdue && request.NewScheduledDate.Date <= workOrder.DueDate.Date)
             {
                 throw new InvalidOperationException($"❌ Ngày hoãn phải sau ngày đến hạn hiện tại ({workOrder.DueDate:dd/MM/yyyy})");
             }
@@ -781,6 +862,23 @@ namespace FITSKIP.Application.Services
                 throw new InvalidOperationException("❌ Ngày hoãn phải là ngày trong tương lai");
             }
 
+            // ✅ #6: Validate ngày hoãn không trùng WO khác
+            var allWorkOrders = await _workOrderRepository.GetByPlanIdAsync(workOrder.PlanId);
+            var duplicateWO = allWorkOrders.FirstOrDefault(wo =>
+                wo.WorkOrderId != workOrderId &&
+                wo.Status != "Đã hủy" &&
+                wo.Status != "Đã đóng" &&
+                wo.ScheduledDate.Date == request.NewScheduledDate.Date
+            );
+
+            if (duplicateWO != null)
+            {
+                throw new InvalidOperationException(
+                    $"❌ Đã có phiếu bảo trì #{duplicateWO.WorkOrderCode} vào ngày {request.NewScheduledDate:dd/MM/yyyy}. " +
+                    $"Vui lòng chọn ngày khác để hoãn."
+                );
+            }
+
             bool hasAssignedElectrical = !string.IsNullOrEmpty(workOrder.AssignedToElectrical);
             bool hasAssignedMechanical = !string.IsNullOrEmpty(workOrder.AssignedToMechanical);
             bool hasAssignedTechnician = hasAssignedElectrical || hasAssignedMechanical;
@@ -799,26 +897,30 @@ namespace FITSKIP.Application.Services
                 }
             }
 
-            // ✅ Logic hoãn:
-            // - Nếu ĐÃ GIAO VIỆC (có ScheduledDate): Cập nhật cả ScheduledDate và DueDate
-            // - Nếu CHƯA GIAO VIỆC (chưa có ScheduledDate): Chỉ cập nhật DueDate
+            // ✅ VALIDATION: Chỉ cho phép hoãn 1 lần - kiểm tra PostponedDate
+            if (workOrder.PostponedDate.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"❌ Phiếu bảo trì #{workOrder.WorkOrderCode} đã được hoãn vào {workOrder.PostponedDate.Value:dd/MM/yyyy HH:mm}. " +
+                    $"Chỉ được phép hoãn tối đa 1 lần. Vui lòng hủy hoặc thực hiện công việc."
+                );
+            }
+
+            // ✅ Logic hoãn mới:
+            // - CHỈ cập nhật ScheduledDate (ngày thực hiện)
+            // - KHÔNG đụng DueDate (để kiểm tra xem có làm đúng hạn không)
             
             if (workOrder.ScheduledDate > DateTime.MinValue && hasAssignedTechnician)
             {
-                // Đã giao việc → Cập nhật cả 2
+                // Đã giao việc → Chỉ cập nhật ScheduledDate
                 workOrder.ScheduledDate = request.NewScheduledDate;
-                workOrder.DueDate = request.NewScheduledDate;
             }
-            else
-            {
-                // Chưa giao việc → Chỉ cập nhật DueDate
-                workOrder.DueDate = request.NewScheduledDate;
-            }
+            // Không cập nhật DueDate nữa - giữ nguyên để tracking
             
             // ✅ Chuyển trạng thái sang "Hoãn"
             workOrder.Status = "Hoãn";
 
-            // ✅ Lưu thông tin hoãn
+            // ✅ Lưu thông tin hoãn (PostponedDate đánh dấu đã hoãn)
             workOrder.PostponedDueDate = request.NewScheduledDate;
             workOrder.PostponedReason = request.Reason;
             workOrder.PostponedDate = DateTime.Now;
@@ -1078,31 +1180,32 @@ namespace FITSKIP.Application.Services
 
             foreach (var workOrder in allWorkOrders)
             {
-                // ✅ Xác định ngày đến hạn thực tế: Nếu đã hoãn thì dùng PostponedDueDate, không thì dùng DueDate
-                DateTime effectiveDueDate = workOrder.PostponedDueDate ?? workOrder.DueDate;
+                // ✅ LOGIC MỚI: Nếu đã hoãn thì check PostponedDueDate, nếu không thì check DueDate
+                // Trường hợp hoãn => nếu ngày hôm nay sau ngày hoãn thì mới là quá hạn
+                // Còn không hoãn thì check ngày đến hạn để suy ra trạng thái
+                DateTime effectiveDueDate = workOrder.PostponedDueDate.HasValue 
+                    ? workOrder.PostponedDueDate.Value 
+                    : workOrder.DueDate;
 
-                // ✅ Chỉ đánh dấu quá hạn nếu qua ngày đến hạn thực tế (tính cả WorkOrder đã hoãn)
+                // ✅ Đánh dấu quá hạn nếu qua effective due date (hoặc postponed hoặc original)
                 if (workOrder.Status != "Hoàn thành" && 
                     workOrder.Status != "Đã đóng" && 
                     workOrder.Status != "Đã hủy" && 
+                    workOrder.Status != "Quá hạn" &&
                     effectiveDueDate.Date < today)
                 {
-                    if (workOrder.Status != "Quá hạn")
-                    {
-                        workOrder.Status = "Quá hạn";
-                        workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động đánh dấu quá hạn";
-                        await _workOrderRepository.UpdateAsync(workOrder);
-                        
-                    }
+                    workOrder.Status = "Quá hạn";
+                    var dateType = workOrder.PostponedDueDate.HasValue ? "PostponedDueDate" : "DueDate";
+                    workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động đánh dấu quá hạn ({dateType}: {effectiveDueDate:dd/MM/yyyy})";
+                    await _workOrderRepository.UpdateAsync(workOrder);
                 }
-                
 
+                // ✅ Auto-cancel nếu quá hạn quá lâu và đã đến chu kỳ tiếp theo
                 if (workOrder.Status == "Quá hạn")
                 {
                     var plan = await _planRepository.GetByIdAsync(workOrder.PlanId);
                     if (plan != null && plan.IsActive)
                     {
-
                         if (today >= plan.NextDueDate.Date)
                         {
                             workOrder.Status = "Đã hủy";
@@ -1125,25 +1228,24 @@ namespace FITSKIP.Application.Services
                     }
                 }
             }
-
-
-
         }
 
         /// <summary>
         /// ✅ TỰ ĐỘNG TẠO WORKORDER khi đến số ngày ReminderDaysBefore trước NextDueDate
+        /// Logic: Chỉ tạo WO MỚI khi:
+        /// - Đến đúng thời điểm (daysUntilDue <= ReminderDaysBefore)
+        /// - Chưa có WO nào cho chu kỳ NextDueDate này (kiểm tra theo DueDate)
         /// </summary>
         public async Task CreateAutoWorkOrdersAsync()
         {
             var allActivePlans = await _planRepository.GetAllAsync();
             var today = DateTime.Today;
 
-
             foreach (var plan in allActivePlans.Where(p => p.IsActive))
             {
                 var daysUntilDue = (plan.NextDueDate - today).Days;
 
-
+                // ✅ Chỉ tạo khi đến thời điểm reminder (ví dụ: 3 ngày trước NextDueDate)
                 if (daysUntilDue <= plan.ReminderDaysBefore && daysUntilDue >= 0)
                 {
                     if (!plan.EquipmentId.HasValue)
@@ -1153,70 +1255,68 @@ namespace FITSKIP.Application.Services
 
                     var existingWorkOrders = await _workOrderRepository.GetByPlanIdAsync(plan.PlanId);
                     
-                    Console.WriteLine($"[AUTO-CREATE] Plan {plan.PlanId} has {existingWorkOrders.Count()} total WorkOrders");
-                    
-                    var hasActiveWorkOrderForCurrentCycle = existingWorkOrders.Any(wo => 
-                        wo.Status != "Đã đóng" && 
-                        wo.Status != "Đã hủy" &&
-                        wo.DueDate.Date == plan.NextDueDate.Date &&
-                        wo.CreatedDate >= DateTime.Today.AddDays(-plan.ReminderDaysBefore) 
+                    // ✅ QUAN TRỌNG: Chỉ check WO có DueDate = NextDueDate (không phân biệt status)
+                    // Nếu đã có bất kỳ WO nào với DueDate này => KHÔNG TẠO MỚI
+                    var hasWorkOrderForThisCycle = existingWorkOrders.Any(wo => 
+                        wo.DueDate.Date == plan.NextDueDate.Date
                     );
 
-
-                    if (!hasActiveWorkOrderForCurrentCycle)
+                    if (hasWorkOrderForThisCycle)
                     {
-                        var workOrderCode = await _workOrderRepository.GenerateWorkOrderCodeAsync();
-                        
-                        var newWorkOrder = new MaintenanceWorkOrder
+                        continue;
+                    }
+
+                    // ✅ Tạo WO mới cho chu kỳ này
+                    
+                    var workOrderCode = await _workOrderRepository.GenerateWorkOrderCodeAsync();
+
+                    var newWorkOrder = new MaintenanceWorkOrder
+                    {
+                        PlanId = plan.PlanId,
+                        EquipmentId = plan.EquipmentId.Value,
+                        WorkOrderCode = workOrderCode,
+                        ScheduledDate = plan.NextDueDate,
+                        DueDate = plan.NextDueDate,
+                        Status = "Chờ xử lý",
+                        Notes = $"[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động tạo WorkOrder từ chu kỳ bảo trì",
+                        CreatedBy = null, 
+                        CreatedDate = DateTime.Now,
+                        UpdatedDate = DateTime.Now
+                    };
+
+                    var createdWorkOrder = await _workOrderRepository.CreateAsync(newWorkOrder);
+
+                    if (plan.TemplateId.HasValue)
+                    {
+                        var template = await _templateRepository.GetByIdAsync(plan.TemplateId.Value);
+                        if (template?.TemplateItems != null)
                         {
-                            PlanId = plan.PlanId,
-                            EquipmentId = plan.EquipmentId.Value,
-                            WorkOrderCode = workOrderCode,
-                            ScheduledDate = plan.NextDueDate,
-                            DueDate = plan.NextDueDate,
-                            Status = "Chờ xử lý",
-                            Notes = $"[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động tạo WorkOrder từ chu kỳ bảo trì",
-                            CreatedBy = null, 
-                            CreatedDate = DateTime.Now,
-                            UpdatedDate = DateTime.Now
-                        };
-
-                        var createdWorkOrder = await _workOrderRepository.CreateAsync(newWorkOrder);
-
-                        Console.WriteLine($"[AUTO-CREATE] ✅ Created WorkOrder {createdWorkOrder.WorkOrderCode} for Plan {plan.PlanId}");
-
-                        if (plan.TemplateId.HasValue)
-                        {
-                            var template = await _templateRepository.GetByIdAsync(plan.TemplateId.Value);
-                            if (template?.TemplateItems != null)
+                            foreach (var templateItem in template.TemplateItems.OrderBy(ti => ti.OrderIndex))
                             {
-                                foreach (var templateItem in template.TemplateItems.OrderBy(ti => ti.OrderIndex))
+                                var checklistItem = new MaintenanceChecklistItem
                                 {
-                                    var checklistItem = new MaintenanceChecklistItem
-                                    {
-                                        WorkOrderId = createdWorkOrder.WorkOrderId,
-                                        Category = templateItem.Category,
-                                        OrderIndex = templateItem.OrderIndex,
-                                        StepName = templateItem.StepName,
-                                        StepDescription = templateItem.StepDescription,
-                                        RequiredRole = templateItem.RequiredRole,
-                                        IsChecked = false
-                                    };
-                                    await _checklistRepository.CreateAsync(checklistItem);
-                                }
+                                    WorkOrderId = createdWorkOrder.WorkOrderId,
+                                    Category = templateItem.Category,
+                                    OrderIndex = templateItem.OrderIndex,
+                                    StepName = templateItem.StepName,
+                                    StepDescription = templateItem.StepDescription,
+                                    RequiredRole = templateItem.RequiredRole,
+                                    IsChecked = false
+                                };
+                                await _checklistRepository.CreateAsync(checklistItem);
                             }
                         }
+                    }
 
-                        var techManagers = await _userRepository.GetUsersByRoleAsync("TechManager");
-                        foreach (var manager in techManagers)
+                    var techManagers = await _userRepository.GetUsersByRoleAsync("TechManager");
+                    foreach (var manager in techManagers)
+                    {
+                        await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
                         {
-                            await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
-                            {
-                                UserId = manager.Id,
-                                Title = "📋 WorkOrder mới được tạo tự động",
-                                Message = $"Phiếu bảo trì #{newWorkOrder.WorkOrderCode} cho thiết bị {plan.Equipment?.EquipmentName} đã được tạo. Vui lòng phân công kỹ thuật viên."
-                            });
-                        }
+                            UserId = manager.Id,
+                            Title = "📋 WorkOrder mới được tạo tự động",
+                            Message = $"Phiếu bảo trì #{newWorkOrder.WorkOrderCode} cho thiết bị {plan.Equipment?.EquipmentName} đã được tạo. Vui lòng phân công kỹ thuật viên."
+                        });
                     }
                 }
             }

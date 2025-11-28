@@ -573,7 +573,7 @@ public class IncidentService : IIncidentService
                     // Clear existing incident shifts
                     // Note: The repository will handle the cascading delete when we save
                     existingIncident.IncidentShifts.Clear();
-                    
+
                     // Create new incident shifts
                     await CreateIncidentShiftsAsync(existingIncident, cancellationToken);
                     Console.WriteLine($"✅ Prepared {existingIncident.IncidentShifts.Count} IncidentShifts for incident {id}");
@@ -589,7 +589,7 @@ public class IncidentService : IIncidentService
 
             // Save all changes (incident + shifts + images) in one transaction
             var updatedIncident = await _incidentRepository.UpdateAsync(existingIncident, cancellationToken);
-            
+
             // Gửi notification CHỈ KHI status hoặc IsTechSupport THAY ĐỔI thành "Chờ xử lý" + true
             // Tránh gửi duplicate notification khi update các field khác
             var shouldSendNotification = updatedIncident != null
@@ -1049,38 +1049,56 @@ public class IncidentService : IIncidentService
 
             Console.WriteLine($"   ✅ Sending notifications to {technicalManagers.Count} Technical Managers across all departments");
 
-            // Send realtime notification to each Technical Manager (no database notification)
+            // Build notification message based on equipment or line
+            string notificationTitle = "Sự cố cần hỗ trợ kỹ thuật";
+            string notificationMessage;
+            if (equipment != null)
+            {
+                // Format: "Có sự cố cần hỗ trợ - [Tên thiết bị] ([Mã thiết bị]) - Dây chuyền: [Tên dây chuyền]"
+                notificationMessage = $"Có sự cố cần hỗ trợ - {equipment.EquipmentName} ({equipment.EquipmentCode}) - Dây chuyền: {line?.LineName ?? "Chưa xác định"}";
+            }
+            else
+            {
+                // If no equipment, just show line
+                notificationMessage = $"Có sự cố cần hỗ trợ - Dây chuyền: {line?.LineName ?? "Chưa xác định"}";
+            }
+
+            // 1. LƯU VÀO DATABASE - Tạo notification record cho mỗi Technical Manager
             foreach (var manager in technicalManagers)
             {
                 if (!string.IsNullOrEmpty(manager.Id))
                 {
-                    // Build notification message based on equipment or line
-                    string notificationMessage;
-                    if (equipment != null)
+                    await _notificationService.CreateNotificationAsync(new CreateNotificationRequest
                     {
-                        // Format: "Có sự cố cần hỗ trợ - [Tên thiết bị] ([Mã thiết bị]) - Dây chuyền: [Tên dây chuyền]"
-                        notificationMessage = $"Có sự cố cần hỗ trợ - {equipment.EquipmentName} ({equipment.EquipmentCode}) - Dây chuyền: {line?.LineName ?? "Chưa xác định"}";
-                    }
-                    else
-                    {
-                        // If no equipment, just show line
-                        notificationMessage = $"Có sự cố cần hỗ trợ - Dây chuyền: {line?.LineName ?? "Chưa xác định"}";
-                    }
-
-                    // Send ONLY realtime notification (no database notification, no title)
-                    await _notificationService.SendNotificationToUserAsync(
-                        manager.Id,
-                        "", // Empty title - only show message
-                        notificationMessage,
-                        "incident"
-                    );
-                    Console.WriteLine($"   ✅ Realtime notification sent to manager: {manager.FullName}");
+                        UserId = manager.Id,
+                        Title = notificationTitle,
+                        Message = notificationMessage
+                    });
+                    Console.WriteLine($"   ✅ Notification saved to database for manager: {manager.FullName}");
                 }
             }
-            Console.WriteLine($"   ✅ Notifications sent successfully to {technicalManagers.Count} managers");
 
-            // Note: Broadcast to Managers group removed to avoid duplicate notifications
-            // Technical Managers already receive individual notifications above
+            // 2. GỬI REALTIME NOTIFICATION đến group TechnicalManagers
+            await _notificationService.SendNotificationToGroupAsync(
+                "TechnicalManagers",
+                notificationTitle,
+                notificationMessage,
+                "info",
+                "incident" // dataType = "incident" để frontend auto-reload trang incidents
+            );
+            Console.WriteLine($"   ✅ Realtime notification sent to TechnicalManagers group");
+
+            // 3. GỬI REALTIME đến group Managers để OEE Dashboard cập nhật hình giọt nước
+            await _notificationService.SendNotificationToGroupAsync(
+                "Managers",
+                "", // Không cần title
+                "", // Không cần message - chỉ cần trigger refresh
+                "incident",
+                "incident" // dataType = "incident" để OEE Dashboard reload
+            );
+            Console.WriteLine($"   ✅ Realtime notification sent to Managers group for OEE Dashboard");
+
+            Console.WriteLine($"   ✅ Notifications sent successfully to {technicalManagers.Count} managers");
         }
         catch (Exception ex)
         {

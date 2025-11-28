@@ -572,7 +572,7 @@ namespace FITSKIP.API.Controllers
         /// Lấy kế hoạch bảo trì quá hạn
         /// </summary>
         [HttpGet("plans/overdue")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
+        [Authorize(Roles = "Quản trị viên,Quản lý,Quản lý kỹ thuật")]
         public async Task<IActionResult> GetOverduePlans()
         {
             try
@@ -683,7 +683,7 @@ namespace FITSKIP.API.Controllers
         /// Lấy tất cả phiếu bảo trì
         /// </summary>
         [HttpGet("work-orders")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật,Quản lý kho")]
+        [Authorize(Roles = "Quản trị viên,Quản lý,Quản lý kỹ thuật,Quản lý kho")]
         public async Task<IActionResult> GetAllWorkOrders()
         {
             try
@@ -1123,7 +1123,7 @@ namespace FITSKIP.API.Controllers
         /// Lấy danh sách TẤT CẢ kỹ thuật viên (có EmployeeCode)
         /// </summary>
         [HttpGet("technicians")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
+        [Authorize(Roles = "Quản trị viên,Quản lý,Quản lý kỹ thuật")]
         public async Task<IActionResult> GetAllTechnicians()
         {
             try
@@ -1197,7 +1197,7 @@ namespace FITSKIP.API.Controllers
         /// Lấy thống kê bảo trì
         /// </summary>
         [HttpGet("statistics")]
-        [Authorize(Roles = "Quản trị viên,Quản lý kỹ thuật")]
+        [Authorize(Roles = "Quản trị viên,Quản lý,Quản lý kỹ thuật")]
         public async Task<IActionResult> GetStatistics()
         {
             try

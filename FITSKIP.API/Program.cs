@@ -67,6 +67,14 @@ namespace FITSKIP.API
             builder.Services.AddDbContext<FITSKIP.Infrastructure.DbContexts.FitskipDbContext>(options =>
                 options.UseSqlServer(connectionString));
 
+            // Also register TestDbContext
+            var testConnectionString = builder.Configuration.GetConnectionString("TestConnection");
+            if (!string.IsNullOrEmpty(testConnectionString))
+            {
+                builder.Services.AddDbContext<FITSKIP.Infrastructure.DbContexts.TestDbContext>(options =>
+                    options.UseSqlServer(testConnectionString));
+            }
+
             // Configure TwilioSettings
             builder.Services.Configure<FITSKIP.Application.Settings.TwilioSettings>(
                 builder.Configuration.GetSection("Twilio"));
@@ -364,6 +372,25 @@ namespace FITSKIP.API
                 {
                     Console.WriteLine($"Error during migration/seeding: {ex.Message}");
                     throw;
+                }
+
+                // Also seed TestDbContext if it's registered
+                var testContext = scope.ServiceProvider.GetService<FITSKIP.Infrastructure.DbContexts.TestDbContext>();
+                if (testContext != null)
+                {
+                    try
+                    {
+                        // Apply migrations for test database
+                        await testContext.Database.MigrateAsync();
+                        // Seed data for test database
+                        await SeedData.SeedAllData(testContext);
+                        Console.WriteLine("✅ Test database seeded successfully");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"⚠️ Error during test database migration/seeding: {ex.Message}");
+                        // Don't throw - test database seeding is optional
+                    }
                 }
             }
 

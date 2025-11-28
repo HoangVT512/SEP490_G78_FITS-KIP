@@ -126,8 +126,9 @@ public class PurchaseRequestService : IPurchaseRequestService
         await _notificationService.SendNotificationToGroupAsync(
             "Managers",
             "Đơn yêu cầu mua hàng mới",
-            $"Có một đơn yêu cầu mua hàng mới từ {user?.FullName ?? userId} (Mã: {createdRequest.RequestId})",
-            "info"
+            $"Có một đơn yêu cầu mua hàng mới từ {user.FullName} (Mã: {createdRequest.RequestId})",
+            "info",
+            "purchaseRequest"
         );
 
         return PurchaseRequestDTO.FromEntity(createdRequest);

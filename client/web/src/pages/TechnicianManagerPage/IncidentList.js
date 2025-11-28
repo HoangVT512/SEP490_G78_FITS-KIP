@@ -76,7 +76,7 @@ const IncidentList = () => {
 
   const workCountMap = useMemo(() => {
     const map = {};
-    allIncidents.forEach(incident => {
+    allIncidents.forEach((incident) => {
       if (incident.status !== "Hoàn thành" && incident.assignedTo) {
         map[incident.assignedTo] = (map[incident.assignedTo] || 0) + 1;
       }
@@ -163,6 +163,23 @@ const IncidentList = () => {
     fetchTechnicians();
     fetchLines();
     fetchStages();
+  }, []);
+
+  // Lắng nghe DataUpdated event để auto-reload khi có sự cố mới
+  useEffect(() => {
+    const handleDataUpdate = (data) => {
+      console.log("📡 [IncidentList] DataUpdated received:", data);
+      if (data.type === "incident") {
+        console.log("🔄 [IncidentList] Incident data updated, reloading...");
+        fetchIncidents(false); // Reload without showing loading spinner
+      }
+    };
+
+    signalRService.onDataUpdated(handleDataUpdate);
+
+    return () => {
+      signalRService.offDataUpdated();
+    };
   }, []);
 
   useEffect(() => {
@@ -263,8 +280,7 @@ const IncidentList = () => {
             it.createdBy ||
             it.createdByName ||
             "",
-          assignedTo:
-            it.assignedTo || it.AssignedTo || null,
+          assignedTo: it.assignedTo || it.AssignedTo || null,
           reportDate:
             it.startTime ||
             it.reportDate ||
@@ -1059,8 +1075,16 @@ const IncidentList = () => {
         viewMode={true}
       />
       {/* Statistics Cards */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', gap: '16px', marginBottom: 16 }}>
-        <div style={{ flex: '1 1 200px' }}>
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          justifyContent: "space-between",
+          gap: "16px",
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ flex: "1 1 200px" }}>
           <Card bordered={true}>
             <Statistic
               title={
@@ -1076,7 +1100,7 @@ const IncidentList = () => {
             />
           </Card>
         </div>
-        <div style={{ flex: '1 1 200px' }}>
+        <div style={{ flex: "1 1 200px" }}>
           <Card bordered={true}>
             <Statistic
               title="Chờ xử lý"
@@ -1086,7 +1110,7 @@ const IncidentList = () => {
             />
           </Card>
         </div>
-        <div style={{ flex: '1 1 200px' }}>
+        <div style={{ flex: "1 1 200px" }}>
           <Card bordered={true}>
             <Statistic
               title="Đang xử lý"
@@ -1096,7 +1120,7 @@ const IncidentList = () => {
             />
           </Card>
         </div>
-        <div style={{ flex: '1 1 200px' }}>
+        <div style={{ flex: "1 1 200px" }}>
           <Card bordered={true}>
             <Statistic
               title="Thời gian chết"
@@ -1446,23 +1470,33 @@ const IncidentList = () => {
                             allowClear
                             showSearch
                             filterOption={(input, option) => {
-                              const tech = sortedTechnicians.find(t => (t.userId || t.id) === option.value);
+                              const tech = sortedTechnicians.find(
+                                (t) => (t.userId || t.id) === option.value
+                              );
                               if (!tech) return false;
-                              const name = tech.fullName || tech.name || tech.username || '';
-                              const code = tech.employeeCode || '';
-                              const searchText = `${name} ${code}`.toLowerCase();
+                              const name =
+                                tech.fullName ||
+                                tech.name ||
+                                tech.username ||
+                                "";
+                              const code = tech.employeeCode || "";
+                              const searchText =
+                                `${name} ${code}`.toLowerCase();
                               return searchText.includes(input.toLowerCase());
                             }}
                           >
                             {sortedTechnicians.map((tech) => {
                               const techId = tech.userId || tech.id;
                               const workCount = workCountMap[techId] || 0;
-                              const status = workCount === 0 ? "Rảnh" : `Bận (${workCount})`;
-                              const name = tech.fullName || tech.name || tech.username;
+                              const status =
+                                workCount === 0 ? "Rảnh" : `Bận (${workCount})`;
+                              const name =
+                                tech.fullName || tech.name || tech.username;
                               const code = tech.employeeCode;
                               return (
                                 <Option key={techId} value={techId}>
-                                  {name}{code ? ` (${code})` : ""} – {status}
+                                  {name}
+                                  {code ? ` (${code})` : ""} – {status}
                                 </Option>
                               );
                             })}

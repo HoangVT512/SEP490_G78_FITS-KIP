@@ -12,6 +12,13 @@ import { useAuth } from "./AuthContext";
 
 const SignalRContext = createContext(null);
 
+// Helper function to check if toast should be shown
+// OEE Dashboard only needs realtime data updates, not toast notifications
+const shouldShowToast = () => {
+  const currentPath = window.location.pathname;
+  return !currentPath.includes("/manager/oee");
+};
+
 export const useSignalR = () => {
   const context = useContext(SignalRContext);
   if (!context) {
@@ -136,10 +143,12 @@ export const SignalRProvider = ({ children }) => {
           listeners.forEach((callback) => callback(workOrder));
         }
 
-        message.info({
-          content: `Bạn được giao công việc mới: ${workOrder.equipmentName}`,
-          duration: 5,
-        });
+        if (shouldShowToast()) {
+          message.info({
+            content: `Bạn được giao công việc mới: ${workOrder.equipmentName}`,
+            duration: 5,
+          });
+        }
       });
 
       // 4. Nhận thông báo Technician bắt đầu làm việc (cho TechManager)
@@ -151,10 +160,12 @@ export const SignalRProvider = ({ children }) => {
           listeners.forEach((callback) => callback(workOrder));
         }
 
-        message.info({
-          content: `${workOrder.technicianName} đã bắt đầu công việc: ${workOrder.equipmentName}`,
-          duration: 4,
-        });
+        if (shouldShowToast()) {
+          message.info({
+            content: `${workOrder.technicianName} đã bắt đầu công việc: ${workOrder.equipmentName}`,
+            duration: 4,
+          });
+        }
       });
 
       // 5. Nhận thông báo Technician hoàn thành (cho TechManager)
@@ -166,10 +177,12 @@ export const SignalRProvider = ({ children }) => {
           listeners.forEach((callback) => callback(workOrder));
         }
 
-        message.success({
-          content: `${workOrder.technicianName} đã hoàn thành: ${workOrder.equipmentName}`,
-          duration: 5,
-        });
+        if (shouldShowToast()) {
+          message.success({
+            content: `${workOrder.technicianName} đã hoàn thành: ${workOrder.equipmentName}`,
+            duration: 5,
+          });
+        }
       });
 
       // 6. Nhận thông báo cập nhật checklist (cho TechManager)
@@ -201,10 +214,12 @@ export const SignalRProvider = ({ children }) => {
           listeners.forEach((callback) => callback(workOrder));
         }
 
-        message.warning({
-          content: `Công việc ${workOrder.equipmentName} đã bị hủy: ${workOrder.reason}`,
-          duration: 5,
-        });
+        if (shouldShowToast()) {
+          message.warning({
+            content: `Công việc ${workOrder.equipmentName} đã bị hủy: ${workOrder.reason}`,
+            duration: 5,
+          });
+        }
       });
 
       // 9. Nhận thông báo hoãn bảo trì (cho TechManager)
@@ -216,10 +231,12 @@ export const SignalRProvider = ({ children }) => {
           listeners.forEach((callback) => callback(plan));
         }
 
-        message.info({
-          content: `Chu kỳ bảo trì ${plan.equipmentName} đã được hoãn`,
-          duration: 4,
-        });
+        if (shouldShowToast()) {
+          message.info({
+            content: `Chu kỳ bảo trì ${plan.equipmentName} đã được hoãn`,
+            duration: 4,
+          });
+        }
       });
 
       // 10. Nhận thông báo yêu cầu hỗ trợ từ Technician (cho TechManager)
@@ -231,10 +248,12 @@ export const SignalRProvider = ({ children }) => {
           listeners.forEach((callback) => callback(request));
         }
 
-        message.warning({
-          content: `${request.technicianName} yêu cầu hỗ trợ: ${request.reason}`,
-          duration: 6,
-        });
+        if (shouldShowToast()) {
+          message.warning({
+            content: `${request.technicianName} yêu cầu hỗ trợ: ${request.reason}`,
+            duration: 6,
+          });
+        }
       });
 
       // 11. Nhận thông báo duyệt cấp phát linh kiện (cho Technician)
@@ -246,10 +265,12 @@ export const SignalRProvider = ({ children }) => {
           listeners.forEach((callback) => callback(data));
         }
 
-        message.success({
-          content: `Linh kiện đã được duyệt: ${data.partName} cho ${data.equipmentName}`,
-          duration: 5,
-        });
+        if (shouldShowToast()) {
+          message.success({
+            content: `Linh kiện đã được duyệt: ${data.partName} cho ${data.equipmentName}`,
+            duration: 5,
+          });
+        }
       });
 
       // Start connection
@@ -296,35 +317,38 @@ export const SignalRProvider = ({ children }) => {
   }, [connection]);
 
   // Subscribe to specific event
-  const subscribe = useCallback((eventType, callback) => {
-    if (!listenersRef.current.has(eventType)) {
-      listenersRef.current.set(eventType, new Set());
-    }
-    listenersRef.current.get(eventType).add(callback);
+  const subscribe = useCallback(
+    (eventType, callback) => {
+      if (!listenersRef.current.has(eventType)) {
+        listenersRef.current.set(eventType, new Set());
+      }
+      listenersRef.current.get(eventType).add(callback);
 
-    // Mark that we have listeners, trigger connection
-    if (!hasListenersRef.current && isAuthenticated && user) {
-      hasListenersRef.current = true;
-      connectToHub();
-    }
+      // Mark that we have listeners, trigger connection
+      if (!hasListenersRef.current && isAuthenticated && user) {
+        hasListenersRef.current = true;
+        connectToHub();
+      }
 
-    // Return unsubscribe function
-    return () => {
-      const listeners = listenersRef.current.get(eventType);
-      if (listeners) {
-        listeners.delete(callback);
-        if (listeners.size === 0) {
-          listenersRef.current.delete(eventType);
+      // Return unsubscribe function
+      return () => {
+        const listeners = listenersRef.current.get(eventType);
+        if (listeners) {
+          listeners.delete(callback);
+          if (listeners.size === 0) {
+            listenersRef.current.delete(eventType);
+          }
         }
-      }
 
-      // If no more listeners, disconnect
-      if (listenersRef.current.size === 0) {
-        hasListenersRef.current = false;
-        disconnectFromHub();
-      }
-    };
-  }, [isAuthenticated, user]);
+        // If no more listeners, disconnect
+        if (listenersRef.current.size === 0) {
+          hasListenersRef.current = false;
+          disconnectFromHub();
+        }
+      };
+    },
+    [isAuthenticated, user]
+  );
 
   // Send message to hub
   const sendMessage = useCallback(

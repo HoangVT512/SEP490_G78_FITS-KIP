@@ -3849,9 +3849,9 @@ const MaintenanceManagement = () => {
             Đóng
           </Button>,
         ]}
-        width={1400}
+        width={1600}
         centered={true}
-        bodyStyle={{ maxHeight: "70vh", overflowY: "auto" }}
+        bodyStyle={{ maxHeight: "75vh", overflowY: "auto", padding: "24px" }}
         className={styles.modal}
       >
         {viewingWorkOrder && (
@@ -3973,10 +3973,17 @@ const MaintenanceManagement = () => {
               </Descriptions.Item>
 
               <Descriptions.Item label="Ghi Chú Hoàn Thành" span={2}>
-                {viewingWorkOrder.completionNotes ? (
-                  <Text>{viewingWorkOrder.completionNotes}</Text>
-                ) : (
+                {!viewingWorkOrder.notes && !viewingWorkOrder.completionNotes ? (
                   <Text type="secondary">Không có ghi chú</Text>
+                ) : (
+                  (viewingWorkOrder.notes || viewingWorkOrder.completionNotes)
+                    .split('\n')
+                    .filter(line => line.trim())
+                    .map((line, idx, arr) => (
+                      <div key={idx} style={{ marginBottom: idx < arr.length - 1 ? '8px' : 0 }}>
+                        {line}
+                      </div>
+                    ))
                 )}
               </Descriptions.Item>
             </Descriptions>
@@ -3995,31 +4002,38 @@ const MaintenanceManagement = () => {
                       <List.Item>
                         <List.Item.Meta
                           avatar={
-                            item.isCompleted ? (
+                            item.isChecked ? (
                               <CheckCircleOutlined
                                 style={{ color: "#52c41a", fontSize: 20 }}
                               />
                             ) : (
-                              <CloseOutlined
+                              <CloseCircleOutlined
                                 style={{ color: "#d9d9d9", fontSize: 20 }}
                               />
                             )
                           }
                           title={
                             <div>
-                              <Text strong>{item.itemDescription}</Text>
+                              <Text strong>{item.stepName || item.itemDescription}</Text>
                               {item.category && (
                                 <Tag
                                   color={
-                                    item.category === "Mechanical"
+                                    item.category === "Mechanical" || item.category === "Cơ khí"
                                       ? "orange"
                                       : "blue"
                                   }
                                   style={{ marginLeft: 8 }}
+                                  icon={
+                                    item.category === "Mechanical" || item.category === "Cơ khí"
+                                      ? <ToolOutlined />
+                                      : <ThunderboltOutlined />
+                                  }
                                 >
-                                  {item.category === "Mechanical"
+                                  {item.category === "Mechanical" || item.category === "Cơ khí"
                                     ? "Cơ khí"
-                                    : "Điện"}
+                                    : item.category === "Electrical" || item.category === "Điện"
+                                    ? "Điện"
+                                    : item.category}
                                 </Tag>
                               )}
                               {item.isRequired && (
@@ -4030,21 +4044,45 @@ const MaintenanceManagement = () => {
                             </div>
                           }
                           description={
-                            item.notes ? (
-                              <Text type="secondary" italic>
-                                {item.notes}
-                              </Text>
-                            ) : null
+                            <div>
+                              {item.stepDescription && (
+                                <div style={{ marginBottom: 8 }}>
+                                  <Text type="secondary" style={{ fontSize: 13 }}>
+                                    {item.stepDescription}
+                                  </Text>
+                                </div>
+                              )}
+                              {item.notes && (
+                                <div style={{ marginTop: 8, padding: "8px 12px", backgroundColor: "#f0f5ff", borderRadius: 4, borderLeft: "3px solid #1890ff" }}>
+                                  <Text style={{ fontSize: 13, color: "#1890ff" }}>
+                                    📝 Ghi chú: {item.notes}
+                                  </Text>
+                                </div>
+                              )}
+                              {item.completedDate && (
+                                <div style={{ marginTop: 8 }}>
+                                  <Text type="secondary" style={{ fontSize: 12 }}>
+                                    <ClockCircleOutlined /> Hoàn thành:{" "}
+                                    {dayjs(item.completedDate).format(
+                                      "DD/MM/YYYY HH:mm"
+                                    )}
+                                    {item.completedBy && (
+                                      <Text type="secondary" style={{ marginLeft: 8 }}>
+                                        - {
+                                          item.completedBy === viewingWorkOrder.assignedToElectrical
+                                            ? viewingWorkOrder.electricalTechnicianName
+                                            : item.completedBy === viewingWorkOrder.assignedToMechanical
+                                            ? viewingWorkOrder.mechanicalTechnicianName
+                                            : item.completedBy
+                                        }
+                                      </Text>
+                                    )}
+                                  </Text>
+                                </div>
+                              )}
+                            </div>
                           }
                         />
-                        {item.completedDate && (
-                          <Text type="secondary" style={{ fontSize: 12 }}>
-                            <ClockCircleOutlined />{" "}
-                            {dayjs(item.completedDate).format(
-                              "DD/MM/YYYY HH:mm"
-                            )}
-                          </Text>
-                        )}
                       </List.Item>
                     )}
                   />

@@ -132,9 +132,10 @@ public class ProductionOutputService : IProductionOutputService
             Console.WriteLine($"📡 Broadcasting production output creation to Managers group for OEE Dashboard");
             await _notificationService.SendNotificationToGroupAsync(
                 "Managers",
-                "Thêm sản lượng mới",
-                $"Sản lượng mới được thêm cho chuyền {line?.LineName} - Ca {shift?.ShiftName}",
-                "production"
+                "", // Không cần title - chỉ cần trigger refresh
+                "", // Không cần message - chỉ cần trigger refresh  
+                "production",
+                "production" // dataType = "production" để OEE Dashboard reload
             );
             Console.WriteLine($"✅ Broadcast to Managers group completed for production output creation");
         }
@@ -261,9 +262,10 @@ public class ProductionOutputService : IProductionOutputService
                 Console.WriteLine($"📡 Broadcasting production output update to Managers group for OEE Dashboard");
                 await _notificationService.SendNotificationToGroupAsync(
                     "Managers",
-                    "Cập nhật sản lượng",
-                    $"Sản lượng được cập nhật cho chuyền {line?.LineName} - Ca {shift?.ShiftName}",
-                    "production"
+                    "", // Không cần title - chỉ cần trigger refresh
+                    "", // Không cần message - chỉ cần trigger refresh
+                    "production",
+                    "production" // dataType = "production" để OEE Dashboard reload
                 );
                 Console.WriteLine($"✅ Broadcast to Managers group completed for production output update");
             }
@@ -295,9 +297,10 @@ public class ProductionOutputService : IProductionOutputService
                 Console.WriteLine($"📡 Broadcasting production output deletion to Managers group for OEE Dashboard");
                 await _notificationService.SendNotificationToGroupAsync(
                     "Managers",
-                    "Xóa sản lượng",
-                    $"Sản lượng đã được xóa cho chuyền {line?.LineName} - Ca {shift?.ShiftName}",
-                    "production"
+                    "", // Không cần title - chỉ cần trigger refresh
+                    "", // Không cần message - chỉ cần trigger refresh
+                    "production",
+                    "production" // dataType = "production" để OEE Dashboard reload
                 );
                 Console.WriteLine($"✅ Broadcast to Managers group completed for production output deletion");
             }

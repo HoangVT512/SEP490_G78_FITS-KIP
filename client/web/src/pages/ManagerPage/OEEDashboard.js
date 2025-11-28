@@ -29,31 +29,32 @@ const OEEDashboard = () => {
   const fetchData = async (date) => {
     setIsLoading(true);
     try {
-      console.log('Lỗi lấy dữ liệu theo ngày:', date);
-      
+      console.log("Lỗi lấy dữ liệu theo ngày:", date);
+
       // Fetch OEE data for all lines
-      const oeeResponse = await dashboardService.getOEEStatsByDate(date)
-      console.log('OEE phản hồi:', oeeResponse);
+      const oeeResponse = await dashboardService.getOEEStatsByDate(date);
+      console.log("OEE phản hồi:", oeeResponse);
       if (oeeResponse?.success && oeeResponse?.data) {
         setOeeData(oeeResponse.data);
       }
 
       // Fetch pending tech support incidents
       // Format date for incident API (yyyy-MM-dd)
-      console.log('Đang gọi api sự cố theo ngày :', date);
+      console.log("Đang gọi api sự cố theo ngày :", date);
       try {
-        const incidentResponse = await incidentService.getTechSupportPendingIncidents(date)
-        console.log('Gọi api sự cố hoàn thành');
-        console.log('Sự cố phản hồi:', incidentResponse);
+        const incidentResponse =
+          await incidentService.getTechSupportPendingIncidents(date);
+        console.log("Gọi api sự cố hoàn thành");
+        console.log("Sự cố phản hồi:", incidentResponse);
         if (incidentResponse?.success && incidentResponse?.data) {
-          console.log('Đang thiết lập dữ liệu sự cố:', incidentResponse.data);
-          setIncidentData(incidentResponse.data)
+          console.log("Đang thiết lập dữ liệu sự cố:", incidentResponse.data);
+          setIncidentData(incidentResponse.data);
         } else {
-          console.log('Không có dữ liệu sự cố hoặc phản hồi không hợp lệ');
+          console.log("Không có dữ liệu sự cố hoặc phản hồi không hợp lệ");
           setIncidentData([]);
         }
       } catch (incidentError) {
-        console.error('Lỗi khi lấy dữ liệu sự cố:', incidentError);
+        console.error("Lỗi khi lấy dữ liệu sự cố:", incidentError);
         setIncidentData([]);
       }
 
@@ -64,7 +65,7 @@ const OEEDashboard = () => {
         new Date().toLocaleTimeString("vi-VN")
       );
     } catch (error) {
-      console.error('Lỗi khi lấy dữ liệu bảng điều khiển OEE:', error)
+      console.error("Lỗi khi lấy dữ liệu bảng điều khiển OEE:", error);
       setIncidentData([]);
     } finally {
       setIsLoading(false);
@@ -96,13 +97,15 @@ const OEEDashboard = () => {
           // Listen for general data updates
           signalRService.onDataUpdated((data) => {
             console.log("📊 Data updated:", data);
+            // Reload khi có sự cố hoặc sản lượng mới
             if (
               data?.type === "incident" ||
+              data?.type === "production" ||
               data?.action === "created" ||
               data?.action === "updated" ||
               data?.action === "deleted"
             ) {
-              console.log("🚨 Incident data changed, refreshing...");
+              console.log("🚨 Data changed, refreshing OEE Dashboard...");
               fetchData(selectedDate);
             }
           });
@@ -167,7 +170,7 @@ const OEEDashboard = () => {
 
   // Debug: log incident data changes
   useEffect(() => {
-    console.log('Dữ liệu sự cố đã thay đổi:', incidentData);
+    console.log("Dữ liệu sự cố đã thay đổi:", incidentData);
   }, [incidentData]);
 
   const handleDateChange = (date) => {

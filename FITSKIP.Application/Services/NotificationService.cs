@@ -136,7 +136,7 @@ namespace FITSKIP.Application.Services
         }
 
         // Real-time notification methods
-        public async Task SendNotificationToUserAsync(string userId, string title, string message, string type = "info")
+        public async Task SendNotificationToUserAsync(string userId, string title, string message, string type = "info", string dataType = "incident")
         {
             var notificationData = new
             {
@@ -146,10 +146,10 @@ namespace FITSKIP.Application.Services
                 Timestamp = DateTime.UtcNow
             };
 
-            await _notificationHubService.SendToUserAsync(userId, notificationData);
+            await _notificationHubService.SendToUserAsync(userId, notificationData, dataType);
         }
 
-        public async Task SendNotificationToGroupAsync(string groupName, string title, string message, string type = "info")
+        public async Task SendNotificationToGroupAsync(string groupName, string title, string message, string type = "info", string dataType = "incident")
         {
             var notificationData = new
             {
@@ -159,7 +159,7 @@ namespace FITSKIP.Application.Services
                 Timestamp = DateTime.UtcNow
             };
 
-            await _notificationHubService.SendToGroupAsync(groupName, notificationData);
+            await _notificationHubService.SendToGroupAsync(groupName, notificationData, dataType);
         }
 
         public async Task SendNotificationToGroupWithDataAsync(string groupName, object notificationData)
@@ -216,7 +216,7 @@ namespace FITSKIP.Application.Services
             else
             {
                 // Send to SignalR group based on role
-                var groupName = roleName == "Quản lý kỹ thuật" ? "TechnicalManagers" : 
+                var groupName = roleName == "Quản lý kỹ thuật" ? "TechnicalManagers" :
                                roleName == "Kỹ thuật viên" ? "Technicians" : roleName;
                 var notificationData = new
                 {

@@ -352,12 +352,12 @@ const MaintenanceTasks = () => {
       render: (_, record) => {
         if (!record) return null;
 
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const displayDate = record.rescheduledDate || record.scheduledDate;
-        const scheduledDate = new Date(displayDate);
-        scheduledDate.setHours(0, 0, 0, 0);
-        const isScheduledDateReached = scheduledDate <= today;
+        // ✅ Validation 2 & 4: Cho phép làm bình thường khi quá hạn, bỏ reschedule
+        const myStatus = getMyStatus(record);
+        const canExecute = myStatus === "Chờ xử lý" || 
+                          myStatus === "Đang thực hiện" || 
+                          myStatus === "Quá hạn" ||  // ✅ Cho phép làm khi quá hạn
+                          record.status === "Hoãn";
 
         const items = [
           {
@@ -366,16 +366,13 @@ const MaintenanceTasks = () => {
             label: "Chi tiết",
             onClick: () => handleViewDetail(record),
           },
-          isScheduledDateReached && {
+          {
             key: "history",
             icon: <FileTextOutlined />,
             label: "Lịch sử linh kiện",
             onClick: () => handleViewSparePartsHistory(record),
           },
-          isScheduledDateReached &&
-            (getMyStatus(record) === "Chờ xử lý" ||
-              getMyStatus(record) === "Đang thực hiện" ||
-              record.status === "Hoãn") && {
+          canExecute && {
             key: "execute",
             icon: <CheckCircleOutlined />,
             label: "Thực hiện",
@@ -620,10 +617,6 @@ const MaintenanceTasks = () => {
         notes: notes,
       });
 
-      message.success(
-        checked ? "Đã hoàn thành bước này!" : "Đã bỏ tick bước này!"
-      );
-
       // Reload work orders để cập nhật UI
       await fetchWorkOrders();
 
@@ -635,6 +628,23 @@ const MaintenanceTasks = () => {
       );
       if (updatedWorkOrder) {
         setSelectedWorkOrder(updatedWorkOrder);
+        
+        // Kiểm tra nếu đây là bước cuối cùng
+        if (checked) {
+          const myItems = getMyChecklistItems(updatedWorkOrder);
+          const allCompleted = myItems.every((item) => item.isChecked);
+          if (allCompleted) {
+            message.success("Công việc hoàn thành. Tất cả mục kiểm tra đã xong.");
+          } else {
+            message.success("Đã hoàn thành bước này!");
+          }
+        } else {
+          message.success("Đã bỏ tick bước này!");
+        }
+      } else {
+        message.success(
+          checked ? "Đã hoàn thành bước này!" : "Đã bỏ tick bước này!"
+        );
       }
     } catch (error) {
       message.error("Cập nhật checklist thất bại: " + error.message);
@@ -669,7 +679,7 @@ const MaintenanceTasks = () => {
 
       await completeWorkOrder(selectedWorkOrder.workOrderId, completionData);
 
-      message.success("Hoàn thành phần công việc của bạn thành công!");
+      message.success("Công việc hoàn thành. Tất cả mục kiểm tra đã xong.");
       setChecklistModalVisible(false);
       setChecklistNotes({});
       fetchWorkOrders();
@@ -1181,7 +1191,7 @@ const MaintenanceTasks = () => {
                                     >
                                       <Text
                                         type="secondary"
-                                        style={{ fontSize: 11 }}
+                                        style={{ fontSize: 11, whiteSpace: "pre-wrap" }}
                                       >
                                         📝 Ghi chú: {item.notes}
                                       </Text>
@@ -1292,7 +1302,7 @@ const MaintenanceTasks = () => {
                                 >
                                   <Text
                                     type="secondary"
-                                    style={{ fontSize: 11 }}
+                                    style={{ fontSize: 11, whiteSpace: "pre-wrap" }}
                                   >
                                     📝 Ghi chú: {item.notes}
                                   </Text>
@@ -1396,11 +1406,13 @@ const MaintenanceTasks = () => {
               </Descriptions.Item>
               <Descriptions.Item label="Ngày phân công" span={1}>
                 {selectedWorkOrder.assignedDate
-                  ? dayjs(selectedWorkOrder.assignedDate).format("DD/MM/YYYY")
+                  ? dayjs(selectedWorkOrder.assignedDate).format("DD/MM/YYYY HH:mm")
                   : "-"}
               </Descriptions.Item>
               <Descriptions.Item label="Ngày thực hiện" span={1}>
-                {dayjs(selectedWorkOrder.scheduledDate).format("DD/MM/YYYY")}
+                {selectedWorkOrder.scheduledDate
+                  ? dayjs(selectedWorkOrder.scheduledDate).format("DD/MM/YYYY")
+                  : "-"}
               </Descriptions.Item>
               {selectedWorkOrder.startedDate && (
                 <Descriptions.Item label="Bắt đầu lúc" span={1}>
@@ -1414,11 +1426,6 @@ const MaintenanceTasks = () => {
                   {dayjs(selectedWorkOrder.completedDate).format(
                     "DD/MM/YYYY HH:mm"
                   )}
-                </Descriptions.Item>
-              )}
-              {selectedWorkOrder.notes && (
-                <Descriptions.Item label="Ghi chú" span={2}>
-                  {selectedWorkOrder.notes}
                 </Descriptions.Item>
               )}
             </Descriptions>
