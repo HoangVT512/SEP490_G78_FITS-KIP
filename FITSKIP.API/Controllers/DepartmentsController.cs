@@ -70,7 +70,7 @@ namespace FITSKIP.API.Controllers
             try
             {
                 var updated = await departmentService.UpdateAsync(id, request, cancellationToken);
-                if (updated == null) return NotFound();
+                if (updated == null) return NotFound(new { message = "Phòng ban không tồn tại" });
                 return Ok(updated);
             }
             catch (InvalidOperationException ex)
