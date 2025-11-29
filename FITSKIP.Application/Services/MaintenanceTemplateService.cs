@@ -51,7 +51,6 @@ namespace FITSKIP.Application.Services
             if (stage == null)
                 throw new InvalidOperationException($"Stage not found: {request.StageId}");
 
-            // ✅ CHECK TRÙNG TEMPLATE: Kiểm tra tên template đã tồn tại trong cùng Stage chưa
             var existingTemplates = await _templateRepository.GetByStageIdAsync(request.StageId);
             var isDuplicateTemplate = existingTemplates.Any(t => 
                 t.TemplateName.Trim().Equals(request.TemplateName.Trim(), StringComparison.OrdinalIgnoreCase) &&
@@ -66,7 +65,6 @@ namespace FITSKIP.Application.Services
                 );
             }
 
-            // ✅ CHECK TRÙNG ITEM: Kiểm tra trùng lặp trong danh sách TemplateItems
             if (request.TemplateItems != null && request.TemplateItems.Any())
             {
                 var duplicateItems = request.TemplateItems
@@ -135,7 +133,24 @@ namespace FITSKIP.Application.Services
             var template = await _templateRepository.GetByIdAsync(templateId);
             if (template == null)
                 throw new InvalidOperationException($"Template not found: {templateId}");
-
+            if (!template.TemplateName.Equals(request.TemplateName, StringComparison.OrdinalIgnoreCase))
+            {
+                var existingTemplates = await _templateRepository.GetByStageIdAsync(template.StageId);
+                var isDuplicateTemplate = existingTemplates.Any(t => 
+                    t.TemplateId != templateId && 
+                    t.TemplateName.Trim().Equals(request.TemplateName.Trim(), StringComparison.OrdinalIgnoreCase) &&
+                    t.IsActive
+                );
+                
+                if (isDuplicateTemplate)
+                {
+                    var stage = await _stageRepository.GetByIdAsync(template.StageId);
+                    throw new InvalidOperationException(
+                        $"Template với tên '{request.TemplateName}' đã tồn tại trong công đoạn '{stage?.StageName}'. " +
+                        $"Vui lòng sử dụng tên khác hoặc cập nhật template hiện có."
+                    );
+                }
+            }
             template.TemplateName = request.TemplateName;
             template.Description = request.Description;
             template.IsActive = request.IsActive;
@@ -144,7 +159,6 @@ namespace FITSKIP.Application.Services
 
             await _templateRepository.UpdateAsync(template);
 
-            // Update template items - delete old and create new
             await _templateItemRepository.DeleteByTemplateIdAsync(templateId);
             
             if (request.TemplateItems != null && request.TemplateItems.Any())
