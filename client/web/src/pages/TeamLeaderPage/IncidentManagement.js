@@ -168,6 +168,8 @@ const IncidentManagement = () => {
   const [formChangeCounter, setFormChangeCounter] = useState(0);
   // Track which duration fields have been manually edited
   const [manualDurationFields, setManualDurationFields] = useState(new Set());
+  // Ref to skip auto-calculate duration on initial form open (use ref to avoid re-render trigger)
+  const skipInitialDurationCalcRef = useRef(false);
   // Image upload states
   const [imageFileList, setImageFileList] = useState({});
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -273,6 +275,12 @@ const IncidentManagement = () => {
   // Only auto-fill if user hasn't manually entered duration
   useEffect(() => {
     if (formModalVisible && isEditMode) {
+      // Skip initial calculation when form first opens with existing data
+      if (skipInitialDurationCalcRef.current) {
+        skipInitialDurationCalcRef.current = false;
+        return;
+      }
+
       const startTime = form.getFieldValue("startTime");
       const endTime = form.getFieldValue("endTime");
 
@@ -287,7 +295,7 @@ const IncidentManagement = () => {
 
         // Auto-update status to "Hoàn thành" when endTime exists
         form.setFieldsValue({
-          status: "Hoàn thành"
+          status: "Hoàn thành",
         });
       } else if (!endTime) {
         // Reset duration when endTime is cleared (only if not manually set)
@@ -766,7 +774,17 @@ const IncidentManagement = () => {
     setIsEditMode(true);
     setSelectedIncident(record);
     setFormChanged(false); // Reset form changed state
-    setManualDurationFields(new Set()); // Reset manual duration tracking for edit mode
+
+    // Skip auto-calculate duration on initial form open to preserve existing value
+    skipInitialDurationCalcRef.current = true;
+
+    // Reset manual duration tracking for edit mode
+    // If record has duration, mark it as manually edited so useEffect doesn't overwrite it
+    const initialManualFields = new Set();
+    if (record.duration !== undefined && record.duration !== null) {
+      initialManualFields.add("duration");
+    }
+    setManualDurationFields(initialManualFields);
 
     // Load existing images from record
     const existingImageUrls = record.imageUrls || [];
@@ -800,13 +818,13 @@ const IncidentManagement = () => {
     const startTimeValue = record.startTime
       ? dayjs(record.startTime)
       : record.reportDate
-        ? dayjs(record.reportDate)
-        : null;
+      ? dayjs(record.reportDate)
+      : null;
     const endTimeValue = record.endTime
       ? dayjs(record.endTime)
       : record.resolveDate
-        ? dayjs(record.resolveDate)
-        : null;
+      ? dayjs(record.resolveDate)
+      : null;
 
     // Calculate duration or use existing
     let durationValue = null;
@@ -858,7 +876,9 @@ const IncidentManagement = () => {
     });
 
     // store previous endTime so we can restore if user cancels clearing it
-    setPreviousEndTime(endTimeValue && endTimeValue.isValid() ? endTimeValue : null);
+    setPreviousEndTime(
+      endTimeValue && endTimeValue.isValid() ? endTimeValue : null
+    );
 
     setFormModalVisible(true);
   };
@@ -871,7 +891,11 @@ const IncidentManagement = () => {
       fetchIncidents();
     } catch (error) {
       console.error("Lỗi khi xóa sự cố:", error);
-      const errMsg = error?.response?.data?.message || error?.message || error?.data?.message || "Xóa thất bại!";
+      const errMsg =
+        error?.response?.data?.message ||
+        error?.message ||
+        error?.data?.message ||
+        "Xóa thất bại!";
       message.error(errMsg);
       setLoading(false);
     }
@@ -956,14 +980,18 @@ const IncidentManagement = () => {
               await incidentService.delete(incident.id);
               return { success: true, incident };
             } catch (deleteError) {
-              const errMsg = deleteError?.response?.data?.message || deleteError?.message || deleteError?.data?.message || "Xóa thất bại!";
+              const errMsg =
+                deleteError?.response?.data?.message ||
+                deleteError?.message ||
+                deleteError?.data?.message ||
+                "Xóa thất bại!";
               return { success: false, incident, error: errMsg };
             }
           });
 
           const results = await Promise.all(deletePromises);
-          const successCount = results.filter(r => r.success).length;
-          const failedResults = results.filter(r => !r.success);
+          const successCount = results.filter((r) => r.success).length;
+          const failedResults = results.filter((r) => !r.success);
 
           // Show results
           if (successCount > 0) {
@@ -971,10 +999,11 @@ const IncidentManagement = () => {
           }
 
           if (failedResults.length > 0) {
-            const errorMessages = failedResults.map(failed =>
-              `Sự cố #${failed.incident.id} (${failed.incident.equipmentName}): ${failed.error}`
+            const errorMessages = failedResults.map(
+              (failed) =>
+                `Sự cố #${failed.incident.id} (${failed.incident.equipmentName}): ${failed.error}`
             );
-            message.error(`${errorMessages.join('\n')}`);
+            message.error(`${errorMessages.join("\n")}`);
           }
 
           if (successCount > 0) {
@@ -985,7 +1014,10 @@ const IncidentManagement = () => {
         } catch (error) {
           console.error("Lỗi khi xóa nhiều sự cố:", error);
           const errMsg =
-            error?.response?.data?.message || error?.message || error?.data?.message || "Xóa thất bại!";
+            error?.response?.data?.message ||
+            error?.message ||
+            error?.data?.message ||
+            "Xóa thất bại!";
           message.error(errMsg);
           setLoading(false);
         }
@@ -999,8 +1031,9 @@ const IncidentManagement = () => {
       const exportData = filteredIncidents.map((incident, index) => ({
         STT: index + 1,
         "Mã sự cố": incident.id,
-        "Thiết bị": `${incident.equipmentName}${incident.equipmentCode ? ` (${incident.equipmentCode})` : ""
-          }`,
+        "Thiết bị": `${incident.equipmentName}${
+          incident.equipmentCode ? ` (${incident.equipmentCode})` : ""
+        }`,
         "Dây chuyền": incident.lineName || "",
         "Công đoạn": incident.stageName || "",
         "Loại dừng": incident.category || "",
@@ -1190,7 +1223,7 @@ const IncidentManagement = () => {
 
       // Validate overlapping incidents (frontend check)
       if (values.lineId && values.startTime) {
-        const overlappingIncidents = incidents.filter(incident => {
+        const overlappingIncidents = incidents.filter((incident) => {
           // Skip if same incident (for edit mode)
           if (isEditMode && incident.id === selectedIncident?.id) return false;
 
@@ -1199,19 +1232,26 @@ const IncidentManagement = () => {
 
           // Check time overlap
           const incidentStart = dayjs(incident.reportDate);
-          const incidentEnd = incident.resolveDate ? dayjs(incident.resolveDate) : null;
+          const incidentEnd = incident.resolveDate
+            ? dayjs(incident.resolveDate)
+            : null;
           const newStart = dayjs(values.startTime);
           const newEnd = values.endTime ? dayjs(values.endTime) : null;
 
           // Overlap logic: new incident starts before existing ends and ends after existing starts
-          const startsBeforeExistingEnds = newStart.isBefore(incidentEnd || dayjs().add(100, 'years'));
-          const endsAfterExistingStarts = !newEnd || newEnd.isAfter(incidentStart);
+          const startsBeforeExistingEnds = newStart.isBefore(
+            incidentEnd || dayjs().add(100, "years")
+          );
+          const endsAfterExistingStarts =
+            !newEnd || newEnd.isAfter(incidentStart);
 
           return startsBeforeExistingEnds && endsAfterExistingStarts;
         });
 
         if (overlappingIncidents.length > 0) {
-          message.error("Thời gian báo cáo sự cố trùng với sự cố khác trên cùng dây chuyền");
+          message.error(
+            "Thời gian báo cáo sự cố trùng với sự cố khác trên cùng dây chuyền"
+          );
           setLoading(false);
           return;
         }
@@ -1226,9 +1266,11 @@ const IncidentManagement = () => {
         // Use more lenient tolerance to account for floating-point precision differences
         if (values.duration > actualDuration + 0.02) {
           message.error(
-            `Thời lượng (${values.duration
-            } phút) không được lớn hơn thời gian thực tế (${actualDuration.toFixed(2)
-            } phút)!`
+            `Thời lượng (${
+              values.duration
+            } phút) không được lớn hơn thời gian thực tế (${actualDuration.toFixed(
+              2
+            )} phút)!`
           );
           setLoading(false);
           return;
@@ -1302,12 +1344,17 @@ const IncidentManagement = () => {
           startTime: values.startTime
             ? dayjs(values.startTime).format("YYYY-MM-DDTHH:mm:ss.SSS")
             : dayjs(selectedIncident.reportDate).format(
-              "YYYY-MM-DDTHH:mm:ss.SSS"
-            ),
+                "YYYY-MM-DDTHH:mm:ss.SSS"
+              ),
           endTime: values.endTime
             ? dayjs(values.endTime).format("YYYY-MM-DDTHH:mm:ss.SSS")
             : null,
-          duration: values.endTime ? null : (values.duration || null), // If endTime exists, let backend auto-calculate duration to avoid precision issues
+          duration:
+            values.duration !== undefined &&
+            values.duration !== null &&
+            values.duration !== ""
+              ? parseFloat(values.duration)
+              : null, // Convert to number before sending
           typeId: typeId || null,
           issue:
             values.issue !== undefined
@@ -1349,7 +1396,7 @@ const IncidentManagement = () => {
         // Backend automatically sets status to "Hoàn thành" when endTime exists
         if (updatedIncident && updatedIncident.status) {
           form.setFieldsValue({
-            status: updatedIncident.status
+            status: updatedIncident.status,
           });
         }
 
@@ -1375,7 +1422,8 @@ const IncidentManagement = () => {
           const reason = form.getFieldValue(`reason_${formId}`);
           const solution = form.getFieldValue(`solution_${formId}`);
           const reporter = form.getFieldValue(`reporter_${formId}`);
-          const isTechSupport = form.getFieldValue(`isTechSupport_${formId}`) || false;
+          const isTechSupport =
+            form.getFieldValue(`isTechSupport_${formId}`) || false;
 
           if (!startTime) {
             message.error(
@@ -1387,19 +1435,24 @@ const IncidentManagement = () => {
 
           // Validate overlapping incidents (frontend check)
           if (lineId && startTime) {
-            const overlappingIncidents = incidents.filter(incident => {
+            const overlappingIncidents = incidents.filter((incident) => {
               // Check if same line (not equipment)
               if (incident.lineId !== lineId) return false;
 
               // Check time overlap
               const incidentStart = dayjs(incident.reportDate);
-              const incidentEnd = incident.resolveDate ? dayjs(incident.resolveDate) : null;
+              const incidentEnd = incident.resolveDate
+                ? dayjs(incident.resolveDate)
+                : null;
               const newStart = dayjs(startTime);
               const newEnd = endTime ? dayjs(endTime) : null;
 
               // Overlap logic: new incident starts before existing ends and ends after existing starts
-              const startsBeforeExistingEnds = newStart.isBefore(incidentEnd || dayjs().add(100, 'years'));
-              const endsAfterExistingStarts = !newEnd || newEnd.isAfter(incidentStart);
+              const startsBeforeExistingEnds = newStart.isBefore(
+                incidentEnd || dayjs().add(100, "years")
+              );
+              const endsAfterExistingStarts =
+                !newEnd || newEnd.isAfter(incidentStart);
 
               return startsBeforeExistingEnds && endsAfterExistingStarts;
             });
@@ -1425,8 +1478,9 @@ const IncidentManagement = () => {
             // Use more lenient tolerance to account for floating-point precision differences
             if (duration > actualDuration + 0.02) {
               message.error(
-                `Sự cố No.${formId}: Thời lượng (${duration} phút) không được lớn hơn thời gian thực tế (${actualDuration.toFixed(2)
-                } phút)!`
+                `Sự cố No.${formId}: Thời lượng (${duration} phút) không được lớn hơn thời gian thực tế (${actualDuration.toFixed(
+                  2
+                )} phút)!`
               );
               setLoading(false);
               return;
@@ -1471,7 +1525,9 @@ const IncidentManagement = () => {
             if (stopType) {
               const typeName = stopType.typeName || stopType.stopTypeName;
               if (typeName === "Dừng ngắn" || typeName === "Dừng dài") {
-                message.error(`Loại "${typeName}" cần endTime để tính duration và xác định loại dừng.`);
+                message.error(
+                  `Loại "${typeName}" cần endTime để tính duration và xác định loại dừng.`
+                );
                 setLoading(false);
                 return;
               }
@@ -1485,19 +1541,29 @@ const IncidentManagement = () => {
           // Check for active incidents on the line (same day and after start time)
           if (lineId && startTime) {
             try {
-              const activeIncidents = await incidentService.getActiveIncidentsByLine(lineId);
+              const activeIncidents =
+                await incidentService.getActiveIncidentsByLine(lineId);
 
               // Filter active incidents that are in the same day and started before the new incident
-              const conflictingIncidents = activeIncidents.filter(activeIncident => {
-                const activeStart = dayjs(activeIncident.reportDate || activeIncident.startTime);
-                const newStart = dayjs(startTime);
+              const conflictingIncidents = activeIncidents.filter(
+                (activeIncident) => {
+                  const activeStart = dayjs(
+                    activeIncident.reportDate || activeIncident.startTime
+                  );
+                  const newStart = dayjs(startTime);
 
-                // Same day and new incident starts after active incident
-                return activeStart.isSame(newStart, 'day') && newStart.isAfter(activeStart);
-              });
+                  // Same day and new incident starts after active incident
+                  return (
+                    activeStart.isSame(newStart, "day") &&
+                    newStart.isAfter(activeStart)
+                  );
+                }
+              );
 
               if (conflictingIncidents.length > 0) {
-                const lineName = lines.find((l) => l.lineId === lineId)?.lineName || `ID ${lineId}`;
+                const lineName =
+                  lines.find((l) => l.lineId === lineId)?.lineName ||
+                  `ID ${lineId}`;
                 message.error(
                   `Sự cố No.${formId}: Không thể tạo sự cố mới! Dây chuyền "${lineName}" đang có ${conflictingIncidents.length} sự cố chưa hoàn thành.`
                 );
@@ -1506,7 +1572,9 @@ const IncidentManagement = () => {
               }
             } catch (error) {
               console.error("Lỗi khi kiểm tra sự cố đang hoạt động:", error);
-              message.error("Không thể kiểm tra trạng thái dây chuyền. Vui lòng thử lại.");
+              message.error(
+                "Không thể kiểm tra trạng thái dây chuyền. Vui lòng thử lại."
+              );
               setLoading(false);
               return;
             }
@@ -1522,7 +1590,10 @@ const IncidentManagement = () => {
             endTime: endTime
               ? dayjs(endTime).format("YYYY-MM-DDTHH:mm:ss.SSS")
               : null,
-            duration: duration || null, // Send manual duration if provided, otherwise backend will auto-calculate
+            duration:
+              duration !== undefined && duration !== null && duration !== ""
+                ? parseFloat(duration)
+                : null, // Convert to number before sending
             typeId: typeId || null,
             issue: issue?.trim() || null,
             reason: reason?.trim() || null,
@@ -1829,8 +1900,9 @@ const IncidentManagement = () => {
       ...getColumnSearchProps("equipmentName", "Tìm thiết bị"),
       render: (text, record) => (
         <Tooltip
-          title={`${text}${record.equipmentCode ? ` (${record.equipmentCode})` : ""
-            }`}
+          title={`${text}${
+            record.equipmentCode ? ` (${record.equipmentCode})` : ""
+          }`}
         >
           <div>
             <div style={{ fontWeight: 500 }}>{text}</div>
@@ -2173,7 +2245,7 @@ const IncidentManagement = () => {
               type="dashed"
               icon={<FileExcelOutlined />}
               onClick={exportToExcel}
-            //style={{ backgroundColor: "#52c41a", borderColor: "#52c41a", color: "white" }}
+              //style={{ backgroundColor: "#52c41a", borderColor: "#52c41a", color: "white" }}
             >
               Xuất Excel
             </Button>
@@ -2473,8 +2545,8 @@ const IncidentManagement = () => {
                       <div style={{ fontSize: "14px" }}>
                         {selectedIncident.reportDate
                           ? dayjs(selectedIncident.reportDate).format(
-                            "DD/MM/YYYY"
-                          )
+                              "DD/MM/YYYY"
+                            )
                           : "-"}
                       </div>
                     </Col>
@@ -2547,8 +2619,8 @@ const IncidentManagement = () => {
                       <div style={{ fontSize: "14px", fontWeight: 500 }}>
                         {selectedIncident.reportDate
                           ? dayjs(selectedIncident.reportDate).format(
-                            "DD/MM/YYYY HH:mm:ss"
-                          )
+                              "DD/MM/YYYY HH:mm:ss"
+                            )
                           : "-"}
                       </div>
                     </Col>
@@ -2566,8 +2638,8 @@ const IncidentManagement = () => {
                       <div style={{ fontSize: "14px", fontWeight: 500 }}>
                         {selectedIncident.resolveDate
                           ? dayjs(selectedIncident.resolveDate).format(
-                            "DD/MM/YYYY HH:mm:ss"
-                          )
+                              "DD/MM/YYYY HH:mm:ss"
+                            )
                           : "-"}
                       </div>
                     </Col>
@@ -2751,28 +2823,28 @@ const IncidentManagement = () => {
                         duration:
                           shift.startTime && shift.endTime
                             ? dayjs(shift.endTime).diff(
-                              dayjs(shift.startTime),
-                              "minute",
-                              true
-                            )
+                                dayjs(shift.startTime),
+                                "minute",
+                                true
+                              )
                             : "-",
                         shiftDuration:
                           shift.shift?.startTime && shift.shift?.endTime
                             ? (() => {
-                              const start = dayjs(
-                                shift.shift.startTime,
-                                "HH:mm:ss.SSSSSSS"
-                              );
-                              let end = dayjs(
-                                shift.shift.endTime,
-                                "HH:mm:ss.SSSSSSS"
-                              );
-                              // Handle night shift (end time is next day)
-                              if (end.isBefore(start)) {
-                                end = end.add(1, "day");
-                              }
-                              return end.diff(start, "minute", true);
-                            })()
+                                const start = dayjs(
+                                  shift.shift.startTime,
+                                  "HH:mm:ss.SSSSSSS"
+                                );
+                                let end = dayjs(
+                                  shift.shift.endTime,
+                                  "HH:mm:ss.SSSSSSS"
+                                );
+                                // Handle night shift (end time is next day)
+                                if (end.isBefore(start)) {
+                                  end = end.add(1, "day");
+                                }
+                                return end.diff(start, "minute", true);
+                              })()
                             : "-",
                       }))}
                       columns={[
@@ -2892,6 +2964,7 @@ const IncidentManagement = () => {
           setFormChanged(false); // Reset form changed state
           setFormChangeCounter(0); // Reset form change counter
           setManualDurationFields(new Set()); // Reset manual duration tracking
+          skipInitialDurationCalcRef.current = false; // Reset skip flag
           setImageFileList({}); // Reset image file list
           setUploadedImageUrls({}); // Reset uploaded image URLs
           form.resetFields();
@@ -2915,6 +2988,7 @@ const IncidentManagement = () => {
                   setFormChanged(false); // Reset form changed state
                   setFormChangeCounter(0); // Reset form change counter
                   setManualDurationFields(new Set()); // Reset manual duration tracking
+                  skipInitialDurationCalcRef.current = false; // Reset skip flag
                   setImageFileList({}); // Reset image file list
                   setUploadedImageUrls({}); // Reset uploaded image URLs
                   form.resetFields();
@@ -3067,12 +3141,12 @@ const IncidentManagement = () => {
                         <Form.Item
                           label="Mã thiết bị"
                           name={`equipmentCode_${incidentForm.id}`}
-                        // rules={[
-                        //   {
-                        //     required: true,
-                        //     message: "Vui lòng chọn mã thiết bị!",
-                        //   },
-                        // ]}
+                          // rules={[
+                          //   {
+                          //     required: true,
+                          //     message: "Vui lòng chọn mã thiết bị!",
+                          //   },
+                          // ]}
                         >
                           <Select
                             placeholder="Chọn hoặc tìm mã thiết bị"
@@ -3195,19 +3269,33 @@ const IncidentManagement = () => {
                       <Col span={12}>
                         <Form.Item
                           shouldUpdate={(prevValues, currentValues) => {
-                            const prevIsTechSupport = prevValues[`isTechSupport_${incidentForm.id}`];
-                            const currentIsTechSupport = currentValues[`isTechSupport_${incidentForm.id}`];
-                            const prevEndTime = prevValues[`endTime_${incidentForm.id}`];
-                            const currentEndTime = currentValues[`endTime_${incidentForm.id}`];
-                            return prevIsTechSupport !== currentIsTechSupport || prevEndTime !== currentEndTime;
+                            const prevIsTechSupport =
+                              prevValues[`isTechSupport_${incidentForm.id}`];
+                            const currentIsTechSupport =
+                              currentValues[`isTechSupport_${incidentForm.id}`];
+                            const prevEndTime =
+                              prevValues[`endTime_${incidentForm.id}`];
+                            const currentEndTime =
+                              currentValues[`endTime_${incidentForm.id}`];
+                            return (
+                              prevIsTechSupport !== currentIsTechSupport ||
+                              prevEndTime !== currentEndTime
+                            );
                           }}
                           noStyle
                         >
                           {({ getFieldValue }) => {
-                            const isTechSupport = getFieldValue(`isTechSupport_${incidentForm.id}`) || false;
-                            const endTime = getFieldValue(`endTime_${incidentForm.id}`);
-                            const hasEndTime = endTime && dayjs(endTime).isValid();
-                            const isRequired = !isTechSupport || (isTechSupport && hasEndTime);
+                            const isTechSupport =
+                              getFieldValue(
+                                `isTechSupport_${incidentForm.id}`
+                              ) || false;
+                            const endTime = getFieldValue(
+                              `endTime_${incidentForm.id}`
+                            );
+                            const hasEndTime =
+                              endTime && dayjs(endTime).isValid();
+                            const isRequired =
+                              !isTechSupport || (isTechSupport && hasEndTime);
                             return (
                               <Form.Item
                                 label="Loại"
@@ -3215,7 +3303,12 @@ const IncidentManagement = () => {
                                 required={isRequired}
                                 rules={
                                   isRequired
-                                    ? [{ required: true, message: "Vui lòng chọn loại dừng!" }]
+                                    ? [
+                                        {
+                                          required: true,
+                                          message: "Vui lòng chọn loại dừng!",
+                                        },
+                                      ]
                                     : []
                                 }
                               >
@@ -3227,10 +3320,15 @@ const IncidentManagement = () => {
                                 >
                                   {stopTypes.map((stopType) => (
                                     <Option
-                                      key={stopType.stopTypeId || stopType.typeId}
-                                      value={stopType.stopTypeId || stopType.typeId}
+                                      key={
+                                        stopType.stopTypeId || stopType.typeId
+                                      }
+                                      value={
+                                        stopType.stopTypeId || stopType.typeId
+                                      }
                                     >
-                                      {stopType.typeName || stopType.stopTypeName}
+                                      {stopType.typeName ||
+                                        stopType.stopTypeName}
                                     </Option>
                                   ))}
                                 </Select>
@@ -3482,16 +3580,16 @@ const IncidentManagement = () => {
                   <Form.Item
                     label="Mã thiết bị"
                     name="equipmentCode"
-                  // rules={[
-                  //   { required: true, message: "Vui lòng chọn mã thiết bị!" },
-                  // ]}
+                    // rules={[
+                    //   { required: true, message: "Vui lòng chọn mã thiết bị!" },
+                    // ]}
                   >
                     <Select
                       placeholder="Chọn hoặc tìm mã thiết bị"
                       showSearch
                       allowClear
                       optionFilterProp="children"
-                      onSearch={() => { }}
+                      onSearch={() => {}}
                       onChange={(value) => {
                         // value will be equipmentId (we store id as value but show code+name)
                         const equipment = equipments.find(
@@ -3600,15 +3698,20 @@ const IncidentManagement = () => {
                       const currentIsTechSupport = currentValues.isTechSupport;
                       const prevEndTime = prevValues.endTime;
                       const currentEndTime = currentValues.endTime;
-                      return prevIsTechSupport !== currentIsTechSupport || prevEndTime !== currentEndTime;
+                      return (
+                        prevIsTechSupport !== currentIsTechSupport ||
+                        prevEndTime !== currentEndTime
+                      );
                     }}
                     noStyle
                   >
                     {({ getFieldValue }) => {
-                      const isTechSupport = getFieldValue("isTechSupport") || false;
+                      const isTechSupport =
+                        getFieldValue("isTechSupport") || false;
                       const endTime = getFieldValue("endTime");
                       const hasEndTime = endTime && dayjs(endTime).isValid();
-                      const isRequired = !isTechSupport || (isTechSupport && hasEndTime);
+                      const isRequired =
+                        !isTechSupport || (isTechSupport && hasEndTime);
                       return (
                         <Form.Item
                           label="Loại"
@@ -3616,7 +3719,12 @@ const IncidentManagement = () => {
                           required={isRequired}
                           rules={
                             isRequired
-                              ? [{ required: true, message: "Vui lòng chọn loại dừng!" }]
+                              ? [
+                                  {
+                                    required: true,
+                                    message: "Vui lòng chọn loại dừng!",
+                                  },
+                                ]
                               : []
                           }
                         >
@@ -3702,7 +3810,7 @@ const IncidentManagement = () => {
                       showSearch
                       allowClear
                       optionFilterProp="children"
-                      onSearch={() => { }}
+                      onSearch={() => {}}
                     >
                       <Option value={null}>Không có</Option>
                       {teamLeads.map((teamLead) => (

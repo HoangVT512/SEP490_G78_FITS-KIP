@@ -62,11 +62,27 @@ export const incidentService = {
   },
 
   async update(id, payload) {
-    const res = await apiRequest(`/Incidents/${encodeURIComponent(id)}`, {
-      method: "PUT",
-      body: JSON.stringify(payload),
-    });
-    return res?.data || res;
+    console.log("=== incidentService.update DEBUG ===");
+    console.log("ID:", id);
+    console.log("Payload:", JSON.stringify(payload, null, 2));
+    console.log(
+      "Payload types:",
+      Object.entries(payload).map(([k, v]) => `${k}: ${typeof v} = ${v}`)
+    );
+
+    try {
+      const res = await apiRequest(`/Incidents/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+      });
+      console.log("Update response:", res);
+      return res?.data || res;
+    } catch (error) {
+      console.error("=== incidentService.update ERROR ===");
+      console.error("Error details:", error);
+      console.error("Error message:", error.message);
+      throw error;
+    }
   },
 
   async delete(id) {

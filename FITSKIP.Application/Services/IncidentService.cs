@@ -824,7 +824,7 @@ public class IncidentService : IIncidentService
         };
     }
 
-    public async Task<IReadOnlyList<dynamic>> GetStopTypesAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<StopType>> GetStopTypesAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -833,7 +833,7 @@ public class IncidentService : IIncidentService
         }
         catch (Exception)
         {
-            return new List<dynamic>();
+            return new List<StopType>();
         }
     }
 
