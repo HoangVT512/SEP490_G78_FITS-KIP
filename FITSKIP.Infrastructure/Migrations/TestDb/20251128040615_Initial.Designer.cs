@@ -9,11 +9,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace FITSKIP.Infrastructure.Migrations
+namespace FITSKIP.Infrastructure.Migrations.TestDb
 {
-    [DbContext(typeof(FitskipDbContext))]
-    [Migration("20251128032616_InitialMigration")]
-    partial class InitialMigration
+    [DbContext(typeof(TestDbContext))]
+    [Migration("20251128040615_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

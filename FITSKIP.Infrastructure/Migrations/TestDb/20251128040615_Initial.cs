@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace FITSKIP.Infrastructure.Migrations.TestDb
 {
     /// <inheritdoc />
-    public partial class TestDbInitial : Migration
+    public partial class Initial : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
