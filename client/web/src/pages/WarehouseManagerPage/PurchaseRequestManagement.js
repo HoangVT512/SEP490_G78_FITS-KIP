@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   Card,
   Table,
@@ -41,6 +42,8 @@ const { TextArea } = Input;
 const { Search } = Input;
 
 const PurchaseRequestManagement = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -48,6 +51,7 @@ const PurchaseRequestManagement = () => {
   const [form] = Form.useForm();
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [prefillProcessed, setPrefillProcessed] = useState(false);
 
   const [requests, setRequests] = useState([]);
 
@@ -95,6 +99,50 @@ const PurchaseRequestManagement = () => {
       mounted = false;
     };
   }, []);
+
+  // Xử lý prefill data từ trang Inventory khi có phụ tùng hết hàng
+  useEffect(() => {
+    if (
+      !prefillProcessed &&
+      location.state?.prefillPart &&
+      availableParts.length > 0
+    ) {
+      const prefillPart = location.state.prefillPart;
+      console.log("Prefilling purchase request with:", prefillPart);
+
+      // Mở modal tạo yêu cầu
+      setIsModalVisible(true);
+
+      // Set giá trị form với phụ tùng đã chọn
+      form.setFieldsValue({
+        partNumber: prefillPart.partId,
+        quantity: Math.max(
+          (prefillPart.minQuantity || 10) - (prefillPart.currentQuantity || 0),
+          1
+        ),
+        reason: `Phụ tùng "${prefillPart.partName}" (${
+          prefillPart.partNumber
+        }) ${
+          prefillPart.currentQuantity === 0
+            ? "đã hết hàng"
+            : "sắp hết hàng (còn " + prefillPart.currentQuantity + " cái)"
+        }. Cần bổ sung để đảm bảo hoạt động sản xuất.`,
+      });
+
+      // Đánh dấu đã xử lý prefill để không chạy lại
+      setPrefillProcessed(true);
+
+      // Clear state để tránh prefill lại khi reload
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [
+    availableParts,
+    location.state,
+    prefillProcessed,
+    form,
+    navigate,
+    location.pathname,
+  ]);
 
   // Thêm useEffect để lắng nghe cập nhật dữ liệu real-time
   useEffect(() => {

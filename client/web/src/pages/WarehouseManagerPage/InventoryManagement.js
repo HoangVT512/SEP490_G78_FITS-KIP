@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Card,
   Table,
@@ -18,6 +19,7 @@ import {
   Alert,
   Tabs,
   Descriptions,
+  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
@@ -29,6 +31,7 @@ import {
   CheckCircleOutlined,
   DownOutlined,
   EyeOutlined,
+  ShoppingCartOutlined,
 } from "@ant-design/icons";
 import styles from "../../styles/pages/InventoryManagement.module.css";
 import { sparePartService } from "../../services/sparePartService";
@@ -37,6 +40,7 @@ const { Option } = Select;
 const { Search } = Input;
 
 const InventoryManagement = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
@@ -175,12 +179,16 @@ const InventoryManagement = () => {
             label: "Xem chi tiết",
             onClick: () => handleView(record),
           },
-          ...(record.isActive ? [{
-            key: "edit",
-            icon: <EditOutlined />,
-            label: "Sửa",
-            onClick: () => handleEdit(record),
-          }] : []),
+          ...(record.isActive
+            ? [
+                {
+                  key: "edit",
+                  icon: <EditOutlined />,
+                  label: "Sửa",
+                  onClick: () => handleEdit(record),
+                },
+              ]
+            : []),
           {
             key: "delete",
             icon: record.isActive ? (
@@ -446,9 +454,46 @@ const InventoryManagement = () => {
                       </h4>
                       <ul style={{ marginBottom: 0, paddingLeft: 20 }}>
                         {outOfStockItems.map((part) => (
-                          <li key={part.partId}>
-                            <strong>{part.partName}</strong> ({part.partNumber})
-                            - Số lượng: 0
+                          <li
+                            key={part.partId}
+                            style={{
+                              marginBottom: 8,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <span>
+                              <strong>{part.partName}</strong> (
+                              {part.partNumber}) - Số lượng: 0
+                            </span>
+                            <Tooltip title="Tạo yêu cầu mua hàng">
+                              <Button
+                                type="primary"
+                                size="small"
+                                icon={<ShoppingCartOutlined />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(
+                                    "/warehouse-manager/purchase-requests",
+                                    {
+                                      state: {
+                                        prefillPart: {
+                                          partId: part.partId,
+                                          partNumber: part.partNumber,
+                                          partName: part.partName,
+                                          currentQuantity: part.quantity,
+                                          minQuantity: part.minQuantity,
+                                        },
+                                      },
+                                    }
+                                  );
+                                }}
+                                style={{ marginLeft: 8 }}
+                              >
+                                Mua hàng
+                              </Button>
+                            </Tooltip>
                           </li>
                         ))}
                       </ul>
@@ -469,13 +514,50 @@ const InventoryManagement = () => {
                       </h4>
                       <ul style={{ marginBottom: 8, paddingLeft: 20 }}>
                         {lowStockItems.map((part) => (
-                          <li key={part.partId}>
-                            <strong>{part.partName}</strong> ({part.partNumber})
-                            - Còn lại:{" "}
-                            <strong style={{ color: "#faad14" }}>
-                              {part.quantity}
-                            </strong>{" "}
-                            cái
+                          <li
+                            key={part.partId}
+                            style={{
+                              marginBottom: 8,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <span>
+                              <strong>{part.partName}</strong> (
+                              {part.partNumber}) - Còn lại:{" "}
+                              <strong style={{ color: "#faad14" }}>
+                                {part.quantity}
+                              </strong>{" "}
+                              cái
+                            </span>
+                            <Tooltip title="Tạo yêu cầu mua hàng">
+                              <Button
+                                type="default"
+                                size="small"
+                                icon={<ShoppingCartOutlined />}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(
+                                    "/warehouse-manager/purchase-requests",
+                                    {
+                                      state: {
+                                        prefillPart: {
+                                          partId: part.partId,
+                                          partNumber: part.partNumber,
+                                          partName: part.partName,
+                                          currentQuantity: part.quantity,
+                                          minQuantity: part.minQuantity,
+                                        },
+                                      },
+                                    }
+                                  );
+                                }}
+                                style={{ marginLeft: 8 }}
+                              >
+                                Mua hàng
+                              </Button>
+                            </Tooltip>
                           </li>
                         ))}
                       </ul>
