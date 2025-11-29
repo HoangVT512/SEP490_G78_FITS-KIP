@@ -89,7 +89,7 @@ namespace FITSKIP.API.Controllers
         public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
         {
             var ok = await departmentService.DeleteAsync(id, cancellationToken);
-            if (!ok) return NotFound();
+            if (!ok) return NotFound(new { message = "Phòng ban không tồn tại" });
             return NoContent();
         }
     }
