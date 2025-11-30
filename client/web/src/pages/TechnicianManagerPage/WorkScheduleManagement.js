@@ -467,9 +467,7 @@ const WorkScheduleManagement = () => {
         }
       }
 
-      const scheduledDate = record.status === 'Hoãn' && record.postponedDueDate
-        ? dayjs(record.postponedDueDate)
-        : dayjs(record.scheduledDate);
+      const scheduledDate = dayjs(record.scheduledDate);
       detailForm.setFieldsValue({
         scheduledDate: scheduledDate,
         assignedToElectrical: record.assignedToElectrical,
@@ -616,29 +614,10 @@ const WorkScheduleManagement = () => {
             setLoading(false);
             return;
           }
-        } else if (selectedRecord.status === "Hoãn") {
-          // ✅ Khi status = "Hoãn" → CHỈ check PostponedDueDate
-          console.log('🔍 Status Hoãn - selectedRecord:', {
-            status: selectedRecord.status,
-            postponedDueDate: selectedRecord.postponedDueDate,
-            dueDate: selectedRecord.dueDate,
-            scheduledDate: selectedRecord.scheduledDate
-          });
-          const postponedDueDate = dayjs(selectedRecord.postponedDueDate).endOf('day');
-          console.log('🔍 PostponedDueDate:', postponedDueDate.format('DD/MM/YYYY'));
-          console.log('🔍 ScheduledDate from form:', scheduledDate.format('DD/MM/YYYY'));
-          if (scheduledDate.isAfter(postponedDueDate)) {
-            message.error(`Ngày bảo trì không được sau ngày đến hạn (${postponedDueDate.format('DD/MM/YYYY')})!`);
-            setLoading(false);
-            return;
-          }
         } else {
-          // ✅ Status khác → Check PostponedDueDate nếu có, không thì check DueDate
-          const effectiveDueDate = selectedRecord.postponedDueDate 
-            ? dayjs(selectedRecord.postponedDueDate).endOf('day')
-            : dayjs(selectedRecord.dueDate).endOf('day');
-          if (scheduledDate.isAfter(effectiveDueDate)) {
-            message.error(`Ngày bảo trì không được sau ngày đến hạn (${effectiveDueDate.format('DD/MM/YYYY')})!`);
+          const dueDate = dayjs(selectedRecord.dueDate).endOf('day');
+          if (scheduledDate.isAfter(dueDate)) {
+            message.error(`Ngày bảo trì không được sau ngày đến hạn (${dueDate.format('DD/MM/YYYY')})!`);
             setLoading(false);
             return;
           }
@@ -744,8 +723,10 @@ const WorkScheduleManagement = () => {
         }
         
         // Hoãn WorkOrder - gửi NewScheduledDate (chỉ update ScheduledDate, giữ DueDate)
+        // ✅ Chuyển sang giờ Việt Nam (UTC+7) để tránh lệch múi giờ
+        const vietnamDate = values.newScheduledDate.add(7, 'hour').toISOString();
         await postponeWorkOrder(selectedRecord.workOrderId, {
-          newScheduledDate: values.newScheduledDate.toISOString(),
+          newScheduledDate: vietnamDate,
           reason: values.reason,
         });
         message.success(`✅ Hoãn phiếu bảo trì đến ngày ${values.newScheduledDate.format('DD/MM/YYYY')}! (Ngày đến hạn gốc được giữ nguyên để theo dõi)`);
@@ -1141,6 +1122,25 @@ const WorkScheduleManagement = () => {
       },
     },
     {
+      title: "Ngày thực hiện",
+      key: "scheduledDate",
+      width: 120,
+      render: (_, record) => {
+        if (record.type === "plan" || !record.scheduledDate) {
+          return (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Chưa lên lịch
+            </Text>
+          );
+        }
+        return (
+          <div>
+            <div>{dayjs(record.scheduledDate).format("DD/MM/YYYY")}</div>
+          </div>
+        );
+      },
+    },
+    {
       title: "Người phụ trách",
       key: "assignedTechnicians",
       width: 160,
@@ -1371,7 +1371,7 @@ const WorkScheduleManagement = () => {
           <div style={{ flex: '1 1 200px' }}>
             <Card bordered={true}>
               <Statistic
-                title="Chờ giao việc"
+                title="Chờ xử lý"
                 value={stats.pendingCount}
                 prefix={<ClockCircleOutlined />}
                 valueStyle={{ color: "#faad14" }}
@@ -1673,23 +1673,25 @@ const WorkScheduleManagement = () => {
                   Đóng
                 </Button>,
 
-                // ✅ NÚT CHUYỂN LỊCH CHO OVERDUE:
-                // WorkOrder quá hạn (Overdue) → Hiện nút "Chuyển lịch" để update ngày và KTV
-                (selectedRecord.workStatus === "overdue" || selectedRecord.status === "Overdue") && (
+                // ✅ NÚT GIAO VIỆC CHO OVERDUE CHƯA CÓ KTV:
+                // WorkOrder quá hạn chưa có KTV → Hiện nút "Giao việc"
+                (selectedRecord.workStatus === "overdue" || selectedRecord.status === "Overdue") &&
+                !selectedRecord.electricalTechnicianName &&
+                !selectedRecord.mechanicalTechnicianName && (
                   <Button
-                    key="reschedule"
+                    key="assign-overdue"
                     type="primary"
-                    icon={<EditOutlined />}
+                    icon={<UserAddOutlined />}
                     onClick={() => handleAssignWork(selectedRecord)}
                     style={{
-                      backgroundColor: "#1890ff",
-                      borderColor: "#1890ff",
+                      backgroundColor: "#283652",
+                      borderColor: "#283652",
                       height: "40px",
                       fontSize: "16px",
                       minWidth: "120px",
                     }}
                   >
-                    Chuyển lịch
+                    Giao việc
                   </Button>
                 ),
 
@@ -1776,7 +1778,11 @@ const WorkScheduleManagement = () => {
                       minWidth: "120px",
                     }}
                   >
-                    {selectedRecord.type === "plan" ? "Giao việc" : "Cập nhật KTV"}
+                    {selectedRecord.type === "plan" 
+                      ? "Giao việc" 
+                      : (!selectedRecord.electricalTechnicianName && !selectedRecord.mechanicalTechnicianName)
+                        ? "Giao việc"
+                        : "Cập nhật KTV"}
                   </Button>
                 ),
               ].filter(Boolean)
@@ -2027,11 +2033,8 @@ const WorkScheduleManagement = () => {
                                   return true;
                                 }
                               } else {
-                                // ✅ Check theo PostponedDueDate nếu đã hoãn, nếu không thì check theo DueDate
-                                const effectiveDueDate = selectedRecord.postponedDueDate 
-                                  ? dayjs(selectedRecord.postponedDueDate)
-                                  : dayjs(selectedRecord.dueDate);
-                                if (effectiveDueDate && current.isAfter(effectiveDueDate, 'day')) {
+                                const dueDate = dayjs(selectedRecord.dueDate);
+                                if (dueDate && current.isAfter(dueDate, 'day')) {
                                   return true;
                                 }
                               }
