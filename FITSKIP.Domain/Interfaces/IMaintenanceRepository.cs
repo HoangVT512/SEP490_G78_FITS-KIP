@@ -32,7 +32,6 @@ namespace FITSKIP.Domain.Interfaces
         Task<MaintenancePlan?> GetByIdAsync(int planId);
         Task<IEnumerable<MaintenancePlan>> GetByEquipmentIdAsync(int equipmentId);
         Task<IEnumerable<MaintenancePlan>> GetActiveAsync();
-        Task<IEnumerable<MaintenancePlan>> GetOverdueAsync();
         Task<IEnumerable<MaintenancePlan>> GetDueWithinDaysAsync(int days);
         Task<IEnumerable<MaintenancePlan>> GetByStatusAsync(string status);
         Task<MaintenancePlan> CreateAsync(MaintenancePlan plan);

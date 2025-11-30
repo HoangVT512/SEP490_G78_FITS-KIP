@@ -9,7 +9,6 @@ namespace FITSKIP.Application.Interfaces
         Task<MaintenancePlanDTO?> GetPlanByIdAsync(int planId);
         Task<IEnumerable<MaintenancePlanDTO>> GetPlansByEquipmentIdAsync(int equipmentId);
         Task<IEnumerable<MaintenancePlanDTO>> GetActivePlansAsync();
-        Task<IEnumerable<MaintenancePlanDTO>> GetOverduePlansAsync();
         Task<IEnumerable<MaintenancePlanDTO>> GetPlansDueWithinDaysAsync(int days);
         Task<MaintenancePlanDTO> CreatePlanAsync(CreateMaintenancePlanRequest request, string userId);
         Task<MaintenancePlanDTO> UpdatePlanAsync(int planId, UpdateMaintenancePlanRequest request);

@@ -133,6 +133,10 @@ namespace FITSKIP.Application.Services
             var template = await _templateRepository.GetByIdAsync(templateId);
             if (template == null)
                 throw new InvalidOperationException($"Template not found: {templateId}");
+
+            // ✅ STAGE KHÔNG THỂ THAY ĐỔI - Template Stage là bất biến sau khi tạo
+            // Không cần validate vì UpdateRequest không có StageId
+
             if (!template.TemplateName.Equals(request.TemplateName, StringComparison.OrdinalIgnoreCase))
             {
                 var existingTemplates = await _templateRepository.GetByStageIdAsync(template.StageId);
@@ -151,6 +155,8 @@ namespace FITSKIP.Application.Services
                     );
                 }
             }
+            
+            // ✅ KHÔNG CẬP NHẬT StageId - Stage là bất biến
             template.TemplateName = request.TemplateName;
             template.Description = request.Description;
             template.IsActive = request.IsActive;
@@ -236,8 +242,13 @@ namespace FITSKIP.Application.Services
 
         // ===== HELPER METHODS =====
         
-        private static MaintenanceTemplateDTO MapTemplateToDTO(MaintenanceTemplate template)
+        private MaintenanceTemplateDTO MapTemplateToDTO(MaintenanceTemplate template)
         {
+            // ✅ Kiểm tra template có đang được sử dụng bởi maintenance plan đang hoạt động không
+            var activePlansCount = template.MaintenancePlans?.Count(p => p.IsActive) ?? 0;
+            // ✅ Stage luôn readonly sau khi template được tạo
+            var isInUse = true; // Luôn readonly để không cho đổi stage
+            
             return new MaintenanceTemplateDTO
             {
                 TemplateId = template.TemplateId,
@@ -260,7 +271,9 @@ namespace FITSKIP.Application.Services
                     IsRequired = ti.IsRequired,
                     RequiredRole = ti.RequiredRole,
                     IsActive = ti.IsActive
-                }).OrderBy(ti => ti.OrderIndex).ToList() ?? new List<MaintenanceTemplateItemDTO>()
+                }).OrderBy(ti => ti.OrderIndex).ToList() ?? new List<MaintenanceTemplateItemDTO>(),
+                IsInUse = isInUse,
+                ActivePlansCount = activePlansCount
             };
         }
 

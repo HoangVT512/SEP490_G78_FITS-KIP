@@ -72,11 +72,6 @@ export const getActivePlans = async () => {
   return apiRequest("/maintenance/plans/active", { method: "GET" });
 };
 
-// Get overdue maintenance plans
-export const getOverduePlans = async () => {
-  return apiRequest("/maintenance/plans/overdue", { method: "GET" });
-};
-
 // Get maintenance plans due within specified days
 export const getPlansDueWithinDays = async (days) => {
   return apiRequest(`/maintenance/plans/due-within/${days}`, {

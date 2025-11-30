@@ -56,12 +56,6 @@ namespace FITSKIP.Application.Services
             return plans.Select(MapPlanToDTO);
         }
 
-        public async Task<IEnumerable<MaintenancePlanDTO>> GetOverduePlansAsync()
-        {
-            var plans = await _planRepository.GetOverdueAsync();
-            return plans.Select(MapPlanToDTO);
-        }
-
         public async Task<IEnumerable<MaintenancePlanDTO>> GetPlansDueWithinDaysAsync(int days)
         {
             var plans = await _planRepository.GetDueWithinDaysAsync(days);
@@ -93,6 +87,14 @@ namespace FITSKIP.Application.Services
                 var template = await _templateRepository.GetByIdAsync(request.TemplateId.Value);
                 if (template == null)
                     throw new InvalidOperationException($"Template not found: {request.TemplateId}");
+                
+                if (template.StageId != equipment.StageId)
+                {
+                    throw new InvalidOperationException(
+                        $"Mẫu bảo trì '{template.TemplateName}' thuộc '{template.Stage?.StageName}' nhưng máy '{equipment.EquipmentName}' thuộc '{equipment.Stage?.StageName}'. " +
+                        $"Mẫu bảo trì phải cùng công đoạn với máy."
+                    );
+                }
             }
 
             var nextDueDate = CalculateNextDueDate(request.StartDate, request.IntervalType, request.IntervalValue);
@@ -146,8 +148,8 @@ namespace FITSKIP.Application.Services
                         $"{wo.WorkOrderCode} ({wo.Status})"
                     ));
                     throw new InvalidOperationException(
-                        $"Không thể ngưng hoạt động chu kỳ bảo trì vì còn {activeWorkOrders.Count} phiếu bảo trì đang hoạt động: {workOrderList}. " 
-                        
+                        $"Cannot deactivate maintenance plan because there are {activeWorkOrders.Count} active work orders: {workOrderList}. " +
+                        $"Please complete or cancel these work orders first."
                     );
                 }
 
@@ -164,27 +166,47 @@ namespace FITSKIP.Application.Services
                 if (plan.NextDueDate < DateTime.Today && !request.NextDueDate.HasValue)
                 {
                     throw new InvalidOperationException(
-                        $"❌ Không thể kích hoạt lại chu kỳ bảo trì vì đã quá hạn (Hạn: {plan.NextDueDate:dd/MM/yyyy}). " +
-                        $"Vui lòng cập nhật ngày bảo trì tiếp theo trước khi kích hoạt."
+                        $"❌ Cannot reactivate maintenance plan because it's overdue (Due: {plan.NextDueDate:dd/MM/yyyy}). " +
+                        $"Please update the next due date before reactivating."
                     );
                 }
                 
                 plan.IsActive = true;
             }
 
+            if (request.IntervalType != plan.IntervalType && request.IntervalType != null)
+            {
+                throw new InvalidOperationException("Không thể thay đổi loại chu kỳ của kế hoạch bảo trì đã tồn tại. Vui lòng tạo kế hoạch mới.");
+            }
+
+            if (request.IntervalValue != plan.IntervalValue && request.IntervalValue != 0)
+            {
+                throw new InvalidOperationException("Không thể thay đổi giá trị chu kỳ của kế hoạch bảo trì đã tồn tại. Vui lòng tạo kế hoạch mới.");
+            }
+
+            if (request.NextDueDate.HasValue && request.NextDueDate != plan.NextDueDate)
+            {
+                throw new InvalidOperationException("Không thể thay đổi ngày bảo trì tiếp theo trực tiếp. Hệ thống sẽ tự động tính toán.");
+            }
+
+            // ✅ CHỈ CHO PHÉP UPDATE: TemplateId, IsActive, ReminderDaysBefore
             if (request.TemplateId.HasValue)
             {
                 var template = await _templateRepository.GetByIdAsync(request.TemplateId.Value);
                 if (template == null)
                     throw new InvalidOperationException($"Template not found: {request.TemplateId}");
+                
+                // ✅ VALIDATION: Template phải thuộc đúng stage của equipment
+                if (template.StageId != plan.Equipment?.StageId)
+                {
+                    throw new InvalidOperationException(
+                        $"Mẫu bảo trì '{template.TemplateName}' thuộc công đoạn '{template.Stage?.StageName}' nhưng thiết bị '{plan.Equipment?.EquipmentName}' thuộc công đoạn '{plan.Equipment?.Stage?.StageName}'. " +
+                        $"Mẫu bảo trì và thiết bị phải cùng công đoạn."
+                    );
+                }
+                
                 plan.TemplateId = request.TemplateId;
             }
-
-            plan.IntervalType = request.IntervalType;
-            plan.IntervalValue = request.IntervalValue;
-            
-            if (request.NextDueDate.HasValue)
-                plan.NextDueDate = request.NextDueDate.Value;
 
             if (request.ReminderDaysBefore.HasValue)
                 plan.ReminderDaysBefore = request.ReminderDaysBefore.Value;

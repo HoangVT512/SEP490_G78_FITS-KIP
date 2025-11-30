@@ -19,6 +19,10 @@ namespace FITSKIP.Domain.DTO
         public DateTime CreatedDate { get; set; }
         public string? CreatedByName { get; set; }
         public List<MaintenanceTemplateItemDTO> TemplateItems { get; set; } = new();
+        
+        // ✅ Để frontend biết có thể thay đổi công đoạn hay không
+        public bool IsInUse { get; set; }
+        public int ActivePlansCount { get; set; }
     }
 
     /// <summary>

@@ -193,20 +193,6 @@ namespace FITSKIP.Infrastructure.Repositories
                 .ToListAsync();
         }
 
-        public async Task<IEnumerable<MaintenancePlan>> GetOverdueAsync()
-        {
-            var today = DateTime.Today;
-            return await _context.MaintenancePlans
-                .Include(p => p.Equipment)
-                    .ThenInclude(e => e!.Stage)
-                    .ThenInclude(s => s!.Line)
-                .Include(p => p.Template)
-                .Include(p => p.WorkOrders)
-                .Where(p => p.IsActive && p.NextDueDate < today)
-                .AsNoTracking()
-                .ToListAsync();
-        }
-
         public async Task<IEnumerable<MaintenancePlan>> GetDueWithinDaysAsync(int days)
         {
             var today = DateTime.Today;

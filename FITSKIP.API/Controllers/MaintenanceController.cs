@@ -569,24 +569,6 @@ namespace FITSKIP.API.Controllers
         }
 
         /// <summary>
-        /// Lấy kế hoạch bảo trì quá hạn
-        /// </summary>
-        [HttpGet("plans/overdue")]
-        [Authorize(Roles = "Quản trị viên,Quản lý,Quản lý kỹ thuật")]
-        public async Task<IActionResult> GetOverduePlans()
-        {
-            try
-            {
-                var plans = await _planService.GetOverduePlansAsync();
-                return Ok(ApiResponse<IEnumerable<MaintenancePlanDTO>>.SuccessResponse(plans, "Lấy danh sách kế hoạch bảo trì quá hạn thành công"));
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, ApiResponse<object>.ErrorResponse($"Lỗi: {ex.Message}"));
-            }
-        }
-
-        /// <summary>
         /// Lấy kế hoạch bảo trì sắp đến hạn (trong X ngày)
         /// </summary>
         [HttpGet("plans/due-within/{days}")]
