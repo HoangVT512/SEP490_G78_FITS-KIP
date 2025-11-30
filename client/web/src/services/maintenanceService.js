@@ -268,16 +268,6 @@ export const getAllTechnicians = async () => {
   return apiRequest("/maintenance/technicians", { method: "GET" });
 };
 
-// Get mechanical technicians
-export const getMechanicalTechnicians = async () => {
-  return apiRequest("/maintenance/technicians/mechanical", { method: "GET" });
-};
-
-// Get electrical technicians
-export const getElectricalTechnicians = async () => {
-  return apiRequest("/maintenance/technicians/electrical", { method: "GET" });
-};
-
 // Get technicians workload by date
 export const getTechniciansWorkloadByDate = async (date) => {
   // Format date to YYYY-MM-DD
