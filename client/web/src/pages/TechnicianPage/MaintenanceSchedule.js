@@ -252,9 +252,14 @@ const MaintenanceSchedule = () => {
     );
   };
 
-  // Handle date select - chỉ highlight ngày, không mở modal
+  // Handle date select - hiển thị modal công việc của ngày được chọn
   const onDateSelect = (date) => {
     setSelectedDate(date);
+    const schedulesForDate = getSchedulesForDate(date);
+    if (schedulesForDate.length > 0) {
+      setSelectedSchedules(schedulesForDate);
+      setModalVisible(true);
+    }
   };
 
   // Get monthly statistics
