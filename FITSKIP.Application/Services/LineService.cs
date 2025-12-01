@@ -52,10 +52,19 @@ public class LineService : ILineService
         // Chuẩn hóa LineCode: trim và chuyển về uppercase để so sánh case-insensitive
         var normalizedLineCode = request.LineCode.Trim().ToUpper();
 
-        // Check duplicate line name in same department
+        // Check duplicate line name in same department (exclude current line)
         var existingLines = await _lineRepository.GetByDepartmentIdAsync(request.DepartmentId, cancellationToken);
+
+        // Loại bỏ TẤT CẢ khoảng trắng khi so sánh để phát hiện duplicate
+        var lineNameWithoutSpaces = System.Text.RegularExpressions.Regex.Replace(normalizedLineName, @"\s+", "").ToLower();
+
         var duplicateLine = existingLines.FirstOrDefault(l =>
-            System.Text.RegularExpressions.Regex.Replace(l.LineName.Trim(), @"\s+", " ").ToLower() == normalizedLineName.ToLower());
+            System.Text.RegularExpressions.Regex.Replace(
+                System.Text.RegularExpressions.Regex.Replace(l.LineName.Trim(), @"\s+", " "),
+                @"\s+",
+                ""
+            ).ToLower() == lineNameWithoutSpaces
+        );
         if (duplicateLine != null)
         {
             throw new LineValidationException(
@@ -124,8 +133,18 @@ public class LineService : ILineService
 
         // Check duplicate line name in same department (exclude current line)
         var existingLines = await _lineRepository.GetByDepartmentIdAsync(request.DepartmentId, cancellationToken);
-        var duplicateLine = existingLines.FirstOrDefault(l => l.LineId != id &&
-            System.Text.RegularExpressions.Regex.Replace(l.LineName.Trim(), @"\s+", " ").ToLower() == normalizedLineName.ToLower());
+
+        // Loại bỏ TẤT CẢ khoảng trắng khi so sánh để phát hiện duplicate
+        var lineNameWithoutSpaces = System.Text.RegularExpressions.Regex.Replace(normalizedLineName, @"\s+", "").ToLower();
+
+        var duplicateLine = existingLines.FirstOrDefault(l =>
+            l.LineId != id &&
+            System.Text.RegularExpressions.Regex.Replace(
+                System.Text.RegularExpressions.Regex.Replace(l.LineName.Trim(), @"\s+", " "),
+                @"\s+",
+                ""
+            ).ToLower() == lineNameWithoutSpaces
+        );
         if (duplicateLine != null)
         {
             throw new LineValidationException(

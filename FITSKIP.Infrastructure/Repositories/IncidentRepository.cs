@@ -226,10 +226,9 @@ public class IncidentRepository : IIncidentRepository
             .ToListAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<dynamic>> GetStopTypesAsync(CancellationToken cancellationToken = default)
+    public async Task<IReadOnlyList<StopType>> GetStopTypesAsync(CancellationToken cancellationToken = default)
     {
         return await _context.StopTypes
-            .Select(s => new { typeId = s.TypeId, typeName = s.TypeName } as dynamic)
             .AsNoTracking()
             .ToListAsync(cancellationToken);
     }

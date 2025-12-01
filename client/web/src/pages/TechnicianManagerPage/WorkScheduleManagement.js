@@ -1778,7 +1778,11 @@ const WorkScheduleManagement = () => {
                       minWidth: "120px",
                     }}
                   >
-                    {selectedRecord.type === "plan" ? "Giao việc" : "Cập nhật KTV"}
+                    {selectedRecord.type === "plan" 
+                      ? "Giao việc" 
+                      : (!selectedRecord.electricalTechnicianName && !selectedRecord.mechanicalTechnicianName)
+                        ? "Giao việc"
+                        : "Cập nhật KTV"}
                   </Button>
                 ),
               ].filter(Boolean)

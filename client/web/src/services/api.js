@@ -38,11 +38,22 @@ const apiRequest = async (endpoint, options = {}) => {
       let errorMessage = `HTTP error! status: ${response.status}`;
       try {
         const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || errorMessage;
+        console.error("=== API Error Response ===");
+        console.error("Status:", response.status);
+        console.error("Error Data:", errorData);
+        // Include details if available (for 500 errors)
+        if (errorData.details) {
+          errorMessage = `${errorData.message || "Error"}: ${
+            errorData.details
+          }`;
+        } else {
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        }
       } catch (parseError) {
         // If can't parse JSON, try to get text
         try {
           const errorText = await response.text();
+          console.error("Error Text:", errorText);
           if (errorText) {
             errorMessage = errorText;
           }

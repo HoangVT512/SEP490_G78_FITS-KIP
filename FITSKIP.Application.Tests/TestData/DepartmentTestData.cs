@@ -10,35 +10,30 @@ public static class DepartmentTestData
         public static CreateDepartmentRequest ValidCreateRequest => new()
         {
             DepartmentName = "Production Department",
-            ManagerId = "MGR001",
             Description = "Handles all production activities"
         };
 
         public static CreateDepartmentRequest CreateRequestWithoutManager => new()
         {
             DepartmentName = "Production Department",
-            ManagerId = null,
             Description = "Department without manager"
         };
 
         public static CreateDepartmentRequest CreateRequestWithoutDescription => new()
         {
             DepartmentName = "Quality Assurance",
-            ManagerId = "MGR002",
             Description = null
         };
 
         public static CreateDepartmentRequest WarehouseCreateRequest => new()
         {
             DepartmentName = "Warehouse",
-            ManagerId = "MGR003",
             Description = "Storage and logistics"
         };
 
         public static CreateDepartmentRequest MaintenanceCreateRequest => new()
         {
             DepartmentName = "Maintenance",
-            ManagerId = "MGR004",
             Description = "Equipment maintenance"
         };
     }

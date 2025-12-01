@@ -11,8 +11,6 @@ public class CreateDepartmentRequest
 
     [StringLength(500, ErrorMessage = "Mô tả phòng ban không được vượt quá 500 ký tự")]
     public string? Description { get; set; }
-
-    public string? ManagerId { get; set; }
 }
 
 

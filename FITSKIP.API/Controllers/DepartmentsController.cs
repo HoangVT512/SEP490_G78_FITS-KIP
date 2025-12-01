@@ -42,7 +42,7 @@ namespace FITSKIP.API.Controllers
         public async Task<ActionResult<DepartmentDTO>> GetById(int id, CancellationToken cancellationToken)
         {
             var item = await departmentService.GetByIdAsync(id, cancellationToken);
-            if (item == null) return NotFound();
+            if (item == null) return NotFound(new { message = "Phòng ban không tồn tại" });
             return Ok(item);
         }
 
@@ -81,7 +81,7 @@ namespace FITSKIP.API.Controllers
             try
             {
                 var updated = await departmentService.UpdateAsync(id, request, cancellationToken);
-                if (updated == null) return NotFound();
+                if (updated == null) return NotFound(new { message = "Phòng ban không tồn tại" });
                 return Ok(updated);
             }
             catch (DepartmentValidationException ex)
@@ -139,7 +139,7 @@ namespace FITSKIP.API.Controllers
         public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)
         {
             var ok = await departmentService.DeleteAsync(id, cancellationToken);
-            if (!ok) return NotFound();
+            if (!ok) return NotFound(new { message = "Phòng ban không tồn tại" });
             return NoContent();
         }
     }

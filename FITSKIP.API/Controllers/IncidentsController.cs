@@ -406,7 +406,7 @@ public class IncidentsController : ControllerBase
             if (request.TypeId.HasValue && request.Duration.HasValue)
             {
                 var stopTypes = await _incidentService.GetStopTypesAsync();
-                var stopType = stopTypes.FirstOrDefault(st => st.StopTypeId == request.TypeId.Value);
+                var stopType = stopTypes.FirstOrDefault(st => st.TypeId == request.TypeId.Value);
 
                 if (stopType != null)
                 {
@@ -671,7 +671,7 @@ public class IncidentsController : ControllerBase
             if (request.TypeId.HasValue && request.Duration.HasValue)
             {
                 var stopTypes = await _incidentService.GetStopTypesAsync();
-                var stopType = stopTypes.FirstOrDefault(st => st.StopTypeId == request.TypeId.Value);
+                var stopType = stopTypes.FirstOrDefault(st => st.TypeId == request.TypeId.Value);
 
                 if (stopType != null)
                 {
