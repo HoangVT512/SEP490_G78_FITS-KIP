@@ -53,7 +53,18 @@ namespace FITSKIP.Application.Services
             // Default: giữ nguyên status cũ
             return rh.Status;
         }
-        public Task<ReplacementHistory> CreateAsync(ReplacementHistory replacementHistory, CancellationToken cancellationToken = default) => _repository.CreateAsync(replacementHistory, cancellationToken);
+
+        public async Task<ReplacementHistory> CreateAsync(ReplacementHistory replacementHistory, CancellationToken cancellationToken = default)
+        {
+            // Validate quantity must be greater than 0
+            if (replacementHistory.Quantity <= 0)
+                throw new ReplacementHistoryValidationException(
+                    "Số lượng phải lớn hơn 0",
+                    "REPLACEMENT_HISTORY_QUANTITY_INVALID",
+                    new { Quantity = replacementHistory.Quantity });
+
+            return await _repository.CreateAsync(replacementHistory, cancellationToken);
+        }
 
         public Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default) => _repository.DeleteAsync(id, cancellationToken);
 

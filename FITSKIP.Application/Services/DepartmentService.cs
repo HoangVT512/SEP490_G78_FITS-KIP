@@ -54,11 +54,6 @@ public class DepartmentService : IDepartmentService
                 new { ExistingDepartmentId = duplicateDepartment.DepartmentId, DepartmentName = request.DepartmentName.Trim() });
         }
 
-        // Validate manager ID if provided
-        if (!string.IsNullOrWhiteSpace(request.ManagerId))
-        {
-            await ValidateManagerIdAsync(request.ManagerId, cancellationToken);
-        }
 
         // Validate description if provided
         if (!string.IsNullOrWhiteSpace(request.Description))
@@ -70,7 +65,6 @@ public class DepartmentService : IDepartmentService
         {
             DepartmentName = request.DepartmentName.Trim(),
             Description = request.Description?.Trim(),
-            ManagerId = request.ManagerId
         };
         var created = await repository.CreateAsync(entity, cancellationToken);
         return MapToDto(created);
