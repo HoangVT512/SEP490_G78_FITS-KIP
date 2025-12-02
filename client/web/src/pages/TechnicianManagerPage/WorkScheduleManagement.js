@@ -187,7 +187,7 @@ const WorkScheduleManagement = () => {
       }
 
       const now = dayjs();
-      
+
       // WO đã hoàn thành quá 24h chưa đóng
       const overdueCompleted = orders.filter(wo => {
         if (wo.status !== "Hoàn thành" && wo.status !== "Completed") return false;
@@ -203,7 +203,7 @@ const WorkScheduleManagement = () => {
 
       setOverdueCompletedWOs(overdueCompleted);
       setOverdueNotStartedWOs(overdueNotStarted);
-      
+
       if (overdueCompleted.length > 0 || overdueNotStarted.length > 0) {
         setShowOverdueWarning(true);
       }
@@ -553,6 +553,48 @@ const WorkScheduleManagement = () => {
     }
   };
 
+  // ✅ Hàm disable ngày không hợp lệ cho DatePicker
+  const disabledDate = (current) => {
+    if (!current || !selectedRecord) {
+      return false;
+    }
+
+    // Lấy thông tin chu kỳ
+    const planStartDate = selectedRecord.startDate || selectedRecord.nextDueDate;
+    const intervalValue = selectedRecord.intervalValue || 7;
+    const intervalType = selectedRecord.intervalType || "Days";
+
+    if (!planStartDate) {
+      return false;
+    }
+
+    const startMoment = dayjs(planStartDate);
+
+    // Tính ngày kết thúc của chu kỳ hiện tại
+    let cycleEndDate;
+    if (intervalType === "Days" || intervalType === "days") {
+      cycleEndDate = startMoment.add(intervalValue, 'days');
+    } else if (intervalType === "Weeks" || intervalType === "weeks") {
+      cycleEndDate = startMoment.add(intervalValue, 'weeks');
+    } else if (intervalType === "Months" || intervalType === "months") {
+      cycleEndDate = startMoment.add(intervalValue, 'months');
+    } else if (intervalType === "Hours" || intervalType === "hours") {
+      cycleEndDate = startMoment.add(intervalValue, 'hour');
+    } else {
+      cycleEndDate = startMoment.add(intervalValue, 'days');
+    }
+
+    // Disable các ngày:
+    // 1. Trước ngày hiện tại
+    // 2. Trùng với ngày bắt đầu chu kỳ (startDate)
+    // 3. Sau ngày kết thúc chu kỳ (để đảm bảo trong phạm vi chu kỳ)
+    const isBeforeToday = current.isBefore(dayjs(), 'day');
+    const isSameAsStart = current.isSame(startMoment, 'day');
+    const isAfterCycleEnd = current.isAfter(cycleEndDate, 'day');
+
+    return isBeforeToday || isSameAsStart || isAfterCycleEnd;
+  };
+
   const getChecklistJobTypes = () => {
     const hasElectrical = templateChecklistItems.some(item => item.category === "Electrical");
     const hasMechanical = templateChecklistItems.some(item => item.category === "Mechanical");
@@ -730,7 +772,22 @@ const WorkScheduleManagement = () => {
       postponeForm.resetFields();
       loadAllData();
     } catch (error) {
-      const errorMessage = error.response?.data?.message || error.message || "Có lỗi xảy ra";
+      console.error('Postpone error:', error);
+
+      let errorMessage = "Không thể hoãn bảo trì. Vui lòng thử lại.";
+
+      if (error.response?.status === 404) {
+        errorMessage = selectedRecord.type === "workOrder"
+          ? "Không tìm thấy phiếu bảo trì này. Vui lòng kiểm tra lại."
+          : "Không tìm thấy chu kỳ bảo trì này. Vui lòng kiểm tra lại.";
+      } else if (error.response?.status === 400) {
+        errorMessage = error.response?.data?.message || "Ngày hoãn không hợp lệ. Vui lòng chọn ngày khác.";
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = `Lỗi: ${error.message}`;
+      }
+
       message.error(errorMessage);
     } finally {
       setLoading(false);
@@ -1416,6 +1473,9 @@ const WorkScheduleManagement = () => {
                 <Option value="inProgress">
                   <PlayCircleOutlined /> Đang thực hiện
                 </Option>
+                <Option value="postponed">
+                  <ClockCircleOutlined /> Hoãn
+                </Option>
                 <Option value="overdue">
                   <ExclamationCircleOutlined /> Quá hạn
                 </Option>
@@ -1479,16 +1539,28 @@ const WorkScheduleManagement = () => {
             name="newScheduledDate"
             label="Chọn ngày hoãn"
             rules={[{ required: true, message: "Vui lòng chọn ngày hoãn" }]}
+            help={
+              selectedRecord?.dueDate && selectedRecord?.intervalValue && selectedRecord?.intervalType
+                ? `Chọn ngày từ ${dayjs(selectedRecord.dueDate).add(1, 'day').format('DD/MM')} đến ${dayjs(selectedRecord.dueDate).add(
+                  selectedRecord.intervalValue,
+                  selectedRecord.intervalType === 'Days' ? 'day' :
+                    selectedRecord.intervalType === 'Weeks' ? 'week' :
+                      selectedRecord.intervalType === 'Months' ? 'month' : 'day'
+                ).subtract(1, 'day').format('DD/MM')} (không trùng ngày bắt đầu chu kỳ)`
+                : "Chọn ngày hoãn trong phạm vi chu kỳ"
+            }
           >
             <DatePicker
               style={{ width: "100%" }}
               format="DD/MM/YYYY"
               placeholder="Chọn ngày hoãn"
+              inputReadOnly={true}
               disabledDate={(current) => {
                 if (!current) return false;
 
                 const today = dayjs().startOf('day');
                 const dueDate = selectedRecord?.dueDate ? dayjs(selectedRecord.dueDate).startOf('day') : null;
+                const planStartDate = selectedRecord?.startDate ? dayjs(selectedRecord.startDate).startOf('day') : null;
 
                 // Tính maxDate = dueDate + chu kỳ
                 let maxDate = null;
@@ -1498,6 +1570,8 @@ const WorkScheduleManagement = () => {
 
                   if (intervalType === 'Days' || intervalType === 'days') {
                     maxDate = dueDate.add(intervalValue, 'day');
+                  } else if (intervalType === 'Weeks' || intervalType === 'weeks') {
+                    maxDate = dueDate.add(intervalValue, 'week');
                   } else if (intervalType === 'Months' || intervalType === 'months') {
                     maxDate = dueDate.add(intervalValue, 'month');
                   } else if (intervalType === 'Hours' || intervalType === 'hours') {
@@ -1512,6 +1586,11 @@ const WorkScheduleManagement = () => {
 
                 // Không cho chọn <= ngày đến hạn hiện tại
                 if (dueDate && current <= dueDate) {
+                  return true;
+                }
+
+                // Không cho chọn trùng ngày bắt đầu chu kỳ (startDate)
+                if (planStartDate && current.isSame(planStartDate, 'day')) {
                   return true;
                 }
 
@@ -1654,8 +1733,6 @@ const WorkScheduleManagement = () => {
                     icon={<EditOutlined />}
                     onClick={() => handleAssignWork(selectedRecord)}
                     style={{
-                      backgroundColor: "#1890ff",
-                      borderColor: "#1890ff",
                       height: "40px",
                       fontSize: "16px",
                       minWidth: "120px",
@@ -1748,7 +1825,7 @@ const WorkScheduleManagement = () => {
                       minWidth: "120px",
                     }}
                   >
-                    {selectedRecord.type === "plan" ? "Giao việc" : "Cập nhật KTV"}
+                    {selectedRecord.type === "plan" || (!selectedRecord.electricalTechnicianName && !selectedRecord.mechanicalTechnicianName) ? "Giao việc" : "Cập nhật KTV"}
                   </Button>
                 ),
               ].filter(Boolean) // Lọc bỏ các false values
@@ -1971,39 +2048,119 @@ const WorkScheduleManagement = () => {
                         rules={[
                           { required: true, message: "Vui lòng chọn ngày bảo trì" },
                         ]}
+                        help={
+                          selectedRecord?.type === 'plan' && selectedRecord?.startDate && selectedRecord?.intervalValue
+                            ? `Chọn từ ${dayjs(selectedRecord.startDate).add(1, 'day').format('DD/MM')} đến ${dayjs(selectedRecord.startDate).add(
+                              selectedRecord.intervalValue,
+                              selectedRecord.intervalType === 'Days' ? 'day' :
+                                selectedRecord.intervalType === 'Weeks' ? 'week' :
+                                  selectedRecord.intervalType === 'Months' ? 'month' : 'day'
+                            ).format('DD/MM')} (không trùng ngày bắt đầu)`
+                            : selectedRecord?.type === 'workOrder' && selectedRecord?.status !== 'Quá hạn'
+                              ? "Chọn ngày trước ngày đến hạn"
+                              : "Chọn ngày bảo trì phù hợp"
+                        }
                       >
                         <DatePicker
                           format="DD/MM/YYYY"
                           style={{ width: "100%" }}
                           placeholder="Chọn ngày bảo trì"
+                          inputReadOnly={true}
                           disabledDate={(current) => {
                             if (!current) return false;
 
                             const today = dayjs().startOf('day');
 
+                            // Không cho chọn ngày quá khứ
                             if (current.isBefore(today, 'day')) {
                               return true;
                             }
 
                             if (selectedRecord?.type === 'plan') {
-                              const dueDate = selectedRecord.postponedDueDate
-                                ? dayjs(selectedRecord.postponedDueDate)
-                                : dayjs(selectedRecord.nextDueDate);
-                              if (dueDate && current.isAfter(dueDate, 'day')) {
-                                return true;
+                              const planStartDate = selectedRecord.startDate || selectedRecord.nextDueDate;
+                              const intervalValue = selectedRecord.intervalValue || 7;
+                              const intervalType = selectedRecord.intervalType || "Days";
+
+                              if (!planStartDate) {
+                                return false;
                               }
+
+                              const startMoment = dayjs(planStartDate);
+
+                              // Tính ngày kết thúc của chu kỳ hiện tại
+                              let cycleEndDate;
+                              if (intervalType === "Days" || intervalType === "days") {
+                                cycleEndDate = startMoment.add(intervalValue, 'days');
+                              } else if (intervalType === "Weeks" || intervalType === "weeks") {
+                                cycleEndDate = startMoment.add(intervalValue, 'weeks');
+                              } else if (intervalType === "Months" || intervalType === "months") {
+                                cycleEndDate = startMoment.add(intervalValue, 'months');
+                              } else if (intervalType === "Hours" || intervalType === "hours") {
+                                cycleEndDate = startMoment.add(intervalValue, 'hour');
+                              } else {
+                                cycleEndDate = startMoment.add(intervalValue, 'days');
+                              }
+
+                              // Disable các ngày:
+                              // 1. Trùng với ngày bắt đầu chu kỳ (startDate)
+                              // 2. Sau ngày kết thúc chu kỳ (để đảm bảo trong phạm vi chu kỳ)
+                              const isSameAsStart = current.isSame(startMoment, 'day');
+                              const isAfterCycleEnd = current.isAfter(cycleEndDate, 'day');
+
+                              return isSameAsStart || isAfterCycleEnd;
                             } else if (selectedRecord?.type === 'workOrder') {
+                              // ✅ Lấy thông tin chu kỳ từ WorkOrder
+                              const intervalValue = selectedRecord.intervalValue || 7;
+                              const intervalType = selectedRecord.intervalType || "Days";
+                              const dueDate = dayjs(selectedRecord.dueDate);
+
+                              // Tính ngày bắt đầu chu kỳ từ dueDate - interval
+                              let cycleStart;
+                              if (intervalType === "Days" || intervalType === "days") {
+                                cycleStart = dueDate.subtract(intervalValue, 'day');
+                              } else if (intervalType === "Weeks" || intervalType === "weeks") {
+                                cycleStart = dueDate.subtract(intervalValue, 'week');
+                              } else if (intervalType === "Months" || intervalType === "months") {
+                                cycleStart = dueDate.subtract(intervalValue, 'month');
+                              } else if (intervalType === "Hours" || intervalType === "hours") {
+                                cycleStart = dueDate.subtract(intervalValue, 'hour');
+                              } else {
+                                cycleStart = dueDate.subtract(intervalValue, 'day');
+                              }
+
+                              // Tính ngày kết thúc của chu kỳ hiện tại từ cycleStart + interval
+                              let cycleEndDate;
+                              if (intervalType === "Days" || intervalType === "days") {
+                                cycleEndDate = cycleStart.add(intervalValue, 'days');
+                              } else if (intervalType === "Weeks" || intervalType === "weeks") {
+                                cycleEndDate = cycleStart.add(intervalValue, 'weeks');
+                              } else if (intervalType === "Months" || intervalType === "months") {
+                                cycleEndDate = cycleStart.add(intervalValue, 'months');
+                              } else if (intervalType === "Hours" || intervalType === "hours") {
+                                cycleEndDate = cycleStart.add(intervalValue, 'hour');
+                              } else {
+                                cycleEndDate = cycleStart.add(intervalValue, 'days');
+                              }
+
+                              // Disable các ngày:
+                              // 1. Trùng với ngày bắt đầu chu kỳ (cycleStart)
+                              const isSameAsCycleStart = current.isSame(cycleStart, 'day');
+
+                              // 2. Kiểm tra theo status
                               if (selectedRecord.status === 'Quá hạn' || selectedRecord.workStatus === 'overdue') {
                                 const maxAllowedDate = today.add(2, 'day');
                                 if (current.isAfter(maxAllowedDate, 'day')) {
                                   return true;
                                 }
                               } else {
-                                const dueDate = dayjs(selectedRecord.dueDate);
-                                if (dueDate && current.isAfter(dueDate, 'day')) {
+                                // 3. Sau ngày kết thúc chu kỳ (để đảm bảo trong phạm vi chu kỳ)
+                                const isAfterCycleEnd = current.isAfter(cycleEndDate, 'day');
+                                if (isAfterCycleEnd) {
                                   return true;
                                 }
                               }
+
+                              return isSameAsCycleStart;
                             }
 
                             return false;

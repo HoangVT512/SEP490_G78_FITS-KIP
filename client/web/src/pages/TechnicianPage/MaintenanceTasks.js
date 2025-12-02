@@ -134,6 +134,7 @@ const MaintenanceTasks = () => {
   // ✅ Lấy trạng thái của work order
   const getMyStatus = (workOrder) => {
     if (!workOrder) return "Chờ xử lý";
+    if (workOrder.status === "Đã hủy") return "Đã hủy";
     const taskType = getMyTaskType(workOrder);
 
     // Nếu là Electrical, lấy electricalStatus
@@ -240,12 +241,31 @@ const MaintenanceTasks = () => {
       key: "scheduledDate",
       width: 130,
       render: (text, record) => {
-        if (!text) return "-";
-        const scheduledDate = dayjs(text);
+        const displayDate = record.rescheduledDate || record.scheduledDate;
+        if (!displayDate) return "-";
+        const scheduledDate = dayjs(displayDate);
         const today = dayjs();
-        const isPast =
-          scheduledDate.isBefore(today, "day") &&
-          record?.status !== "Hoàn thành";
+        const myStatus = getMyStatus(record);
+        
+        // Không hiển thị màu sắc/badge cho các trạng thái đã hoàn thành, đã hủy
+        const isCompletedOrCancelled = myStatus === "Hoàn thành" || myStatus === "Đã hủy" || myStatus === "Đã đóng";
+        
+        if (isCompletedOrCancelled) {
+          return (
+            <div
+              style={{
+                fontSize: "12px",
+                color: "inherit",
+                fontWeight: "normal",
+              }}
+            >
+              {scheduledDate.format("DD/MM/YYYY")}
+            </div>
+          );
+        }
+        
+        // Chỉ hiển thị màu sắc cho các trạng thái chưa hoàn thành
+        const isPast = scheduledDate.isBefore(today, "day");
         const isToday = scheduledDate.isSame(today, "day");
         return (
           <div
@@ -334,7 +354,8 @@ const MaintenanceTasks = () => {
 
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const scheduledDate = new Date(record.scheduledDate);
+        const displayDate = record.rescheduledDate || record.scheduledDate;
+        const scheduledDate = new Date(displayDate);
         scheduledDate.setHours(0, 0, 0, 0);
         const isScheduledDateReached = scheduledDate <= today;
 
@@ -352,13 +373,14 @@ const MaintenanceTasks = () => {
             onClick: () => handleViewSparePartsHistory(record),
           },
           isScheduledDateReached &&
-            (record.status === "Chờ xử lý" ||
-              record.status === "Đang thực hiện") && {
-              key: "execute",
-              icon: <CheckCircleOutlined />,
-              label: "Thực hiện",
-              onClick: () => handleOpenChecklist(record),
-            },
+            (getMyStatus(record) === "Chờ xử lý" ||
+              getMyStatus(record) === "Đang thực hiện" ||
+              record.status === "Hoãn") && {
+            key: "execute",
+            icon: <CheckCircleOutlined />,
+            label: "Thực hiện",
+            onClick: () => handleOpenChecklist(record),
+          },
         ].filter(Boolean);
 
         return (
@@ -563,7 +585,7 @@ const MaintenanceTasks = () => {
         console.error("❌ Lỗi API:", errorData);
         throw new Error(
           errorData.message ||
-            `API Error: ${response.status} ${response.statusText}`
+          `API Error: ${response.status} ${response.statusText}`
         );
       }
 
@@ -764,7 +786,7 @@ const MaintenanceTasks = () => {
         }
         extra={
           <Space>
-            <Button type="primary" onClick={fetchWorkOrders} loading={loading}>
+            <Button onClick={fetchWorkOrders} loading={loading}>
               Làm mới
             </Button>
           </Space>
@@ -935,8 +957,8 @@ const MaintenanceTasks = () => {
                       percent === 100
                         ? "success"
                         : completed > 0
-                        ? "active"
-                        : "normal"
+                          ? "active"
+                          : "normal"
                     }
                   />
                   <div
@@ -1203,7 +1225,7 @@ const MaintenanceTasks = () => {
                             style={{
                               backgroundColor:
                                 getMyTaskType(selectedWorkOrder) ===
-                                "Electrical"
+                                  "Electrical"
                                   ? "#1890ff"
                                   : "#52c41a",
                             }}
@@ -1435,12 +1457,12 @@ const MaintenanceTasks = () => {
                               style={{
                                 backgroundColor:
                                   getMyTaskType(selectedWorkOrder) ===
-                                  "Electrical"
+                                    "Electrical"
                                     ? "#1890ff"
                                     : getMyTaskType(selectedWorkOrder) ===
                                       "Mechanical"
-                                    ? "#52c41a"
-                                    : "#722ed1",
+                                      ? "#52c41a"
+                                      : "#722ed1",
                               }}
                             />
                           }
@@ -1512,12 +1534,10 @@ const MaintenanceTasks = () => {
         {selectedWorkOrder && (
           <div>
             <Alert
-              message={`Phiếu bảo trì: ${
-                selectedWorkOrder.workOrderCode ||
+              message={`Phiếu bảo trì: ${selectedWorkOrder.workOrderCode ||
                 `WO${String(selectedWorkOrder.workOrderId).padStart(3, "0")}`
-              } - ${selectedWorkOrder.equipmentCode} (${
-                selectedWorkOrder.equipmentName
-              })`}
+                } - ${selectedWorkOrder.equipmentCode} (${selectedWorkOrder.equipmentName
+                })`}
               type="info"
               style={{ marginBottom: 16 }}
             />
