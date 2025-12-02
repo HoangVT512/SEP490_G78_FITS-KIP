@@ -40,6 +40,7 @@ namespace FITSKIP.Application.Interfaces
         Task GenerateWorkOrdersForDuePlansAsync();
         Task CreateAutoWorkOrdersAsync(); // ✅ Tự động tạo WorkOrder khi đến ReminderDaysBefore
         Task UpdateOverdueStatusAsync();
+        Task UpdateOverdueStatusForPlanAsync(int planId); // ✅ Tự động update status Quá hạn khi load plan
         Task SendMaintenanceRemindersAsync();
         Task SendCompletedWorkOrderRemindersAsync();
     }

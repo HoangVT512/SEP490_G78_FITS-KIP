@@ -607,14 +607,35 @@ const WorkScheduleManagement = () => {
           return;
         }
 
-        if (selectedRecord.status === "Quá hạn" || selectedRecord.workStatus === "overdue") {
-          const maxAllowedDate = today.add(2, 'day');
-          if (scheduledDate.isAfter(maxAllowedDate)) {
-            message.error(`Ngày bảo trì quá hạn chỉ được chuyển tối đa đến ${maxAllowedDate.format('DD/MM/YYYY')}!`);
+        // ✅ FIX: WO đã hoãn hoặc quá hạn → check theo chu kỳ tiếp theo
+        const isPostponed = selectedRecord.postponedDate != null;
+        const isOverdue = selectedRecord.status === "Quá hạn" || selectedRecord.workStatus === "overdue";
+        
+        if (isPostponed || isOverdue) {
+          // Tính maxDate = NextDueDate + Interval
+          const nextDueDate = dayjs(selectedRecord.planNextDueDate || selectedRecord.nextDueDate);
+          let maxDate = null;
+          
+          if (nextDueDate && selectedRecord.intervalValue && selectedRecord.intervalType) {
+            const intervalValue = selectedRecord.intervalValue;
+            const intervalType = selectedRecord.intervalType.toLowerCase();
+            
+            if (intervalType === 'days') {
+              maxDate = nextDueDate.add(intervalValue, 'day');
+            } else if (intervalType === 'months') {
+              maxDate = nextDueDate.add(intervalValue, 'month');
+            } else if (intervalType === 'hours') {
+              maxDate = nextDueDate.add(intervalValue, 'hour');
+            }
+          }
+          
+          if (maxDate && scheduledDate.isAfter(maxDate)) {
+            message.error(`Ngày bảo trì không được sau chu kỳ tiếp theo (${maxDate.format('DD/MM/YYYY')})!`);
             setLoading(false);
             return;
           }
         } else {
+          // WO bình thường → check theo DueDate
           const dueDate = dayjs(selectedRecord.dueDate).endOf('day');
           if (scheduledDate.isAfter(dueDate)) {
             message.error(`Ngày bảo trì không được sau ngày đến hạn (${dueDate.format('DD/MM/YYYY')})!`);
@@ -2027,12 +2048,34 @@ const WorkScheduleManagement = () => {
                                 return true;
                               }
                             } else if (selectedRecord?.type === 'workOrder') {
-                              if (selectedRecord.status === 'Quá hạn' || selectedRecord.workStatus === 'overdue') {
-                                const maxAllowedDate = today.add(2, 'day');
-                                if (current.isAfter(maxAllowedDate, 'day')) {
+                              // ✅ FIX: WO đã hoãn hoặc quá hạn → cho phép chọn đến chu kỳ tiếp theo
+                              const isPostponed = selectedRecord.postponedDate != null;
+                              const isOverdue = selectedRecord.status === 'Quá hạn' || selectedRecord.workStatus === 'overdue';
+                              
+                              if (isPostponed || isOverdue) {
+                                // Tính maxDate = NextDueDate + Interval
+                                const nextDueDate = dayjs(selectedRecord.planNextDueDate || selectedRecord.nextDueDate);
+                                let maxDate = null;
+                                
+                                if (nextDueDate && selectedRecord.intervalValue && selectedRecord.intervalType) {
+                                  const intervalValue = selectedRecord.intervalValue;
+                                  const intervalType = selectedRecord.intervalType.toLowerCase();
+                                  
+                                  if (intervalType === 'days') {
+                                    maxDate = nextDueDate.add(intervalValue, 'day');
+                                  } else if (intervalType === 'months') {
+                                    maxDate = nextDueDate.add(intervalValue, 'month');
+                                  } else if (intervalType === 'hours') {
+                                    maxDate = nextDueDate.add(intervalValue, 'hour');
+                                  }
+                                }
+                                
+                                // Block nếu >= chu kỳ tiếp theo
+                                if (maxDate && current.isAfter(maxDate, 'day')) {
                                   return true;
                                 }
                               } else {
+                                // WO bình thường → check theo DueDate
                                 const dueDate = dayjs(selectedRecord.dueDate);
                                 if (dueDate && current.isAfter(dueDate, 'day')) {
                                   return true;
