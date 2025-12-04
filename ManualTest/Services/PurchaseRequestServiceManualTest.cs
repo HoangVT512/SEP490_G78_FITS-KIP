@@ -329,7 +329,7 @@ public class PurchaseRequestServiceManualTest
         catch (PurchaseRequestValidationException ex)
         {
             Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
-            return false;
+            return null;
         }
         catch (Exception ex)
         {

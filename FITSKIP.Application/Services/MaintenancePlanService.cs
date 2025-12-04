@@ -40,6 +40,9 @@ namespace FITSKIP.Application.Services
 
         public async Task<MaintenancePlanDTO?> GetPlanByIdAsync(int planId)
         {
+            // ✅ Tự động cập nhật trạng thái "Quá hạn" cho work orders của plan này
+            await UpdateOverdueStatusForPlanWorkOrdersAsync(planId);
+            
             var plan = await _planRepository.GetByIdAsync(planId);
             return plan == null ? null : MapPlanToDTO(plan);
         }
@@ -128,7 +131,6 @@ namespace FITSKIP.Application.Services
             
             if (isBeingDeactivated)
             {
-                // ✅ Kiểm tra xem có WorkOrder đang active không
                 var allWorkOrders = await _workOrderRepository.GetByPlanIdAsync(planId);
                 var activeWorkOrders = allWorkOrders.Where(wo => 
                 {
@@ -207,7 +209,6 @@ namespace FITSKIP.Application.Services
             if (plan == null)
                 throw new InvalidOperationException($"Plan not found: {planId}");
 
-            //  VALIDATION 3A: Không được xóa kế hoạch đang hoạt động
             if (plan.IsActive)
             {
                 throw new InvalidOperationException(
@@ -216,7 +217,6 @@ namespace FITSKIP.Application.Services
                 );
             }
 
-            //  VALIDATION 3B: Kiểm tra có work order đang chờ xử lý hoặc đang thực hiện , quá hạn hoặc hoãn
             var workOrders = await _workOrderRepository.GetByPlanIdAsync(planId);
             var activeWorkOrders = workOrders.Where(wo => 
             {
@@ -233,11 +233,9 @@ namespace FITSKIP.Application.Services
                 );
             }
 
-            // Only Completed or Cancelled work orders remain - can delete safely
             await _planRepository.DeleteAsync(planId);
         }
 
-        // PostponeMaintenancePlanAsync removed - postpone logic moved to WorkOrder level
 
         public async Task<IEnumerable<MaintenancePlanDTO>> GetUpcomingMaintenanceAsync(int days = 7)
         {
@@ -319,6 +317,56 @@ namespace FITSKIP.Application.Services
                 "months" => currentDate.AddMonths(intervalValue),
                 _ => currentDate.AddDays(intervalValue)
             };
+        }
+
+        /// <summary>
+        /// Tự động cập nhật trạng thái "Quá hạn" cho work orders khi load plan
+        /// Logic:
+        /// - TH1: Chưa hoãn (PostponedDate = null): DueDate < Today và Status = "Chờ xử lý" → Quá hạn
+        /// - TH2: Đã hoãn (PostponedDate != null): 
+        ///   + Nếu PostponedDate < Today → Quá hạn
+        ///   + Nếu DueDate < Today < PostponedDate → Vẫn là "Chờ xử lý"
+        /// </summary>
+        private async Task UpdateOverdueStatusForPlanWorkOrdersAsync(int planId)
+        {
+            var workOrders = await _workOrderRepository.GetByPlanIdAsync(planId);
+            var today = DateTime.Today;
+
+            foreach (var wo in workOrders)
+            {
+                // Chỉ cập nhật work order đang "Chờ xử lý"
+                if (wo.Status != "Chờ xử lý") continue;
+
+                var isOverdue = false;
+
+                // TH1: Đã hoãn - check theo PostponedDate
+                if (wo.PostponedDate.HasValue)
+                {
+                    // Nếu PostponedDate < Today → Quá hạn
+                    if (wo.PostponedDate.Value.Date < today)
+                    {
+                        isOverdue = true;
+                    }
+                    // Nếu DueDate < Today < PostponedDate → Vẫn "Chờ xử lý" (không làm gì)
+                }
+                // TH2: Chưa hoãn - check theo DueDate
+                else
+                {
+                    if (wo.DueDate.Date < today)
+                    {
+                        isOverdue = true;
+                    }
+                }
+
+                // Cập nhật status nếu quá hạn
+                if (isOverdue)
+                {
+                    wo.Status = "Quá hạn";
+                    await _workOrderRepository.UpdateAsync(wo);
+
+                    Console.WriteLine($"[AUTO-UPDATE] Work Order #{wo.WorkOrderCode} → Quá hạn (DueDate: {wo.DueDate:dd/MM/yyyy}, PostponedDate: {wo.PostponedDate?.ToString("dd/MM/yyyy") ?? "N/A"})");
+                }
+            }
         }
 
         // TODO: Remove SendPlanAssignmentNotifications - technician assignment moved to WorkOrder
