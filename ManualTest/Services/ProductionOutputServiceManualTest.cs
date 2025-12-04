@@ -174,10 +174,10 @@ public class ProductionOutputServiceManualTest
                         Console.WriteLine($"OEE: {result13.OEE:F4} ({result13.OEEPercentage}%)");
                         break;
                     case "0":
-                        Console.WriteLine("Goodbye!");
+                        Console.WriteLine("Tạm biệt!");
                         return;
                     default:
-                        Console.WriteLine("Invalid choice. Please try again.");
+                        Console.WriteLine("Lựa chọn không hợp lệ. Vui lòng thử lại.");
                         break;
                 }
             }
@@ -289,17 +289,17 @@ public class ProductionOutputServiceManualTest
         try
         {
             var result = await _service.CreateProductionOutputAsync(request);
-            Console.WriteLine("[SUCCESS] Production output created successfully");
+            Console.WriteLine("[THÀNH CÔNG] Tạo sản lượng sản xuất thành công");
             return result;
         }
         catch (ProductionOutputValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
             return null;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return null;
         }
     }
@@ -349,22 +349,22 @@ public class ProductionOutputServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Production output updated successfully");
+                Console.WriteLine("[THÀNH CÔNG] Cập nhật sản lượng sản xuất thành công");
             }
             else
             {
-                Console.WriteLine("[WARNING] Update returned null");
+                Console.WriteLine("[CẢNH BÁO] Cập nhật trả về null");
             }
             return result;
         }
         catch (ProductionOutputValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
             return null;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return null;
         }
     }
@@ -388,22 +388,22 @@ public class ProductionOutputServiceManualTest
 
             if (result)
             {
-                Console.WriteLine("[SUCCESS] Production output deleted successfully");
+                Console.WriteLine("[THÀNH CÔNG] Xóa sản lượng sản xuất thành công");
             }
             else
             {
-                Console.WriteLine("[FAILED] Failed to delete production output");
+                Console.WriteLine("[THẤT BẠI] Xóa sản lượng sản xuất thất bại");
             }
             return result;
         }
         catch (ProductionOutputValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
             return false;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return false;
         }
     }

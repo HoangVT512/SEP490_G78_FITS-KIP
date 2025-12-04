@@ -140,10 +140,10 @@ public class PurchaseRequestServiceManualTest
                         }
                         break;
                     case "0":
-                        Console.WriteLine("Goodbye!");
+                        Console.WriteLine("Tạm biệt!");
                         return;
                     default:
-                        Console.WriteLine("Invalid choice. Please try again.");
+                        Console.WriteLine("Lựa chọn không hợp lệ. Vui lòng thử lại.");
                         break;
                 }
             }
@@ -262,17 +262,17 @@ public class PurchaseRequestServiceManualTest
         try
         {
             var result = await _service.CreatePurchaseRequestAsync(request, userId);
-            Console.WriteLine("[SUCCESS] Purchase request created successfully");
+            Console.WriteLine("[THÀNH CÔNG] Tạo yêu cầu mua hàng thành công");
             return result;
         }
         catch (PurchaseRequestValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
             return null;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return null;
         }
     }
@@ -318,22 +318,22 @@ public class PurchaseRequestServiceManualTest
             var result = await _service.UpdatePurchaseRequestAsync(id, request, userId);
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Purchase request updated successfully");
+                Console.WriteLine("[THÀNH CÔNG] Cập nhật yêu cầu mua hàng thành công");
             }
             else
             {
-                Console.WriteLine("[WARNING] Update returned null");
+                Console.WriteLine("[CẢNH BÁO] Cập nhật trả về null");
             }
             return result;
         }
         catch (PurchaseRequestValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
-            return null;
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
+            return false;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return null;
         }
     }
@@ -357,32 +357,32 @@ public class PurchaseRequestServiceManualTest
 
             if (result)
             {
-                Console.WriteLine("[SUCCESS] Purchase request deleted successfully");
+                Console.WriteLine("[THÀNH CÔNG] Xóa yêu cầu mua hàng thành công");
             }
             else
             {
-                Console.WriteLine("[FAILED] Failed to delete purchase request");
+                Console.WriteLine("[THẤT BẠI] Xóa yêu cầu mua hàng thất bại");
             }
             return result;
         }
         catch (PurchaseRequestValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
             return false;
         }
         catch (UnauthorizedAccessException ex)
         {
-            Console.WriteLine($"[UNAUTHORIZED] {ex.Message}");
+            Console.WriteLine($"[KHÔNG ĐƯỢC PHÉP] {ex.Message}");
             return false;
         }
         catch (InvalidOperationException ex)
         {
-            Console.WriteLine($"[INVALID OPERATION] {ex.Message}");
+            Console.WriteLine($"[THOÁC TÁC KHÔNG HỢP LỆ] {ex.Message}");
             return false;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return false;
         }
     }

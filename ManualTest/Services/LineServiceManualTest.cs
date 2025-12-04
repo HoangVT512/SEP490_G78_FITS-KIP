@@ -91,10 +91,10 @@ public class LineServiceManualTest
                     }
                     break;
                 case "0":
-                    Console.WriteLine("Goodbye!");
+                    Console.WriteLine("Tạm biệt!");
                     return;
                 default:
-                    Console.WriteLine("Invalid choice. Please try again.");
+                    Console.WriteLine("Lựa chọn không hợp lệ. Vui lòng thử lại.");
                     break;
             }
 
@@ -106,7 +106,7 @@ public class LineServiceManualTest
 
     private void ShowMenu()
     {
-        Console.WriteLine("LINE SERVICE TEST MENU");
+        Console.WriteLine("MENU TEST LINE SERVICE");
         Console.WriteLine("======================");
         Console.WriteLine("1. Test GetLinesAsync");
         Console.WriteLine("2. Test GetActiveLinesAsync");
@@ -137,12 +137,12 @@ public class LineServiceManualTest
             // Verify
             _mockLineRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
 
-            Console.WriteLine($"[SUCCESS] Found {result.Count} lines");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} dây chuyền");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return new List<Line>();
         }
     }
@@ -162,13 +162,13 @@ public class LineServiceManualTest
 
             // Verify
             var activeCount = _testLines.Count(l => l.IsActive);
-            Console.WriteLine($"[SUCCESS] Found {result.Count} active lines (Expected: {activeCount})");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} dây chuyền đang hoạt động (Mong đợi: {activeCount})");
 
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return new List<Line>();
         }
     }
@@ -191,17 +191,17 @@ public class LineServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine($"[SUCCESS] Line found with ID: {id}");
+                Console.WriteLine($"[THÀNH CÔNG] Tìm thấy dây chuyền với ID: {id}");
             }
             else
             {
-                Console.WriteLine($"[NOT FOUND] No line found with ID: {id}");
+                Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy dây chuyền với ID: {id}");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return null;
         }
     }
@@ -254,17 +254,17 @@ public class LineServiceManualTest
         try
         {
             var result = await _service.CreateLineAsync(request);
-            Console.WriteLine("[SUCCESS] Line created successfully");
+            Console.WriteLine("[THÀNH CÔNG] Tạo dây chuyền thành công");
             return result;
         }
         catch (LineValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
             return null;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return null;
         }
     }
@@ -280,7 +280,7 @@ public class LineServiceManualTest
 
         if (existingLine == null)
         {
-            Console.WriteLine($"[NOT FOUND] Line with ID {id} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy dây chuyền với ID {id}");
             return null;
         }
 
@@ -342,22 +342,22 @@ public class LineServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Line updated successfully");
+                Console.WriteLine("[THÀNH CÔNG] Cập nhật dây chuyền thành công");
             }
             else
             {
-                Console.WriteLine("[WARNING] Update returned null");
+                Console.WriteLine("[CẢNH BÁO] Cập nhật trả về null");
             }
             return result;
         }
         catch (LineValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
             return null;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return null;
         }
     }
@@ -381,12 +381,12 @@ public class LineServiceManualTest
 
             _mockLineRepository.Verify(x => x.GetByDepartmentIdAsync(deptId, It.IsAny<CancellationToken>()), Times.Once);
 
-            Console.WriteLine($"[SUCCESS] Found {result.Count} lines for department {deptId}");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} dây chuyền cho phòng ban {deptId}");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return new List<Line>();
         }
     }
@@ -402,11 +402,11 @@ public class LineServiceManualTest
 
         if (existingLine == null)
         {
-            Console.WriteLine($"[NOT FOUND] Line with ID {id} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy dây chuyền với ID {id}");
             return null;
         }
 
-        Console.WriteLine($"[STATUS] Will toggle from {existingLine.IsActive} to {!existingLine.IsActive}");
+        Console.WriteLine($"[TRẠNG THÁI] Sẽ chuyển từ {existingLine.IsActive} sang {!existingLine.IsActive}");
 
         // Setup mock
         var toggledLine = new Line
@@ -427,17 +427,17 @@ public class LineServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Status toggled successfully");
+                Console.WriteLine("[THÀNH CÔNG] Chuyển đổi trạng thái thành công");
             }
             else
             {
-                Console.WriteLine("[WARNING] Toggle returned null");
+                Console.WriteLine("[CẢNH BÁO] Chuyển đổi trả về null");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return null;
         }
     }
@@ -451,14 +451,14 @@ public class LineServiceManualTest
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            Console.WriteLine("[ERROR] User ID cannot be empty.");
+            Console.WriteLine("[LỖI] User ID không được để trống.");
             return new List<Line>();
         }
 
         // Validate userId format
         if (userId.Length < 3)
         {
-            Console.WriteLine("[ERROR] User ID must be at least 3 characters long.");
+            Console.WriteLine("[LỖI] User ID phải có ít nhất 3 ký tự.");
             return new List<Line>();
         }
 
@@ -468,7 +468,7 @@ public class LineServiceManualTest
 
         if (!userExists)
         {
-            Console.WriteLine($"[ERROR] User '{userId}' not found or access denied.");
+            Console.WriteLine($"[LỖI] Không tìm thấy người dùng '{userId}' hoặc bị từ chối truy cập.");
             return new List<Line>();
         }
 
@@ -493,12 +493,12 @@ public class LineServiceManualTest
 
             _mockLineRepository.Verify(x => x.GetLinesByUserAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
 
-            Console.WriteLine($"[SUCCESS] Found {result.Count} lines for user '{userId}'");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} dây chuyền cho người dùng '{userId}'");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return new List<Line>();
         }
     }

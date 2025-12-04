@@ -78,7 +78,7 @@ public class ReplacementHistoryServiceManualTest
                             Console.WriteLine("Replacement history not found");
                         break;
                     case "3":
-                        var request3 = new CreateReplacementHistoryRequest
+                        var request3 = new ReplacementHistory
                         {
                             EquipmentId = GetNullableIntInput("Equipment ID"),
                             IncidentId = GetNullableIntInput("Incident ID"),
@@ -87,7 +87,6 @@ public class ReplacementHistoryServiceManualTest
                             Quantity = GetIntInput("Quantity"),
                             ReplacedBy = GetStringInput("Replaced By (User ID)"),
                             Status = GetStringInput("Status", "Chờ duyệt cấp phát"),
-                            Remarks = GetStringInput("Remarks")
                         };
                         var result3 = await TestCreateAsync(request3);
                         if (result3 != null)
@@ -95,7 +94,7 @@ public class ReplacementHistoryServiceManualTest
                         break;
                     case "4":
                         var id4 = GetIntInput("Replacement ID to update");
-                        var request4 = new UpdateReplacementHistoryRequest
+                        var request4 = new ReplacementHistory
                         {
                             EquipmentId = GetNullableIntInput("Equipment ID"),
                             IncidentId = GetNullableIntInput("Incident ID"),
@@ -105,7 +104,6 @@ public class ReplacementHistoryServiceManualTest
                             ReplacedDate = GetDateInput("Replaced Date"),
                             ReplacedBy = GetStringInput("Replaced By (User ID)"),
                             Status = GetStringInput("Status"),
-                            Remarks = GetStringInput("Remarks"),
                             ActualQuantityUsed = GetNullableIntInput("Actual Quantity Used"),
                             QuantityToReturn = GetNullableIntInput("Quantity To Return")
                         };
@@ -194,7 +192,7 @@ public class ReplacementHistoryServiceManualTest
                         }
                         break;
                     case "0":
-                        Console.WriteLine("Goodbye!");
+                        Console.WriteLine("Tạm biệt!");
                         return;
                     default:
                         Console.WriteLine("Invalid choice. Please try again.");
@@ -242,7 +240,7 @@ public class ReplacementHistoryServiceManualTest
         // Execute
         var result = await _service.GetAllAsync();
 
-        Console.WriteLine($"[SUCCESS] Found {result.Count()} replacement histories");
+        Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count()} lịch sử thay thế");
         Console.WriteLine($"[LOG] INFO: Retrieved {result.Count()} records: [{string.Join(", ", result.Select(r => $"{{replacementId: {r.ReplacementId}, partId: {r.PartId}, quantity: {r.Quantity}, replacedBy: \"{r.ReplacedBy}\", status: \"{r.Status}\"}}"))}]");
         return result;
     }
@@ -276,7 +274,7 @@ public class ReplacementHistoryServiceManualTest
         }
     }
 
-    private async Task<ReplacementHistory> TestCreateAsync(CreateReplacementHistoryRequest request)
+    private async Task<ReplacementHistory> TestCreateAsync(ReplacementHistory request)
     {
         // Setup mocks for validation
         var part = _testSpareParts.FirstOrDefault(p => p.PartId == request.PartId);
@@ -320,7 +318,6 @@ public class ReplacementHistoryServiceManualTest
             ReplacedDate = request.ReplacedDate ?? DateTime.Now,
             ReplacedBy = request.ReplacedBy,
             Status = request.Status,
-            Remarks = request.Remarks
         };
 
         _mockRepository.Setup(x => x.CreateAsync(It.IsAny<ReplacementHistory>(), It.IsAny<CancellationToken>()))
@@ -331,7 +328,7 @@ public class ReplacementHistoryServiceManualTest
         return result;
     }
 
-    private async Task<ReplacementHistory?> TestUpdateAsync(int id, UpdateReplacementHistoryRequest request)
+    private async Task<ReplacementHistory?> TestUpdateAsync(int id, ReplacementHistory request)
     {
         var existing = _testReplacements.FirstOrDefault(r => r.ReplacementId == id);
         if (existing == null) return null;
@@ -377,7 +374,6 @@ public class ReplacementHistoryServiceManualTest
         existing.ReplacedDate = request.ReplacedDate;
         existing.ReplacedBy = request.ReplacedBy;
         existing.Status = request.Status;
-        existing.Remarks = request.Remarks;
         existing.ActualQuantityUsed = request.ActualQuantityUsed;
         existing.QuantityToReturn = request.QuantityToReturn;
 
@@ -689,8 +685,7 @@ public class ReplacementHistoryServiceManualTest
                 Quantity = 5,
                 ReplacedDate = DateTime.Now.AddDays(-5),
                 ReplacedBy = "USER001",
-                Status = "Đã cấp phát",
-                Remarks = "Urgent replacement needed"
+                Status = "Đã cấp phát"
             },
             new ReplacementHistory
             {
@@ -702,8 +697,7 @@ public class ReplacementHistoryServiceManualTest
                 Quantity = 3,
                 ReplacedDate = DateTime.Now.AddDays(-3),
                 ReplacedBy = "USER002",
-                Status = "Chờ duyệt cấp phát",
-                Remarks = "Scheduled maintenance"
+                Status = "Chờ duyệt cấp phát"
             },
             new ReplacementHistory
             {
@@ -715,8 +709,7 @@ public class ReplacementHistoryServiceManualTest
                 Quantity = 2,
                 ReplacedDate = DateTime.Now.AddDays(-1),
                 ReplacedBy = "USER003",
-                Status = "Hoàn thành",
-                Remarks = "Quality improvement"
+                Status = "Hoàn thành"
             }
         };
     }
