@@ -91,10 +91,10 @@ public class StageServiceManualTest
                     }
                     break;
                 case "0":
-                    Console.WriteLine("Goodbye!");
+                    Console.WriteLine("Tạm biệt!");
                     return;
                 default:
-                    Console.WriteLine("Invalid choice. Please try again.");
+                    Console.WriteLine("Lựa chọn không hợp lệ. Vui lòng thử lại.");
                     break;
             }
 
@@ -134,12 +134,12 @@ public class StageServiceManualTest
             // Execute
             var result = await _service.GetStagesAsync();
 
-            Console.WriteLine($"[SUCCESS] Found {result.Count} stages");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} công đoạn");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return new List<Stage>();
         }
     }
@@ -160,13 +160,13 @@ public class StageServiceManualTest
 
             // Verify
             var activeCount = _testStages.Count(s => s.IsActive);
-            Console.WriteLine($"[SUCCESS] Found {result.Count} active stages (Expected: {activeCount})");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} công đoạn đang hoạt động (Mong đợi: {activeCount})");
 
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return new List<Stage>();
         }
     }
@@ -189,17 +189,17 @@ public class StageServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine($"[SUCCESS] Stage found with ID: {id}");
+                Console.WriteLine($"[THÀNH CÔNG] Tìm thấy công đoạn với ID: {id}");
             }
             else
             {
-                Console.WriteLine($"[NOT FOUND] No stage found with ID: {id}");
+                Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy công đoạn với ID: {id}");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return null;
         }
     }
@@ -246,17 +246,17 @@ public class StageServiceManualTest
         try
         {
             var result = await _service.CreateStageAsync(request);
-            Console.WriteLine("[SUCCESS] Stage created successfully");
+            Console.WriteLine("[THÀNH CÔNG] Tạo công đoạn thành công");
             return result;
         }
         catch (StageValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
             return null;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return null;
         }
     }
@@ -272,7 +272,7 @@ public class StageServiceManualTest
 
         if (existingStage == null)
         {
-            Console.WriteLine($"[NOT FOUND] Stage with ID {id} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy công đoạn với ID {id}");
             return null;
         }
 
@@ -321,22 +321,22 @@ public class StageServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Stage updated successfully");
+                Console.WriteLine("[THÀNH CÔNG] Cập nhật công đoạn thành công");
             }
             else
             {
-                Console.WriteLine("[WARNING] Update returned null");
+                Console.WriteLine("[CẢNH BÁO] Cập nhật trả về null");
             }
             return result;
         }
         catch (StageValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
             return null;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return null;
         }
     }
@@ -352,7 +352,7 @@ public class StageServiceManualTest
 
         if (existingStage == null)
         {
-            Console.WriteLine($"[NOT FOUND] Stage with ID {id} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy công đoạn với ID {id}");
             return null;
         }
 
@@ -379,17 +379,17 @@ public class StageServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Status toggled successfully");
+                Console.WriteLine("[THÀNH CÔNG] Chuyển đổi trạng thái thành công");
             }
             else
             {
-                Console.WriteLine("[WARNING] Toggle returned null");
+                Console.WriteLine("[CẢNH BÁO] Chuyển đổi trả về null");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return null;
         }
     }
@@ -413,12 +413,12 @@ public class StageServiceManualTest
 
             _mockStageRepository.Verify(x => x.GetByLineIdAsync(lineId, It.IsAny<CancellationToken>()), Times.Once);
 
-            Console.WriteLine($"[SUCCESS] Found {result.Count} stages for line {lineId}");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} công đoạn cho dây chuyền {lineId}");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return new List<Stage>();
         }
     }
@@ -432,7 +432,7 @@ public class StageServiceManualTest
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            Console.WriteLine("[ERROR] User ID cannot be empty.");
+            Console.WriteLine("[LỖI] ID người dùng không được để trống.");
             return new List<Stage>();
         }
 
@@ -449,12 +449,12 @@ public class StageServiceManualTest
 
             _mockStageRepository.Verify(x => x.GetStagesByUserLinesAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
 
-            Console.WriteLine($"[SUCCESS] Found {result.Count} stages for user's lines");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} công đoạn cho các dây chuyền của người dùng");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return new List<Stage>();
         }
     }

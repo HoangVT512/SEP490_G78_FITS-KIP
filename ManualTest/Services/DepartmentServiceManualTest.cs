@@ -38,7 +38,7 @@ public class DepartmentServiceManualTest
             {
                 case "1":
                     var allResult = await TestGetAllAsync();
-                    Console.WriteLine($"Test returned {allResult.Count} departments");
+                    Console.WriteLine($"Test trả về {allResult.Count} phòng ban");
                     foreach (var dept in allResult)
                     {
                         Console.WriteLine(FormatDepartment(dept));
@@ -46,7 +46,7 @@ public class DepartmentServiceManualTest
                     break;
                 case "2":
                     var activeResult = await TestGetActiveAsync();
-                    Console.WriteLine($"Test returned {activeResult.Count} active departments");
+                    Console.WriteLine($"Test trả về {activeResult.Count} phòng ban đang hoạt động");
                     foreach (var dept in activeResult)
                     {
                         Console.WriteLine(FormatDepartment(dept));
@@ -54,7 +54,7 @@ public class DepartmentServiceManualTest
                     break;
                 case "3":
                     var getResult = await TestGetByIdAsync();
-                    Console.WriteLine($"Test returned: {(getResult != null ? "Department found" : "No department found")}");
+                    Console.WriteLine($"Test trả về: {(getResult != null ? "Tìm thấy phòng ban" : "Không tìm thấy phòng ban")}");
                     if (getResult != null)
                     {
                         Console.WriteLine(FormatDepartment(getResult));
@@ -62,7 +62,7 @@ public class DepartmentServiceManualTest
                     break;
                 case "4":
                     var createResult = await TestCreateAsync();
-                    Console.WriteLine($"Test returned: {(createResult != null ? "Department created" : "Creation failed")}");
+                    Console.WriteLine($"Test trả về: {(createResult != null ? "Tạo phòng ban thành công" : "Tạo thất bại")}");
                     if (createResult != null)
                     {
                         Console.WriteLine(FormatDepartment(createResult));
@@ -70,7 +70,7 @@ public class DepartmentServiceManualTest
                     break;
                 case "5":
                     var updateResult = await TestUpdateAsync();
-                    Console.WriteLine($"Test returned: {(updateResult != null ? "Department updated" : "Update failed")}");
+                    Console.WriteLine($"Test trả về: {(updateResult != null ? "Cập nhật phòng ban thành công" : "Cập nhật thất bại")}");
                     if (updateResult != null)
                     {
                         Console.WriteLine(FormatDepartment(updateResult));
@@ -78,7 +78,7 @@ public class DepartmentServiceManualTest
                     break;
                 case "6":
                     var toggleResult = await TestToggleStatusAsync();
-                    Console.WriteLine($"Test returned: {(toggleResult != null ? "Status toggled" : "Toggle failed")}");
+                    Console.WriteLine($"Test trả về: {(toggleResult != null ? "Chuyển đổi trạng thái thành công" : "Chuyển đổi thất bại")}");
                     if (toggleResult != null)
                     {
                         Console.WriteLine(FormatDepartment(toggleResult));
@@ -86,20 +86,20 @@ public class DepartmentServiceManualTest
                     break;
                 case "7":
                     var deleteResult = await TestDeleteAsync();
-                    Console.WriteLine($"Test returned: {(deleteResult ? "Department deleted" : "Deletion failed")}");
+                    Console.WriteLine($"Test trả về: {(deleteResult ? "Xóa phòng ban thành công" : "Xóa thất bại")}");
                     break;
                 case "8":
-                    Console.WriteLine("All tests option removed. Please use individual test options.");
+                    Console.WriteLine("Tùy chọn chạy tất cả test đã bị xóa. Vui lòng sử dụng các tùy chọn test riêng lẻ.");
                     break;
                 case "0":
-                    Console.WriteLine("Goodbye!");
+                    Console.WriteLine("Tạm biệt!");
                     return;
                 default:
-                    Console.WriteLine("Invalid choice. Please try again.");
+                    Console.WriteLine("Lựa chọn không hợp lệ. Vui lòng thử lại.");
                     break;
             }
 
-            Console.WriteLine("\nPress any key to continue...");
+            Console.WriteLine("\nNhấn phím bất kỳ để tiếp tục...");
             Console.ReadKey();
             Console.Clear();
         }
@@ -107,7 +107,7 @@ public class DepartmentServiceManualTest
 
     private void ShowMenu()
     {
-        Console.WriteLine("DEPARTMENT SERVICE TEST MENU");
+        Console.WriteLine("MENU TEST DEPARTMENT SERVICE");
         Console.WriteLine("=============================");
         Console.WriteLine("1. Test GetAllAsync");
         Console.WriteLine("2. Test GetActiveAsync");
@@ -116,10 +116,10 @@ public class DepartmentServiceManualTest
         Console.WriteLine("5. Test UpdateAsync ()");
         Console.WriteLine("6. Test ToggleStatusAsync ()");
         Console.WriteLine("7. Test DeleteAsync ()");
-        Console.WriteLine("8. Run All Tests");
-        Console.WriteLine("0. Exit");
+        Console.WriteLine("8. Chạy tất cả Tests");
+        Console.WriteLine("0. Thoát");
         Console.WriteLine();
-        Console.Write("Enter your choice: ");
+        Console.Write("Nhập lựa chọn của bạn: ");
     }
 
 
@@ -138,7 +138,7 @@ public class DepartmentServiceManualTest
         // Verify
         _mockDepartmentRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
 
-        Console.WriteLine($"[SUCCESS] Found {result.Count} departments");
+        Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} phòng ban");
         return result;
     }
 
@@ -155,7 +155,7 @@ public class DepartmentServiceManualTest
 
         // Verify
         var activeCount = _testData.Count(d => d.IsActive);
-        Console.WriteLine($"[SUCCESS] Found {result.Count} active departments (Expected: {activeCount})");
+        Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} phòng ban đang hoạt động (Kỳ vọng: {activeCount})");
 
         return result;
     }
@@ -178,17 +178,17 @@ public class DepartmentServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine($"[SUCCESS] Department found with ID: {id}");
+                Console.WriteLine($"[THÀNH CÔNG] Tìm thấy phòng ban với ID: {id}");
             }
             else
             {
-                Console.WriteLine($"[NOT FOUND] No department found with ID: {id}");
+                Console.WriteLine($"[KHÔNG TÌM THẤY] Không có phòng ban với ID: {id}");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             throw;
         }
     }
@@ -211,7 +211,6 @@ public class DepartmentServiceManualTest
         {
             DepartmentName = name ?? "",
             Description = string.IsNullOrWhiteSpace(description) ? null : description,
-            ManagerId = string.IsNullOrWhiteSpace(managerId) ? null : managerId
         };
 
         // Setup repository mocks
@@ -223,44 +222,28 @@ public class DepartmentServiceManualTest
             DepartmentId = _testData.Max(d => d.DepartmentId) + 1,
             DepartmentName = request.DepartmentName.Trim(),
             Description = request.Description?.Trim(),
-            ManagerId = request.ManagerId,
             IsActive = true
         };
 
         _mockDepartmentRepository.Setup(x => x.CreateAsync(It.IsAny<Department>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(newDept);
 
-        // Setup user repository mock for manager validation
-        if (!string.IsNullOrWhiteSpace(request.ManagerId))
-        {
-            var manager = new User
-            {
-                Id = request.ManagerId,
-                FullName = "Test Manager",
-                Email = "test@manager.com"
-            };
-            _mockUserRepository.Setup(x => x.GetUserByIdAsync(request.ManagerId, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(manager);
 
-            var managers = new List<User> { manager };
-            _mockUserRepository.Setup(x => x.GetUsersByRoleAsync("Quản lý", It.IsAny<CancellationToken>()))
-                .ReturnsAsync(managers);
-        }
 
         try
         {
             var result = await _service.CreateAsync(request);
-            Console.WriteLine("[SUCCESS] Department created successfully");
+            Console.WriteLine("[THÀNH CÔNG] Tạo phòng ban thành công");
             return result;
         }
         catch (DepartmentValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI VALIDATION] {ex.Message} (Mã: {ex.ErrorCode})");
             return null!;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             throw;
         }
     }
@@ -277,7 +260,7 @@ public class DepartmentServiceManualTest
 
         if (existingDept == null)
         {
-            Console.WriteLine($"[NOT FOUND] Department with ID {id} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy phòng ban với ID {id}");
             return null;
         }
 
@@ -326,22 +309,22 @@ public class DepartmentServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Department updated successfully");
+                Console.WriteLine("[THÀNH CÔNG] Cập nhật phòng ban thành công");
             }
             else
             {
-                Console.WriteLine("[WARNING] Update returned null");
+                Console.WriteLine("[CẢNH BÁO] Cập nhật trả về null");
             }
             return result;
         }
         catch (DepartmentValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI VALIDATION] {ex.Message} (Mã: {ex.ErrorCode})");
             return null;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             throw;
         }
     }
@@ -358,11 +341,11 @@ public class DepartmentServiceManualTest
 
         if (existingDept == null)
         {
-            Console.WriteLine($"[NOT FOUND] Department with ID {id} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy phòng ban với ID {id}");
             return null;
         }
 
-        Console.WriteLine($"[STATUS] Will toggle from {existingDept.IsActive} to {!existingDept.IsActive}");
+        Console.WriteLine($"[TRẠNG THÁI] Sẽ chuyển từ {existingDept.IsActive} sang {!existingDept.IsActive}");
 
         // Setup mock
         _mockDepartmentRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
@@ -386,17 +369,17 @@ public class DepartmentServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Status toggled successfully");
+                Console.WriteLine("[THÀNH CÔNG] Chuyển đổi trạng thái thành công");
             }
             else
             {
-                Console.WriteLine("[WARNING] Toggle returned null");
+                Console.WriteLine("[CẢNH BÁO] Chuyển đổi trả về null");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             throw;
         }
     }
@@ -412,16 +395,16 @@ public class DepartmentServiceManualTest
         var existingDept = _testData.FirstOrDefault(d => d.DepartmentId == id);
         if (existingDept == null)
         {
-            Console.WriteLine($"[NOT FOUND] Department with ID {id} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy phòng ban với ID {id}");
             return false;
         }
 
-        Console.Write($"[CONFIRM] Delete department '{existingDept.DepartmentName}'? (y/n): ");
+        Console.Write($"[XÁC NHẬN] Xóa phòng ban '{existingDept.DepartmentName}'? (y/n): ");
         var confirm = Console.ReadLine();
 
         if (confirm?.ToLower() != "y")
         {
-            Console.WriteLine("[CANCELLED] Delete operation cancelled");
+            Console.WriteLine("[HỦY BỎ] Đã hủy thao tác xóa");
             return false;
         }
 
@@ -435,17 +418,17 @@ public class DepartmentServiceManualTest
 
             if (result)
             {
-                Console.WriteLine("[SUCCESS] Department deleted successfully");
+                Console.WriteLine("[THÀNH CÔNG] Xóa phòng ban thành công");
             }
             else
             {
-                Console.WriteLine("[FAILED] Failed to delete department");
+                Console.WriteLine("[THẤT BẠI] Xóa phòng ban thất bại");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return false;
         }
     }

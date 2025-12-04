@@ -108,14 +108,14 @@ public class EquipmentServiceManualTest
                     }
                     break;
                 case "0":
-                    Console.WriteLine("Goodbye!");
+                    Console.WriteLine("Tạm biệt!");
                     return;
                 default:
-                    Console.WriteLine("Invalid choice. Please try again.");
+                    Console.WriteLine("Lựa chọn không hợp lệ. Vui lòng thử lại.");
                     break;
             }
 
-            Console.WriteLine("\nPress any key to continue...");
+            Console.WriteLine("\nNhấn phím bất kỳ để tiếp tục...");
             Console.ReadKey();
             Console.Clear();
         }
@@ -123,8 +123,8 @@ public class EquipmentServiceManualTest
 
     private void ShowMenu()
     {
-        Console.WriteLine("EQUIPMENT SERVICE TEST MENU");
-        Console.WriteLine("===========================");
+        Console.WriteLine("MENU TEST EQUIPMENT SERVICE");
+        Console.WriteLine("============================");
         Console.WriteLine("1. Test GetEquipmentsAsync");
         Console.WriteLine("2. Test GetEquipmentByIdAsync");
         Console.WriteLine("3. Test CreateEquipmentAsync");
@@ -136,9 +136,9 @@ public class EquipmentServiceManualTest
         Console.WriteLine("9. Test GenerateQRCodeAsync (by Code)");
         Console.WriteLine("10. Test GetEquipmentsByUserLinesAsync");
         Console.WriteLine("11. Test GetEquipmentsByLineAsync");
-        Console.WriteLine("0. Exit");
+        Console.WriteLine("0. Thoát");
         Console.WriteLine();
-        Console.Write("Enter your choice: ");
+        Console.Write("Nhập lựa chọn của bạn: ");
     }
 
     private async Task<IReadOnlyList<EquipmentDTO>> TestGetEquipmentsAsync()
@@ -155,7 +155,7 @@ public class EquipmentServiceManualTest
         // Verify
         _mockEquipmentRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
 
-        Console.WriteLine($"[SUCCESS] Found {result.Count} equipments");
+        Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} thiết bị");
         return result;
     }
 
@@ -177,17 +177,17 @@ public class EquipmentServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine($"[SUCCESS] Equipment found with ID: {id}");
+                Console.WriteLine($"[THÀNH CÔNG] Tìm thấy thiết bị với ID: {id}");
             }
             else
             {
-                Console.WriteLine($"[NOT FOUND] No equipment found with ID: {id}");
+                Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy thiết bị với ID: {id}");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return null;
         }
     }
@@ -264,17 +264,17 @@ public class EquipmentServiceManualTest
         try
         {
             var result = await _service.CreateEquipmentAsync(request);
-            Console.WriteLine("[SUCCESS] Equipment created successfully");
+            Console.WriteLine("[THÀNH CÔNG] Tạo thiết bị thành công");
             return result;
         }
         catch (EquipmentValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
             return null;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return null;
         }
     }
@@ -290,7 +290,7 @@ public class EquipmentServiceManualTest
 
         if (existingEquipment == null)
         {
-            Console.WriteLine($"[NOT FOUND] Equipment with ID {id} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy thiết bị với ID {id}");
             return null;
         }
 
@@ -350,22 +350,22 @@ public class EquipmentServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Equipment updated successfully");
+                Console.WriteLine("[THÀNH CÔNG] Cập nhật thiết bị thành công");
             }
             else
             {
-                Console.WriteLine("[WARNING] Update returned null");
+                Console.WriteLine("[CẢNH BÁO] Cập nhật trả về null");
             }
             return result;
         }
         catch (EquipmentValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
             return null;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return null;
         }
     }
@@ -381,11 +381,11 @@ public class EquipmentServiceManualTest
 
         if (existingEquipment == null)
         {
-            Console.WriteLine($"[NOT FOUND] Equipment with ID {id} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Thiết bị với ID {id} không tìm thấy");
             return null;
         }
 
-        Console.WriteLine($"[STATUS] Will toggle from {existingEquipment.IsActive} to {!existingEquipment.IsActive}");
+        Console.WriteLine($"[TRẠNG THÁI] Sẽ chuyển từ {existingEquipment.IsActive} sang {!existingEquipment.IsActive}");
 
         // Setup mock
         _mockEquipmentRepository.Setup(x => x.GetByIdAsync(id, It.IsAny<CancellationToken>()))
@@ -410,17 +410,17 @@ public class EquipmentServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Status toggled successfully");
+                Console.WriteLine("[THÀNH CÔNG] Chuyển đổi trạng thái thành công");
             }
             else
             {
-                Console.WriteLine("[WARNING] Toggle returned null");
+                Console.WriteLine("[CẢNH BÁO] Toggle trả về null");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return null;
         }
     }
@@ -435,16 +435,16 @@ public class EquipmentServiceManualTest
         var existingEquipment = _testData.FirstOrDefault(e => e.EquipmentId == id);
         if (existingEquipment == null)
         {
-            Console.WriteLine($"[NOT FOUND] Equipment with ID {id} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Thiết bị với ID {id} không tìm thấy");
             return false;
         }
 
-        Console.Write($"[CONFIRM] Delete equipment '{existingEquipment.EquipmentName}'? (y/n): ");
+        Console.Write($"[XÁC NHẬN] Xóa thiết bị '{existingEquipment.EquipmentName}'? (y/n): ");
         var confirm = Console.ReadLine();
 
         if (confirm?.ToLower() != "y")
         {
-            Console.WriteLine("[CANCELLED] Delete operation cancelled");
+            Console.WriteLine("[HỦY] Thao tác xóa đã bị hủy");
             return false;
         }
 
@@ -460,17 +460,17 @@ public class EquipmentServiceManualTest
 
             if (result)
             {
-                Console.WriteLine("[SUCCESS] Equipment deleted successfully");
+                Console.WriteLine("[THÀNH CÔNG] Xóa thiết bị thành công");
             }
             else
             {
-                Console.WriteLine("[FAILED] Failed to delete equipment");
+                Console.WriteLine("[THẤT BẠI] Không thể xóa thiết bị");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return false;
         }
     }
@@ -490,12 +490,12 @@ public class EquipmentServiceManualTest
         try
         {
             var result = await _service.GetEquipmentsByStageAsync(stageId);
-            Console.WriteLine($"[SUCCESS] Found {result.Count} equipments in stage {stageId}");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} thiết bị trong công đoạn {stageId}");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return new List<EquipmentDTO>();
         }
     }
@@ -511,7 +511,7 @@ public class EquipmentServiceManualTest
 
         if (existingEquipment == null)
         {
-            Console.WriteLine($"[NOT FOUND] Equipment with ID {id} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Thiết bị với ID {id} không tìm thấy");
             return null;
         }
 
@@ -527,17 +527,17 @@ public class EquipmentServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] QR Code generated successfully");
+                Console.WriteLine("[THÀNH CÔNG] Tạo mã QR thành công");
             }
             else
             {
-                Console.WriteLine("[WARNING] QR Code generation returned null");
+                Console.WriteLine("[CẢNH BÁO] Tạo mã QR trả về null");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return null;
         }
     }
@@ -551,7 +551,7 @@ public class EquipmentServiceManualTest
 
         if (string.IsNullOrWhiteSpace(equipmentCode))
         {
-            Console.WriteLine("[ERROR] Equipment code cannot be empty");
+            Console.WriteLine("[LỖI] Mã thiết bị không được để trống");
             return null;
         }
 
@@ -561,18 +561,18 @@ public class EquipmentServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] QR Code generated successfully");
+                Console.WriteLine("[THÀNH CÔNG] Tạo mã QR thành công");
                 Console.WriteLine($"Generated QR Code: {result}");
             }
             else
             {
-                Console.WriteLine("[WARNING] QR Code generation returned null");
+                Console.WriteLine("[CẢNH BÁO] Tạo mã QR trả về null");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return null;
         }
     }
@@ -586,7 +586,7 @@ public class EquipmentServiceManualTest
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            Console.WriteLine("[ERROR] User ID cannot be empty");
+            Console.WriteLine("[LỖI] User ID không được để trống");
             return new List<EquipmentDTO>();
         }
 
@@ -605,12 +605,12 @@ public class EquipmentServiceManualTest
         try
         {
             var result = await _service.GetEquipmentsByUserLinesAsync(userId);
-            Console.WriteLine($"[SUCCESS] Found {result.Count} equipments for user {userId}");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} thiết bị cho người dùng {userId}");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return new List<EquipmentDTO>();
         }
     }
@@ -734,7 +734,7 @@ public class EquipmentServiceManualTest
         var lineIdInput = Console.ReadLine();
         if (!int.TryParse(lineIdInput, out var lineId))
         {
-            Console.WriteLine("[ERROR] Invalid Line ID");
+            Console.WriteLine("[LỖI] Line ID không hợp lệ");
             return new List<EquipmentDTO>();
         }
 
@@ -747,12 +747,12 @@ public class EquipmentServiceManualTest
         try
         {
             var result = await _service.GetEquipmentsByLineAsync(lineId);
-            Console.WriteLine($"[SUCCESS] Found {result.Count} equipments for line {lineId}");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} thiết bị cho dây chuyền {lineId}");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return new List<EquipmentDTO>();
         }
     }

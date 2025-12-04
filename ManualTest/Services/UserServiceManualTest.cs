@@ -159,10 +159,10 @@ public class UserServiceManualTest
                         }
                         break;
                     case "0":
-                        Console.WriteLine("Goodbye!");
+                        Console.WriteLine("Tạm biệt!");
                         return;
                     default:
-                        Console.WriteLine("Invalid choice. Please try again.");
+                        Console.WriteLine("Lựa chọn không hợp lệ. Vui lòng thử lại.");
                         break;
                 }
             }
@@ -294,18 +294,18 @@ public class UserServiceManualTest
         try
         {
             var result = await _service.CreateUserWithAssignmentsAsync(request);
-            Console.WriteLine("[SUCCESS] User created with assignments successfully");
+            Console.WriteLine("[THÀNH CÔNG] Tạo người dùng với phân công thành công");
             return result;
         }
         catch (UserValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
-            throw;
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
+            return null;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-            throw;
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
+            return null;
         }
     }
 
@@ -361,22 +361,22 @@ public class UserServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] User updated successfully");
+                Console.WriteLine("[THÀNH CÔNG] Cập nhật người dùng thành công");
             }
             else
             {
-                Console.WriteLine("[WARNING] Update returned null");
+                Console.WriteLine("[CẢNH BÁO] Cập nhật trả về null");
             }
             return result;
         }
         catch (UserValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
             return null;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return null;
         }
     }

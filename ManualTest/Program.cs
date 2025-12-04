@@ -17,45 +17,42 @@ class Program
 
             switch (choice)
             {
-                case "1":
-                    await RunDepartmentServiceTests();
+                case "1": 
+                    await RunAuthServiceTests();
                     break;
                 case "2":
-                    await RunEquimentServiceTests();
+                    await RunDepartmentServiceTests();
                     break;
                 case "3":
-                    await RunPurchaseRequestServiceTests();
+                    await RunEquimentServiceTests();
                     break;
                 case "4":
-                    await RunIncidentServiceTests();
+                    await RunPurchaseRequestServiceTests();
                     break;
                 case "5":
-                    await RunProductionOutputServiceTests();
+                    await RunIncidentServiceTests();
                     break;
                 case "6":
-                    await RunLineServiceTests();
+                    await RunProductionOutputServiceTests();
                     break;
                 case "7":
-                    await RunUserServiceTests();
+                    await RunLineServiceTests();
                     break;
                 case "8":
-                    await RunStageServiceTests();
+                    await RunUserServiceTests();
                     break;
                 case "9":
+                    await RunStageServiceTests();
+                    break;
+                case "10":
                     await RunSparePartServiceTests();
                     break;
-/*                case "10":
-                    await RunReplacementHistoryServiceTests();
-                    break;*/
                 case "11":
-                    await RunNotificationServiceTests();
+                    await RunReplacementHistoryServiceTests();
                     break;
                 case "12":
-                    await RunAzureStorageServiceTests();
+                    await RunNotificationServiceTests();
                     break;
-/*                case "13":
-                    await RunDashboardServiceTests();
-                    break;*/
                 case "0":
                     Console.WriteLine("Goodbye!");
                     return;
@@ -74,19 +71,18 @@ class Program
     {
         Console.WriteLine("MAIN TEST MENU");
         Console.WriteLine("===============");
-        Console.WriteLine("1. Department Service Tests");
-        Console.WriteLine("2. Equiment Service Tests");
-        Console.WriteLine("3. Purchase Request Service Tests");
-        Console.WriteLine("4. Incident Service Tests");
-        Console.WriteLine("5. Production Output Service Tests");
-        Console.WriteLine("6. Line Service Tests");
-        Console.WriteLine("7. User Service Tests");
-        Console.WriteLine("8. Stage Service Tests");
-        Console.WriteLine("9. Spare Part Service Tests");
-        Console.WriteLine("10. Replacement History Service Tests");
-        Console.WriteLine("11. Notification Service Tests");
-        Console.WriteLine("12. Azure Storage Service Tests");
-        Console.WriteLine("13. Dashboard Service Tests");
+        Console.WriteLine("1. Auth Service Tests");
+        Console.WriteLine("2. Department Service Tests");
+        Console.WriteLine("3. Equiment Service Tests");
+        Console.WriteLine("4. Purchase Request Service Tests");
+        Console.WriteLine("5. Incident Service Tests");
+        Console.WriteLine("6. Production Output Service Tests");
+        Console.WriteLine("7. Line Service Tests");
+        Console.WriteLine("8. User Service Tests");
+        Console.WriteLine("9. Stage Service Tests");
+        Console.WriteLine("10. Spare Part Service Tests");
+        Console.WriteLine("11. Replacement History Service Tests");
+        Console.WriteLine("12. Notification Service Tests");
         Console.WriteLine("0. Exit");
         Console.WriteLine();
         Console.Write("Enter your choice: ");
@@ -120,12 +116,12 @@ class Program
         await testRunner.RunTests();
     }
 
-/*    static async Task RunAuthServiceTests()
+    static async Task RunAuthServiceTests()
     {
 
         var testRunner = new AuthServiceManualTest();
         await testRunner.RunTests();
-    }*/
+    }
 
     static async Task RunProductionOutputServiceTests()
     {
@@ -158,17 +154,16 @@ class Program
     static async Task RunSparePartServiceTests()
     {
 
-        // var testRunner = new SparePartServiceManualTest();
-        // await testRunner.RunTests();
-        Console.WriteLine("SparePartServiceManualTest is temporarily disabled due to compilation issues.");
+        var testRunner = new SparePartServiceManualTest();
+        await testRunner.RunTests();
     }
 
-    //static async Task RunReplacementHistoryServiceTests()
-    //{
+    static async Task RunReplacementHistoryServiceTests()
+    {
 
-    //    var testRunner = new ReplacementHistoryServiceManualTest();
-    //    await testRunner.RunTests();
-    //}
+        var testRunner = new ReplacementHistoryServiceManualTest();
+        await testRunner.RunTests();
+    }
 
     static async Task RunNotificationServiceTests()
     {
@@ -177,18 +172,5 @@ class Program
         await testRunner.RunTests();
     }
 
-    static async Task RunAzureStorageServiceTests()
-    {
-
-        var testRunner = new AzureStorageServiceManualTest();
-        await testRunner.RunTests();
-    }
-
-/*    static async Task RunDashboardServiceTests()
-    {
-
-        var testRunner = new DashboardServiceManualTest();
-        await testRunner.RunTests();
-    }*/
 
 }

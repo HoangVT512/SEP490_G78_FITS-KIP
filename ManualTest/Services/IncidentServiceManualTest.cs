@@ -166,10 +166,10 @@ public class IncidentServiceManualTest
                     Console.WriteLine($"  Has Return Requests: {sparePartsStatus.HasReturnRequests}");
                     break;
                 case "0":
-                    Console.WriteLine("Goodbye!");
+                    Console.WriteLine("Tạm biệt!");
                     return;
                 default:
-                    Console.WriteLine("Invalid choice. Please try again.");
+                    Console.WriteLine("Lựa chọn không hợp lệ. Vui lòng thử lại.");
                     break;
             }
 
@@ -181,7 +181,7 @@ public class IncidentServiceManualTest
 
     private void ShowMenu()
     {
-        Console.WriteLine("INCIDENT SERVICE TEST MENU");
+        Console.WriteLine("MENU TEST INCIDENT SERVICE");
         Console.WriteLine("==========================");
         Console.WriteLine("1. Test GetIncidentsAsync");
         Console.WriteLine("2. Test GetIncidentByIdAsync");
@@ -216,7 +216,7 @@ public class IncidentServiceManualTest
         // Verify
         _mockIncidentRepository.Verify(x => x.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
 
-        Console.WriteLine($"[SUCCESS] Found {result.Count} incidents");
+        Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} sự cố");
         return result;
     }
 
@@ -238,17 +238,17 @@ public class IncidentServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine($"[SUCCESS] Incident found with ID: {id}");
+                Console.WriteLine($"[THÀNH CÔNG] Tìm thấy sự cố với ID: {id}");
             }
             else
             {
-                Console.WriteLine($"[NOT FOUND] No incident found with ID: {id}");
+                Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy sự cố với ID: {id}");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             throw;
         }
     }
@@ -319,17 +319,17 @@ public class IncidentServiceManualTest
         try
         {
             var result = await _service.CreateIncidentAsync(request);
-            Console.WriteLine("[SUCCESS] Incident created successfully");
+            Console.WriteLine("[THÀNH CÔNG] Tạo sự cố thành công");
             return result;
         }
         catch (InvalidOperationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] Invalid operation: {ex.Message}");
+            Console.WriteLine($"[LỖI XÁC THỰC] Hoạt động không hợp lệ: {ex.Message}");
             throw;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             throw;
         }
     }
@@ -345,7 +345,7 @@ public class IncidentServiceManualTest
 
         if (existingIncident == null)
         {
-            Console.WriteLine($"[NOT FOUND] Incident with ID {id} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy sự cố với ID {id}");
             return null;
         }
 
@@ -417,22 +417,22 @@ public class IncidentServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine("[SUCCESS] Incident updated successfully");
+                Console.WriteLine("[THÀNH CÔNG] Cập nhật sự cố thành công");
             }
             else
             {
-                Console.WriteLine("[WARNING] Update returned null");
+                Console.WriteLine("[CẢNH BÁO] Cập nhật trả về null");
             }
             return result;
         }
         catch (InvalidOperationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] Invalid operation: {ex.Message}");
+            Console.WriteLine($"[LỖI XÁC THỰC] Hoạt động không hợp lệ: {ex.Message}");
             throw;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             throw;
         }
     }
@@ -447,16 +447,16 @@ public class IncidentServiceManualTest
         var existingIncident = _testIncidents.FirstOrDefault(i => i.IncidentId == id);
         if (existingIncident == null)
         {
-            Console.WriteLine($"[NOT FOUND] Incident with ID {id} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy sự cố với ID {id}");
             return false;
         }
 
-        Console.Write($"[CONFIRM] Delete incident '{existingIncident.Issue}'? (y/n): ");
+        Console.Write($"[XÁC NHẬN] Xóa sự cố '{existingIncident.Issue}'? (y/n): ");
         var confirm = Console.ReadLine();
 
         if (confirm?.ToLower() != "y")
         {
-            Console.WriteLine("[CANCELLED] Delete operation cancelled");
+            Console.WriteLine("[HỦY] Thao tác xóa đã bị hủy");
             return false;
         }
 
@@ -470,17 +470,17 @@ public class IncidentServiceManualTest
 
             if (result)
             {
-                Console.WriteLine("[SUCCESS] Incident deleted successfully");
+                Console.WriteLine("[THÀNH CÔNG] Xóa sự cố thành công");
             }
             else
             {
-                Console.WriteLine("[FAILED] Failed to delete incident");
+                Console.WriteLine("[THẤT BẠI] Không thể xóa sự cố");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return false;
         }
     }
@@ -501,7 +501,7 @@ public class IncidentServiceManualTest
         var existingIncident = _testIncidents.FirstOrDefault(i => i.IncidentId == incidentId);
         if (existingIncident == null)
         {
-            Console.WriteLine($"[NOT FOUND] Incident with ID {incidentId} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy sự cố với ID {incidentId}");
             return false;
         }
 
@@ -531,17 +531,17 @@ public class IncidentServiceManualTest
 
             if (result)
             {
-                Console.WriteLine("[SUCCESS] Technician assigned successfully");
+                Console.WriteLine("[THÀNH CÔNG] Phân công kỹ thuật viên thành công");
             }
             else
             {
-                Console.WriteLine("[FAILED] Failed to assign technician");
+                Console.WriteLine("[THẤT BẠI] Không thể phân công kỹ thuật viên");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return false;
         }
     }
@@ -567,12 +567,12 @@ public class IncidentServiceManualTest
         try
         {
             var result = await _service.GetIncidentsByUserLinesAsync(userId!);
-            Console.WriteLine($"[SUCCESS] Found {result.Count} incidents for user's lines");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} sự cố cho dây chuyền của người dùng");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return new List<IncidentHistory>();
         }
     }
@@ -592,12 +592,12 @@ public class IncidentServiceManualTest
         try
         {
             var result = await _service.GetIncidentsAssignedToTechnicianAsync(technicianId!);
-            Console.WriteLine($"[SUCCESS] Found {result.Count} incidents assigned to technician");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count} sự cố được phân công cho kỹ thuật viên");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return new List<IncidentHistory>();
         }
     }
@@ -685,17 +685,17 @@ public class IncidentServiceManualTest
         {
             var result = await _service.CreateBulkIncidentsAsync(bulkRequest);
 
-            Console.WriteLine($"[SUCCESS] Bulk incident creation completed");
-            Console.WriteLine($"  Total requested: {result.TotalRequested}");
-            Console.WriteLine($"  Success count: {result.SuccessCount}");
-            Console.WriteLine($"  Failure count: {result.FailureCount}");
+            Console.WriteLine($"[THÀNH CÔNG] Tạo hàng loạt sự cố hoàn tất");
+            Console.WriteLine($"  Tổng yêu cầu: {result.TotalRequested}");
+            Console.WriteLine($"  Thành công: {result.SuccessCount}");
+            Console.WriteLine($"  Thất bại: {result.FailureCount}");
 
             if (result.SuccessfulIncidents.Count > 0)
             {
-                Console.WriteLine("Successful incidents:");
+                Console.WriteLine("Sự cố thành công:");
                 foreach (var incident in result.SuccessfulIncidents)
                 {
-                    Console.WriteLine($"  - Incident {incident.IncidentId}: {incident.Issue}");
+                    Console.WriteLine($"  - Sự cố {incident.IncidentId}: {incident.Issue}");
                 }
             }
 
@@ -703,7 +703,7 @@ public class IncidentServiceManualTest
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return new BulkIncidentResponse
             {
                 TotalRequested = bulkRequest.Incidents.Count,
@@ -723,33 +723,33 @@ public class IncidentServiceManualTest
         }
     }
 
-    private async Task<IReadOnlyList<dynamic>> TestGetStopTypesAsync()
+    private async Task<IReadOnlyList<StopType>> TestGetStopTypesAsync()
     {
         Console.WriteLine("TEST: GetStopTypesAsync");
 
         // Setup mock with sample stop types
-        var mockStopTypes = new List<dynamic>
+        var mockStopTypes = new List<StopType>
         {
-            new { TypeId = 1, TypeName = "Machine Breakdown" },
-            new { TypeId = 2, TypeName = "Material Shortage" },
-            new { TypeId = 3, TypeName = "Operator Error" },
-            new { TypeId = 4, TypeName = "Maintenance" },
-            new { TypeId = 5, TypeName = "Quality Issue" }
+            new StopType { TypeId = 1, TypeName = "Machine Breakdown" },
+            new StopType { TypeId = 2, TypeName = "Material Shortage" },
+            new StopType { TypeId = 3, TypeName = "Operator Error" },
+            new StopType { TypeId = 4, TypeName = "Maintenance" },
+            new StopType { TypeId = 5, TypeName = "Quality Issue" }
         };
 
-        _mockIncidentRepository.Setup(x => x.GetStopTypesAsync(It.IsAny<CancellationToken>()))
+        _mockIncidentRepository.Setup(x => x.GetStopTypesAsync(default))
             .ReturnsAsync(mockStopTypes);
 
         try
         {
             var result = await _service.GetStopTypesAsync();
-            Console.WriteLine($"[SUCCESS] Retrieved {result.Count} stop types");
+            Console.WriteLine($"[THÀNH CÔNG] Lấy được {result.Count} loại dừng máy");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-            return new List<dynamic>();
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
+            return new List<StopType>();
         }
     }
 
@@ -837,22 +837,22 @@ public class IncidentServiceManualTest
         try
         {
             var result = await _service.GetDowntimeStatsAsync(period, lineId: lineId);
-            Console.WriteLine($"[SUCCESS] Retrieved downtime statistics");
+            Console.WriteLine($"[THÀNH CÔNG] Lấy được thống kê thời gian ngừng");
             return result;
         }
         catch (InvalidOperationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message}");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message}");
             throw;
         }
         catch (ArgumentException ex)
         {
-            Console.WriteLine($"[ARGUMENT ERROR] {ex.Message}");
+            Console.WriteLine($"[LỖI THAM SỐ] {ex.Message}");
             throw;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             throw;
         }
     }
@@ -886,12 +886,12 @@ public class IncidentServiceManualTest
         try
         {
             var result = await _service.GetIncidentShiftsAsync(incidentId);
-            Console.WriteLine($"[SUCCESS] Retrieved {result.Count} incident shifts");
+            Console.WriteLine($"[THÀNH CÔNG] Lấy được {result.Count} ca làm việc của sự cố");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return new List<IncidentShift>();
         }
     }
@@ -905,7 +905,7 @@ public class IncidentServiceManualTest
 
         if (string.IsNullOrEmpty(filePath))
         {
-            Console.WriteLine("[CANCELLED] No file path provided");
+            Console.WriteLine("[HỦY] Không cung cấp đường dẫn tệp");
             return string.Empty;
         }
 
@@ -925,17 +925,17 @@ public class IncidentServiceManualTest
                 .ReturnsAsync(mockUrl);
 
             var result = await _service.UploadIncidentImageAsync(mockFile);
-            Console.WriteLine($"[SUCCESS] Image uploaded successfully");
+            Console.WriteLine($"[THÀNH CÔNG] Tải lên hình ảnh thành công");
             return result;
         }
         catch (ArgumentException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message}");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message}");
             return string.Empty;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return string.Empty;
         }
     }
@@ -980,12 +980,12 @@ public class IncidentServiceManualTest
         try
         {
             var result = await _service.GetSparePartsStatusAsync(incidentId);
-            Console.WriteLine($"[SUCCESS] Retrieved spare parts status");
+            Console.WriteLine($"[THÀNH CÔNG] Lấy được trạng thái phụ tùng");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Xảy ra ngoại lệ: {ex.Message}");
             return new SparePartsStatus { HasPendingRequests = false, HasReturnRequests = false };
         }
     }

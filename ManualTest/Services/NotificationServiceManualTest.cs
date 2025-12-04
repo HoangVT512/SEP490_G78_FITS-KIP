@@ -99,14 +99,14 @@ public class NotificationServiceManualTest
                     await TestRefreshIncidentsForDepartmentAsync();
                     break;
                 case "0":
-                    Console.WriteLine("Goodbye!");
+                    Console.WriteLine("Tạm biệt!");
                     return;
                 default:
-                    Console.WriteLine("Invalid choice. Please try again.");
+                    Console.WriteLine("Lựa chọn không hợp lệ. Vui lòng thử lại.");
                     break;
             }
 
-            Console.WriteLine("\nPress any key to continue...");
+            Console.WriteLine("\nNhấn phím bất kỳ để tiếp tục...");
             Console.ReadKey();
             Console.Clear();
         }
@@ -114,9 +114,9 @@ public class NotificationServiceManualTest
 
     private void ShowMenu()
     {
-        Console.WriteLine("NOTIFICATION SERVICE TEST MENU");
-        Console.WriteLine("==============================");
-        Console.WriteLine("DATABASE OPERATIONS");
+        Console.WriteLine("MENU TEST NOTIFICATION SERVICE");
+        Console.WriteLine("================================");
+        Console.WriteLine("CÁC THAO TÁC CƠ SỞ DỮ LIỆU");
         Console.WriteLine("1. Test CreateNotificationAsync");
         Console.WriteLine("2. Test GetNotificationByIdAsync");
         Console.WriteLine("3. Test GetUserNotificationsAsync");
@@ -126,7 +126,7 @@ public class NotificationServiceManualTest
         Console.WriteLine("7. Test DeleteNotificationAsync");
         Console.WriteLine("8. Test DeleteAllReadNotificationsAsync");
         Console.WriteLine();
-        Console.WriteLine("REAL-TIME NOTIFICATIONS");
+        Console.WriteLine("THÔNG BÁO THỜI GIAN THỰC");
         Console.WriteLine("9. Test SendNotificationToUserAsync");
         Console.WriteLine("10. Test SendNotificationToGroupAsync");
         Console.WriteLine("11. Test SendNotificationToAllAsync");
@@ -134,9 +134,9 @@ public class NotificationServiceManualTest
         Console.WriteLine("13. Test SendIncidentNotificationToDepartmentAsync");
         Console.WriteLine("14. Test RefreshIncidentsForDepartmentAsync");
         Console.WriteLine();
-        Console.WriteLine("0. Exit");
+        Console.WriteLine("0. Thoát");
         Console.WriteLine();
-        Console.Write("Enter your choice: ");
+        Console.Write("Nhập lựa chọn của bạn: ");
     }
 
     private async Task<NotificationDTO> TestCreateNotificationAsync()
@@ -154,8 +154,8 @@ public class NotificationServiceManualTest
 
         if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(message))
         {
-            Console.WriteLine("[ERROR] User ID and Message are required.");
-            return null;
+            Console.WriteLine("[LỖI] User ID và Message là bắt buộc.");
+            return null!;
         }
 
         var request = new CreateNotificationRequest
@@ -169,7 +169,7 @@ public class NotificationServiceManualTest
         if (!string.IsNullOrWhiteSpace(request.UserId))
         {
             var user = _testUsers.FirstOrDefault(u => u.Id == request.UserId);
-            _mockUserRepository.Setup(x => x.GetUserByIdAsync(request.UserId, It.IsAny<CancellationToken>()))
+            _mockUserRepository.Setup(x => x.GetUserByIdAsync(request.UserId, default))
                 .ReturnsAsync(user);
         }
 
@@ -190,18 +190,18 @@ public class NotificationServiceManualTest
         try
         {
             var result = await _service.CreateNotificationAsync(request);
-            Console.WriteLine("[SUCCESS] Notification created successfully");
+            Console.WriteLine("[THÀNH CÔNG] Tạo thông báo thành công");
             return result;
         }
         catch (NotificationValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
-            return null;
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
+            return null!;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-            return null;
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
+            return null!;
         }
     }
 
@@ -223,18 +223,18 @@ public class NotificationServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine($"[SUCCESS] Notification found with ID: {id}");
+                Console.WriteLine($"[THÀNH CÔNG] Tìm thấy thông báo với ID: {id}");
             }
             else
             {
-                Console.WriteLine($"[NOT FOUND] No notification found with ID: {id}");
+                Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy thông báo với ID: {id}");
             }
-            return result;
+            return result!;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-            return null;
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
+            return null!;
         }
     }
 
@@ -247,11 +247,11 @@ public class NotificationServiceManualTest
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            Console.WriteLine("[ERROR] User ID cannot be empty.");
+            Console.WriteLine("[LỖI] User ID không được để trống.");
             return new List<NotificationDTO>();
         }
 
-        Console.Write("[INPUT] Unread only? (y/n): ");
+        Console.Write("[INPUT] Chỉ chưa đọc? (y/n): ");
         var unreadInput = Console.ReadLine();
         bool unreadOnly = unreadInput?.ToLower() == "y";
 
@@ -266,12 +266,12 @@ public class NotificationServiceManualTest
         try
         {
             var result = await _service.GetUserNotificationsAsync(userId, unreadOnly);
-            Console.WriteLine($"[SUCCESS] Found {result.Count()} notifications");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count()} thông báo");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return new List<NotificationDTO>();
         }
     }
@@ -285,8 +285,8 @@ public class NotificationServiceManualTest
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            Console.WriteLine("[ERROR] User ID cannot be empty.");
-            return null;
+            Console.WriteLine("[LỖI] User ID không được để trống.");
+            return null!;
         }
 
         var userNotifications = _testNotifications.Where(n => n.UserId == userId).ToList();
@@ -304,13 +304,13 @@ public class NotificationServiceManualTest
         try
         {
             var result = await _service.GetUserNotificationSummaryAsync(userId);
-            Console.WriteLine("[SUCCESS] Notification summary retrieved");
+            Console.WriteLine("[THÀNH CÔNG] Lấy tổng quan thông báo thành công");
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
-            return null;
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
+            return null!;
         }
     }
 
@@ -326,7 +326,7 @@ public class NotificationServiceManualTest
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            Console.WriteLine("[ERROR] User ID cannot be empty.");
+            Console.WriteLine("[LỖI] User ID không được để trống.");
             return false;
         }
 
@@ -346,22 +346,22 @@ public class NotificationServiceManualTest
 
             if (result)
             {
-                Console.WriteLine("[SUCCESS] Notification marked as read successfully");
+                Console.WriteLine("[THÀNH CÔNG] Đánh dấu đã đọc thành công");
             }
             else
             {
-                Console.WriteLine("[FAILED] Failed to mark notification as read");
+                Console.WriteLine("[THẤT BẠI] Không thể đánh dấu đã đọc");
             }
             return result;
         }
         catch (NotificationValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
             return false;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return false;
         }
     }
@@ -375,12 +375,12 @@ public class NotificationServiceManualTest
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            Console.WriteLine("[ERROR] User ID cannot be empty.");
+            Console.WriteLine("[LỖI] User ID không được để trống.");
             return false;
         }
 
         var unreadCount = _testNotifications.Count(n => n.UserId == userId && !n.IsRead);
-        Console.WriteLine($"[INFO] User has {unreadCount} unread notifications");
+        Console.WriteLine($"[THÔNG TIN] Người dùng có {unreadCount} thông báo chưa đọc");
 
         // Setup mock
         _mockRepository.Setup(x => x.MarkAllAsReadAsync(userId))
@@ -392,17 +392,17 @@ public class NotificationServiceManualTest
 
             if (result)
             {
-                Console.WriteLine("[SUCCESS] All notifications marked as read successfully");
+                Console.WriteLine("[THÀNH CÔNG] Tất cả thông báo đã được đánh dấu là đã đọc");
             }
             else
             {
-                Console.WriteLine("[FAILED] Failed to mark all notifications as read");
+                Console.WriteLine("[THẤT BẠI] Không thể đánh dấu tất cả thông báo là đã đọc");
             }
             return result;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return false;
         }
     }
@@ -418,16 +418,16 @@ public class NotificationServiceManualTest
 
         if (notification == null)
         {
-            Console.WriteLine($"[NOT FOUND] Notification with ID {id} not found");
+            Console.WriteLine($"[KHÔNG TÌM THẤY] Không tìm thấy thông báo với ID {id}");
             return false;
         }
 
-        Console.Write($"[CONFIRM] Delete notification '{notification.Title}'? (y/n): ");
+        Console.Write($"[XÁC NHẬN] Xóa thông báo '{notification.Title}'? (y/n): ");
         var confirm = Console.ReadLine();
 
         if (confirm?.ToLower() != "y")
         {
-            Console.WriteLine("[CANCELLED] Delete operation cancelled");
+            Console.WriteLine("[HỦY] Thao tác xóa đã bị hủy");
             return false;
         }
 
@@ -445,22 +445,22 @@ public class NotificationServiceManualTest
 
             if (result)
             {
-                Console.WriteLine("[SUCCESS] Notification deleted successfully");
+                Console.WriteLine("[THÀNH CÔNG] Xóa thông báo thành công");
             }
             else
             {
-                Console.WriteLine("[FAILED] Failed to delete notification");
+                Console.WriteLine("[THẤT BẠI] Không thể xóa thông báo");
             }
             return result;
         }
         catch (NotificationValidationException ex)
         {
-            Console.WriteLine($"[VALIDATION ERROR] {ex.Message} (Code: {ex.ErrorCode})");
+            Console.WriteLine($"[LỖI XÁC THỰC] {ex.Message} (Mã: {ex.ErrorCode})");
             return false;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
             return false;
         }
     }
@@ -474,12 +474,12 @@ public class NotificationServiceManualTest
 
         if (string.IsNullOrWhiteSpace(userId))
         {
-            Console.WriteLine("[ERROR] User ID cannot be empty.");
+            Console.WriteLine("[LỖI] User ID không được để trống.");
             return;
         }
 
         var readCount = _testNotifications.Count(n => n.UserId == userId && n.IsRead);
-        Console.WriteLine($"[INFO] User has {readCount} read notifications");
+        Console.WriteLine($"[THÔNG TIN] Người dùng có {readCount} thông báo đã đọc");
 
         // Setup mock
         _mockRepository.Setup(x => x.DeleteAllReadByUserIdAsync(userId))
@@ -488,11 +488,11 @@ public class NotificationServiceManualTest
         try
         {
             await _service.DeleteAllReadNotificationsAsync(userId);
-            Console.WriteLine("[SUCCESS] All read notifications deleted successfully");
+            Console.WriteLine("[THÀNH CÔNG] Xóa tất cả thông báo đã đọc thành công");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
         }
     }
 
@@ -516,28 +516,28 @@ public class NotificationServiceManualTest
 
         if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(message))
         {
-            Console.WriteLine("[ERROR] User ID and Message are required.");
+            Console.WriteLine("[LỖI] User ID và Message là bắt buộc.");
             return;
         }
 
-        Console.WriteLine($"\n[INPUT DATA] UserId: {userId}, Title: {title}, Message: {message}, Type: {type}");
+        Console.WriteLine($"\n[DỮ LIỆU NHẬP] UserId: {userId}, Title: {title}, Message: {message}, Type: {type}");
 
         // Setup mock
-        _mockHubService.Setup(x => x.SendToUserAsync(userId, It.IsAny<object>()))
+        _mockHubService.Setup(x => x.SendToUserAsync(userId, It.IsAny<object>(), It.IsAny<string>()))
             .Returns(Task.CompletedTask);
 
         try
         {
-            Console.WriteLine("[STATUS] Executing SendNotificationToUserAsync...");
+            Console.WriteLine("[TRẠNG THÁI] Đang thực thi SendNotificationToUserAsync...");
             await _service.SendNotificationToUserAsync(userId, title!, message, type);
 
-            Console.WriteLine($"[SUCCESS] Real-time notification sent to user {userId}");
-            _mockHubService.Verify(x => x.SendToUserAsync(userId, It.IsAny<object>()), Times.Once);
-            Console.WriteLine("[VERIFY] Hub service called exactly once");
+            Console.WriteLine($"[THÀNH CÔNG] Gửi thông báo thời gian thực tới người dùng {userId}");
+            _mockHubService.Verify(x => x.SendToUserAsync(userId, It.IsAny<object>(), It.IsAny<string>()), Times.Once);
+            Console.WriteLine("[XÁC MINH] Hub service đã được gọi đúng một lần");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
         }
     }
 
@@ -561,28 +561,28 @@ public class NotificationServiceManualTest
 
         if (string.IsNullOrWhiteSpace(groupName) || string.IsNullOrWhiteSpace(message))
         {
-            Console.WriteLine("[ERROR] Group Name and Message are required.");
+            Console.WriteLine("[LỖI] Tên nhóm và Message là bắt buộc.");
             return;
         }
 
-        Console.WriteLine($"\n[INPUT DATA] GroupName: {groupName}, Title: {title}, Message: {message}, Type: {type}");
+        Console.WriteLine($"\n[DỮ LIỆU NHẬP] GroupName: {groupName}, Title: {title}, Message: {message}, Type: {type}");
 
         // Setup mock
-        _mockHubService.Setup(x => x.SendToGroupAsync(groupName, It.IsAny<object>()))
+        _mockHubService.Setup(x => x.SendToGroupAsync(groupName, It.IsAny<object>(), It.IsAny<string>()))
             .Returns(Task.CompletedTask);
 
         try
         {
-            Console.WriteLine("[STATUS] Executing SendNotificationToGroupAsync...");
+            Console.WriteLine("[TRẠNG THÁI] Đang thực thi SendNotificationToGroupAsync...");
             await _service.SendNotificationToGroupAsync(groupName, title!, message, type);
 
-            Console.WriteLine($"[SUCCESS] Real-time notification sent to group {groupName}");
-            _mockHubService.Verify(x => x.SendToGroupAsync(groupName, It.IsAny<object>()), Times.Once);
-            Console.WriteLine("[VERIFY] Hub service called exactly once");
+            Console.WriteLine($"[THÀNH CÔNG] Gửi thông báo thời gian thực tới nhóm {groupName}");
+            _mockHubService.Verify(x => x.SendToGroupAsync(groupName, It.IsAny<object>(), It.IsAny<string>()), Times.Once);
+            Console.WriteLine("[XÁC MINH] Hub service đã được gọi đúng một lần");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
         }
     }
 
@@ -603,11 +603,11 @@ public class NotificationServiceManualTest
 
         if (string.IsNullOrWhiteSpace(message))
         {
-            Console.WriteLine("[ERROR] Message is required.");
+            Console.WriteLine("[LỖI] Message là bắt buộc.");
             return;
         }
 
-        Console.WriteLine($"\n[INPUT DATA] Title: {title}, Message: {message}, Type: {type}");
+        Console.WriteLine($"\n[DỮ LIỆU NHẬP] Title: {title}, Message: {message}, Type: {type}");
 
         // Setup mock
         _mockHubService.Setup(x => x.SendToAllAsync(It.IsAny<object>()))
@@ -615,16 +615,16 @@ public class NotificationServiceManualTest
 
         try
         {
-            Console.WriteLine("[STATUS] Executing SendNotificationToAllAsync...");
+            Console.WriteLine("[TRẠNG THÁI] Đang thực thi SendNotificationToAllAsync...");
             await _service.SendNotificationToAllAsync(title!, message, type);
 
-            Console.WriteLine($"[SUCCESS] Real-time notification sent to all users");
+            Console.WriteLine($"[THÀNH CÔNG] Gửi thông báo thời gian thực tới tất cả người dùng");
             _mockHubService.Verify(x => x.SendToAllAsync(It.IsAny<object>()), Times.Once);
-            Console.WriteLine("[VERIFY] Hub service called exactly once");
+            Console.WriteLine("[XÁC MINH] Hub service đã được gọi đúng một lần");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
         }
     }
 
@@ -645,22 +645,22 @@ public class NotificationServiceManualTest
 
         if (string.IsNullOrWhiteSpace(roleName) || string.IsNullOrWhiteSpace(message))
         {
-            Console.WriteLine("[ERROR] Role Name and Message are required.");
+            Console.WriteLine("[LỖI] Tên vai trò và Message là bắt buộc.");
             return;
         }
 
-        Console.WriteLine($"\n[INPUT DATA] RoleName: {roleName}, Message: {message}, Type: {type}");
+        Console.WriteLine($"\n[DỮ LIỆU NHẬP] RoleName: {roleName}, Message: {message}, Type: {type}");
 
         // Setup mock - Get users by role
         var usersInRole = _testUsers.Take(2).ToList();
-        _mockUserRepository.Setup(x => x.GetUsersByRoleAsync(roleName, It.IsAny<CancellationToken>()))
+        _mockUserRepository.Setup(x => x.GetUsersByRoleAsync(roleName, default))
             .ReturnsAsync(usersInRole);
 
-        Console.WriteLine($"[INFO] Found {usersInRole.Count} users with role '{roleName}'");
+        Console.WriteLine($"[THÔNG TIN] Tìm thấy {usersInRole.Count} người dùng với vai trò '{roleName}'");
 
         // Setup mock - Create notification for each user
         _mockRepository.Setup(x => x.CreateAsync(It.IsAny<Notification>()))
-            .ReturnsAsync((Notification n, CancellationToken ct) => n);
+            .ReturnsAsync((Notification n) => n);
 
         // Setup mock - Send real-time notification
         if (roleName == "Kỹ thuật viên" && type == "replacementApproved")
@@ -670,22 +670,22 @@ public class NotificationServiceManualTest
         }
         else
         {
-            _mockHubService.Setup(x => x.SendToGroupAsync(It.IsAny<string>(), It.IsAny<object>()))
+            _mockHubService.Setup(x => x.SendToGroupAsync(It.IsAny<string>(), It.IsAny<object>(), It.IsAny<string>()))
                 .Returns(Task.CompletedTask);
         }
 
         try
         {
-            Console.WriteLine("[STATUS] Executing SendNotificationToRoleAsync...");
+            Console.WriteLine("[TRẠNG THÁI] Đang thực thi SendNotificationToRoleAsync...");
             await _service.SendNotificationToRoleAsync(roleName, message, type);
 
-            Console.WriteLine($"[SUCCESS] Notifications created for {usersInRole.Count} users and real-time notification sent to role {roleName}");
+            Console.WriteLine($"[THÀNH CÔNG] Tạo thông báo cho {usersInRole.Count} người dùng và gửi thông báo thời gian thực tới vai trò {roleName}");
             _mockRepository.Verify(x => x.CreateAsync(It.IsAny<Notification>()), Times.Exactly(usersInRole.Count));
-            Console.WriteLine($"[VERIFY] Created {usersInRole.Count} notifications in database");
+            Console.WriteLine($"[XÁC MINH] Đã tạo {usersInRole.Count} thông báo trong cơ sở dữ liệu");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
         }
     }
 
@@ -706,31 +706,31 @@ public class NotificationServiceManualTest
 
         if (string.IsNullOrWhiteSpace(message))
         {
-            Console.WriteLine("[ERROR] Message is required.");
+            Console.WriteLine("[LỖI] Message là bắt buộc.");
             return;
         }
 
-        Console.WriteLine($"\n[INPUT DATA] DepartmentId: {deptId}, Title: {title}, Message: {message}");
+        Console.WriteLine($"\n[DỮ LIỆU NHẬP] DepartmentId: {deptId}, Title: {title}, Message: {message}");
 
         var groupName = $"TechnicalManagers_Department_{deptId}";
-        Console.WriteLine($"[INFO] Target SignalR group: {groupName}");
+        Console.WriteLine($"[THÔNG TIN] Nhóm SignalR đích: {groupName}");
 
         // Setup mock
-        _mockHubService.Setup(x => x.SendToGroupAsync(groupName, It.IsAny<object>()))
+        _mockHubService.Setup(x => x.SendToGroupAsync(groupName, It.IsAny<object>(), It.IsAny<string>()))
             .Returns(Task.CompletedTask);
 
         try
         {
-            Console.WriteLine("[STATUS] Executing SendIncidentNotificationToDepartmentAsync...");
+            Console.WriteLine("[TRẠNG THÁI] Đang thực thi SendIncidentNotificationToDepartmentAsync...");
             await _service.SendIncidentNotificationToDepartmentAsync(deptId, title!, message);
 
-            Console.WriteLine($"[SUCCESS] Incident notification sent to department {deptId}");
-            _mockHubService.Verify(x => x.SendToGroupAsync(groupName, It.IsAny<object>()), Times.Once);
-            Console.WriteLine("[VERIFY] Hub service called exactly once");
+            Console.WriteLine($"[THÀNH CÔNG] Gửi thông báo sự cố tới phòng ban {deptId}");
+            _mockHubService.Verify(x => x.SendToGroupAsync(groupName, It.IsAny<object>(), It.IsAny<string>()), Times.Once);
+            Console.WriteLine("[XÁC MINH] Hub service đã được gọi đúng một lần");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
         }
     }
 
@@ -743,28 +743,28 @@ public class NotificationServiceManualTest
         Console.Write("[INPUT] Enter Department ID: ");
         int.TryParse(Console.ReadLine(), out int deptId);
 
-        Console.WriteLine($"\n[INPUT DATA] DepartmentId: {deptId}");
+        Console.WriteLine($"\n[DỮ LIỆU NHẬP] DepartmentId: {deptId}");
 
         var groupName = $"TechnicalManagers_Department_{deptId}";
-        Console.WriteLine($"[INFO] Target SignalR group: {groupName}");
-        Console.WriteLine($"[INFO] This will send a refresh signal to update the incident list");
+        Console.WriteLine($"[THÔNG TIN] Nhóm SignalR đích: {groupName}");
+        Console.WriteLine($"[THÔNG TIN] Sẽ gửi tín hiệu làm mới để cập nhật danh sách sự cố");
 
         // Setup mock
-        _mockHubService.Setup(x => x.SendToGroupAsync(groupName, It.IsAny<object>()))
+        _mockHubService.Setup(x => x.SendToGroupAsync(groupName, It.IsAny<object>(), It.IsAny<string>()))
             .Returns(Task.CompletedTask);
 
         try
         {
-            Console.WriteLine("[STATUS] Executing RefreshIncidentsForDepartmentAsync...");
+            Console.WriteLine("[TRẠNG THÁI] Đang thực thi RefreshIncidentsForDepartmentAsync...");
             await _service.RefreshIncidentsForDepartmentAsync(deptId);
 
-            Console.WriteLine($"[SUCCESS] Refresh signal sent to department {deptId}");
-            _mockHubService.Verify(x => x.SendToGroupAsync(groupName, It.IsAny<object>()), Times.Once);
-            Console.WriteLine("[VERIFY] Hub service called exactly once");
+            Console.WriteLine($"[THÀNH CÔNG] Đã gửi tín hiệu làm mới tới phòng ban {deptId}");
+            _mockHubService.Verify(x => x.SendToGroupAsync(groupName, It.IsAny<object>(), It.IsAny<string>()), Times.Once);
+            Console.WriteLine("[XÁC MINH] Hub service đã được gọi đúng một lần");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] Exception occurred: {ex.Message}");
+            Console.WriteLine($"[LỖI] Exception xảy ra: {ex.Message}");
         }
     }
 

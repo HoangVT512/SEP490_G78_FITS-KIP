@@ -61,10 +61,10 @@ public class SparePartServiceManualTest
                         await TestGetUsageByCurrentMonthAsync();
                         break;
                     case "0":
-                        Console.WriteLine("Goodbye!");
+                        Console.WriteLine("Tạm biệt!");
                         return;
                     default:
-                        Console.WriteLine("Invalid choice. Please try again.");
+                        Console.WriteLine("Lựa chọn không hợp lệ. Vui lòng thử lại.");
                         break;
                 }
             }
@@ -111,7 +111,7 @@ public class SparePartServiceManualTest
             // Execute
             var result = await _service.GetAllSparePartsAsync();
 
-            Console.WriteLine($"[SUCCESS] Found {result.Count()} spare parts");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count()} phụ tùng");
             foreach (var part in result)
             {
                 Console.WriteLine(FormatSparePart(part));
@@ -119,7 +119,7 @@ public class SparePartServiceManualTest
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] {ex.Message}");
+            Console.WriteLine($"[LỖI] {ex.Message}");
         }
     }
 
@@ -139,17 +139,17 @@ public class SparePartServiceManualTest
 
             if (result != null)
             {
-                Console.WriteLine($"[SUCCESS] Spare part found");
+                Console.WriteLine($"[THÀNH CÔNG] Tìm thấy phụ tùng");
                 Console.WriteLine(FormatSparePart(result));
             }
             else
             {
-                Console.WriteLine("[NOT FOUND] Spare part not found");
+                Console.WriteLine("[KHÔNG TÌM THẤY] Không tìm thấy phụ tùng");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] {ex.Message}");
+            Console.WriteLine($"[LỖI] {ex.Message}");
         }
     }
 
@@ -182,12 +182,12 @@ public class SparePartServiceManualTest
             // Execute
             var result = await _service.CreateSparePartAsync(newPart);
 
-            Console.WriteLine($"[SUCCESS] Spare part created");
+            Console.WriteLine($"[THÀNH CÔNG] Tạo phụ tùng thành công");
             Console.WriteLine(FormatSparePart(result));
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] {ex.Message}");
+            Console.WriteLine($"[LỖI] {ex.Message}");
         }
     }
 
@@ -202,7 +202,7 @@ public class SparePartServiceManualTest
 
             if (existingPart == null)
             {
-                Console.WriteLine($"[ERROR] Spare part with ID {partId} not found");
+                Console.WriteLine($"[LỖI] Không tìm thấy phụ tùng với ID {partId}");
                 return;
             }
 
@@ -226,11 +226,11 @@ public class SparePartServiceManualTest
             // Execute
             var result = await _service.UpdateSparePartAsync(partId, updatedPart);
 
-            Console.WriteLine($"[SUCCESS] Spare part updated: {result}");
+            Console.WriteLine($"[THÀNH CÔNG] Cập nhật phụ tùng thành công: {result}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] {ex.Message}");
+            Console.WriteLine($"[LỖI] {ex.Message}");
         }
     }
 
@@ -251,11 +251,11 @@ public class SparePartServiceManualTest
             // Execute
             var result = await _service.DeleteSparePartAsync(partId);
 
-            Console.WriteLine($"[SUCCESS] Spare part deleted: {result}");
+            Console.WriteLine($"[THÀNH CÔNG] Xóa phụ tùng thành công: {result}");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] {ex.Message}");
+            Console.WriteLine($"[LỖI] {ex.Message}");
         }
     }
 
@@ -273,7 +273,7 @@ public class SparePartServiceManualTest
             // Execute
             var result = await _service.GetTop5MostUsedSparePartsAsync();
 
-            Console.WriteLine($"[SUCCESS] Found {result.Count()} top used spare parts");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy {result.Count()} phụ tùng được sử dụng nhiều nhất");
             int rank = 1;
             foreach (var part in result)
             {
@@ -282,7 +282,7 @@ public class SparePartServiceManualTest
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] {ex.Message}");
+            Console.WriteLine($"[LỖI] {ex.Message}");
         }
     }
 
@@ -307,15 +307,15 @@ public class SparePartServiceManualTest
             // Execute
             var result = await _service.GetUsageByWeekAsync(week, year);
 
-            Console.WriteLine($"[SUCCESS] Found usage data for {result.Count} spare parts in week {week}, {year}");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy dữ liệu sử dụng cho {result.Count} phụ tùng trong tuần {week}, {year}");
             foreach (var kvp in result)
             {
-                Console.WriteLine($"PartId: {kvp.Key}, Usage Count: {kvp.Value}");
+                Console.WriteLine($"PartId: {kvp.Key}, Số lần sử dụng: {kvp.Value}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] {ex.Message}");
+            Console.WriteLine($"[LỖI] {ex.Message}");
         }
     }
 
@@ -340,15 +340,15 @@ public class SparePartServiceManualTest
             // Execute
             var result = await _service.GetUsageByMonthAsync(month, year);
 
-            Console.WriteLine($"[SUCCESS] Found usage data for {result.Count} spare parts in month {month}, {year}");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy dữ liệu sử dụng cho {result.Count} phụ tùng trong tháng {month}, {year}");
             foreach (var kvp in result)
             {
-                Console.WriteLine($"PartId: {kvp.Key}, Usage Count: {kvp.Value}");
+                Console.WriteLine($"PartId: {kvp.Key}, Số lần sử dụng: {kvp.Value}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] {ex.Message}");
+            Console.WriteLine($"[LỖI] {ex.Message}");
         }
     }
 
@@ -370,15 +370,15 @@ public class SparePartServiceManualTest
             // Execute
             var result = await _service.GetUsageByCurrentWeekAsync();
 
-            Console.WriteLine($"[SUCCESS] Found usage data for {result.Count} spare parts in current week");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy dữ liệu sử dụng cho {result.Count} phụ tùng trong tuần hiện tại");
             foreach (var kvp in result)
             {
-                Console.WriteLine($"PartId: {kvp.Key}, Usage Count: {kvp.Value}");
+                Console.WriteLine($"PartId: {kvp.Key}, Số lần sử dụng: {kvp.Value}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] {ex.Message}");
+            Console.WriteLine($"[LỖI] {ex.Message}");
         }
     }
 
@@ -400,15 +400,15 @@ public class SparePartServiceManualTest
             // Execute
             var result = await _service.GetUsageByCurrentMonthAsync();
 
-            Console.WriteLine($"[SUCCESS] Found usage data for {result.Count} spare parts in current month");
+            Console.WriteLine($"[THÀNH CÔNG] Tìm thấy dữ liệu sử dụng cho {result.Count} phụ tùng trong tháng hiện tại");
             foreach (var kvp in result)
             {
-                Console.WriteLine($"PartId: {kvp.Key}, Usage Count: {kvp.Value}");
+                Console.WriteLine($"PartId: {kvp.Key}, Số lần sử dụng: {kvp.Value}");
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR] {ex.Message}");
+            Console.WriteLine($"[LỖI] {ex.Message}");
         }
     }
 
