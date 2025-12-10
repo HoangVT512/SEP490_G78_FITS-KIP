@@ -22,6 +22,7 @@ public class MobileUserDTO
 public class MobileLineDTO
 {
     public int LineId { get; set; }
+    public string LineCode { get; set; } = null!;
     public string LineName { get; set; } = null!;
     public int? DepartmentId { get; set; }
     public bool IsActive { get; set; }
