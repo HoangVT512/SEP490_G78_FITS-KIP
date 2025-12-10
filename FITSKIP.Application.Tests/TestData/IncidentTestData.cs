@@ -14,24 +14,24 @@ namespace FITSKIP.Application.Tests.TestData
                 new Equipment
                 {
                     EquipmentId = 1,
-                    EquipmentCode = "CNC-001",
-                    EquipmentName = "CNC Machine 1",
+                    EquipmentCode = "EQ001",
+                    EquipmentName = "Máy hàn tự động 1",
                     IsActive = true,
                     StageId = 1
                 },
                 new Equipment
                 {
                     EquipmentId = 2,
-                    EquipmentCode = "ROBOT-001",
-                    EquipmentName = "Assembly Robot 1",
+                    EquipmentCode = "EQ002",
+                    EquipmentName = "Robot cánh tay 2",
                     IsActive = true,
                     StageId = 2
                 },
                 new Equipment
                 {
                     EquipmentId = 3,
-                    EquipmentCode = "CONV-A01",
-                    EquipmentName = "Conveyor Belt A",
+                    EquipmentCode = "EQ003",
+                    EquipmentName = "Máy kiểm tra chất lượng",
                     IsActive = false, // Inactive equipment for testing
                     StageId = 3
                 },
@@ -52,7 +52,7 @@ namespace FITSKIP.Application.Tests.TestData
                 new Line
                 {
                     LineId = 1,
-                    LineName = "Production Line 1",
+                    LineName = "Dây chuyền lắp ráp 1",
                     LineCode = "LINE001",
                     IsActive = true,
                     DepartmentId = 1
@@ -60,7 +60,7 @@ namespace FITSKIP.Application.Tests.TestData
                 new Line
                 {
                     LineId = 2,
-                    LineName = "Production Line 2",
+                    LineName = "Dây chuyền sơn 2",
                     LineCode = "LINE002",
                     IsActive = true,
                     DepartmentId = 1
@@ -68,7 +68,7 @@ namespace FITSKIP.Application.Tests.TestData
                 new Line
                 {
                     LineId = 3,
-                    LineName = "Assembly Line A",
+                    LineName = "Dây chuyền đóng gói",
                     LineCode = "LINE003",
                     IsActive = false, // Inactive line for testing
                     DepartmentId = 2
@@ -84,8 +84,8 @@ namespace FITSKIP.Application.Tests.TestData
                 {
                     Id = "USER001",
                     UserName = "operator1",
-                    Email = "john.doe@example.com",
-                    FullName = "John Doe",
+                    Email = "operator1@test.com",
+                    FullName = "Nguyễn Văn A",
                     EmployeeCode = "OP001",
                     IsActive = true,
                     DepartmentId = 1
@@ -94,8 +94,8 @@ namespace FITSKIP.Application.Tests.TestData
                 {
                     Id = "TECH001",
                     UserName = "technician1",
-                    Email = "tech1@example.com",
-                    FullName = "Technician One",
+                    Email = "tech1@test.com",
+                    FullName = "Trần Văn B",
                     EmployeeCode = "TECH001",
                     IsActive = true,
                     DepartmentId = 1
@@ -104,8 +104,8 @@ namespace FITSKIP.Application.Tests.TestData
                 {
                     Id = "TECH002",
                     UserName = "technician2",
-                    Email = "tech2@example.com",
-                    FullName = "Technician Two",
+                    Email = "tech2@test.com",
+                    FullName = "Lê Văn C",
                     EmployeeCode = "TECH002",
                     IsActive = true,
                     DepartmentId = 1
@@ -147,11 +147,11 @@ namespace FITSKIP.Application.Tests.TestData
         {
             return new List<StopType>
             {
-                new StopType { TypeId = 1, TypeName = "Machine Breakdown"},
-                new StopType { TypeId = 2, TypeName = "Material Shortage" },
-                new StopType { TypeId = 3, TypeName = "Operator Error"},
-                new StopType { TypeId = 4, TypeName = "Maintenance"},
-                new StopType { TypeId = 5, TypeName = "Quality Issue"}
+                new StopType { TypeId = 1, TypeName = "Dừng ngắn"},
+                new StopType { TypeId = 2, TypeName = "Dừng dài" },
+                new StopType { TypeId = 3, TypeName = "Vệ sinh"},
+                new StopType { TypeId = 4, TypeName = "Đổi mã"},
+                new StopType { TypeId = 5, TypeName = "Phế phẩm"}
             };
         }
 
@@ -162,21 +162,21 @@ namespace FITSKIP.Application.Tests.TestData
                 new Shift 
                 { 
                     ShiftId = 1, 
-                    ShiftName = "Morning", 
+                    ShiftName = "Ca sáng", 
                     StartTime = new TimeOnly(6, 0),
                     EndTime = new TimeOnly(14, 0)
                 },
                 new Shift 
                 { 
                     ShiftId = 2, 
-                    ShiftName = "Afternoon", 
+                    ShiftName = "Ca chiều", 
                     StartTime = new TimeOnly(14, 0),
                     EndTime = new TimeOnly(22, 0)
                 },
                 new Shift 
                 { 
                     ShiftId = 3, 
-                    ShiftName = "Night", 
+                    ShiftName = "Ca đêm", 
                     StartTime = new TimeOnly(22, 0),
                     EndTime = new TimeOnly(6, 0)
                 }
@@ -192,68 +192,48 @@ namespace FITSKIP.Application.Tests.TestData
                     IncidentId = 1,
                     EquipmentId = 1,
                     LineId = 1,
-                    StartTime = DateTime.Now.AddHours(-5),
-                    EndTime = DateTime.Now.AddHours(-3),
-                    Duration = 120,
-                    TypeId = 1,
-                    Issue = "Machine overheating",
-                    Reason = "Cooling system failure",
-                    Solution = "Replaced cooling fan",
+                    StartTime = DateTime.Now.AddHours(-3),
+                    EndTime = DateTime.Now.AddHours(-2),
+                    Duration = 60,
+                    TypeId = 2,
+                    Issue = "Máy hàn bị kẹt",
                     Status = "Hoàn thành",
                     ReportedByUserId = "USER001",
                     AssignedTo = "TECH001",
                     IsTechSupport = false,
-                    CreatedDate = DateTime.Now.AddHours(-5)
+                    CreatedDate = DateTime.Now.AddHours(-3)
                 },
                 new IncidentHistory
                 {
                     IncidentId = 2,
                     EquipmentId = 2,
                     LineId = 1,
-                    StartTime = DateTime.Now.AddHours(-2),
+                    StartTime = DateTime.Now.AddHours(-1),
                     EndTime = null,
                     Duration = null,
                     TypeId = 2,
-                    Issue = "Robot arm malfunction",
+                    Issue = "Robot không hoạt động",
                     Status = "Đang xử lý",
                     ReportedByUserId = "USER001",
                     AssignedTo = "TECH002",
                     IsTechSupport = true,
-                    CreatedDate = DateTime.Now.AddHours(-2)
+                    CreatedDate = DateTime.Now.AddHours(-1)
                 },
                 new IncidentHistory
                 {
                     IncidentId = 3,
-                    EquipmentId = 3,
-                    LineId = 2,
+                    EquipmentId = 1,
+                    LineId = 1,
                     StartTime = DateTime.Now.AddMinutes(-30),
                     EndTime = null,
                     Duration = null,
-                    TypeId = 3,
-                    Issue = "Conveyor belt stopped",
+                    TypeId = 1,
+                    Issue = "Dừng ngắn để kiểm tra",
                     Status = "Chờ xử lý",
                     ReportedByUserId = "USER001",
                     AssignedTo = null,
                     IsTechSupport = false,
                     CreatedDate = DateTime.Now.AddMinutes(-30)
-                },
-                new IncidentHistory
-                {
-                    IncidentId = 4,
-                    EquipmentId = 1,
-                    LineId = 1,
-                    StartTime = DateTime.Now.AddDays(-1),
-                    EndTime = DateTime.Now.AddDays(-1).AddHours(1),
-                    Duration = 60,
-                    TypeId = 1,
-                    Issue = "Machine not starting",
-                    Reason = "Power supply issue",
-                    Solution = "Reset circuit breaker",
-                    Status = "Hoàn thành",
-                    ReportedByUserId = "USER001",
-                    AssignedTo = "TECH001",
-                    IsTechSupport = false,
-                    CreatedDate = DateTime.Now.AddDays(-1)
                 }
             };
         }
@@ -264,8 +244,8 @@ namespace FITSKIP.Application.Tests.TestData
             {
                 EquipmentId = 1,
                 LineId = 1,
-                Issue = "Machine overheating test",
-                TypeId = 1,
+                Issue = "Test issue - Machine overheating",
+                TypeId = 2,
                 StartTime = DateTime.Now.AddHours(-1),
                 EndTime = null,
                 ReportedByUserId = "USER001",
@@ -378,11 +358,11 @@ namespace FITSKIP.Application.Tests.TestData
         {
             return new CreateIncidentRequest
             {
-                EquipmentId = 2,
+                EquipmentId = 1,
                 LineId = 1,
-                Issue = "Robot arm malfunction - needs tech support",
+                Issue = "Critical issue needs tech support",
                 TypeId = 2,
-                StartTime = DateTime.Now.AddMinutes(-30),
+                StartTime = DateTime.Now.AddHours(-1),
                 EndTime = null,
                 ReportedByUserId = "USER001",
                 IsTechSupport = true // Tech support request

@@ -15,7 +15,7 @@ namespace FITSKIP.Application.Tests.TestData
                 {
                     WorkOrderId = 1,
                     PlanId = 1,
-                    EquipmentId = 1, // CNC Machine 1
+                    EquipmentId = 1,
                     WorkOrderCode = "WO001",
                     Status = "Chờ xử lý",
                     ScheduledDate = DateTime.Now.AddDays(5),
@@ -28,7 +28,7 @@ namespace FITSKIP.Application.Tests.TestData
                 {
                     WorkOrderId = 2,
                     PlanId = 1,
-                    EquipmentId = 1, // CNC Machine 1
+                    EquipmentId = 1,
                     WorkOrderCode = "WO002",
                     Status = "Đang thực hiện",
                     ScheduledDate = DateTime.Now,
@@ -41,7 +41,7 @@ namespace FITSKIP.Application.Tests.TestData
                 {
                     WorkOrderId = 3,
                     PlanId = 2,
-                    EquipmentId = 2, // Assembly Robot 1
+                    EquipmentId = 2,
                     WorkOrderCode = "WO003",
                     Status = "Quá hạn",
                     ScheduledDate = DateTime.Now.AddDays(-5),
@@ -54,7 +54,7 @@ namespace FITSKIP.Application.Tests.TestData
                 {
                     WorkOrderId = 4,
                     PlanId = 1,
-                    EquipmentId = 1, // CNC Machine 1
+                    EquipmentId = 1,
                     WorkOrderCode = "WO004",
                     Status = "Hoàn thành",
                     ScheduledDate = DateTime.Now.AddDays(-30),

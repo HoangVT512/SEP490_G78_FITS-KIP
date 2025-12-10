@@ -14,62 +14,26 @@ namespace FITSKIP.Application.Tests.TestData
                 new SparePart
                 {
                     PartId = 1,
-                    PartNumber = "SP001",
-                    PartName = "Motor Bearing",
-                    PartType = "Mechanical",
+                    PartName = "Bạc đạn A",
                     Quantity = 100,
                     MinQuantity = 10,
-                    Location = "Warehouse A",
-                    Status = "Đủ hàng",
                     IsActive = true
                 },
                 new SparePart
                 {
                     PartId = 2,
-                    PartNumber = "SP002",
-                    PartName = "Belt Drive",
-                    PartType = "Mechanical",
+                    PartName = "Vòng bi B",
                     Quantity = 50,
                     MinQuantity = 5,
-                    Location = "Warehouse A",
-                    Status = "Đủ hàng",
                     IsActive = true
                 },
                 new SparePart
                 {
                     PartId = 3,
-                    PartNumber = "SP003",
-                    PartName = "Control Board",
-                    PartType = "Electrical",
+                    PartName = "Phớt dầu C",
                     Quantity = 0,
                     MinQuantity = 10,
-                    Location = "Warehouse B",
-                    Status = "Hết hàng",
                     IsActive = false
-                },
-                new SparePart
-                {
-                    PartId = 4,
-                    PartNumber = "SP004",
-                    PartName = "Oil Filter",
-                    PartType = "Consumable",
-                    Quantity = 100,
-                    MinQuantity = 20,
-                    Location = "Warehouse A",
-                    Status = "Đủ hàng",
-                    IsActive = true
-                },
-                new SparePart
-                {
-                    PartId = 5,
-                    PartNumber = "SP005",
-                    PartName = "Hydraulic Cylinder",
-                    PartType = "Hydraulic",
-                    Quantity = 15,
-                    MinQuantity = 5,
-                    Location = "Warehouse B",
-                    Status = "Đủ hàng",
-                    IsActive = true
                 }
             };
         }
@@ -81,9 +45,9 @@ namespace FITSKIP.Application.Tests.TestData
                 new ReplacementHistory
                 {
                     ReplacementId = 1,
-                    EquipmentId = 1, // CNC Machine 1
+                    EquipmentId = 1,
                     IncidentId = 1,
-                    PartId = 1, // Motor Bearing
+                    PartId = 1,
                     Quantity = 5,
                     ReplacedDate = DateTime.Now.AddDays(-5),
                     ReplacedBy = "TECH001",
@@ -96,9 +60,9 @@ namespace FITSKIP.Application.Tests.TestData
                 new ReplacementHistory
                 {
                     ReplacementId = 2,
-                    EquipmentId = 2, // Assembly Robot 1
+                    EquipmentId = 2,
                     IncidentId = 2,
-                    PartId = 2, // Belt Drive
+                    PartId = 2,
                     Quantity = 10,
                     ReplacedDate = DateTime.Now.AddDays(-2),
                     ReplacedBy = "TECH002",
@@ -111,10 +75,10 @@ namespace FITSKIP.Application.Tests.TestData
                 new ReplacementHistory
                 {
                     ReplacementId = 3,
-                    EquipmentId = 1, // CNC Machine 1
+                    EquipmentId = 1,
                     IncidentId = null,
                     WorkOrderId = 1,
-                    PartId = 1, // Motor Bearing
+                    PartId = 1,
                     Quantity = 8,
                     ReplacedDate = DateTime.Now.AddDays(-1),
                     ReplacedBy = "TECH001",

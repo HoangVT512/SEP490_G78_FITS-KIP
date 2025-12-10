@@ -347,7 +347,6 @@ public class AuthService : IAuthService
             Line = new MobileLineDTO
             {
                 LineId = assignedLine.LineId,
-                LineCode = assignedLine.LineCode,
                 LineName = assignedLine.LineName,
                 DepartmentId = assignedLine.DepartmentId,
                 IsActive = assignedLine.IsActive

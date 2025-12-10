@@ -24,7 +24,7 @@ public partial class ReplacementHistory
 
     public string ReplacedBy { get; set; } = null!;
 
-    public string Status { get; set; } = "Đã cấp phát"; // Trạng thái mặc định (tiếng Việt)
+    public string Status { get; set; } = "Chờ duyệt cấp phát"; // Trạng thái mặc định (tiếng Việt)
 
     /// <summary>
     /// Số lượng thực tế sử dụng (có thể khác với Quantity nếu có thừa/thiếu)
@@ -56,8 +56,8 @@ public partial class ReplacementHistory
     public virtual IncidentHistory? Incident { get; set; }
 
     public virtual MaintenanceWorkOrder? WorkOrder { get; set; }
-    
-    public virtual SparePart? Part { get; set; } = null!;
 
-    public virtual User? ReplacedByNavigation { get; set; } = null!;
+    public virtual SparePart Part { get; set; } = null!;
+
+    public virtual User ReplacedByNavigation { get; set; } = null!;
 }
