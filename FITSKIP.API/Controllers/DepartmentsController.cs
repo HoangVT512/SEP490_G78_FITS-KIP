@@ -1,6 +1,7 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
+using FITSKIP.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Identity;
 
@@ -53,6 +54,16 @@ namespace FITSKIP.API.Controllers
                 var created = await departmentService.CreateAsync(request, cancellationToken);
                 return CreatedAtAction(nameof(GetById), new { id = created.DepartmentId }, created);
             }
+            catch (DepartmentValidationException ex)
+            {
+                // Return validation error with structured response
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message,
+                    errorCode = ex.ErrorCode,
+                    errorData = ex.ErrorData
+                });
+            }
             catch (InvalidOperationException ex)
             {
                 // Trả về thông báo lỗi cụ thể từ service layer
@@ -73,6 +84,16 @@ namespace FITSKIP.API.Controllers
                 if (updated == null) return NotFound(new { message = "Phòng ban không tồn tại" });
                 return Ok(updated);
             }
+            catch (DepartmentValidationException ex)
+            {
+                // Return validation error with structured response
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message,
+                    errorCode = ex.ErrorCode,
+                    errorData = ex.ErrorData
+                });
+            }
             catch (InvalidOperationException ex)
             {
                 // Trả về thông báo lỗi cụ thể từ service layer
@@ -84,6 +105,35 @@ namespace FITSKIP.API.Controllers
             }
         }
 
+
+        [HttpPatch("{id:int}/toggle-status")]
+        public async Task<ActionResult<DepartmentDTO>> ToggleStatus(int id, CancellationToken cancellationToken)
+        {
+            try
+            {
+                var department = await departmentService.GetByIdAsync(id, cancellationToken);
+                if (department == null)
+                {
+                    return NotFound(new { success = false, message = "Khong tìm thấy phòng ban ID" + id });
+                }
+
+                var updatedDepartment = await departmentService.ToggleStatusAsync(id, cancellationToken);
+                if (updatedDepartment == null)
+                {
+                    return BadRequest(new { success = false, message = "Không thể thay đổi trạng thái phòng ban ID" + id });
+                }
+
+                return Ok(new { 
+                    success = true, 
+                    message = $"Đã thay đổi trạng thái phòng ban ID" + id, 
+                    data = updatedDepartment 
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { success = false, message = ex.Message });
+            }
+        }
 
         [HttpDelete("{id:int}")]
         public async Task<IActionResult> Delete(int id, CancellationToken cancellationToken)

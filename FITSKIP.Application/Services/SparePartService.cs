@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
 using FITSKIP.Application.Interfaces;
+using FITSKIP.Domain.Exceptions;
 
 namespace FITSKIP.Application.Services
 {
@@ -32,13 +33,20 @@ namespace FITSKIP.Application.Services
         {
             // Business logic validation
             if (string.IsNullOrWhiteSpace(sparePart.PartNumber))
-                throw new ArgumentException("Part number is required");
+                throw new SparePartValidationException(
+                    "Mã phụ tùng không được để trống",
+                    "SPAREPART_PARTNUMBER_REQUIRED");
 
             if (string.IsNullOrWhiteSpace(sparePart.PartName))
-                throw new ArgumentException("Part name is required");
+                throw new SparePartValidationException(
+                    "Tên phụ tùng không được để trống",
+                    "SPAREPART_PARTNAME_REQUIRED");
 
             if (sparePart.Quantity < 0)
-                throw new ArgumentException("Quantity cannot be negative");
+                throw new SparePartValidationException(
+                    "Số lượng không được âm",
+                    "SPAREPART_QUANTITY_NEGATIVE",
+                    new { Quantity = sparePart.Quantity });
 
             // Set default MinQuantity if not provided
             if (sparePart.MinQuantity <= 0)
@@ -54,13 +62,20 @@ namespace FITSKIP.Application.Services
         {
             // Business logic validation
             if (string.IsNullOrWhiteSpace(sparePart.PartNumber))
-                throw new ArgumentException("Part number is required");
+                throw new SparePartValidationException(
+                    "Mã phụ tùng không được để trống",
+                    "SPAREPART_PARTNUMBER_REQUIRED");
 
             if (string.IsNullOrWhiteSpace(sparePart.PartName))
-                throw new ArgumentException("Part name is required");
+                throw new SparePartValidationException(
+                    "Tên phụ tùng không được để trống",
+                    "SPAREPART_PARTNAME_REQUIRED");
 
             if (sparePart.Quantity < 0)
-                throw new ArgumentException("Quantity cannot be negative");
+                throw new SparePartValidationException(
+                    "Số lượng không được âm",
+                    "SPAREPART_QUANTITY_NEGATIVE",
+                    new { Quantity = sparePart.Quantity });
 
             // Set default MinQuantity if not provided
             if (sparePart.MinQuantity <= 0)
@@ -94,10 +109,16 @@ namespace FITSKIP.Application.Services
         public async Task<Dictionary<int, int>> GetUsageByWeekAsync(int week, int year, CancellationToken cancellationToken = default)
         {
             if (week < 1 || week > 53)
-                throw new ArgumentException("Week must be between 1 and 53", nameof(week));
+                throw new SparePartValidationException(
+                    "Tuần phải từ 1 đến 53",
+                    "SPAREPART_WEEK_INVALID",
+                    new { Week = week, MinWeek = 1, MaxWeek = 53 });
 
             if (year < 1900 || year > 2100)
-                throw new ArgumentException("Invalid year", nameof(year));
+                throw new SparePartValidationException(
+                    "Năm không hợp lệ (phải từ 1900 đến 2100)",
+                    "SPAREPART_YEAR_INVALID",
+                    new { Year = year, MinYear = 1900, MaxYear = 2100 });
 
             return await _repository.GetUsageByWeekAsync(week, year, cancellationToken);
         }
@@ -105,10 +126,16 @@ namespace FITSKIP.Application.Services
         public async Task<Dictionary<int, int>> GetUsageByMonthAsync(int month, int year, CancellationToken cancellationToken = default)
         {
             if (month < 1 || month > 12)
-                throw new ArgumentException("Month must be between 1 and 12", nameof(month));
+                throw new SparePartValidationException(
+                    "Tháng phải từ 1 đến 12",
+                    "SPAREPART_MONTH_INVALID",
+                    new { Month = month, MinMonth = 1, MaxMonth = 12 });
 
             if (year < 1900 || year > 2100)
-                throw new ArgumentException("Invalid year", nameof(year));
+                throw new SparePartValidationException(
+                    "Năm không hợp lệ (phải từ 1900 đến 2100)",
+                    "SPAREPART_YEAR_INVALID",
+                    new { Year = year, MinYear = 1900, MaxYear = 2100 });
 
             return await _repository.GetUsageByMonthAsync(month, year, cancellationToken);
         }

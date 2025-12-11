@@ -2,6 +2,7 @@ using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
+using FITSKIP.Domain.Exceptions;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -10,17 +11,32 @@ namespace FITSKIP.Application.Services;
 public class DashboardService : IDashboardService
 {
     private readonly IDashboardRepository _repository;
+    private readonly ILineRepository _lineRepository;
+    private readonly IShiftRepository _shiftRepository;
     private readonly ILogger<DashboardService> _logger;
 
-    public DashboardService(IDashboardRepository repository, ILogger<DashboardService> logger)
+    public DashboardService(
+        IDashboardRepository repository,
+        ILineRepository lineRepository,
+        IShiftRepository shiftRepository,
+        ILogger<DashboardService> logger)
     {
         _repository = repository;
+        _lineRepository = lineRepository;
+        _shiftRepository = shiftRepository;
         _logger = logger;
     }
 
 
     public async Task<object> GetDowntimeStatsAsync(int month, int year, int? lineId = null)
     {
+        // Validate parameters
+        ValidateMonthYear(month, year);
+        if (lineId.HasValue)
+        {
+            await ValidateLineIdAsync(lineId.Value);
+        }
+
         _logger.LogInformation($"Đang lấy thống kê thời gian ngừng hoạt động cho tháng={month}, năm={year}, lineId={lineId}");
 
         // Step 1: Define month range
@@ -102,6 +118,17 @@ public class DashboardService : IDashboardService
     // Cập nhật method mới với logic OEE giống GetDetailedOEEDailyStatsAsync
     public async Task<object> GetDailyDowntimeStatsAsync(int month, int year, int? lineId = null, string? date = null)
     {
+        // Validate parameters
+        ValidateMonthYear(month, year);
+        if (lineId.HasValue)
+        {
+            await ValidateLineIdAsync(lineId.Value);
+        }
+        if (!string.IsNullOrEmpty(date))
+        {
+            ValidateDateString(date, "dd/MM/yyyy");
+        }
+
         _logger.LogInformation($"Đang lấy thống kê thời gian ngừng hoạt động hàng ngày cho tháng={month}, năm={year}, lineId={lineId}, date={date}");
 
         DateTime startDate, endDate;
@@ -110,7 +137,10 @@ public class DashboardService : IDashboardService
             // Lọc theo ngày cụ thể (dd/mm/yyyy)
             if (!DateTime.TryParseExact(date, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out startDate))
             {
-                throw new ArgumentException("Lỗi định dạng ngày. Sử dụng dd/MM/yyyy.");
+                throw new DashboardValidationException(
+                    "Lỗi định dạng ngày. Sử dụng dd/MM/yyyy.",
+                    "DASHBOARD_INVALID_DATE_FORMAT",
+                    new { ProvidedDate = date, ExpectedFormat = "dd/MM/yyyy" });
             }
             endDate = startDate.AddDays(1);
         }
@@ -299,6 +329,10 @@ public class DashboardService : IDashboardService
     // New method for detailed OEE calculation per day per line
     public async Task<object> GetDetailedOEEDailyStatsAsync(int lineId, DateTime date)
     {
+        // Validate parameters
+        await ValidateLineIdAsync(lineId);
+        ValidateDateForOEE(date);
+
         _logger.LogInformation($"Đang tính chi tiết OEE cho dây chuyền={lineId}, date={date.ToString("yyyy-MM-dd")}");
 
         // Define date range for the specific day
@@ -392,6 +426,12 @@ public class DashboardService : IDashboardService
     // New method for detailed OEE calculation per slot per line
     public async Task<object> GetDetailedOEESlotStatsAsync(int lineId, DateTime date, int shiftId, string slotTime)
     {
+        // Validate parameters
+        await ValidateLineIdAsync(lineId);
+        await ValidateShiftIdAsync(shiftId);
+        ValidateDateForOEE(date);
+        ValidateSlotTimeFormat(slotTime);
+
         _logger.LogInformation($"Đang tính chi tiết OEE cho dây chuyền={lineId}, date={date.ToString("yyyy-MM-dd")}, shiftId={shiftId}, slotTime={slotTime}");
 
         // Parse slot time to get start and end time
@@ -400,11 +440,10 @@ public class DashboardService : IDashboardService
             !TimeSpan.TryParse(slotParts[0], out var startTimeSpan) ||
             !TimeSpan.TryParse(slotParts[1], out var endTimeSpan))
         {
-            return new
-            {
-                success = false,
-                message = "Định dạng khung thời gian không hợp lệ. Sử dụng HH:mm-HH:mm."
-            };
+            throw new DashboardValidationException(
+                "Định dạng khung thời gian không hợp lệ. Sử dụng HH:mm-HH:mm.",
+                "DASHBOARD_INVALID_SLOT_TIME_FORMAT",
+                new { SlotTime = slotTime, ExpectedFormat = "HH:mm-HH:mm" });
         }
 
         var slotStart = date.Date.Add(startTimeSpan);
@@ -525,5 +564,147 @@ public class DashboardService : IDashboardService
             .Where(ih => ih.StartTime >= start && ih.StartTime < end
                         && ih.LineId == lineId && ih.TypeId == 3)
             .CountAsync();
+    }
+
+    private void ValidateMonthYear(int month, int year)
+    {
+        if (month < 1 || month > 12)
+        {
+            throw new DashboardValidationException(
+                "Tháng phải từ 1 đến 12",
+                "DASHBOARD_INVALID_MONTH",
+                new { Month = month, ValidRange = "1-12" });
+        }
+
+        if (year < 2020 || year > DateTime.Now.Year + 1)
+        {
+            throw new DashboardValidationException(
+                $"Năm phải từ 2020 đến {DateTime.Now.Year + 1}",
+                "DASHBOARD_INVALID_YEAR",
+                new { Year = year, MinYear = 2020, MaxYear = DateTime.Now.Year + 1 });
+        }
+    }
+
+    private void ValidateDateString(string date, string expectedFormat)
+    {
+        if (string.IsNullOrWhiteSpace(date))
+        {
+            throw new DashboardValidationException(
+                "Ngày không được để trống",
+                "DASHBOARD_DATE_REQUIRED");
+        }
+
+        if (!DateTime.TryParseExact(date, expectedFormat, null, System.Globalization.DateTimeStyles.None, out _))
+        {
+            throw new DashboardValidationException(
+                $"Định dạng ngày không hợp lệ. Sử dụng {expectedFormat}",
+                "DASHBOARD_INVALID_DATE_FORMAT",
+                new { ProvidedDate = date, ExpectedFormat = expectedFormat });
+        }
+    }
+
+    private async Task ValidateLineIdAsync(int lineId)
+    {
+        var line = await _lineRepository.GetByIdAsync(lineId);
+        if (line == null)
+        {
+            throw new DashboardValidationException(
+                $"Không tìm thấy chuyền sản xuất với ID {lineId}",
+                "LINE_NOT_FOUND",
+                new { LineId = lineId });
+        }
+    }
+
+    private async Task ValidateShiftIdAsync(int shiftId)
+    {
+        var shift = await _shiftRepository.GetByIdAsync(shiftId);
+        if (shift == null)
+        {
+            throw new DashboardValidationException(
+                $"Không tìm thấy ca làm việc với ID {shiftId}",
+                "SHIFT_NOT_FOUND",
+                new { ShiftId = shiftId });
+        }
+    }
+
+    private void ValidateDateForOEE(DateTime date)
+    {
+        if (date > DateTime.Now.AddDays(1))
+        {
+            throw new DashboardValidationException(
+                "Ngày không được ở tương lai",
+                "DASHBOARD_DATE_IN_FUTURE",
+                new { Date = date });
+        }
+
+        if (date < new DateTime(2020, 1, 1))
+        {
+            throw new DashboardValidationException(
+                "Ngày không được nhỏ hơn năm 2020",
+                "DASHBOARD_DATE_TOO_OLD",
+                new { Date = date, MinDate = new DateTime(2020, 1, 1) });
+        }
+    }
+
+    private void ValidateSlotTimeFormat(string slotTime)
+    {
+        if (string.IsNullOrWhiteSpace(slotTime))
+        {
+            throw new DashboardValidationException(
+                "Thời gian slot không được để trống",
+                "DASHBOARD_SLOT_TIME_REQUIRED");
+        }
+
+        // Validate slot time format (HH:mm-HH:mm)
+        var slotPattern = @"^\d{1,2}:\d{2}-\d{1,2}:\d{2}$";
+        if (!System.Text.RegularExpressions.Regex.IsMatch(slotTime.Trim(), slotPattern))
+        {
+            throw new DashboardValidationException(
+                "Định dạng thời gian slot không hợp lệ. Sử dụng HH:mm-HH:mm",
+                "DASHBOARD_INVALID_SLOT_TIME_FORMAT",
+                new { SlotTime = slotTime, ExpectedFormat = "HH:mm-HH:mm" });
+        }
+
+        // Validate hour and minute ranges
+        var parts = slotTime.Split('-');
+        if (parts.Length == 2)
+        {
+            for (int i = 0; i < 2; i++)
+            {
+                var timeParts = parts[i].Split(':');
+                if (timeParts.Length == 2 &&
+                    int.TryParse(timeParts[0], out int hour) &&
+                    int.TryParse(timeParts[1], out int minute))
+                {
+                    if (hour < 0 || hour > 23)
+                    {
+                        throw new DashboardValidationException(
+                            "Giờ phải từ 0 đến 23",
+                            "DASHBOARD_INVALID_HOUR",
+                            new { Hour = hour, SlotTime = slotTime });
+                    }
+                    if (minute < 0 || minute > 59)
+                    {
+                        throw new DashboardValidationException(
+                            "Phút phải từ 0 đến 59",
+                            "DASHBOARD_INVALID_MINUTE",
+                            new { Minute = minute, SlotTime = slotTime });
+                    }
+                }
+            }
+
+            // Validate start time < end time
+            if (TimeSpan.TryParse(parts[0], out var startTime) &&
+                TimeSpan.TryParse(parts[1], out var endTime))
+            {
+                if (startTime >= endTime)
+                {
+                    throw new DashboardValidationException(
+                        "Thời gian bắt đầu phải nhỏ hơn thời gian kết thúc",
+                        "DASHBOARD_INVALID_TIME_RANGE",
+                        new { StartTime = parts[0], EndTime = parts[1], SlotTime = slotTime });
+                }
+            }
+        }
     }
 }

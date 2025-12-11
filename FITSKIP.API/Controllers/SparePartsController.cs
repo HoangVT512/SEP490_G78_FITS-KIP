@@ -2,6 +2,7 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.DTO;
+using FITSKIP.Domain.Exceptions;
 
 namespace FITSKIP.API.Controllers
 {
@@ -131,6 +132,15 @@ namespace FITSKIP.API.Controllers
 
                 return CreatedAtAction(nameof(GetSparePartById), new { id = sparePartDTO.PartId }, sparePartDTO);
             }
+            catch (SparePartValidationException ex)
+            {
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message,
+                    errorCode = ex.ErrorCode,
+                    errorData = ex.ErrorData
+                });
+            }
             catch (ArgumentException ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -173,6 +183,15 @@ namespace FITSKIP.API.Controllers
                     return NotFound(new { message = $"Spare part with ID {id} not found" });
 
                 return NoContent();
+            }
+            catch (SparePartValidationException ex)
+            {
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message,
+                    errorCode = ex.ErrorCode,
+                    errorData = ex.ErrorData
+                });
             }
             catch (ArgumentException ex)
             {

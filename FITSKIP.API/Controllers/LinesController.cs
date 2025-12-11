@@ -1,5 +1,6 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using FITSKIP.Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -85,6 +86,17 @@ public class LinesController : ControllerBase
             var line = await _lineService.CreateLineAsync(request);
             return CreatedAtAction(nameof(GetLine), new { id = line.LineId }, new { success = true, data = line, message = "Tạo chuyền sản xuất thành công" });
         }
+        catch (LineValidationException ex)
+        {
+            // Return validation error with structured response
+            Console.WriteLine($"Validation error: {ex.Message}");
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
+        }
         catch (InvalidOperationException ex)
         {
             // Trả về thông báo lỗi cụ thể từ service layer
@@ -114,6 +126,16 @@ public class LinesController : ControllerBase
                 return NotFound(new { success = false, message = "Không tìm thấy chuyền sản xuất" });
             }
             return Ok(new { success = true, data = line, message = "Cập nhật chuyền sản xuất thành công" });
+        }
+        catch (LineValidationException ex)
+        {
+            // Return validation error with structured response
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
         }
         catch (InvalidOperationException ex)
         {

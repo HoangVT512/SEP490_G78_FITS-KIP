@@ -131,7 +131,6 @@ namespace FITSKIP.Application.Services
             
             if (isBeingDeactivated)
             {
-                // ✅ Kiểm tra xem có WorkOrder đang active không
                 var allWorkOrders = await _workOrderRepository.GetByPlanIdAsync(planId);
                 var activeWorkOrders = allWorkOrders.Where(wo => 
                 {
@@ -210,7 +209,6 @@ namespace FITSKIP.Application.Services
             if (plan == null)
                 throw new InvalidOperationException($"Plan not found: {planId}");
 
-            //  VALIDATION 3A: Không được xóa kế hoạch đang hoạt động
             if (plan.IsActive)
             {
                 throw new InvalidOperationException(
@@ -219,7 +217,6 @@ namespace FITSKIP.Application.Services
                 );
             }
 
-            //  VALIDATION 3B: Kiểm tra có work order đang chờ xử lý hoặc đang thực hiện , quá hạn hoặc hoãn
             var workOrders = await _workOrderRepository.GetByPlanIdAsync(planId);
             var activeWorkOrders = workOrders.Where(wo => 
             {
@@ -236,11 +233,9 @@ namespace FITSKIP.Application.Services
                 );
             }
 
-            // Only Completed or Cancelled work orders remain - can delete safely
             await _planRepository.DeleteAsync(planId);
         }
 
-        // PostponeMaintenancePlanAsync removed - postpone logic moved to WorkOrder level
 
         public async Task<IEnumerable<MaintenancePlanDTO>> GetUpcomingMaintenanceAsync(int days = 7)
         {

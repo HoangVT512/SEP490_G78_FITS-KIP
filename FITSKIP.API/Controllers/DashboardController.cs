@@ -1,5 +1,6 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using FITSKIP.Domain.Exceptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
@@ -35,6 +36,16 @@ public class DashboardController : ControllerBase
             var data = await _dashboardService.GetDowntimeStatsAsync(month, year, lineId);
             return Ok(new { success = true, data = data });
         }
+        catch (DashboardValidationException ex)
+        {
+            _logger.LogWarning(ex, "Lỗi validation trong GetDowntimeStats");
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi trong GetDowntimeStats");
@@ -63,6 +74,16 @@ public class DashboardController : ControllerBase
             var data = await _dashboardService.GetDailyDowntimeStatsAsync(month, year, lineId, date);
             return Ok(new { success = true, data = data });
         }
+        catch (DashboardValidationException ex)
+        {
+            _logger.LogWarning(ex, "Lỗi validation trong GetDailyDowntimeStats");
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Lỗi trong GetDailyDowntimeStats");
@@ -90,6 +111,16 @@ public class DashboardController : ControllerBase
         {
             var result = await _dashboardService.GetDetailedOEEDailyStatsAsync(lineId, parsedDate);
             return Ok(result);
+        }
+        catch (DashboardValidationException ex)
+        {
+            _logger.LogWarning(ex, "Lỗi validation trong GetDetailedOEEDailyStats");
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
         }
         catch (Exception ex)
         {
@@ -128,6 +159,16 @@ public class DashboardController : ControllerBase
         {
             var result = await _dashboardService.GetDetailedOEESlotStatsAsync(lineId, parsedDate, shiftId, slotTime);
             return Ok(result);
+        }
+        catch (DashboardValidationException ex)
+        {
+            _logger.LogWarning(ex, "Lỗi validation trong GetDetailedOEESlotStats");
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
         }
         catch (Exception ex)
         {

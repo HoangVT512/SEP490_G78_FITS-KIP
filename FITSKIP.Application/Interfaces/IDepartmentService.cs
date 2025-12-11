@@ -9,6 +9,7 @@ public interface IDepartmentService
     Task<DepartmentDTO?> GetByIdAsync(int id, CancellationToken cancellationToken = default);
     Task<DepartmentDTO> CreateAsync(CreateDepartmentRequest request, CancellationToken cancellationToken = default);
     Task<DepartmentDTO?> UpdateAsync(int id, UpdateDepartmentRequest request, CancellationToken cancellationToken = default);
+    Task<DepartmentDTO?> ToggleStatusAsync(int id, CancellationToken cancellationToken = default);
     Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default);
 }
 

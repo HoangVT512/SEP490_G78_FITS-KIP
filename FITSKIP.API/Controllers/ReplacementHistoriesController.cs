@@ -13,6 +13,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using FITSKIP.Domain.Exceptions;
 
 namespace FITSKIP.API.Controllers
 {
@@ -117,7 +118,7 @@ namespace FITSKIP.API.Controllers
         }
 
         [HttpPost]
-        public async Task<ActionResult<ReplacementHistoryDTO>> Create([FromBody] CreateReplacementHistoryRequest request, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<ReplacementHistoryDTO>> Create([FromBody] ReplacementHistory request, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -172,6 +173,15 @@ namespace FITSKIP.API.Controllers
                 // Return BadRequest so client sees a readable validation error
                 return BadRequest(new { message = ex.Message });
             }
+            catch (ReplacementHistoryValidationException ex)
+            {
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message,
+                    errorCode = ex.ErrorCode,
+                    errorData = ex.ErrorData
+                });
+            }
             catch (InvalidOperationException ex)
             {
                 return BadRequest(new { message = ex.Message });
@@ -183,7 +193,7 @@ namespace FITSKIP.API.Controllers
         }
 
         [HttpPut("{id:int}")]
-        public async Task<ActionResult<ReplacementHistoryDTO>> Update(int id, [FromBody] UpdateReplacementHistoryRequest request, CancellationToken cancellationToken = default)
+        public async Task<ActionResult<ReplacementHistoryDTO>> Update(int id, [FromBody] ReplacementHistory request, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -215,6 +225,15 @@ namespace FITSKIP.API.Controllers
 
 
                 return NoContent();
+            }
+            catch (ReplacementHistoryValidationException ex)
+            {
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message,
+                    errorCode = ex.ErrorCode,
+                    errorData = ex.ErrorData
+                });
             }
             catch (KeyNotFoundException ex)
             {

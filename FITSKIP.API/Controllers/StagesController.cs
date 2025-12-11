@@ -1,5 +1,6 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using FITSKIP.Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -84,6 +85,16 @@ public class StagesController : ControllerBase
             var stage = await _stageService.CreateStageAsync(request);
             return CreatedAtAction(nameof(GetStage), new { id = stage.StageId }, new { success = true, data = stage, message = "Tạo giai đoạn thành công" });
         }
+        catch (StageValidationException ex)
+        {
+            // Return validation error with structured response
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
+        }
         catch (InvalidOperationException ex)
         {
             // Trả về thông báo lỗi cụ thể từ service layer
@@ -110,6 +121,16 @@ public class StagesController : ControllerBase
                 return NotFound(new { success = false, message = "Không tìm thấy giai đoạn" });
             }
             return Ok(new { success = true, data = stage, message = "Cập nhật giai đoạn thành công" });
+        }
+        catch (StageValidationException ex)
+        {
+            // Return validation error with structured response
+            return BadRequest(new {
+                success = false,
+                message = ex.Message,
+                errorCode = ex.ErrorCode,
+                errorData = ex.ErrorData
+            });
         }
         catch (InvalidOperationException ex)
         {

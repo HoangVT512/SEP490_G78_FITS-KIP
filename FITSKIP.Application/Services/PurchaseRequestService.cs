@@ -2,6 +2,8 @@ using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
+using FITSKIP.Domain.Exceptions;
+using System.Text.RegularExpressions;
 
 namespace FITSKIP.Application.Services;
 
@@ -49,17 +51,20 @@ public class PurchaseRequestService : IPurchaseRequestService
         return requests.Select(r => PurchaseRequestDTO.FromEntity(r)).ToList();
     }
 
+    // Validation-enabled method
     public async Task<PurchaseRequestDTO> CreatePurchaseRequestAsync(
         CreatePurchaseRequestRequest request,
         string userId,
         CancellationToken cancellationToken = default)
     {
-        // Validate user exists
-        var user = await _userRepository.GetUserByIdAsync(userId, cancellationToken);
-        if (user == null)
-        {
-            throw new InvalidOperationException("Không tìm thấy người dùng");
-        }
+        // Validate quantity
+        ValidateQuantity(request.Quantity);
+
+        // Validate part ID existence
+        await ValidatePartIdAsync(request.PartId, cancellationToken);
+
+        // Validate requested by user existence
+        await ValidateRequestedByAsync(userId, cancellationToken);
 
         // Check if there's already a pending request for this part
         var existingPendingRequest = await _purchaseRequestRepository.GetByPartIdAndStatusAsync(
@@ -70,17 +75,21 @@ public class PurchaseRequestService : IPurchaseRequestService
 
         if (existingPendingRequest != null)
         {
-            throw new InvalidOperationException(
-                $"Phụ tùng này đã có yêu cầu đang chờ duyệt (REQ{existingPendingRequest.RequestId.ToString().PadLeft(3, '0')}). Vui lòng chờ hoàn thành yêu cầu này trước khi tạo yêu cầu mới!"
-            );
+            throw new PurchaseRequestValidationException(
+                $"Phụ tùng này đã có yêu cầu đang chờ duyệt (REQ{existingPendingRequest.RequestId.ToString().PadLeft(3, '0')}). Vui lòng chờ hoàn thành yêu cầu này trước khi tạo yêu cầu mới!",
+                "PURCHASE_REQUEST_DUPLICATE_PENDING",
+                new {
+                    PartId = request.PartId,
+                    ExistingRequestId = existingPendingRequest.RequestId,
+                    ExistingRequestCode = $"REQ{existingPendingRequest.RequestId.ToString().PadLeft(3, '0')}"
+                });
         }
 
-        // Validate spare part exists
-        //var sparePartExists = await _sparePartRepository.ExistsAsync(request.PartId, cancellationToken);
-        //if (!sparePartExists)
-        //{
-        //    throw new InvalidOperationException($"Không tìm thấy linh kiện với ID: {request.PartId}");
-        //}
+        // Validate reason if provided
+        if (!string.IsNullOrWhiteSpace(request.Reason))
+        {
+            ValidateReason(request.Reason);
+        }
 
         var purchaseRequest = new PurchaseRequest
         {
@@ -92,6 +101,9 @@ public class PurchaseRequestService : IPurchaseRequestService
         };
 
         var createdRequest = await _purchaseRequestRepository.CreateAsync(purchaseRequest, cancellationToken);
+
+        // Get user details for notifications
+        var user = await _userRepository.GetUserByIdAsync(userId, cancellationToken);
 
         // Get all managers to send notifications
         var managers = await _userRepository.GetUsersByRoleAsync("Quản lý", cancellationToken);
@@ -105,7 +117,7 @@ public class PurchaseRequestService : IPurchaseRequestService
                 {
                     UserId = manager.Id,
                     Title = "Đơn yêu cầu mua hàng mới",
-                    Message = $"Có một đơn yêu cầu mua hàng mới từ {user.FullName} (Mã: {createdRequest.RequestId})"
+                    Message = $"Có một đơn yêu cầu mua hàng mới từ {user?.FullName ?? userId} (Mã: {createdRequest.RequestId})"
                 });
             }
         }
@@ -131,30 +143,63 @@ public class PurchaseRequestService : IPurchaseRequestService
         var existingRequest = await _purchaseRequestRepository.GetByIdAsync(id, cancellationToken);
         if (existingRequest == null)
         {
-            return null;
+            throw new PurchaseRequestValidationException(
+                $"Không tìm thấy yêu cầu mua hàng với ID {id}",
+                "PURCHASE_REQUEST_NOT_FOUND",
+                new { RequestId = id });
         }
 
         // Only allow the requester to update their own request
         if (existingRequest.RequestedBy != userId)
         {
-            throw new UnauthorizedAccessException("Bạn không có quyền cập nhật yêu cầu này");
+            throw new PurchaseRequestValidationException(
+                "Bạn không có quyền cập nhật yêu cầu này",
+                "PURCHASE_REQUEST_UNAUTHORIZED_UPDATE",
+                new { RequestId = id, RequestedBy = existingRequest.RequestedBy, CurrentUserId = userId });
         }
 
         // Only allow update if status is Pending
         if (existingRequest.Status != "Chờ duyệt")
         {
-            throw new InvalidOperationException($"Không thể cập nhật yêu cầu đã {existingRequest.Status}");
+            throw new PurchaseRequestValidationException(
+                $"Không thể cập nhật yêu cầu đã {existingRequest.Status}",
+                "PURCHASE_REQUEST_CANNOT_UPDATE_STATUS",
+                new { RequestId = id, CurrentStatus = existingRequest.Status, RequiredStatus = "Chờ duyệt" });
         }
 
-        /*        // Validate spare part exists if PartId is being changed
-                if (existingRequest.PartId != request.PartId)
-                {
-                    var sparePartExists = await _sparePartRepository.ExistsAsync(request.PartId, cancellationToken);
-                    if (!sparePartExists)
-                    {
-                        throw new InvalidOperationException($"Không tìm thấy linh kiện với ID: {request.PartId}");
-                    }
-                }*/
+        // Validate quantity
+        ValidateQuantity(request.Quantity);
+
+        // Validate part ID existence
+        await ValidatePartIdAsync(request.PartId, cancellationToken);
+
+        // Check for duplicate pending request if PartId is being changed
+        if (existingRequest.PartId != request.PartId)
+        {
+            var existingPendingRequest = await _purchaseRequestRepository.GetByPartIdAndStatusAsync(
+                request.PartId,
+                "Chờ duyệt",
+                cancellationToken
+            );
+
+            if (existingPendingRequest != null && existingPendingRequest.RequestId != id)
+            {
+                throw new PurchaseRequestValidationException(
+                    $"Phụ tùng này đã có yêu cầu đang chờ duyệt (REQ{existingPendingRequest.RequestId.ToString().PadLeft(3, '0')}). Không thể thay đổi PartId!",
+                    "PURCHASE_REQUEST_DUPLICATE_PENDING",
+                    new {
+                        PartId = request.PartId,
+                        ExistingRequestId = existingPendingRequest.RequestId,
+                        ExistingRequestCode = $"REQ{existingPendingRequest.RequestId.ToString().PadLeft(3, '0')}"
+                    });
+            }
+        }
+
+        // Validate reason if provided
+        if (!string.IsNullOrWhiteSpace(request.Reason))
+        {
+            ValidateReason(request.Reason);
+        }
 
         existingRequest.PartId = request.PartId;
         existingRequest.Quantity = request.Quantity;
@@ -355,6 +400,67 @@ public class PurchaseRequestService : IPurchaseRequestService
         var updatedRequest = await _purchaseRequestRepository.UpdateAsync(existingRequest, cancellationToken);
 
         return updatedRequest == null ? null : PurchaseRequestDTO.FromEntity(updatedRequest);
+    }
+
+    private void ValidateQuantity(int quantity)
+    {
+        if (quantity <= 0)
+        {
+            throw new PurchaseRequestValidationException(
+                "Số lượng phải lớn hơn 0",
+                "PURCHASE_REQUEST_QUANTITY_INVALID",
+                new { Quantity = quantity });
+        }
+
+        if (quantity > 10000)
+        {
+            throw new PurchaseRequestValidationException(
+                "Số lượng không được vượt quá 10.000",
+                "PURCHASE_REQUEST_QUANTITY_TOO_LARGE",
+                new { MaxQuantity = 10000, ActualQuantity = quantity });
+        }
+    }
+
+    private async Task ValidatePartIdAsync(int partId, CancellationToken cancellationToken)
+    {
+        var exists = await _sparePartRepository.ExistsAsync(partId, cancellationToken);
+        if (!exists)
+        {
+            throw new PurchaseRequestValidationException(
+                $"Không tìm thấy phụ tùng với ID {partId}",
+                "SPARE_PART_NOT_FOUND",
+                new { PartId = partId });
+        }
+    }
+
+    private async Task ValidateRequestedByAsync(string requestedBy, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(requestedBy))
+        {
+            throw new PurchaseRequestValidationException(
+                "Người yêu cầu không được để trống",
+                "PURCHASE_REQUEST_REQUESTED_BY_REQUIRED");
+        }
+
+        var user = await _userRepository.GetUserByIdAsync(requestedBy, cancellationToken);
+        if (user == null)
+        {
+            throw new PurchaseRequestValidationException(
+                $"Không tìm thấy người dùng với ID {requestedBy}",
+                "USER_NOT_FOUND",
+                new { UserId = requestedBy });
+        }
+    }
+
+    private void ValidateReason(string reason)
+    {
+        if (reason.Length > 500)
+        {
+            throw new PurchaseRequestValidationException(
+                "Lý do không được vượt quá 500 ký tự",
+                "PURCHASE_REQUEST_REASON_TOO_LONG",
+                new { MaxLength = 500, ActualLength = reason.Length });
+        }
     }
 }
 

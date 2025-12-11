@@ -3,6 +3,8 @@ using FITSKIP.Application.Helpers;
 using FITSKIP.Domain.Entities;
 using FITSKIP.Domain.Interfaces;
 using FITSKIP.Domain.DTO;
+using FITSKIP.Domain.Exceptions;
+using System.Text.RegularExpressions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,7 +16,19 @@ namespace FITSKIP.Application.Services
     public class ReplacementHistoryService : IReplacementHistoryService
     {
         private readonly IReplacementHistoryRepository _repository;
-        public ReplacementHistoryService(IReplacementHistoryRepository repository)
+        private readonly IEquipmentRepository _equipmentRepository;
+        private readonly IIncidentRepository _incidentRepository;
+        private readonly IMaintenanceWorkOrderRepository _workOrderRepository;
+        private readonly ISparePartRepository _sparePartRepository;
+        private readonly IUserRepository _userRepository;
+
+        public ReplacementHistoryService(
+            IReplacementHistoryRepository repository,
+            IEquipmentRepository equipmentRepository,
+            IIncidentRepository incidentRepository,
+            IMaintenanceWorkOrderRepository workOrderRepository,
+            ISparePartRepository sparePartRepository,
+            IUserRepository userRepository)
         {
             _repository = repository;
         }
@@ -39,7 +53,18 @@ namespace FITSKIP.Application.Services
             // Default: giữ nguyên status cũ
             return rh.Status;
         }
-        public Task<ReplacementHistory> CreateAsync(ReplacementHistory replacementHistory, CancellationToken cancellationToken = default) => _repository.CreateAsync(replacementHistory, cancellationToken);
+
+        public async Task<ReplacementHistory> CreateAsync(ReplacementHistory replacementHistory, CancellationToken cancellationToken = default)
+        {
+            // Validate quantity must be greater than 0
+            if (replacementHistory.Quantity <= 0)
+                throw new ReplacementHistoryValidationException(
+                    "Số lượng phải lớn hơn 0",
+                    "REPLACEMENT_HISTORY_QUANTITY_INVALID",
+                    new { Quantity = replacementHistory.Quantity });
+
+            return await _repository.CreateAsync(replacementHistory, cancellationToken);
+        }
 
         public Task<bool> DeleteAsync(int id, CancellationToken cancellationToken = default) => _repository.DeleteAsync(id, cancellationToken);
 
@@ -133,15 +158,19 @@ namespace FITSKIP.Application.Services
 
         public async Task<ReplacementHistory> UpdateAsync(int replacementId, ReplacementHistory replacementHistory, CancellationToken cancellationToken = default)
         {
-
             if (replacementHistory.Quantity < 0)
-                throw new ArgumentException("Số lượng phải lớn hơn 0");
-
+                throw new ReplacementHistoryValidationException(
+                    "Số lượng phải lớn hơn 0",
+                    "REPLACEMENT_HISTORY_QUANTITY_INVALID",
+                    new { Quantity = replacementHistory.Quantity });
 
             var exists = await _repository.ExistsAsync(replacementId);
             if (!exists)
             {
-                throw new ArgumentException($"Lịch sử thay thế với id {replacementId} không tồn tại");
+                throw new ReplacementHistoryValidationException(
+                    $"Lịch sử thay thế với id {replacementId} không tồn tại",
+                    "REPLACEMENT_HISTORY_NOT_FOUND",
+                    new { ReplacementId = replacementId });
             }
             replacementHistory.ReplacementId = replacementId;
 
@@ -168,7 +197,10 @@ namespace FITSKIP.Application.Services
         {
             var existing = await _repository.GetByIdAsync(replacementId, cancellationToken);
             if (existing == null)
-                throw new ArgumentException($"Lịch sử thay thế với id {replacementId} không tồn tại");
+                throw new ReplacementHistoryValidationException(
+                    $"Lịch sử thay thế với id {replacementId} không tồn tại",
+                    "REPLACEMENT_HISTORY_NOT_FOUND",
+                    new { ReplacementId = replacementId });
 
             // Tính số lượng thừa
             if (confirmationDto.ActualQuantityUsed.HasValue)

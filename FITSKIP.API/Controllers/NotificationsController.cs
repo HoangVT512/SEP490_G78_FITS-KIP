@@ -1,5 +1,6 @@
 using FITSKIP.Application.Interfaces;
 using FITSKIP.Domain.DTO;
+using FITSKIP.Domain.Exceptions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -245,6 +246,15 @@ namespace FITSKIP.API.Controllers
                     Success = true,
                     Message = "Notification marked as read",
                     Data = true
+                });
+            }
+            catch (NotificationValidationException ex)
+            {
+                return BadRequest(new {
+                    success = false,
+                    message = ex.Message,
+                    errorCode = ex.ErrorCode,
+                    errorData = ex.ErrorData
                 });
             }
             catch (Exception ex)
