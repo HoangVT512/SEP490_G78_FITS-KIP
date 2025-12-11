@@ -1092,21 +1092,21 @@ namespace FITSKIP.Application.Services
             // ✅ Kiểm tra xem có phải checklist item cuối cùng không → Auto-complete WorkOrder
             if (request.IsChecked)
             {
-                var workOrder = await _workOrderRepository.GetByIdAsync(item.WorkOrderId);
-                if (workOrder != null)
+                var wo = await _workOrderRepository.GetByIdAsync(item.WorkOrderId);
+                if (wo != null)
                 {
                     var allChecklistItems = await _checklistRepository.GetByWorkOrderIdAsync(item.WorkOrderId);
 
                     // Kiểm tra xem TẤT CẢ các checklist items đã được hoàn thành chưa
                     bool allCompleted = allChecklistItems.All(ci => ci.IsChecked);
 
-                    if (allCompleted && workOrder.Status != "Hoàn thành" && workOrder.Status != "Đã đóng")
+                    if (allCompleted && wo.Status != "Hoàn thành" && wo.Status != "Đã đóng")
                     {
                         // Tự động chuyển WorkOrder sang "Hoàn thành"
-                        workOrder.Status = "Hoàn thành";
-                        workOrder.CompletedDate = DateTime.Now;
-                        workOrder.Notes = (workOrder.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động hoàn thành - Tất cả checklist đã xong";
-                        await _workOrderRepository.UpdateAsync(workOrder);
+                        wo.Status = "Hoàn thành";
+                        wo.CompletedDate = DateTime.Now;
+                        wo.Notes = (wo.Notes ?? "") + $"\n[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động hoàn thành - Tất cả checklist đã xong";
+                        await _workOrderRepository.UpdateAsync(wo);
                     }
                 }
             }
@@ -1327,8 +1327,10 @@ namespace FITSKIP.Application.Services
             {
                 var daysUntilDue = (plan.NextDueDate - today).Days;
 
-                // ✅ Chỉ tạo khi đến thời điểm reminder (ví dụ: 3 ngày trước NextDueDate)
-                if (daysUntilDue <= plan.ReminderDaysBefore && daysUntilDue >= 0)
+                // ✅ Tạo WO khi đến thời điểm reminder HOẶC đã quá hạn (để xử lý trường hợp không vào web)
+                bool shouldCreateWorkOrder = (daysUntilDue <= plan.ReminderDaysBefore && daysUntilDue >= 0) || (daysUntilDue < 0);
+
+                if (shouldCreateWorkOrder)
                 {
                     if (!plan.EquipmentId.HasValue)
                     {
@@ -1349,6 +1351,11 @@ namespace FITSKIP.Application.Services
                     }
 
                     // ✅ Tạo WO mới cho chu kỳ này
+                    // Nếu đã quá hạn thì tạo với status "Quá hạn", ngược lại là "Chờ xử lý"
+                    var initialStatus = daysUntilDue < 0 ? "Quá hạn" : "Chờ xử lý";
+                    var autoNote = daysUntilDue < 0
+                        ? $"Tự động tạo WorkOrder - Đã quá hạn {Math.Abs(daysUntilDue)} ngày"
+                        : $"Tự động tạo WorkOrder từ chu kỳ bảo trì";
 
                     var workOrderCode = await _workOrderRepository.GenerateWorkOrderCodeAsync();
 
@@ -1359,8 +1366,8 @@ namespace FITSKIP.Application.Services
                         WorkOrderCode = workOrderCode,
                         ScheduledDate = plan.NextDueDate,
                         DueDate = plan.NextDueDate,
-                        Status = "Chờ xử lý",
-                        Notes = $"[{DateTime.Now:dd/MM/yyyy HH:mm}] Tự động tạo WorkOrder từ chu kỳ bảo trì",
+                        Status = initialStatus,
+                        Notes = $"[{DateTime.Now:dd/MM/yyyy HH:mm}] {autoNote}",
                         CreatedBy = null,
                         CreatedDate = DateTime.Now,
                         UpdatedDate = DateTime.Now

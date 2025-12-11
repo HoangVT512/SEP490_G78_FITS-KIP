@@ -57,7 +57,7 @@ public partial class ReplacementHistory
 
     public virtual MaintenanceWorkOrder? WorkOrder { get; set; }
 
-    public virtual SparePart Part { get; set; } = null!;
+    public virtual SparePart? Part { get; set; } = null!;
 
-    public virtual User ReplacedByNavigation { get; set; } = null!;
+    public virtual User? ReplacedByNavigation { get; set; } = null!;
 }

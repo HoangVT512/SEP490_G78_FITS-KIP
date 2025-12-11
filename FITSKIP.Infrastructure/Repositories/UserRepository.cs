@@ -923,4 +923,25 @@ public class UserRepository : IUserRepository
             return new List<User>();
         }
     }
+
+    public async Task<bool> ResetPasswordByPhoneAsync(string phoneNumber, string newPassword, CancellationToken cancellationToken = default)
+    {
+        // Normalize phone number
+        var normalizedPhone = phoneNumber.Trim();
+        
+        var user = await db.Users.FirstOrDefaultAsync(u => u.PhoneNumber.Trim() == normalizedPhone, cancellationToken);
+        if (user == null)
+        {
+            return false;
+        }
+
+        var removeResult = await userManager.RemovePasswordAsync(user);
+        if (!removeResult.Succeeded)
+        {
+            return false;
+        }
+
+        var addResult = await userManager.AddPasswordAsync(user, newPassword);
+        return addResult.Succeeded;
+    }
 }

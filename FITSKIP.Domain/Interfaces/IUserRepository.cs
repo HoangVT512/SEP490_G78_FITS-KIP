@@ -21,6 +21,7 @@ public interface IUserRepository
     Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default);
     Task<User?> GetByEmployeeCodeAsync(string employeeCode, CancellationToken cancellationToken = default);
     Task<bool> ResetPasswordAsync(string userId, string newPassword, CancellationToken cancellationToken = default);
+    Task<bool> ResetPasswordByPhoneAsync(string phoneNumber, string newPassword, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<UserLine>> GetUserLinesAsync(string userId, CancellationToken cancellationToken = default);
 }
 

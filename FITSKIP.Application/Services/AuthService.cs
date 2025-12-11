@@ -115,7 +115,6 @@ public class AuthService : IAuthService
         var user = await _userManager.FindByEmailAsync(request.Email);
         if (user == null)
         {
-            // Do not reveal whether email exists
             return true;
         }
 
@@ -228,19 +227,15 @@ public class AuthService : IAuthService
                 return false;
             }
 
-            // Check if already verified
             if (user.EmailConfirmed)
             {
                 return false;
             }
 
-            // Generate email confirmation token
             var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-            // Encode token for URL
             var encodedToken = Uri.EscapeDataString(token);
 
-            // Get frontend URL from configuration
             var frontendUrl = _configuration["Frontend:Url"] ?? "http://localhost:3000";
             var verificationLink = $"{frontendUrl}/verify-email?userId={userId}&token={encodedToken}";
 

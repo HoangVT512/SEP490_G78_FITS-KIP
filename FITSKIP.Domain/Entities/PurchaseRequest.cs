@@ -35,7 +35,7 @@ public partial class PurchaseRequest
 
     public virtual User? ReceivedByNavigation { get; set; }
 
-    public virtual SparePart Part { get; set; } = null!;
+    public virtual SparePart? Part { get; set; } = null!;
 
-    public virtual User RequestedByNavigation { get; set; } = null!;
+    public virtual User? RequestedByNavigation { get; set; } = null!;
 }
