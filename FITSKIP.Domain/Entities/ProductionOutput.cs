@@ -18,6 +18,6 @@ public partial class ProductionOutput
     public DateTime? UpdatedAt { get; set; }
 
     // Navigation properties
-    public virtual Line Line { get; set; } = null!;
-    public virtual Shift Shift { get; set; } = null!;
+    public virtual Line? Line { get; set; } = null!;
+    public virtual Shift? Shift { get; set; } = null!;
 }

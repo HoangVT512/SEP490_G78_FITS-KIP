@@ -661,19 +661,21 @@ public class ProductionOutputService : IProductionOutputService
                 "PRODUCTION_OUTPUT_SLOT_TIME_REQUIRED");
         }
 
-        // Validate slot time format (e.g., "7h-8h", "8h-9h", etc.)
-        var slotPattern = @"^\d{1,2}h-\d{1,2}h$";
-        if (!Regex.IsMatch(slotTime.Trim(), slotPattern))
+        // Validate slot time format: support both "7h-8h" and "7:00-8:00" formats
+        var slotPatternH = @"^\d{1,2}h-\d{1,2}h$"; // Format: 7h-8h
+        var slotPatternColon = @"^\d{1,2}:\d{2}-\d{1,2}:\d{2}$"; // Format: 7:00-8:00
+        
+        if (!Regex.IsMatch(slotTime.Trim(), slotPatternH) && !Regex.IsMatch(slotTime.Trim(), slotPatternColon))
         {
             throw new ProductionOutputValidationException(
-                "Thời gian slot phải có định dạng 'Xh-Yh' (VD: 7h-8h, 8h-9h)",
+                "Thời gian slot phải có định dạng 'Xh-Yh' (VD: 7h-8h) hoặc 'X:00-Y:00' (VD: 7:00-8:00)",
                 "PRODUCTION_OUTPUT_SLOT_TIME_INVALID_FORMAT",
                 new { SlotTime = slotTime });
         }
 
         // Validate hour range (0-23)
         var hours = Regex.Matches(slotTime.Trim(), @"\d+");
-        if (hours.Count == 2)
+        if (hours.Count >= 2)
         {
             int startHour = int.Parse(hours[0].Value);
             int endHour = int.Parse(hours[1].Value);

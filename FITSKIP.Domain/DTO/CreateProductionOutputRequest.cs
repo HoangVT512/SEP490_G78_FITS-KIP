@@ -19,8 +19,6 @@ public class CreateProductionOutputRequest
     public int ShiftId { get; set; }
 
     [Required(ErrorMessage = "Thời gian slot là bắt buộc")]
-    [StringLength(10, MinimumLength = 3, ErrorMessage = "Thời gian slot phải từ 3 đến 10 ký tự")]
-    [RegularExpression(@"^\d{1,2}h-\d{1,2}h$", ErrorMessage = "Thời gian slot phải có định dạng 'Xh-Yh' (VD: 7h-8h)")]
     public string SlotTime { get; set; } = string.Empty; // Format: "7h-8h", "8h-9h", etc.
 
     [Range(1, 10000, ErrorMessage = "Số lượng mục tiêu phải từ 1 đến 10.000")]
