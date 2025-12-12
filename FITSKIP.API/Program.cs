@@ -68,12 +68,13 @@ namespace FITSKIP.API
                 options.UseSqlServer(connectionString));
 
             // Also register TestDbContext
-            var testConnectionString = builder.Configuration.GetConnectionString("TestConnection");
-            if (!string.IsNullOrEmpty(testConnectionString))
-            {
-                builder.Services.AddDbContext<FITSKIP.Infrastructure.DbContexts.TestDbContext>(options =>
-                    options.UseSqlServer(testConnectionString));
-            }
+            // Commented out to avoid conflict with main database
+            // var testConnectionString = builder.Configuration.GetConnectionString("TestConnection");
+            // if (!string.IsNullOrEmpty(testConnectionString))
+            // {
+            //     builder.Services.AddDbContext<FITSKIP.Infrastructure.DbContexts.TestDbContext>(options =>
+            //         options.UseSqlServer(testConnectionString));
+            // }
 
             // Configure TwilioSettings
             builder.Services.Configure<FITSKIP.Application.Settings.TwilioSettings>(
@@ -375,23 +376,24 @@ namespace FITSKIP.API
                 }
 
                 // Also seed TestDbContext if it's registered
-                var testContext = scope.ServiceProvider.GetService<FITSKIP.Infrastructure.DbContexts.TestDbContext>();
-                if (testContext != null)
-                {
-                    try
-                    {
-                        // Apply migrations for test database
-                        await testContext.Database.MigrateAsync();
-                        // Seed data for test database
-                        await SeedData.SeedAllData(testContext);
-                        Console.WriteLine("✅ Test database seeded successfully");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"⚠️ Error during test database migration/seeding: {ex.Message}");
-                        // Don't throw - test database seeding is optional
-                    }
-                }
+                // Commented out to avoid conflict with main database
+                // var testContext = scope.ServiceProvider.GetService<FITSKIP.Infrastructure.DbContexts.TestDbContext>();
+                // if (testContext != null)
+                // {
+                //     try
+                //     {
+                //         // Apply migrations for test database
+                //         await testContext.Database.MigrateAsync();
+                //         // Seed data for test database
+                //         await SeedData.SeedAllData(testContext);
+                //         Console.WriteLine("✅ Test database seeded successfully");
+                //     }
+                //     catch (Exception ex)
+                //     {
+                //         Console.WriteLine($"⚠️ Error during test database migration/seeding: {ex.Message}");
+                //         // Don't throw - test database seeding is optional
+                //     }
+                // }
             }
 
             app.Run();
