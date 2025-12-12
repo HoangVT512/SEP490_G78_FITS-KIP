@@ -358,18 +358,38 @@ public class ProductionOutputService : IProductionOutputService
     public async Task<int> CalculateLoadingTimeAsync(int lineId, DateTime date, int shiftId, string slotTime, int? providedLoadingTime = null, CancellationToken cancellationToken = default)
     {
         // Hỗ trợ cả "07:00-08:00" và "7h-8h"
-        // Chuẩn hóa: loại bỏ "h", ":", và space
-        var cleanedSlotTime = slotTime.Replace("h", "").Replace(":", "").Replace(" ", "").Replace("–", "-").Replace("—", "-").Replace("−", "-");
+        // Chuẩn hóa các loại dấu gạch ngang
+        var normalizedSlotTime = slotTime.Replace("–", "-").Replace("—", "-").Replace("−", "-").Trim();
 
-        var slotParts = cleanedSlotTime.Split('-');
-        if (slotParts.Length != 2)
-            throw new ArgumentException("Định dạng slot time không hợp lệ. Định dạng mong đợi: '07:00-08:00' hoặc '7h-8h'");
-
-        // Parse giờ (giả sử luôn 4 ký tự sau khi clean: "0700-0800")
-        if (!int.TryParse(slotParts[0].Substring(0, 2), out var startHour) ||
-            !int.TryParse(slotParts[1].Substring(0, 2), out var endHour))
+        int startHour, endHour;
+        
+        // Parse theo format
+        if (normalizedSlotTime.Contains("h"))
         {
-            throw new ArgumentException("Không thể parse giờ từ slot time");
+            // Format: "7h-8h" hoặc "07h-08h"
+            var parts = normalizedSlotTime.Replace("h", "").Split('-');
+            if (parts.Length != 2 || !int.TryParse(parts[0], out startHour) || !int.TryParse(parts[1], out endHour))
+                throw new ArgumentException("Định dạng slot time không hợp lệ. Định dạng mong đợi: '7h-8h'");
+        }
+        else if (normalizedSlotTime.Contains(":"))
+        {
+            // Format: "07:00-08:00"
+            var parts = normalizedSlotTime.Split('-');
+            if (parts.Length != 2)
+                throw new ArgumentException("Định dạng slot time không hợp lệ. Định dạng mong đợi: '07:00-08:00'");
+            
+            var startParts = parts[0].Split(':');
+            var endParts = parts[1].Split(':');
+            
+            if (startParts.Length < 2 || endParts.Length < 2 ||
+                !int.TryParse(startParts[0], out startHour) || !int.TryParse(endParts[0], out endHour))
+            {
+                throw new ArgumentException("Không thể parse giờ từ slot time");
+            }
+        }
+        else
+        {
+            throw new ArgumentException("Định dạng slot time không hợp lệ. Định dạng mong đợi: '7h-8h' hoặc '07:00-08:00'");
         }
 
         // Tạo range thời gian
@@ -414,11 +434,35 @@ public class ProductionOutputService : IProductionOutputService
         if (resultAmount.HasValue && resultAmount.Value > 0)
         {
             // Parse slot time to get start and end hours
-            var cleanedSlotTime = slotTime.Replace("h", "").Replace(":", "").Replace(" ", "").Replace("–", "-").Replace("—", "-").Replace("−", "-");
-            var slotParts = cleanedSlotTime.Split('-');
-            if (slotParts.Length == 2 &&
-                int.TryParse(slotParts[0].Substring(0, 2), out var startHour) &&
-                int.TryParse(slotParts[1].Substring(0, 2), out var endHour))
+            var normalizedSlotTime = slotTime.Replace("–", "-").Replace("—", "-").Replace("−", "-").Trim();
+            
+            int startHour = 0, endHour = 0;
+            bool parsed = false;
+            
+            if (normalizedSlotTime.Contains("h"))
+            {
+                var parts = normalizedSlotTime.Replace("h", "").Split('-');
+                if (parts.Length == 2 && int.TryParse(parts[0], out startHour) && int.TryParse(parts[1], out endHour))
+                {
+                    parsed = true;
+                }
+            }
+            else if (normalizedSlotTime.Contains(":"))
+            {
+                var parts = normalizedSlotTime.Split('-');
+                if (parts.Length == 2)
+                {
+                    var startParts = parts[0].Split(':');
+                    var endParts = parts[1].Split(':');
+                    if (startParts.Length >= 2 && endParts.Length >= 2 &&
+                        int.TryParse(startParts[0], out startHour) && int.TryParse(endParts[0], out endHour))
+                    {
+                        parsed = true;
+                    }
+                }
+            }
+            
+            if (parsed)
             {
                 var slotStart = date.Date.AddHours(startHour);
                 var slotEnd = date.Date.AddHours(endHour);
@@ -515,15 +559,33 @@ public class ProductionOutputService : IProductionOutputService
         var runTime = await CalculateLoadingTimeAsync(lineId, date, shiftId, slotTime, null, cancellationToken); // Có thể truyền Loading Time nếu cần
 
         // Parse slot for incidents
-        var cleanedSlotTime = slotTime.Replace("h", "").Replace(":", "").Replace(" ", "").Replace("–", "-").Replace("—", "-").Replace("−", "-");
-        var slotParts = cleanedSlotTime.Split('-');
+        var normalizedSlotTime = slotTime.Replace("–", "-").Replace("—", "-").Replace("−", "-").Trim();
         DateTime slotStart = date.Date, slotEnd = date.Date;
-        if (slotParts.Length == 2 &&
-            int.TryParse(slotParts[0].Substring(0, 2), out var startHour) &&
-            int.TryParse(slotParts[1].Substring(0, 2), out var endHour))
+        
+        int startHour, endHour;
+        if (normalizedSlotTime.Contains("h"))
         {
-            slotStart = date.Date.AddHours(startHour);
-            slotEnd = date.Date.AddHours(endHour);
+            var parts = normalizedSlotTime.Replace("h", "").Split('-');
+            if (parts.Length == 2 && int.TryParse(parts[0], out startHour) && int.TryParse(parts[1], out endHour))
+            {
+                slotStart = date.Date.AddHours(startHour);
+                slotEnd = date.Date.AddHours(endHour);
+            }
+        }
+        else if (normalizedSlotTime.Contains(":"))
+        {
+            var parts = normalizedSlotTime.Split('-');
+            if (parts.Length == 2)
+            {
+                var startParts = parts[0].Split(':');
+                var endParts = parts[1].Split(':');
+                if (startParts.Length >= 2 && endParts.Length >= 2 &&
+                    int.TryParse(startParts[0], out startHour) && int.TryParse(endParts[0], out endHour))
+                {
+                    slotStart = date.Date.AddHours(startHour);
+                    slotEnd = date.Date.AddHours(endHour);
+                }
+            }
         }
 
         // A Loss: Downtime from TypeId 1,2,4,5, accounting for crossover
@@ -571,15 +633,43 @@ public class ProductionOutputService : IProductionOutputService
     // Helper method to calculate max loading time based on slot time
     private static int CalculateMaxLoadingTime(string slotTime)
     {
-        // Chuẩn hóa slot time
-        var cleanedSlotTime = slotTime.Replace("h", "").Replace(":", "").Replace(" ", "").Replace("–", "-").Replace("—", "-").Replace("−", "-");
-        var slotParts = cleanedSlotTime.Split('-');
-        if (slotParts.Length != 2 ||
-            !int.TryParse(slotParts[0].Substring(0, 2), out var startHour) ||
-            !int.TryParse(slotParts[1].Substring(0, 2), out var endHour))
+        // Chuẩn hóa các loại dấu gạch ngang
+        var normalizedSlotTime = slotTime.Replace("–", "-").Replace("—", "-").Replace("−", "-").Trim();
+        
+        int startHour, endHour;
+        
+        if (normalizedSlotTime.Contains("h"))
+        {
+            // Format: "7h-8h"
+            var parts = normalizedSlotTime.Replace("h", "").Split('-');
+            if (parts.Length != 2 || !int.TryParse(parts[0], out startHour) || !int.TryParse(parts[1], out endHour))
+            {
+                throw new ArgumentException("Định dạng slot time không hợp lệ.");
+            }
+        }
+        else if (normalizedSlotTime.Contains(":"))
+        {
+            // Format: "07:00-08:00"
+            var parts = normalizedSlotTime.Split('-');
+            if (parts.Length != 2)
+            {
+                throw new ArgumentException("Định dạng slot time không hợp lệ.");
+            }
+            
+            var startParts = parts[0].Split(':');
+            var endParts = parts[1].Split(':');
+            
+            if (startParts.Length < 2 || endParts.Length < 2 ||
+                !int.TryParse(startParts[0], out startHour) || !int.TryParse(endParts[0], out endHour))
+            {
+                throw new ArgumentException("Định dạng slot time không hợp lệ.");
+            }
+        }
+        else
         {
             throw new ArgumentException("Định dạng slot time không hợp lệ.");
         }
+        
         // Max loading time = (endHour - startHour) * 60
         return (endHour - startHour) * 60;
     }
@@ -661,11 +751,63 @@ public class ProductionOutputService : IProductionOutputService
                 "PRODUCTION_OUTPUT_SLOT_TIME_REQUIRED");
         }
 
+        // Chuẩn hóa các loại dấu gạch ngang
+        var normalizedSlotTime = slotTime.Replace("–", "-").Replace("—", "-").Replace("−", "-").Trim();
+
+        int startHour, endHour;
+        bool isValidFormat = false;
+
         // Validate slot time format: support both "7h-8h" and "7:00-8:00" formats
         var slotPatternH = @"^\d{1,2}h-\d{1,2}h$"; // Format: 7h-8h
         var slotPatternColon = @"^\d{1,2}:\d{2}-\d{1,2}:\d{2}$"; // Format: 7:00-8:00
         
-        if (!Regex.IsMatch(slotTime.Trim(), slotPatternH) && !Regex.IsMatch(slotTime.Trim(), slotPatternColon))
+        if (Regex.IsMatch(normalizedSlotTime, slotPatternH))
+        {
+            // Parse format "7h-8h"
+            var parts = normalizedSlotTime.Replace("h", "").Split('-');
+            if (parts.Length == 2 && int.TryParse(parts[0], out startHour) && int.TryParse(parts[1], out endHour))
+            {
+                isValidFormat = true;
+            }
+            else
+            {
+                throw new ProductionOutputValidationException(
+                    "Thời gian slot phải có định dạng 'Xh-Yh' (VD: 7h-8h) hoặc 'X:00-Y:00' (VD: 7:00-8:00)",
+                    "PRODUCTION_OUTPUT_SLOT_TIME_INVALID_FORMAT",
+                    new { SlotTime = slotTime });
+            }
+        }
+        else if (Regex.IsMatch(normalizedSlotTime, slotPatternColon))
+        {
+            // Parse format "07:00-08:00"
+            var parts = normalizedSlotTime.Split('-');
+            if (parts.Length == 2)
+            {
+                var startParts = parts[0].Split(':');
+                var endParts = parts[1].Split(':');
+                
+                if (startParts.Length >= 2 && endParts.Length >= 2 &&
+                    int.TryParse(startParts[0], out startHour) && int.TryParse(endParts[0], out endHour))
+                {
+                    isValidFormat = true;
+                }
+                else
+                {
+                    throw new ProductionOutputValidationException(
+                        "Thời gian slot phải có định dạng 'Xh-Yh' (VD: 7h-8h) hoặc 'X:00-Y:00' (VD: 7:00-8:00)",
+                        "PRODUCTION_OUTPUT_SLOT_TIME_INVALID_FORMAT",
+                        new { SlotTime = slotTime });
+                }
+            }
+            else
+            {
+                throw new ProductionOutputValidationException(
+                    "Thời gian slot phải có định dạng 'Xh-Yh' (VD: 7h-8h) hoặc 'X:00-Y:00' (VD: 7:00-8:00)",
+                    "PRODUCTION_OUTPUT_SLOT_TIME_INVALID_FORMAT",
+                    new { SlotTime = slotTime });
+            }
+        }
+        else
         {
             throw new ProductionOutputValidationException(
                 "Thời gian slot phải có định dạng 'Xh-Yh' (VD: 7h-8h) hoặc 'X:00-Y:00' (VD: 7:00-8:00)",
@@ -674,12 +816,8 @@ public class ProductionOutputService : IProductionOutputService
         }
 
         // Validate hour range (0-23)
-        var hours = Regex.Matches(slotTime.Trim(), @"\d+");
-        if (hours.Count >= 2)
+        if (isValidFormat)
         {
-            int startHour = int.Parse(hours[0].Value);
-            int endHour = int.Parse(hours[1].Value);
-
             if (startHour < 0 || startHour > 23 || endHour < 0 || endHour > 23)
             {
                 throw new ProductionOutputValidationException(
