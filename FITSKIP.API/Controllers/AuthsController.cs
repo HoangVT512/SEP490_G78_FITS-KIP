@@ -380,11 +380,39 @@ public class AuthsController : ControllerBase
     }
 
     /// <summary>
-    /// Gửi OTP qua SMS để đặt lại mật khẩu
+    /// Gửi OTP qua SMS để xác thực số điện thoại (dùng cho Profile)
+    /// </summary>
+    [HttpPost("send-phone-verification-otp")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SendPhoneVerificationOtp([FromBody] SendSmsOtpRequest request)
+    {
+        try
+        {
+            // Validate phone number format
+            if (!IsValidVietnamesePhoneNumber(request.PhoneNumber))
+            {
+                return BadRequest(new { success = false, message = "Số điện thoại không hợp lệ. Vui lòng sử dụng format +84xxxxxxxxx" });
+            }
+
+            var result = await _smsService.SendVerificationCodeAsync(request.PhoneNumber);
+
+            if (result)
+                return Ok(new { success = true, message = "Mã OTP đã được gửi qua SMS" });
+
+            return BadRequest(new { success = false, message = "Không thể gửi SMS OTP" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Lỗi khi gửi SMS OTP", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Gửi OTP qua SMS để đặt lại mật khẩu (Forgot Password)
     /// </summary>
     [HttpPost("forgot-password/send-sms-otp")]
     [AllowAnonymous]
-    public async Task<IActionResult> SendSmsOtp([FromBody] SendSmsOtpRequest request)
+    public async Task<IActionResult> SendForgotPasswordSmsOtp([FromBody] SendSmsOtpRequest request)
     {
         try
         {

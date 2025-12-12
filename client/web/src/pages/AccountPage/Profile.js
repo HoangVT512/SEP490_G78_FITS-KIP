@@ -188,7 +188,7 @@ const Profile = () => {
         ? "+84" + userInfo.phoneNumber.substring(1)
         : userInfo.phoneNumber;
 
-      const response = await authService.sendForgotPasswordSmsOtp(phoneNumber);
+      const response = await authService.sendPhoneVerificationOtp(phoneNumber);
       if (response.success) {
         message.success("Mã OTP đã được gửi đến số điện thoại của bạn");
         setPhoneVerifyStep(2);
