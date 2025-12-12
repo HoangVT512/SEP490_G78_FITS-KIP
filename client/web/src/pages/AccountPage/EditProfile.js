@@ -113,31 +113,33 @@ const EditProfile = () => {
 
       let errorMessage = "Có lỗi xảy ra khi cập nhật thông tin!";
 
-      if (error.message.includes("Đã có người dùng sử dụng email này")) {
-        //errorMessage = "Đã có người dùng sử dụng email này, không được dùng.";
+      if (
+        error.message.includes("email") &&
+        error.message.includes("đã có người dùng sử dụng")
+      ) {
+        errorMessage = error.message;
         form.setFields([
           {
             name: "email",
-            errors: ["Đã có người dùng sử dụng email này, không được dùng"],
+            errors: [error.message],
           },
         ]);
       } else if (
-        error.message.includes("Đã có người dùng sử dụng số điện thoại này")
+        error.message.includes("điện thoại") &&
+        error.message.includes("đã có người dùng sử dụng")
       ) {
-        //errorMessage ="Đã có người dùng sử dụng số điện thoại này, không được dùng.";
+        errorMessage = error.message;
         form.setFields([
           {
             name: "phoneNumber",
-            errors: [
-              "Đã có người dùng sử dụng số điện thoại này, không được dùng",
-            ],
+            errors: [error.message],
           },
         ]);
       } else if (error.message) {
         errorMessage = error.message;
       }
 
-      //message.error(errorMessage);
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
