@@ -33,6 +33,7 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import Layout from "../../components/Layout";
 import { authService } from "../../services/authService";
+import { useAuth } from "../../contexts/AuthContext";
 import styles from "../../styles/pages/Profile.module.css";
 
 const { Title, Text } = Typography;
@@ -42,6 +43,14 @@ const Profile = () => {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
+  const {
+    isAdmin,
+    isTeamLeader,
+    isTechnician,
+    isTechnicianManager,
+    isManager,
+    isWarehouseManager,
+  } = useAuth();
 
   // Check for update success parameter - only runs once on mount
   useEffect(() => {
@@ -174,11 +183,27 @@ const Profile = () => {
   };
 
   const getDashboardPath = () => {
-    if (authService.isAdmin()) {
+    // Check role priority: Admin > Manager > TechnicianManager > WarehouseManager > TeamLeader > Technician
+    if (isAdmin()) {
       return "/admin";
     }
-    // Default dashboard for regular users
-    return "/dashboard"; // You can change this to appropriate user dashboard
+    if (isManager()) {
+      return "/manager";
+    }
+    if (isTechnicianManager()) {
+      return "/technician-manager";
+    }
+    if (isWarehouseManager()) {
+      return "/warehouse-manager";
+    }
+    if (isTeamLeader()) {
+      return "/team-leader";
+    }
+    if (isTechnician()) {
+      return "/technician";
+    }
+    // Default fallback
+    return "/";
   };
 
   const handleBackToDashboard = () => {
