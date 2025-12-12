@@ -272,6 +272,21 @@ export const authService = {
     }
   },
 
+  // Phone Verification - Send OTP (for Profile page)
+  sendPhoneVerificationOtp: async (phoneNumber) => {
+    try {
+      const response = await apiRequest("/Auths/send-phone-verification-otp", {
+        method: "POST",
+        body: JSON.stringify({ phoneNumber }),
+      });
+
+      return response;
+    } catch (error) {
+      console.error("Send phone verification OTP error:", error);
+      throw error;
+    }
+  },
+
   // Forgot Password - Send SMS OTP
   sendForgotPasswordSmsOtp: async (phoneNumber) => {
     try {

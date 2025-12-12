@@ -944,4 +944,24 @@ public class UserRepository : IUserRepository
         var addResult = await userManager.AddPasswordAsync(user, newPassword);
         return addResult.Succeeded;
     }
+
+    public async Task<bool> ConfirmPhoneNumberAsync(string userId, CancellationToken cancellationToken = default)
+    {
+        var user = await db.Users.FirstOrDefaultAsync(u => u.Id == userId, cancellationToken);
+        if (user == null)
+        {
+            return false;
+        }
+
+        user.PhoneNumberConfirmed = true;
+        db.Users.Update(user);
+        await db.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    public async Task<User?> GetUserByPhoneAsync(string phoneNumber, CancellationToken cancellationToken = default)
+    {
+        var normalizedPhone = phoneNumber.Trim();
+        return await db.Users.FirstOrDefaultAsync(u => u.PhoneNumber.Trim() == normalizedPhone, cancellationToken);
+    }
 }

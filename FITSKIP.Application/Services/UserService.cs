@@ -48,6 +48,10 @@ public class UserService : IUserService
 
     public Task<bool> ResetPasswordByPhoneAsync(string phoneNumber, string newPassword, CancellationToken cancellationToken = default) => userRepository.ResetPasswordByPhoneAsync(phoneNumber, newPassword, cancellationToken);
 
+    public Task<User?> GetUserByPhoneAsync(string phoneNumber, CancellationToken cancellationToken = default) => userRepository.GetUserByPhoneAsync(phoneNumber, cancellationToken);
+
+    public Task<bool> ConfirmPhoneNumberAsync(string userId, CancellationToken cancellationToken = default) => userRepository.ConfirmPhoneNumberAsync(userId, cancellationToken);
+
     public Task<IReadOnlyList<UserLine>> GetUserLinesAsync(string userId, CancellationToken cancellationToken = default) => userRepository.GetUserLinesAsync(userId, cancellationToken);
 
     // Validation-enabled methods
