@@ -36,8 +36,9 @@ const apiRequest = async (endpoint, options = {}) => {
     if (!response.ok) {
       // Try to parse error response as JSON
       let errorMessage = `HTTP error! status: ${response.status}`;
+      let errorData = null;
       try {
-        const errorData = await response.json();
+        errorData = await response.json();
         console.error("=== API Error Response ===");
         console.error("Status:", response.status);
         console.error("Error Data:", errorData);
@@ -61,7 +62,10 @@ const apiRequest = async (endpoint, options = {}) => {
           // Keep default error message
         }
       }
-      throw new Error(errorMessage);
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      error.data = errorData;
+      throw error;
     }
 
     const contentType = response.headers.get("content-type");

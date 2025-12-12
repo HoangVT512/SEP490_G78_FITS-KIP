@@ -386,9 +386,43 @@ const PurchaseRequestManagement = () => {
       setSelectedRequest(null);
     } catch (error) {
       console.error("Create purchase request error:", error);
+
+      // Check for validation errors from backend (error.data contains the parsed JSON response)
+      if (error?.data?.errors) {
+        const errors = error.data.errors;
+
+        // Check for quantity validation error
+        if (errors["$.quantity"] || errors.quantity) {
+          const quantityErrors = errors["$.quantity"] || errors.quantity;
+          if (quantityErrors && quantityErrors.length > 0) {
+            message.error(`Số lượng không hợp lệ: ${quantityErrors[0]}`);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Check for other validation errors
+        const errorMessages = [];
+        for (const [field, messages] of Object.entries(errors)) {
+          if (Array.isArray(messages) && messages.length > 0) {
+            // Format field name for better readability
+            const fieldName = field
+              .replace("$.", "")
+              .replace("request", "yêu cầu");
+            errorMessages.push(`${fieldName}: ${messages[0]}`);
+          }
+        }
+
+        if (errorMessages.length > 0) {
+          message.error(errorMessages.join("; "));
+          setLoading(false);
+          return;
+        }
+      }
+
       // Try to get message from backend response first, then from error message
       const errorMessage =
-        error?.response?.data?.message ||
+        error?.data?.message ||
         error?.message ||
         "Có lỗi xảy ra khi tạo yêu cầu!";
 
