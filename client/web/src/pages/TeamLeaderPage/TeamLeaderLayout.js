@@ -382,7 +382,7 @@ const TeamLeaderLayout = () => {
 
           <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             {/* Notifications */}
-            <Badge count={5} size="small" className={styles.notificationBadge}>
+            <Badge count={0} size="small" className={styles.notificationBadge}>
               <Button
                 type="text"
                 icon={<BellOutlined />}
