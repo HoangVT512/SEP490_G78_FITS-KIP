@@ -394,6 +394,24 @@ public class AuthsController : ControllerBase
                 return BadRequest(new { success = false, message = "Số điện thoại không hợp lệ. Vui lòng sử dụng format +84xxxxxxxxx" });
             }
 
+            // Normalize phone number (convert from +84 to 0)
+            var normalizedPhone = request.PhoneNumber.StartsWith("+84") 
+                ? "0" + request.PhoneNumber.Substring(3) 
+                : request.PhoneNumber;
+
+            // Check if phone number exists in database
+            var user = await _userService.GetUserByPhoneAsync(normalizedPhone);
+            if (user == null)
+            {
+                return BadRequest(new { success = false, message = "Số điện thoại không có trong hệ thống" });
+            }
+
+            // Check if phone number is verified
+            if (!user.PhoneNumberConfirmed)
+            {
+                return BadRequest(new { success = false, message = "Số điện thoại chưa được xác thực. Liên hệ quản lý để được hỗ trợ." });
+            }
+
             var result = await _smsService.SendVerificationCodeAsync(request.PhoneNumber);
 
             if (result)
@@ -425,13 +443,72 @@ public class AuthsController : ControllerBase
             var result = await _smsService.VerifyCodeAsync(request.PhoneNumber, request.Code);
 
             if (result)
+            {
+                // Normalize phone number (convert from +84 to 0)
+                var normalizedPhone = request.PhoneNumber.StartsWith("+84") 
+                    ? "0" + request.PhoneNumber.Substring(3) 
+                    : request.PhoneNumber;
+
+                // Update PhoneNumberConfirmed if user is logged in (for phone verification)
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    // This is a phone verification request from logged-in user
+                    var user = await _userService.GetUserByIdAsync(userId);
+                    if (user != null && user.PhoneNumber?.Trim() == normalizedPhone.Trim())
+                    {
+                        await _userService.ConfirmPhoneNumberAsync(userId);
+                    }
+                }
+
                 return Ok(new { success = true, message = "Xác thực SMS OTP thành công" });
+            }
 
             return BadRequest(new { success = false, message = "Mã OTP không hợp lệ hoặc đã hết hạn" });
         }
         catch (Exception ex)
         {
             return BadRequest(new { success = false, message = "Lỗi khi xác thực SMS OTP", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Reset mật khẩu sau khi verify OTP thành công qua SMS
+    /// </summary>
+    [HttpPost("forgot-password/reset-sms")]
+    [AllowAnonymous]
+    public async Task<IActionResult> ResetPasswordWithSms([FromBody] ResetPasswordWithSmsRequest request)
+    {
+        try
+        {
+            // Validate phone number format
+            if (!IsValidVietnamesePhoneNumber(request.PhoneNumber))
+            {
+                return BadRequest(new { success = false, message = "Số điện thoại không hợp lệ. Vui lòng sử dụng format +84xxxxxxxxx" });
+            }
+
+            // Validate password
+            if (string.IsNullOrWhiteSpace(request.NewPassword) || request.NewPassword.Length < 6)
+            {
+                return BadRequest(new { success = false, message = "Mật khẩu mới phải có ít nhất 6 ký tự" });
+            }
+
+            // Normalize phone number (convert from +84 to 0)
+            var normalizedPhone = request.PhoneNumber.StartsWith("+84") 
+                ? "0" + request.PhoneNumber.Substring(3) 
+                : request.PhoneNumber;
+
+            // Reset password by phone number
+            var result = await _userService.ResetPasswordByPhoneAsync(normalizedPhone, request.NewPassword);
+
+            if (result)
+                return Ok(new { success = true, message = "Đặt lại mật khẩu thành công" });
+
+            return BadRequest(new { success = false, message = "Không thể đặt lại mật khẩu. Số điện thoại không tồn tại." });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Lỗi khi đặt lại mật khẩu", details = ex.Message });
         }
     }
 
@@ -484,6 +561,12 @@ public class VerifySmsOtpRequest
 {
     public string PhoneNumber { get; set; } = string.Empty;
     public string Code { get; set; } = string.Empty;
+}
+
+public class ResetPasswordWithSmsRequest
+{
+    public string PhoneNumber { get; set; } = string.Empty;
+    public string NewPassword { get; set; } = string.Empty;
 }
 
 public class SendSmsRequest

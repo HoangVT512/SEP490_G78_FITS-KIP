@@ -16,6 +16,8 @@ import {
   Spin,
   message,
   Modal,
+  Form,
+  Input,
 } from "antd";
 import {
   UserOutlined,
@@ -42,6 +44,11 @@ const Profile = () => {
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
+  const [phoneVerifyModalVisible, setPhoneVerifyModalVisible] = useState(false);
+  const [phoneVerifyStep, setPhoneVerifyStep] = useState(1); // 1: Send OTP, 2: Verify OTP
+  const [otpCode, setOtpCode] = useState("");
+  const [sendingOtp, setSendingOtp] = useState(false);
+  const [verifyingOtp, setVerifyingOtp] = useState(false);
 
   // Check for update success parameter - only runs once on mount
   useEffect(() => {
@@ -171,6 +178,79 @@ const Profile = () => {
         }
       },
     });
+  };
+
+  const handleSendPhoneVerification = async () => {
+    setSendingOtp(true);
+    try {
+      // Convert phone number to +84 format
+      const phoneNumber = userInfo.phoneNumber.startsWith("0")
+        ? "+84" + userInfo.phoneNumber.substring(1)
+        : userInfo.phoneNumber;
+
+      const response = await authService.sendForgotPasswordSmsOtp(phoneNumber);
+      if (response.success) {
+        message.success("Mã OTP đã được gửi đến số điện thoại của bạn");
+        setPhoneVerifyStep(2);
+      } else {
+        message.error(response.message || "Không thể gửi mã OTP");
+      }
+    } catch (error) {
+      message.error(error.message || "Đã có lỗi xảy ra khi gửi mã OTP");
+    } finally {
+      setSendingOtp(false);
+    }
+  };
+
+  const handleVerifyPhoneOtp = async () => {
+    if (!otpCode || otpCode.length !== 6) {
+      message.error("Vui lòng nhập mã OTP gồm 6 chữ số");
+      return;
+    }
+
+    setVerifyingOtp(true);
+    try {
+      // Convert phone number to +84 format
+      const phoneNumber = userInfo.phoneNumber.startsWith("0")
+        ? "+84" + userInfo.phoneNumber.substring(1)
+        : userInfo.phoneNumber;
+
+      const response = await authService.verifySmsOtp(phoneNumber, otpCode);
+      if (response.success) {
+        message.success("Xác thực số điện thoại thành công!");
+        // Update user info to reflect phone confirmation
+        setUserInfo({ ...userInfo, phoneNumberConfirmed: true });
+        // Refresh user data from server
+        const updatedUser = await authService.getCurrentUser();
+        if (updatedUser) {
+          setUserInfo({
+            ...userInfo,
+            phoneNumberConfirmed: updatedUser.phoneNumberConfirmed || true,
+          });
+        }
+        setPhoneVerifyModalVisible(false);
+        setPhoneVerifyStep(1);
+        setOtpCode("");
+      } else {
+        message.error(response.message || "Mã OTP không hợp lệ hoặc đã hết hạn");
+      }
+    } catch (error) {
+      message.error(error.message || "Xác thực thất bại");
+    } finally {
+      setVerifyingOtp(false);
+    }
+  };
+
+  const handleOpenPhoneVerifyModal = () => {
+    setPhoneVerifyModalVisible(true);
+    setPhoneVerifyStep(1);
+    setOtpCode("");
+  };
+
+  const handleClosePhoneVerifyModal = () => {
+    setPhoneVerifyModalVisible(false);
+    setPhoneVerifyStep(1);
+    setOtpCode("");
   };
 
   const getDashboardPath = () => {
@@ -368,22 +448,34 @@ const Profile = () => {
                           </Space>
                         </Descriptions.Item>
                         <Descriptions.Item label="Số điện thoại">
-                          <Space>
-                            <PhoneOutlined
-                              className={styles.profileIconPhone}
-                            />
-                            {userInfo.phoneNumber || "Chưa cập nhật"}
-                            {userInfo.phoneNumber ? (
-                              userInfo.phoneNumberConfirmed ? (
-                                <CheckCircleOutlined
-                                  className={styles.profileIconVerified}
-                                />
-                              ) : (
-                                <Tag color="orange" style={{ marginLeft: 8 }}>
-                                  Chưa xác thực
-                                </Tag>
-                              )
-                            ) : null}
+                          <Space direction="vertical" style={{ width: "100%" }}>
+                            <Space>
+                              <PhoneOutlined
+                                className={styles.profileIconPhone}
+                              />
+                              {userInfo.phoneNumber || "Chưa cập nhật"}
+                              {userInfo.phoneNumber ? (
+                                userInfo.phoneNumberConfirmed ? (
+                                  <CheckCircleOutlined
+                                    className={styles.profileIconVerified}
+                                  />
+                                ) : (
+                                  <Tag color="orange" style={{ marginLeft: 8 }}>
+                                    Chưa xác thực
+                                  </Tag>
+                                )
+                              ) : null}
+                            </Space>
+                            {!userInfo.phoneNumberConfirmed && userInfo.phoneNumber && (
+                              <Button
+                                type="primary"
+                                size="small"
+                                icon={<VerifiedOutlined />}
+                                onClick={handleOpenPhoneVerifyModal}
+                              >
+                                Xác thực số điện thoại
+                              </Button>
+                            )}
                           </Space>
                         </Descriptions.Item>
                         <Descriptions.Item label="Phòng ban">
@@ -401,6 +493,82 @@ const Profile = () => {
           </Col>
         </Row>
       </div>
+
+      {/* Phone Verification Modal */}
+      <Modal
+        title="Xác thực số điện thoại"
+        open={phoneVerifyModalVisible}
+        onCancel={handleClosePhoneVerifyModal}
+        footer={null}
+        width={500}
+      >
+        {phoneVerifyStep === 1 ? (
+          <div style={{ textAlign: "center", padding: "20px 0" }}>
+            <PhoneOutlined style={{ fontSize: 48, color: "#1890ff", marginBottom: 16 }} />
+            <Title level={4}>Xác thực số điện thoại</Title>
+            <Text>
+              Chúng tôi sẽ gửi mã OTP đến số điện thoại{" "}
+              <Text strong>{userInfo?.phoneNumber}</Text>
+            </Text>
+            <div style={{ marginTop: 24 }}>
+              <Button
+                type="primary"
+                size="large"
+                loading={sendingOtp}
+                onClick={handleSendPhoneVerification}
+                block
+              >
+                Gửi mã OTP
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div style={{ padding: "20px 0" }}>
+            <Title level={4} style={{ textAlign: "center" }}>
+              Nhập mã OTP
+            </Title>
+            <Text style={{ display: "block", textAlign: "center", marginBottom: 24 }}>
+              Mã OTP đã được gửi đến {userInfo?.phoneNumber}
+            </Text>
+            <Form layout="vertical">
+              <Form.Item
+                label="Mã OTP (6 chữ số)"
+                required
+              >
+                <Input
+                  size="large"
+                  placeholder="Nhập mã OTP"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value)}
+                  maxLength={6}
+                  style={{ textAlign: "center", fontSize: 20, letterSpacing: 8 }}
+                />
+              </Form.Item>
+              <Form.Item>
+                <Space style={{ width: "100%" }} direction="vertical">
+                  <Button
+                    type="primary"
+                    size="large"
+                    loading={verifyingOtp}
+                    onClick={handleVerifyPhoneOtp}
+                    block
+                  >
+                    Xác thực
+                  </Button>
+                  <Button
+                    size="large"
+                    loading={sendingOtp}
+                    onClick={handleSendPhoneVerification}
+                    block
+                  >
+                    Gửi lại mã OTP
+                  </Button>
+                </Space>
+              </Form.Item>
+            </Form>
+          </div>
+        )}
+      </Modal>
     </Layout>
   );
 };
