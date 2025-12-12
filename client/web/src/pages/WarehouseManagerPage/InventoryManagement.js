@@ -393,7 +393,11 @@ const InventoryManagement = () => {
       return matchSearch && matchStatus && matchActive;
     })
     .sort((a, b) => {
-      // Sort by partId descending (newest first)
+      // Sort by status priority first (Hết hàng -> Sắp hết -> Đủ hàng)
+      const statusDiff =
+        getStatusSortOrder(a.status) - getStatusSortOrder(b.status);
+      if (statusDiff !== 0) return statusDiff;
+      // If same status, sort by partId descending (newest first)
       return b.partId - a.partId;
     });
 
@@ -995,7 +999,12 @@ const InventoryManagement = () => {
                 name="quantity"
                 label={
                   <span style={{ fontWeight: "600", fontSize: "14px" }}>
-                    Số lượng
+                    Số lượng{" "}
+                    {editingRecord && (
+                      <span style={{ color: "#999", fontSize: "12px" }}>
+                        (chỉ xem)
+                      </span>
+                    )}
                   </span>
                 }
                 rules={[
@@ -1008,11 +1017,17 @@ const InventoryManagement = () => {
                       : "Số lượng phải lớn hơn 0",
                   },
                 ]}
+                tooltip={
+                  editingRecord
+                    ? "Số lượng tự động cập nhật khi nhập kho/xuất kho"
+                    : undefined
+                }
               >
                 <InputNumber
                   min={editingRecord ? 0 : 1}
                   style={{ width: "100%" }}
                   size="large"
+                  disabled={editingRecord}
                 />
               </Form.Item>
             </Col>
