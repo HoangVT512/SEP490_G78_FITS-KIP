@@ -380,11 +380,11 @@ public class AuthsController : ControllerBase
     }
 
     /// <summary>
-    /// Gửi OTP qua SMS để đặt lại mật khẩu
+    /// Gửi OTP qua SMS để xác thực số điện thoại (dùng cho Profile)
     /// </summary>
-    [HttpPost("forgot-password/send-sms-otp")]
+    [HttpPost("send-phone-verification-otp")]
     [AllowAnonymous]
-    public async Task<IActionResult> SendSmsOtp([FromBody] SendSmsOtpRequest request)
+    public async Task<IActionResult> SendPhoneVerificationOtp([FromBody] SendSmsOtpRequest request)
     {
         try
         {
@@ -392,6 +392,52 @@ public class AuthsController : ControllerBase
             if (!IsValidVietnamesePhoneNumber(request.PhoneNumber))
             {
                 return BadRequest(new { success = false, message = "Số điện thoại không hợp lệ. Vui lòng sử dụng format +84xxxxxxxxx" });
+            }
+
+            var result = await _smsService.SendVerificationCodeAsync(request.PhoneNumber);
+
+            if (result)
+                return Ok(new { success = true, message = "Mã OTP đã được gửi qua SMS" });
+
+            return BadRequest(new { success = false, message = "Không thể gửi SMS OTP" });
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { success = false, message = "Lỗi khi gửi SMS OTP", details = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Gửi OTP qua SMS để đặt lại mật khẩu (Forgot Password)
+    /// </summary>
+    [HttpPost("forgot-password/send-sms-otp")]
+    [AllowAnonymous]
+    public async Task<IActionResult> SendForgotPasswordSmsOtp([FromBody] SendSmsOtpRequest request)
+    {
+        try
+        {
+            // Validate phone number format
+            if (!IsValidVietnamesePhoneNumber(request.PhoneNumber))
+            {
+                return BadRequest(new { success = false, message = "Số điện thoại không hợp lệ. Vui lòng sử dụng format +84xxxxxxxxx" });
+            }
+
+            // Normalize phone number (convert from +84 to 0)
+            var normalizedPhone = request.PhoneNumber.StartsWith("+84") 
+                ? "0" + request.PhoneNumber.Substring(3) 
+                : request.PhoneNumber;
+
+            // Check if phone number exists in database
+            var user = await _userService.GetUserByPhoneAsync(normalizedPhone);
+            if (user == null)
+            {
+                return BadRequest(new { success = false, message = "Số điện thoại không có trong hệ thống" });
+            }
+
+            // Check if phone number is verified
+            if (!user.PhoneNumberConfirmed)
+            {
+                return BadRequest(new { success = false, message = "Số điện thoại chưa được xác thực. Liên hệ quản lý để được hỗ trợ." });
             }
 
             var result = await _smsService.SendVerificationCodeAsync(request.PhoneNumber);
@@ -425,7 +471,26 @@ public class AuthsController : ControllerBase
             var result = await _smsService.VerifyCodeAsync(request.PhoneNumber, request.Code);
 
             if (result)
+            {
+                // Normalize phone number (convert from +84 to 0)
+                var normalizedPhone = request.PhoneNumber.StartsWith("+84") 
+                    ? "0" + request.PhoneNumber.Substring(3) 
+                    : request.PhoneNumber;
+
+                // Update PhoneNumberConfirmed if user is logged in (for phone verification)
+                var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    // This is a phone verification request from logged-in user
+                    var user = await _userService.GetUserByIdAsync(userId);
+                    if (user != null && user.PhoneNumber?.Trim() == normalizedPhone.Trim())
+                    {
+                        await _userService.ConfirmPhoneNumberAsync(userId);
+                    }
+                }
+
                 return Ok(new { success = true, message = "Xác thực SMS OTP thành công" });
+            }
 
             return BadRequest(new { success = false, message = "Mã OTP không hợp lệ hoặc đã hết hạn" });
         }
@@ -436,7 +501,7 @@ public class AuthsController : ControllerBase
     }
 
     /// <summary>
-    /// Reset mật khẩu sau khi verify OTP thành công
+    /// Reset mật khẩu sau khi verify OTP thành công qua SMS
     /// </summary>
     [HttpPost("forgot-password/reset-sms")]
     [AllowAnonymous]
@@ -475,7 +540,27 @@ public class AuthsController : ControllerBase
         }
     }
 
-   
+    /// <summary>
+    /// Gửi SMS thông thường
+    /// </summary>
+    // [HttpPost("send-sms")]
+    // [AllowAnonymous]
+    // public async Task<IActionResult> SendSms([FromBody] SendSmsRequest request)
+    // {
+    //     try
+    //     {
+    //         var result = await _smsService.SendSmsAsync(request.PhoneNumber, request.Message);
+
+    //         if (result)
+    //             return Ok(new { success = true, message = "SMS đã được gửi thành công" });
+
+    //         return BadRequest(new { success = false, message = "Không thể gửi SMS" });
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         return BadRequest(new { success = false, message = "Lỗi khi gửi SMS", details = ex.Message });
+    //     }
+    // }
 
     private bool IsValidVietnamesePhoneNumber(string phoneNumber)
     {

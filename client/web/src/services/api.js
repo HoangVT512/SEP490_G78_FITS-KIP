@@ -1,5 +1,6 @@
 // Base API configuration
-const API_BASE_URL = "https://localhost:7003/api";
+const API_BASE_URL =
+  process.env.REACT_APP_API_BASE_URL || "http://localhost:7003/api";
 
 const apiRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
@@ -36,25 +37,13 @@ const apiRequest = async (endpoint, options = {}) => {
     if (!response.ok) {
       // Try to parse error response as JSON
       let errorMessage = `HTTP error! status: ${response.status}`;
-      let errorData = null;
       try {
-        errorData = await response.json();
-        console.error("=== API Error Response ===");
-        console.error("Status:", response.status);
-        console.error("Error Data:", errorData);
-        // Include details if available (for 500 errors)
-        if (errorData.details) {
-          errorMessage = `${errorData.message || "Error"}: ${
-            errorData.details
-          }`;
-        } else {
-          errorMessage = errorData.message || errorData.error || errorMessage;
-        }
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || errorMessage;
       } catch (parseError) {
         // If can't parse JSON, try to get text
         try {
           const errorText = await response.text();
-          console.error("Error Text:", errorText);
           if (errorText) {
             errorMessage = errorText;
           }
@@ -62,10 +51,7 @@ const apiRequest = async (endpoint, options = {}) => {
           // Keep default error message
         }
       }
-      const error = new Error(errorMessage);
-      error.status = response.status;
-      error.data = errorData;
-      throw error;
+      throw new Error(errorMessage);
     }
 
     const contentType = response.headers.get("content-type");
