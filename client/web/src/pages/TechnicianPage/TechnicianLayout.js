@@ -13,6 +13,7 @@ import {
   Divider,
   Spin,
   Drawer,
+  Grid,
 } from "antd";
 import {
   DashboardOutlined,
@@ -31,7 +32,11 @@ import {
   CheckCircleOutlined,
   DeleteOutlined,
   BookOutlined,
+  MenuOutlined,
+  CloseOutlined,
 } from "@ant-design/icons";
+
+const { useBreakpoint } = Grid;
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import signalRService from "../../services/signalRService";
@@ -60,9 +65,14 @@ const TechnicianLayout = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [notificationLoading, setNotificationLoading] = useState(false);
   const [notificationDrawerOpen, setNotificationDrawerOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const screens = useBreakpoint();
+
+  // Detect if on mobile
+  const isMobile = !screens.md;
 
   // Get technician user info from context
   const technicianUser = {
@@ -120,7 +130,10 @@ const TechnicianLayout = () => {
 
         // Define notification handler
         notificationHandler = (notificationData) => {
-          console.log("� [TechnicianLayout] Received notification:", notificationData);
+          console.log(
+            "� [TechnicianLayout] Received notification:",
+            notificationData
+          );
 
           // Tăng số lượng notification badge NGAY LẬP TỨC
           setUnreadCount((prev) => {
@@ -136,7 +149,11 @@ const TechnicianLayout = () => {
 
           // Hiển thị message toast CHỈ MỘT LẦN
           message.success({
-            content: `🔔 ${notificationData.title || notificationData.message || "Bạn có thông báo mới"}`,
+            content: `🔔 ${
+              notificationData.title ||
+              notificationData.message ||
+              "Bạn có thông báo mới"
+            }`,
             duration: 5,
             key: `notification-${Date.now()}`, // Unique key để tránh duplicate
           });
@@ -149,7 +166,9 @@ const TechnicianLayout = () => {
           // Tăng số lượng notification badge
           setUnreadCount((prev) => {
             const newCount = prev + 1;
-            console.log(`📊 Replacement badge count updated: ${prev} -> ${newCount}`);
+            console.log(
+              `📊 Replacement badge count updated: ${prev} -> ${newCount}`
+            );
             return newCount;
           });
 
@@ -160,7 +179,9 @@ const TechnicianLayout = () => {
 
           // Hiển thị message toast cho replacement approved
           message.success({
-            content: `✅ Linh kiện đã được duyệt: ${data.partName || data.Message} cho ${data.equipmentName}`,
+            content: `✅ Linh kiện đã được duyệt: ${
+              data.partName || data.Message
+            } cho ${data.equipmentName}`,
             duration: 5,
             key: `replacement-${Date.now()}`, // Unique key để tránh duplicate
           });
@@ -218,14 +239,14 @@ const TechnicianLayout = () => {
     try {
       await notificationService.markNotificationAsRead(notificationId);
       // Update local state
-      setNotifications(prev =>
-        prev.map(notif =>
+      setNotifications((prev) =>
+        prev.map((notif) =>
           notif.notificationId === notificationId
             ? { ...notif, isRead: true }
             : notif
         )
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
@@ -235,8 +256,8 @@ const TechnicianLayout = () => {
   const markAllAsRead = async () => {
     try {
       await notificationService.markAllNotificationsAsRead();
-      setNotifications(prev =>
-        prev.map(notif => ({ ...notif, isRead: true }))
+      setNotifications((prev) =>
+        prev.map((notif) => ({ ...notif, isRead: true }))
       );
       setUnreadCount(0);
       message.success("Đã đánh dấu tất cả thông báo là đã đọc");
@@ -290,7 +311,7 @@ const TechnicianLayout = () => {
       key: "maintenance-schedule",
       icon: <CalendarOutlined />,
       label: "Lịch bảo trì",
-    }, 
+    },
     {
       key: "user-guide",
       icon: <BookOutlined />,
@@ -305,6 +326,10 @@ const TechnicianLayout = () => {
 
   const handleMenuClick = ({ key }) => {
     setSelectedKey(key);
+    // Close mobile menu after selection
+    if (isMobile) {
+      setMobileMenuOpen(false);
+    }
     switch (key) {
       case "dashboard":
         navigate("/technician/dashboard");
@@ -381,22 +406,29 @@ const TechnicianLayout = () => {
 
   const headerStyle = {
     background: "#fff",
-    padding: "0 24px",
+    padding: isMobile ? "0 12px" : "0 24px",
     boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
     borderBottom: "1px solid #f0f0f0",
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    marginLeft:
-      collapsed && !hovered ? SIDER_COLLAPSED_WIDTH : SIDER_EXPANDED_WIDTH,
+    marginLeft: isMobile
+      ? 0
+      : collapsed && !hovered
+      ? SIDER_COLLAPSED_WIDTH
+      : SIDER_EXPANDED_WIDTH,
     transition: "margin-left 0.2s",
+    height: isMobile ? 56 : 64,
   };
 
   const contentStyle = {
-    marginLeft:
-      collapsed && !hovered ? SIDER_COLLAPSED_WIDTH : SIDER_EXPANDED_WIDTH,
+    marginLeft: isMobile
+      ? 0
+      : collapsed && !hovered
+      ? SIDER_COLLAPSED_WIDTH
+      : SIDER_EXPANDED_WIDTH,
     padding: 0,
-    minHeight: "calc(100vh - 70px)",
+    minHeight: isMobile ? "calc(100vh - 56px)" : "calc(100vh - 70px)",
     backgroundColor: "#f8fafc",
     transition: "margin-left 0.2s",
   };
@@ -417,92 +449,174 @@ const TechnicianLayout = () => {
     fontSize: "14px",
   };
 
+  // Mobile menu content
+  const renderMobileMenu = () => (
+    <div className={styles.mobileMenuContent}>
+      <div className={styles.mobileMenuHeader}>
+        <Title level={5} style={{ color: "#fff", margin: 0 }}>
+          🔧 FITS-KIP Kỹ thuật
+        </Title>
+        <Button
+          type="text"
+          icon={<CloseOutlined />}
+          onClick={() => setMobileMenuOpen(false)}
+          style={{ color: "#fff" }}
+        />
+      </div>
+      <Menu
+        theme="dark"
+        mode="inline"
+        selectedKeys={[selectedKey]}
+        onClick={handleMenuClick}
+        style={menuStyle}
+        items={menuItems}
+      />
+      <div className={styles.mobileMenuUser}>
+        <Avatar
+          size={40}
+          icon={<UserOutlined />}
+          src={technicianUser.avatar}
+          style={{ backgroundColor: "#334766" }}
+        />
+        <div className={styles.mobileMenuUserInfo}>
+          <div className={styles.mobileMenuUserName}>{technicianUser.name}</div>
+          <div className={styles.mobileMenuUserRole}>{technicianUser.role}</div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <AntLayout
-      className={styles.technicianLayout}
+      className={`${styles.technicianLayout} ${
+        isMobile ? styles.mobileLayout : ""
+      }`}
       style={{ minHeight: "100vh" }}
     >
-      {/* Sidebar */}
-      <Sider
-        collapsible
-        collapsed={collapsed && !hovered}
-        onCollapse={setCollapsed}
-        onMouseEnter={() => {
-          if (!collapsed) setHovered(true);
-        }}
-        onMouseLeave={() => setHovered(false)}
-        width={SIDER_EXPANDED_WIDTH}
-        collapsedWidth={SIDER_COLLAPSED_WIDTH}
-        style={siderStyle}
-        trigger={null}
-      >
-        {/* Logo */}
-        <div style={logoStyle}>
-          {!collapsed && (
-            <Title
-              level={4}
-              style={{ color: "#fff", margin: 0, fontSize: "16px" }}
-            >
-              🔧 FITS-KIP Kỹ thuật
-            </Title>
-          )}
-          {collapsed && (
-            <Text style={{ color: "#fff", fontSize: "20px" }}>🔧</Text>
-          )}
-        </div>
-
-        {/* Menu */}
-        <Menu
-          theme="dark"
-          mode="inline"
-          inlineCollapsed={collapsed && !hovered}
-          selectedKeys={[selectedKey]}
-          onClick={handleMenuClick}
-          style={menuStyle}
-          items={menuItems}
-        />
-
-        {/* Collapse button */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: "16px",
-            left: "50%",
-            transform: "translateX(-50%)",
+      {/* Mobile Menu Drawer */}
+      {isMobile && (
+        <Drawer
+          placement="left"
+          open={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+          width={280}
+          closable={false}
+          styles={{
+            body: {
+              padding: 0,
+              background: "linear-gradient(180deg, #283652 0%, #283652 100%)",
+            },
           }}
         >
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() =>
-              setCollapsed((prev) => {
-                const next = !prev;
-                if (next) setHovered(false);
-                return next;
-              })
-            }
-            style={{
-              color: "#fff",
-              border: "none",
-              background: "rgba(255,255,255,0.1)",
-              width: "40px",
-              height: "40px",
-            }}
+          {renderMobileMenu()}
+        </Drawer>
+      )}
+
+      {/* Desktop Sidebar - only show on non-mobile */}
+      {!isMobile && (
+        <Sider
+          collapsible
+          collapsed={collapsed && !hovered}
+          onCollapse={setCollapsed}
+          onMouseEnter={() => {
+            if (!collapsed) setHovered(true);
+          }}
+          onMouseLeave={() => setHovered(false)}
+          width={SIDER_EXPANDED_WIDTH}
+          collapsedWidth={SIDER_COLLAPSED_WIDTH}
+          style={siderStyle}
+          trigger={null}
+        >
+          {/* Logo */}
+          <div style={logoStyle}>
+            {!collapsed && (
+              <Title
+                level={4}
+                style={{ color: "#fff", margin: 0, fontSize: "16px" }}
+              >
+                🔧 FITS-KIP Kỹ thuật
+              </Title>
+            )}
+            {collapsed && (
+              <Text style={{ color: "#fff", fontSize: "20px" }}>🔧</Text>
+            )}
+          </div>
+
+          {/* Menu */}
+          <Menu
+            theme="dark"
+            mode="inline"
+            inlineCollapsed={collapsed && !hovered}
+            selectedKeys={[selectedKey]}
+            onClick={handleMenuClick}
+            style={menuStyle}
+            items={menuItems}
           />
-        </div>
-      </Sider>
+
+          {/* Collapse button */}
+          <div
+            style={{
+              position: "absolute",
+              bottom: "16px",
+              left: "50%",
+              transform: "translateX(-50%)",
+            }}
+          >
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() =>
+                setCollapsed((prev) => {
+                  const next = !prev;
+                  if (next) setHovered(false);
+                  return next;
+                })
+              }
+              style={{
+                color: "#fff",
+                border: "none",
+                background: "rgba(255,255,255,0.1)",
+                width: "40px",
+                height: "40px",
+              }}
+            />
+          </div>
+        </Sider>
+      )}
 
       <AntLayout>
         {/* Header */}
         <Header style={headerStyle}>
-          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-            <Title level={4} style={{ margin: 0, color: "#1f2937" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            {/* Mobile hamburger menu */}
+            {isMobile && (
+              <Button
+                type="text"
+                icon={<MenuOutlined />}
+                onClick={() => setMobileMenuOpen(true)}
+                className={styles.mobileMenuBtn}
+              />
+            )}
+            <Title
+              level={isMobile ? 5 : 4}
+              style={{
+                margin: 0,
+                color: "#1f2937",
+                fontSize: isMobile ? "16px" : "18px",
+              }}
+            >
               {menuItems.find((item) => item.key === selectedKey)?.label ||
                 "Tổng quan"}
             </Title>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: isMobile ? "8px" : "16px",
+            }}
+          >
             {/* Notifications */}
             <Badge
               count={unreadCount}
@@ -515,7 +629,12 @@ const TechnicianLayout = () => {
               }}
               style={{ cursor: "pointer" }}
             >
-              <BellOutlined style={{ fontSize: "18px", cursor: "pointer" }} />
+              <BellOutlined
+                style={{
+                  fontSize: isMobile ? "20px" : "18px",
+                  cursor: "pointer",
+                }}
+              />
             </Badge>
 
             {/* User dropdown */}
@@ -524,17 +643,23 @@ const TechnicianLayout = () => {
               placement="bottomRight"
               arrow
             >
-              <div className={styles.userDropdown}>
+              <div
+                className={`${styles.userDropdown} ${
+                  isMobile ? styles.mobileUserDropdown : ""
+                }`}
+              >
                 <Avatar
                   size="small"
                   icon={<UserOutlined />}
                   src={technicianUser.avatar}
                   style={{ backgroundColor: "#334766" }}
                 />
-                <div className={styles.userInfo}>
-                  <div className={styles.userName}>{technicianUser.name}</div>
-                  <div className={styles.userRole}>{technicianUser.role}</div>
-                </div>
+                {!isMobile && (
+                  <div className={styles.userInfo}>
+                    <div className={styles.userName}>{technicianUser.name}</div>
+                    <div className={styles.userRole}>{technicianUser.role}</div>
+                  </div>
+                )}
               </div>
             </Dropdown>
           </div>
@@ -542,7 +667,13 @@ const TechnicianLayout = () => {
 
         {/* Content */}
         <Content style={contentStyle}>
-          <div className={styles.technicianContent}>{renderContent()}</div>
+          <div
+            className={`${styles.technicianContent} ${
+              isMobile ? styles.mobileContent : ""
+            }`}
+          >
+            {renderContent()}
+          </div>
         </Content>
       </AntLayout>
 
@@ -552,14 +683,12 @@ const TechnicianLayout = () => {
         placement="right"
         onClose={() => setNotificationDrawerOpen(false)}
         open={notificationDrawerOpen}
-        width={720}
+        width={isMobile ? "100%" : 720}
         styles={{ body: { padding: 0 } }}
       >
         <NotificationsList
           onClose={() => setNotificationDrawerOpen(false)}
-          onNotificationCountChange={(newCount) =>
-            setUnreadCount(newCount)
-          }
+          onNotificationCountChange={(newCount) => setUnreadCount(newCount)}
           initialNotifications={notifications}
           initialLoading={notificationLoading}
           onRefresh={fetchNotifications}

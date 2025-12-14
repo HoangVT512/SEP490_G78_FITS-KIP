@@ -152,6 +152,25 @@
   }
 }
 
+/* Tablet styles */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .statCard :global(.ant-card-body) {
+    padding: 14px;
+  }
+
+  .statCard :global(.ant-statistic-content-value) {
+    font-size: 22px;
+  }
+
+  .calendarCard :global(.ant-card-body) {
+    padding: 12px;
+  }
+
+  .todayCard :global(.ant-card-body) {
+    padding: 14px;
+  }
+}
+
 @media (max-width: 768px) {
   .dateCell {
     gap: 2px;
@@ -162,28 +181,131 @@
   }
 
   .statCard {
-    margin-bottom: 8px;
+    margin-bottom: 10px;
+    border-radius: 10px;
+  }
+
+  .statCard :global(.ant-card-body) {
+    padding: 14px;
+  }
+
+  .statCard :global(.ant-statistic-title) {
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+
+  .statCard :global(.ant-statistic-content-value) {
+    font-size: 20px;
+  }
+
+  .calendarCard {
+    border-radius: 10px;
   }
 
   .calendar :global(.ant-picker-calendar-header) {
     padding: 12px 16px;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
-  .timelineItem {
+  .calendar :global(.ant-picker-calendar-header .ant-select) {
+    min-width: 80px;
+  }
+
+  .calendarCard :global(.ant-card-body) {
     padding: 10px;
   }
 
-  .scheduleListItem {
+  .timelineItem {
     padding: 12px;
+    font-size: 13px;
+  }
+
+  .scheduleListItem {
+    padding: 14px;
+  }
+
+  .todayCard {
+    border-radius: 10px;
+  }
+
+  .todayCard :global(.ant-card-head) {
+    padding: 14px;
+  }
+
+  .todayCard :global(.ant-card-body) {
+    padding: 14px;
+    max-height: 320px;
+    overflow-y: auto;
+  }
+
+  .todayCard :global(.ant-list-item) {
+    padding: 10px 0;
+    font-size: 13px;
+  }
+
+  /* Modal responsive */
+  .scheduleModal :global(.ant-modal) {
+    max-width: calc(100vw - 32px);
+    margin: 16px;
+  }
+
+  .scheduleModal :global(.ant-modal-body) {
+    padding: 14px;
+    max-height: 65vh;
+    overflow-y: auto;
   }
 }
 
 @media (max-width: 576px) {
+  .statCard :global(.ant-card-body) {
+    padding: 12px;
+  }
+
+  .statCard :global(.ant-statistic-content-value) {
+    font-size: 18px;
+  }
+
   .calendar :global(.ant-picker-cell) {
     font-size: 12px;
+    padding: 2px;
+  }
+
+  .calendar :global(.ant-picker-content th),
+  .calendar :global(.ant-picker-content td) {
+    padding: 4px 2px;
   }
 
   .dateCell {
     min-height: 20px;
+    font-size: 10px;
+  }
+
+  .dateCell :global(.ant-badge) {
+    font-size: 8px;
+  }
+
+  .calendarCard :global(.ant-card-body) {
+    padding: 8px;
+  }
+
+  .timelineItem {
+    padding: 10px;
+    font-size: 12px;
+  }
+
+  .scheduleListItem {
+    padding: 12px;
+    font-size: 12px;
+  }
+
+  .todayCard :global(.ant-card-body) {
+    padding: 12px;
+    max-height: 280px;
+  }
+
+  .todayCard :global(.ant-list-item) {
+    padding: 8px 0;
+    font-size: 12px;
   }
 }

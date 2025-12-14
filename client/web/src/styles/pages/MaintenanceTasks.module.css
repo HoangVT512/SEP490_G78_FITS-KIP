@@ -6,9 +6,245 @@
   margin-bottom: 16px;
 }
 
+/* Table Wrapper */
+.maintenanceTasks :global(.ant-table-wrapper) {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Card Styling */
+.maintenanceTasks :global(.ant-card) {
+  margin-bottom: 16px;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.maintenanceTasks :global(.ant-card-head) {
+  padding: 14px 20px;
+  min-height: auto;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.maintenanceTasks :global(.ant-card-head-title) {
+  padding: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.maintenanceTasks :global(.ant-card-body) {
+  padding: 16px;
+}
+
+/* Stats Cards */
+.statsCard {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e8e8e8;
+  transition: all 0.3s ease;
+  height: 100%;
+}
+
+.statsCard:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.statsCard:active {
+  transform: scale(0.99);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .filterTabs {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+
+  .filterTabs :global(.ant-radio-button-wrapper) {
+    font-size: 12px;
+    padding: 0 10px;
+    height: 32px;
+    line-height: 30px;
+  }
+
+  .maintenanceTasks :global(.ant-card) {
+    border-radius: 10px;
+    margin-bottom: 12px;
+  }
+
+  .maintenanceTasks :global(.ant-card-head) {
+    padding: 12px 14px;
+  }
+
+  .maintenanceTasks :global(.ant-card-head-title) {
+    font-size: 14px;
+  }
+
+  .maintenanceTasks :global(.ant-card-body) {
+    padding: 10px;
+  }
+
+  .maintenanceTasks :global(.ant-table) {
+    font-size: 12px;
+  }
+
+  .maintenanceTasks :global(.ant-table-cell) {
+    padding: 10px 8px;
+  }
+
+  .maintenanceTasks :global(.ant-table-thead > tr > th) {
+    padding: 10px 8px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+
+  .maintenanceTasks :global(.ant-tag) {
+    font-size: 11px;
+    padding: 2px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
+  }
+
+  .maintenanceTasks :global(.ant-btn) {
+    font-size: 12px;
+    padding: 6px 10px;
+    height: auto;
+    min-height: 32px;
+  }
+
+  .maintenanceTasks :global(.ant-btn-icon-only) {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+  }
+
+  /* Stats Card Mobile */
+  .statsCard {
+    border-radius: 10px;
+    margin-bottom: 10px;
+  }
+
+  .statsCard :global(.ant-card-body) {
+    padding: 14px;
+  }
+
+  .statsCard :global(.ant-statistic-title) {
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+
+  .statsCard :global(.ant-statistic-content-value) {
+    font-size: 20px;
+  }
+
+  /* Modal responsive */
+  .maintenanceTasks :global(.ant-modal) {
+    max-width: calc(100vw - 32px);
+    margin: 16px;
+  }
+
+  .maintenanceTasks :global(.ant-modal-body) {
+    padding: 14px;
+    max-height: 65vh;
+    overflow-y: auto;
+  }
+
+  .maintenanceTasks :global(.ant-descriptions-item-label) {
+    font-size: 12px;
+  }
+
+  .maintenanceTasks :global(.ant-descriptions-item-content) {
+    font-size: 12px;
+  }
+
+  .maintenanceTasks :global(.ant-form-item-label > label) {
+    font-size: 12px;
+  }
+
+  /* Checklist items */
+  .maintenanceTasks :global(.ant-list-item) {
+    padding: 10px 0;
+  }
+
+  .maintenanceTasks :global(.ant-checkbox-wrapper) {
+    font-size: 13px;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .filterTabs :global(.ant-radio-button-wrapper) {
+    font-size: 11px;
+    padding: 0 8px;
+    height: 28px;
+    line-height: 26px;
+  }
+
+  .maintenanceTasks :global(.ant-card-body) {
+    padding: 8px;
+  }
+
+  .maintenanceTasks :global(.ant-table-cell) {
+    padding: 8px 6px;
+    font-size: 11px;
+  }
+
+  .maintenanceTasks :global(.ant-table-thead > tr > th) {
+    padding: 8px 6px;
+    font-size: 10px;
+  }
+
+  .maintenanceTasks :global(.ant-tag) {
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+
+  .maintenanceTasks :global(.ant-btn) {
+    min-height: 28px;
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .maintenanceTasks :global(.ant-btn-icon-only) {
+    width: 28px;
+    height: 28px;
+  }
+
+  .statsCard :global(.ant-card-body) {
+    padding: 12px;
+  }
+
+  .statsCard :global(.ant-statistic-content-value) {
+    font-size: 18px;
+  }
+
+  /* Hide less important columns on very small screens */
+  .maintenanceTasks :global(.ant-table-cell:nth-child(3)),
+  .maintenanceTasks :global(.ant-table-thead th:nth-child(3)) {
+    display: none;
+  }
+}
+
+/* Tablet styles */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .maintenanceTasks :global(.ant-card-head) {
+    padding: 14px 18px;
+  }
+
+  .maintenanceTasks :global(.ant-card-body) {
+    padding: 14px;
+  }
+
+  .maintenanceTasks :global(.ant-table-cell) {
+    padding: 12px 10px;
+  }
+
+  .statsCard :global(.ant-card-body) {
+    padding: 16px;
+  }
+
+  .statsCard :global(.ant-statistic-content-value) {
+    font-size: 24px;
   }
 }

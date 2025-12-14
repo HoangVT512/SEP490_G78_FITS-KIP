@@ -1,7 +1,7 @@
 /* Incident Assign List Styles */
 
 .container {
-  padding: 24px;
+  padding: 20px;
   background: #f5f7fa;
   min-height: 100vh;
 }
@@ -13,22 +13,28 @@
 
 .statsCard {
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e8e8e8;
   transition: all 0.3s ease;
+  height: 100%;
 }
 
 .statsCard:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   border-color: #d9d9d9;
+}
+
+.statsCard:active {
+  transform: scale(0.99);
 }
 
 /* Table Card */
 .tableCard {
   background: white;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border-radius: 8px;
+  border-radius: 12px;
   border: 1px solid #e8e8e8;
+  overflow: hidden;
 }
 
 .tableCard :global(.ant-card-head) {
@@ -41,6 +47,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 /* Header Title */
@@ -178,11 +186,35 @@
 /* Responsive styles */
 @media (max-width: 768px) {
   .container {
-    padding: 16px;
+    padding: 12px;
   }
 
   .statsCard {
     margin-bottom: 12px;
+  }
+
+  .statsCard :global(.ant-card-body) {
+    padding: 12px;
+  }
+
+  .statsCard :global(.ant-statistic-title) {
+    font-size: 12px;
+  }
+
+  .statsCard :global(.ant-statistic-content-value) {
+    font-size: 18px;
+  }
+
+  .tableCard :global(.ant-card-head) {
+    padding: 12px;
+  }
+
+  .tableCard :global(.ant-card-head-title) {
+    font-size: 14px;
+  }
+
+  .tableCard :global(.ant-card-body) {
+    padding: 0;
   }
 
   .tableCard :global(.ant-table) {
@@ -190,10 +222,95 @@
   }
 
   .tableCard :global(.ant-table-cell) {
-    padding: 8px 12px;
+    padding: 8px 8px;
+  }
+
+  .tableCard :global(.ant-table-thead > tr > th) {
+    padding: 8px 8px;
+    font-size: 11px;
+  }
+
+  .tableCard :global(.ant-tag) {
+    font-size: 10px;
+    padding: 2px 6px;
+    margin: 2px 0;
   }
 
   .filterTabs {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 8px;
+  }
+
+  .filterTabs :global(.ant-radio-button-wrapper) {
+    font-size: 12px;
+    padding: 0 8px;
+    height: 28px;
+    line-height: 26px;
+  }
+
+  /* Modal responsive */
+  .tableCard :global(.ant-modal) {
+    max-width: calc(100vw - 32px);
+    margin: 16px;
+  }
+
+  .tableCard :global(.ant-modal-body) {
+    padding: 12px;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .tableCard :global(.ant-descriptions-item-label) {
+    font-size: 12px;
+  }
+
+  .tableCard :global(.ant-descriptions-item-content) {
+    font-size: 12px;
+  }
+
+  /* Dropdown and buttons */
+  .tableCard :global(.ant-btn) {
+    font-size: 12px;
+    padding: 4px 8px;
+    height: auto;
+  }
+
+  .tableCard :global(.ant-btn-icon-only) {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+  }
+}
+
+/* Extra small devices */
+@media (max-width: 480px) {
+  .container {
+    padding: 8px;
+  }
+
+  .statsCard :global(.ant-statistic-content-value) {
+    font-size: 16px;
+  }
+
+  .tableCard :global(.ant-table-cell) {
+    padding: 6px 4px;
+    font-size: 11px;
+  }
+
+  .tableCard :global(.ant-table-thead > tr > th) {
+    padding: 6px 4px;
+    font-size: 10px;
+  }
+
+  .tableCard :global(.ant-tag) {
+    font-size: 9px;
+    padding: 1px 4px;
+  }
+
+  /* Hide some columns on very small screens */
+  .tableCard :global(.ant-table-cell:nth-child(3)),
+  .tableCard :global(.ant-table-thead th:nth-child(3)) {
+    display: none;
   }
 }
