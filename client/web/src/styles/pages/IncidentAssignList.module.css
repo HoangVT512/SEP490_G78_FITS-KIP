@@ -8,7 +8,7 @@
 
 /* Statistics Row */
 .statsRow {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .statsCard {
@@ -25,7 +25,7 @@
 }
 
 .statsCard:active {
-  transform: scale(0.99);
+  transform: scale(0.98);
 }
 
 /* Table Card */
@@ -39,8 +39,8 @@
 
 .tableCard :global(.ant-card-head) {
   background: white;
-  border-bottom: 2px solid #f0f0f0;
-  padding: 16px 24px;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 20px;
 }
 
 .tableCard :global(.ant-card-head .ant-card-head-wrapper) {
@@ -53,7 +53,7 @@
 
 /* Header Title */
 .tableCard :global(.ant-card-title) {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
   color: #1f1f1f;
   margin: 0;
@@ -65,10 +65,11 @@
 }
 
 .tableCard :global(.ant-table-thead > tr > th) {
-  background: #f5f7fa;
+  background: #f8f9fa;
   font-weight: 600;
   color: #1f1f1f;
-  border-bottom: 2px solid #e8e8e8;
+  border-bottom: 1px solid #e8e8e8;
+  padding: 12px 14px;
 }
 
 .tableCard :global(.ant-table-tbody > tr) {
@@ -80,15 +81,15 @@
 }
 
 .tableCard :global(.ant-table-cell) {
-  padding: 12px 16px;
+  padding: 12px 14px;
   color: #595959;
 }
 
 /* Tag Styling */
 .tableCard :global(.ant-tag) {
-  border-radius: 4px;
+  border-radius: 6px;
   font-weight: 500;
-  padding: 4px 12px;
+  padding: 4px 10px;
 }
 
 .tableCard :global(.ant-tag-success) {
@@ -183,14 +184,63 @@
   color: #8c8c8c;
 }
 
-/* Responsive styles */
+/* Filter tabs styling */
+.filterTabs {
+  margin-bottom: 0;
+  overflow: visible !important;
+  padding-top: 14px;
+}
+
+.filterTabs :global(.ant-btn) {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* Ensure Badge count is fully visible */
+.filterTabs :global(.ant-badge) {
+  overflow: visible !important;
+}
+
+.filterTabs :global(.ant-badge-count) {
+  box-shadow: 0 0 0 1px #fff;
+  z-index: 10;
+}
+
+/* ===== TABLET STYLES (768px - 1024px) ===== */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .container {
+    padding: 16px;
+  }
+
+  .statsRow {
+    margin-bottom: 16px;
+  }
+
+  .statsCard :global(.ant-card-body) {
+    padding: 16px;
+  }
+
+  .tableCard :global(.ant-card-head) {
+    padding: 14px 18px;
+  }
+
+  .tableCard :global(.ant-table-cell) {
+    padding: 10px 12px;
+  }
+}
+
+/* ===== MOBILE STYLES (max-width: 768px) ===== */
 @media (max-width: 768px) {
   .container {
     padding: 12px;
   }
 
-  .statsCard {
+  .statsRow {
     margin-bottom: 12px;
+  }
+
+  .statsCard {
+    border-radius: 10px;
   }
 
   .statsCard :global(.ant-card-body) {
@@ -199,14 +249,23 @@
 
   .statsCard :global(.ant-statistic-title) {
     font-size: 12px;
+    margin-bottom: 4px;
   }
 
   .statsCard :global(.ant-statistic-content-value) {
-    font-size: 18px;
+    font-size: 20px;
+  }
+
+  .statsCard :global(.ant-statistic-content-prefix) {
+    font-size: 16px;
+  }
+
+  .tableCard {
+    border-radius: 10px;
   }
 
   .tableCard :global(.ant-card-head) {
-    padding: 12px;
+    padding: 12px 14px;
   }
 
   .tableCard :global(.ant-card-head-title) {
@@ -214,7 +273,7 @@
   }
 
   .tableCard :global(.ant-card-body) {
-    padding: 0;
+    padding: 12px;
   }
 
   .tableCard :global(.ant-table) {
@@ -222,95 +281,166 @@
   }
 
   .tableCard :global(.ant-table-cell) {
-    padding: 8px 8px;
+    padding: 10px 8px;
   }
 
   .tableCard :global(.ant-table-thead > tr > th) {
-    padding: 8px 8px;
+    padding: 10px 8px;
     font-size: 11px;
+    white-space: nowrap;
   }
 
   .tableCard :global(.ant-tag) {
-    font-size: 10px;
-    padding: 2px 6px;
-    margin: 2px 0;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
   }
 
   .filterTabs {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 8px;
+    padding-bottom: 4px;
+    padding-top: 16px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    overflow-y: visible;
   }
 
-  .filterTabs :global(.ant-radio-button-wrapper) {
-    font-size: 12px;
-    padding: 0 8px;
-    height: 28px;
-    line-height: 26px;
+  .filterTabs::-webkit-scrollbar {
+    display: none;
   }
 
-  /* Modal responsive */
-  .tableCard :global(.ant-modal) {
-    max-width: calc(100vw - 32px);
-    margin: 16px;
+  /* Ensure Badge is fully visible on mobile */
+  .filterTabs :global(.ant-badge) {
+    overflow: visible !important;
   }
 
-  .tableCard :global(.ant-modal-body) {
+  .filterTabs :global(.ant-badge-count) {
+    font-size: 10px;
+    min-width: 16px;
+    height: 16px;
+    line-height: 16px;
+    padding: 0 4px;
+    box-shadow: 0 0 0 1px #fff;
+    z-index: 10;
+  }
+
+  /* Modal responsive for mobile */
+  :global(.ant-modal) {
+    max-width: 100% !important;
+    margin: 8px !important;
+    padding: 0 !important;
+    top: auto !important;
+  }
+
+  :global(.ant-modal-content) {
+    border-radius: 12px !important;
+    max-height: calc(100vh - 16px);
+    overflow: hidden;
+  }
+
+  :global(.ant-modal-header) {
+    padding: 12px 16px;
+    border-radius: 12px 12px 0 0;
+  }
+
+  :global(.ant-modal-body) {
     padding: 12px;
-    max-height: 60vh;
+    max-height: calc(100vh - 160px);
     overflow-y: auto;
   }
 
-  .tableCard :global(.ant-descriptions-item-label) {
-    font-size: 12px;
+  :global(.ant-modal-footer) {
+    padding: 12px 16px;
+    border-radius: 0 0 12px 12px;
   }
 
-  .tableCard :global(.ant-descriptions-item-content) {
+  :global(.ant-descriptions-item-label) {
     font-size: 12px;
+    padding: 8px 10px;
+  }
+
+  :global(.ant-descriptions-item-content) {
+    font-size: 12px;
+    padding: 8px 10px;
   }
 
   /* Dropdown and buttons */
   .tableCard :global(.ant-btn) {
-    font-size: 12px;
-    padding: 4px 8px;
-    height: auto;
+    font-size: 13px;
+    min-height: 32px;
   }
 
   .tableCard :global(.ant-btn-icon-only) {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     padding: 0;
+  }
+  
+  /* Pagination */
+  .tableCard :global(.ant-pagination) {
+    margin: 12px 0 0;
+  }
+  
+  .tableCard :global(.ant-pagination-item) {
+    min-width: 28px;
+    height: 28px;
+    line-height: 26px;
   }
 }
 
-/* Extra small devices */
+/* ===== SMALL MOBILE STYLES (max-width: 480px) ===== */
 @media (max-width: 480px) {
   .container {
     padding: 8px;
   }
 
+  .statsCard :global(.ant-card-body) {
+    padding: 10px;
+  }
+
+  .statsCard :global(.ant-statistic-title) {
+    font-size: 11px;
+  }
+
   .statsCard :global(.ant-statistic-content-value) {
-    font-size: 16px;
+    font-size: 18px;
+  }
+
+  .statsCard :global(.ant-statistic-content-prefix) {
+    font-size: 14px;
+  }
+
+  .tableCard :global(.ant-card-head) {
+    padding: 10px 12px;
+  }
+
+  .tableCard :global(.ant-card-body) {
+    padding: 8px;
   }
 
   .tableCard :global(.ant-table-cell) {
-    padding: 6px 4px;
+    padding: 8px 6px;
     font-size: 11px;
   }
 
   .tableCard :global(.ant-table-thead > tr > th) {
-    padding: 6px 4px;
+    padding: 8px 6px;
     font-size: 10px;
   }
 
   .tableCard :global(.ant-tag) {
-    font-size: 9px;
-    padding: 1px 4px;
+    font-size: 10px;
+    padding: 2px 6px;
   }
 
-  /* Hide some columns on very small screens */
-  .tableCard :global(.ant-table-cell:nth-child(3)),
-  .tableCard :global(.ant-table-thead th:nth-child(3)) {
-    display: none;
+  .tableCard :global(.ant-btn) {
+    min-height: 28px;
+    font-size: 12px;
+  }
+
+  .tableCard :global(.ant-btn-icon-only) {
+    width: 28px;
+    height: 28px;
   }
 }

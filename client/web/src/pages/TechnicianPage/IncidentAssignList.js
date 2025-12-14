@@ -20,6 +20,7 @@ import {
   Divider,
   Dropdown,
   Statistic,
+  Grid,
 } from "antd";
 import {
   WarningOutlined,
@@ -33,7 +34,10 @@ import {
   InboxOutlined,
   ExclamationCircleOutlined,
   ReloadOutlined,
+  MoreOutlined,
 } from "@ant-design/icons";
+
+const { useBreakpoint } = Grid;
 import dayjs from "dayjs";
 import { incidentService } from "../../services/incidentService";
 import { replacementHistoryService } from "../../services/replacementHistoryService";
@@ -47,7 +51,8 @@ const { Option } = Select;
 
 const IncidentAssignList = () => {
   const [loading, setLoading] = useState(false);
-  const [incidents, setIncidents] = useState([]);
+  const [allIncidents, setAllIncidents] = useState([]); // Store all incidents
+  const [incidents, setIncidents] = useState([]); // Filtered incidents for display
   const [selectedIncident, setSelectedIncident] = useState(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [updateModalVisible, setUpdateModalVisible] = useState(false);
@@ -59,19 +64,33 @@ const IncidentAssignList = () => {
   const [historyEquipmentId, setHistoryEquipmentId] = useState(null);
   const [filterStatus, setFilterStatus] = useState("all");
   const [form] = Form.useForm();
+  const screens = useBreakpoint();
 
-  // Statistics calculation
+  // Responsive flags
+  const isMobile = !screens.md;
+  const isTablet = screens.md && !screens.lg;
+
+  // Statistics calculation - always from allIncidents
   const stats = {
-    total: incidents.length,
-    pending: incidents.filter((i) => i.status === "Chưa xử lý").length,
-    inProgress: incidents.filter((i) => i.status === "Đang xử lý").length,
-    completed: incidents.filter((i) => i.status === "Hoàn thành").length,
+    total: allIncidents.length,
+    pending: allIncidents.filter((i) => i.status === "Chưa xử lý").length,
+    inProgress: allIncidents.filter((i) => i.status === "Đang xử lý").length,
+    completed: allIncidents.filter((i) => i.status === "Hoàn thành").length,
   };
 
   // Fetch incidents assigned to current user
   useEffect(() => {
     fetchIncidents();
-  }, [filterStatus]);
+  }, []); // Only fetch once on mount
+
+  // Filter incidents when filterStatus changes
+  useEffect(() => {
+    if (filterStatus === "all") {
+      setIncidents(allIncidents);
+    } else {
+      setIncidents(allIncidents.filter((item) => item.status === filterStatus));
+    }
+  }, [filterStatus, allIncidents]);
 
   const fetchIncidents = async () => {
     setLoading(true);
@@ -104,16 +123,19 @@ const IncidentAssignList = () => {
         imageUrls: it.incidentImages?.map((img) => img.imageUrl) || [],
       }));
 
-      // Filter by status if needed
-      let filtered = mapped;
-      if (filterStatus !== "all") {
-        filtered = mapped.filter((item) => item.status === filterStatus);
-      }
+      // Store all incidents for badge counting
+      setAllIncidents(mapped);
 
-      setIncidents(filtered);
+      // Apply current filter
+      if (filterStatus === "all") {
+        setIncidents(mapped);
+      } else {
+        setIncidents(mapped.filter((item) => item.status === filterStatus));
+      }
     } catch (err) {
       console.error("Lỗi khi tải danh sách sự cố:", err);
       message.error("Không thể tải danh sách sự cố. Vui lòng thử lại.");
+      setAllIncidents([]);
       setIncidents([]);
     } finally {
       setLoading(false);
@@ -125,47 +147,56 @@ const IncidentAssignList = () => {
       title: "Mã sự cố",
       dataIndex: "incidentCode",
       key: "incidentCode",
-      width: 100,
+      width: isMobile ? 90 : 100,
       fixed: "left",
-      render: (text) => <strong>{text}</strong>,
+      render: (text) => (
+        <strong style={{ fontSize: isMobile ? 12 : 14 }}>{text}</strong>
+      ),
     },
     {
       title: "Thiết bị",
       key: "equipment",
-      width: 180,
+      width: isMobile ? 140 : 180,
       render: (record) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{record.equipmentName}</div>
-          <div style={{ fontSize: "12px", color: "#888" }}>
+          <div style={{ fontWeight: 500, fontSize: isMobile ? 12 : 14 }}>
+            {record.equipmentName}
+          </div>
+          <div style={{ fontSize: isMobile ? 11 : 12, color: "#888" }}>
             {record.equipmentCode}
           </div>
         </div>
       ),
     },
-    {
-      title: "Vị trí",
-      key: "location",
-      width: 150,
-      render: (record) => (
-        <div>
-          <div style={{ fontSize: "12px" }}>{record.lineName}</div>
-          <div style={{ fontSize: "11px", color: "#888" }}>
-            {record.stageName}
-          </div>
-        </div>
-      ),
-    },
+    // Hide location column on mobile
+    ...(!isMobile
+      ? [
+          {
+            title: "Vị trí",
+            key: "location",
+            width: 150,
+            render: (record) => (
+              <div>
+                <div style={{ fontSize: "12px" }}>{record.lineName}</div>
+                <div style={{ fontSize: "11px", color: "#888" }}>
+                  {record.stageName}
+                </div>
+              </div>
+            ),
+          },
+        ]
+      : []),
     {
       title: "Vấn đề",
       dataIndex: "issue",
       key: "issue",
-      width: 200,
+      width: isMobile ? 150 : 200,
       ellipsis: {
         showTitle: false,
       },
       render: (text) => (
         <Tooltip placement="topLeft" title={text}>
-          {text}
+          <span style={{ fontSize: isMobile ? 12 : 14 }}>{text}</span>
         </Tooltip>
       ),
     },
@@ -173,7 +204,7 @@ const IncidentAssignList = () => {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      width: 130,
+      width: isMobile ? 100 : 130,
       render: (status) => {
         let color = "default";
         let icon = null;
@@ -188,35 +219,44 @@ const IncidentAssignList = () => {
           icon = <CheckCircleOutlined />;
         }
         return (
-          <Tag icon={icon} color={color}>
-            {status}
+          <Tag
+            icon={isMobile ? null : icon}
+            color={color}
+            style={{ fontSize: isMobile ? 11 : 12 }}
+          >
+            {isMobile ? status.replace("xử lý", "") : status}
           </Tag>
         );
       },
     },
+    // Hide date column on mobile
+    ...(!isMobile
+      ? [
+          {
+            title: "Ngày giao",
+            dataIndex: "assignedDate",
+            key: "assignedDate",
+            width: 150,
+            render: (text) =>
+              text ? (
+                <div>
+                  <div style={{ fontSize: "13px" }}>
+                    {dayjs(text).format("DD/MM/YYYY")}
+                  </div>
+                  <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
+                    {dayjs(text).format("HH:mm")}
+                  </div>
+                </div>
+              ) : (
+                ""
+              ),
+          },
+        ]
+      : []),
     {
-      title: "Ngày giao",
-      dataIndex: "assignedDate",
-      key: "assignedDate",
-      width: 150,
-      render: (text) =>
-        text ? (
-          <div>
-            <div style={{ fontSize: "13px" }}>
-              {dayjs(text).format("DD/MM/YYYY")}
-            </div>
-            <div style={{ fontSize: "12px", color: "#8c8c8c" }}>
-              {dayjs(text).format("HH:mm")}
-            </div>
-          </div>
-        ) : (
-          ""
-        ),
-    },
-    {
-      title: "Thao tác",
+      title: "",
       key: "action",
-      width: 120,
+      width: isMobile ? 50 : 80,
       fixed: "right",
       render: (record) => {
         const items = [
@@ -228,76 +268,6 @@ const IncidentAssignList = () => {
           },
         ];
 
-        // Ẩn "Ghi nhận thay thế" - KTV chỉ xem lịch sử cấp phát tại quản lý kho
-        // if (record.status !== "Hoàn thành") {
-        //   items.push({
-        //     key: "recordReplacement",
-        //     icon: <ToolOutlined />,
-        //     label: "Ghi nhận thay thế",
-        //     onClick: async () => {
-        //       // Check if there are any approved replacement requests
-        //       try {
-        //         const incidentId =
-        //           record.incidentId || record.id || record.incidentID;
-
-        //         if (!incidentId) {
-        //           console.error("Cannot find incident ID in record:", record);
-        //           message.error("Không tìm thấy mã sự cố");
-        //           return;
-        //         }
-
-        //         console.log(
-        //           "=== Checking replacement for incident:",
-        //           incidentId
-        //         );
-
-        //         const res = await replacementHistoryService.getByIncidentId(
-        //           incidentId
-        //         );
-        //         const data = Array.isArray(res) ? res : res?.data || [];
-
-        //         console.log("API Response:", res);
-        //         console.log("Parsed data:", data);
-        //         console.log(
-        //           "Data statuses:",
-        //           data.map((r) => ({ id: r.replacementID, status: r.status }))
-        //         );
-
-        //         const hasApprovedReplacement = data.some(
-        //           (r) =>
-        //             r.status === "Đã duyệt cấp phát" || r.status === "Completed"
-        //         );
-
-        //         console.log(
-        //           "Has approved replacement:",
-        //           hasApprovedReplacement
-        //         );
-
-        //         if (!hasApprovedReplacement) {
-        //           message.warning({
-        //             content:
-        //               "Vui lòng tạo yêu cầu phụ tùng và chờ Quản lý kho duyệt cấp phát trước khi ghi nhận thay thế",
-        //             duration: 5,
-        //           });
-        //           return;
-        //         }
-
-        //         // If there are approved replacements, show the modal
-        //         setReplacementForIncident(record);
-        //         setReplacementModalVisible(true);
-        //       } catch (error) {
-        //         console.error("Error checking replacement history:", error);
-        //         // Nếu có lỗi API (ví dụ: chưa có yêu cầu nào), cũng hiển thị message hướng dẫn
-        //         message.warning({
-        //           content:
-        //             "Vui lòng tạo yêu cầu phụ tùng và chờ Quản lý kho duyệt cấp phát trước khi ghi nhận thay thế",
-        //           duration: 5,
-        //         });
-        //       }
-        //     },
-        //   });
-        // }
-
         items.push({
           key: "history",
           icon: <ToolOutlined />,
@@ -308,47 +278,21 @@ const IncidentAssignList = () => {
           },
         });
 
-        // Ẩn "Yêu cầu phụ tùng" - KTV chỉ xem lịch sử cấp phát tại quản lý kho
-        // if (record.status !== "Hoàn thành") {
-        //   items.push({
-        //     key: "spare",
-        //     icon: <ToolOutlined />,
-        //     label: "Yêu cầu phụ tùng",
-        //     onClick: () => {
-        //       setSpareForIncident(record);
-        //       setSpareModalVisible(true);
-        //     },
-        //   });
-        // }
-
-        // Chỉ hiển thị "Cập nhật" khi sự cố chưa hoàn thành
-        // if (record.status !== "Hoàn thành") {
-        //   items.push({
-        //     key: "update",
-        //     icon: <EditOutlined />,
-        //     label: "Cập nhật",
-        //     onClick: () => handleUpdateIncident(record),
-        //   });
-        // }
-
         return (
           <Dropdown
             menu={{ items }}
             trigger={["click"]}
             placement="bottomRight"
           >
-            <span
+            <Button
+              type="text"
+              icon={<MoreOutlined style={{ fontSize: isMobile ? 18 : 20 }} />}
               style={{
-                cursor: "pointer",
-                display: "inline-flex",
-                alignItems: "center",
-                padding: 4,
+                padding: isMobile ? 4 : 8,
+                minWidth: isMobile ? 32 : 40,
+                height: isMobile ? 32 : 40,
               }}
-              aria-label="thao-tac"
-              title="Thao tác"
-            >
-              <DownOutlined style={{ fontSize: 16 }} />
-            </span>
+            />
           </Dropdown>
         );
       },
@@ -390,15 +334,15 @@ const IncidentAssignList = () => {
   const getStatusBadge = (status) => {
     const badges = {
       "Chưa xử lý": {
-        count: incidents.filter((i) => i.status === "Chưa xử lý").length,
+        count: allIncidents.filter((i) => i.status === "Chưa xử lý").length,
         color: "orange",
       },
       "Đang xử lý": {
-        count: incidents.filter((i) => i.status === "Đang xử lý").length,
+        count: allIncidents.filter((i) => i.status === "Đang xử lý").length,
         color: "blue",
       },
       "Hoàn thành": {
-        count: incidents.filter((i) => i.status === "Hoàn thành").length,
+        count: allIncidents.filter((i) => i.status === "Hoàn thành").length,
         color: "green",
       },
     };
@@ -408,88 +352,145 @@ const IncidentAssignList = () => {
   return (
     <div className={styles.container}>
       {/* Statistics */}
-      <Row gutter={[16, 16]} className={styles.statsRow}>
-        <Col xs={24} sm={12} lg={6}>
+      <Row
+        gutter={[isMobile ? 8 : 16, isMobile ? 8 : 16]}
+        className={styles.statsRow}
+      >
+        <Col xs={12} sm={12} lg={6}>
           <Card
             className={styles.statsCard}
-            style={{ borderRadius: "8px", border: "1px solid #e8e8e8" }}
+            style={{
+              borderRadius: isMobile ? "10px" : "12px",
+              border: "1px solid #e8e8e8",
+            }}
+            bodyStyle={{ padding: isMobile ? 12 : 20 }}
           >
             <Statistic
               title={
-                <span style={{ color: "#283652", fontWeight: "600" }}>
+                <span
+                  style={{
+                    color: "#283652",
+                    fontWeight: "600",
+                    fontSize: isMobile ? 12 : 14,
+                  }}
+                >
                   Tổng sự cố
                 </span>
               }
               value={stats.total}
-              prefix={<InboxOutlined style={{ color: "#283652" }} />}
+              prefix={
+                <InboxOutlined
+                  style={{ color: "#283652", fontSize: isMobile ? 16 : 20 }}
+                />
+              }
               valueStyle={{
                 color: "#283652",
-                fontSize: "28px",
+                fontSize: isMobile ? "20px" : "28px",
                 fontWeight: "600",
               }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={12} sm={12} lg={6}>
           <Card
             className={styles.statsCard}
-            style={{ borderRadius: "8px", border: "1px solid #ffccc7" }}
+            style={{
+              borderRadius: isMobile ? "10px" : "12px",
+              border: "1px solid #ffccc7",
+            }}
+            bodyStyle={{ padding: isMobile ? 12 : 20 }}
           >
             <Statistic
               title={
-                <span style={{ color: "#ff4d4f", fontWeight: "600" }}>
+                <span
+                  style={{
+                    color: "#ff4d4f",
+                    fontWeight: "600",
+                    fontSize: isMobile ? 12 : 14,
+                  }}
+                >
                   Chưa xử lý
                 </span>
               }
               value={stats.pending}
               prefix={
-                <ExclamationCircleOutlined style={{ color: "#ff4d4f" }} />
+                <ExclamationCircleOutlined
+                  style={{ color: "#ff4d4f", fontSize: isMobile ? 16 : 20 }}
+                />
               }
               valueStyle={{
                 color: "#ff4d4f",
-                fontSize: "28px",
+                fontSize: isMobile ? "20px" : "28px",
                 fontWeight: "600",
               }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={12} sm={12} lg={6}>
           <Card
             className={styles.statsCard}
-            style={{ borderRadius: "8px", border: "1px solid #ffe58f" }}
+            style={{
+              borderRadius: isMobile ? "10px" : "12px",
+              border: "1px solid #ffe58f",
+            }}
+            bodyStyle={{ padding: isMobile ? 12 : 20 }}
           >
             <Statistic
               title={
-                <span style={{ color: "#faad14", fontWeight: "600" }}>
+                <span
+                  style={{
+                    color: "#faad14",
+                    fontWeight: "600",
+                    fontSize: isMobile ? 12 : 14,
+                  }}
+                >
                   Đang xử lý
                 </span>
               }
               value={stats.inProgress}
-              prefix={<ClockCircleOutlined style={{ color: "#faad14" }} />}
+              prefix={
+                <ClockCircleOutlined
+                  style={{ color: "#faad14", fontSize: isMobile ? 16 : 20 }}
+                />
+              }
               valueStyle={{
                 color: "#faad14",
-                fontSize: "28px",
+                fontSize: isMobile ? "20px" : "28px",
                 fontWeight: "600",
               }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={12} sm={12} lg={6}>
           <Card
             className={styles.statsCard}
-            style={{ borderRadius: "8px", border: "1px solid #b7eb8f" }}
+            style={{
+              borderRadius: isMobile ? "10px" : "12px",
+              border: "1px solid #b7eb8f",
+            }}
+            bodyStyle={{ padding: isMobile ? 12 : 20 }}
           >
             <Statistic
               title={
-                <span style={{ color: "#52c41a", fontWeight: "600" }}>
+                <span
+                  style={{
+                    color: "#52c41a",
+                    fontWeight: "600",
+                    fontSize: isMobile ? 12 : 14,
+                  }}
+                >
                   Hoàn thành
                 </span>
               }
               value={stats.completed}
-              prefix={<CheckCircleOutlined style={{ color: "#52c41a" }} />}
+              prefix={
+                <CheckCircleOutlined
+                  style={{ color: "#52c41a", fontSize: isMobile ? 16 : 20 }}
+                />
+              }
               valueStyle={{
                 color: "#52c41a",
-                fontSize: "28px",
+                fontSize: isMobile ? "20px" : "28px",
                 fontWeight: "600",
               }}
             />
@@ -499,128 +500,166 @@ const IncidentAssignList = () => {
 
       <Card
         title={
-          <Space>
-            <WarningOutlined />
-            <span>Danh sách sự cố được giao</span>
+          <Space size={isMobile ? "small" : "middle"}>
+            <WarningOutlined style={{ fontSize: isMobile ? 16 : 18 }} />
+            <span style={{ fontSize: isMobile ? 14 : 16 }}>
+              Danh sách sự cố được giao
+            </span>
           </Space>
         }
         className={styles.tableCard}
         extra={
-          <Space>
-            <Button icon={<ReloadOutlined />} onClick={fetchIncidents}>
-              Làm mới
-            </Button>
-          </Space>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchIncidents}
+            size={isMobile ? "middle" : "middle"}
+            style={{ fontSize: isMobile ? 12 : 14 }}
+          >
+            {!isMobile && "Làm mới"}
+          </Button>
         }
         variant="borderless"
+        bodyStyle={{ padding: isMobile ? 12 : 24 }}
       >
-        {/* Filter Tabs */}
+        {/* Filter Tabs - Scrollable on mobile */}
         <div className={styles.filterTabs}>
-          <Space size="middle">
+          <div
+            style={{
+              display: "flex",
+              gap: isMobile ? 8 : 12,
+              overflowX: "auto",
+              paddingBottom: 8,
+              paddingTop: 12,
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
             <Button
               type={filterStatus === "all" ? "primary" : "default"}
               onClick={() => setFilterStatus("all")}
-              style={
-                filterStatus === "all"
-                  ? {
-                      borderRadius: "6px",
-                      fontWeight: "500",
-                    }
-                  : {
-                      borderColor: "#d9d9d9",
-                      color: "#595959",
-                      borderRadius: "6px",
-                      fontWeight: "500",
-                    }
-              }
+              size={isMobile ? "middle" : "middle"}
+              style={{
+                borderRadius: "6px",
+                fontWeight: "500",
+                fontSize: isMobile ? 12 : 14,
+                whiteSpace: "nowrap",
+                minWidth: isMobile ? "auto" : 100,
+                ...(filterStatus !== "all" && {
+                  borderColor: "#d9d9d9",
+                  color: "#595959",
+                }),
+              }}
             >
-              Tất cả ({incidents.length})
+              Tất cả ({allIncidents.length})
             </Button>
-            <Badge count={getStatusBadge("Chưa xử lý").count} color="red">
+            <Badge
+              count={getStatusBadge("Chưa xử lý").count}
+              color="red"
+              size={isMobile ? "small" : "default"}
+              offset={[-5, 0]}
+              overflowCount={99}
+            >
               <Button
                 type={filterStatus === "Chưa xử lý" ? "primary" : "default"}
                 onClick={() => setFilterStatus("Chưa xử lý")}
-                style={
-                  filterStatus === "Chưa xử lý"
-                    ? {
-                        borderRadius: "6px",
-                        fontWeight: "500",
-                      }
-                    : {
-                        borderColor: "#d9d9d9",
-                        color: "#595959",
-                        borderRadius: "6px",
-                        fontWeight: "500",
-                      }
-                }
+                size={isMobile ? "middle" : "middle"}
+                style={{
+                  borderRadius: "6px",
+                  fontWeight: "500",
+                  fontSize: isMobile ? 12 : 14,
+                  whiteSpace: "nowrap",
+                  ...(filterStatus !== "Chưa xử lý" && {
+                    borderColor: "#d9d9d9",
+                    color: "#595959",
+                  }),
+                }}
               >
-                Chưa xử lý
+                {isMobile ? "Chưa XL" : "Chưa xử lý"}
               </Button>
             </Badge>
-            <Badge count={getStatusBadge("Đang xử lý").count} color="orange">
+            <Badge
+              count={getStatusBadge("Đang xử lý").count}
+              color="orange"
+              size={isMobile ? "small" : "default"}
+              offset={[-5, 0]}
+              overflowCount={99}
+            >
               <Button
                 type={filterStatus === "Đang xử lý" ? "primary" : "default"}
                 onClick={() => setFilterStatus("Đang xử lý")}
-                style={
-                  filterStatus === "Đang xử lý"
-                    ? {
-                        borderRadius: "6px",
-                        fontWeight: "500",
-                      }
-                    : {
-                        borderColor: "#d9d9d9",
-                        color: "#595959",
-                        borderRadius: "6px",
-                        fontWeight: "500",
-                      }
-                }
+                size={isMobile ? "middle" : "middle"}
+                style={{
+                  borderRadius: "6px",
+                  fontWeight: "500",
+                  fontSize: isMobile ? 12 : 14,
+                  whiteSpace: "nowrap",
+                  ...(filterStatus !== "Đang xử lý" && {
+                    borderColor: "#d9d9d9",
+                    color: "#595959",
+                  }),
+                }}
               >
-                Đang xử lý
+                {isMobile ? "Đang XL" : "Đang xử lý"}
               </Button>
             </Badge>
-            <Badge count={getStatusBadge("Hoàn thành").count} color="green">
+            <Badge
+              count={getStatusBadge("Hoàn thành").count}
+              color="green"
+              size={isMobile ? "small" : "default"}
+              offset={[-5, 0]}
+              overflowCount={99}
+            >
               <Button
                 type={filterStatus === "Hoàn thành" ? "primary" : "default"}
                 onClick={() => setFilterStatus("Hoàn thành")}
-                style={
-                  filterStatus === "Hoàn thành"
-                    ? {
-                        borderRadius: "6px",
-                        fontWeight: "500",
-                      }
-                    : {
-                        borderColor: "#d9d9d9",
-                        color: "#595959",
-                        borderRadius: "6px",
-                        fontWeight: "500",
-                      }
-                }
+                size={isMobile ? "middle" : "middle"}
+                style={{
+                  borderRadius: "6px",
+                  fontWeight: "500",
+                  fontSize: isMobile ? 12 : 14,
+                  whiteSpace: "nowrap",
+                  ...(filterStatus !== "Hoàn thành" && {
+                    borderColor: "#d9d9d9",
+                    color: "#595959",
+                  }),
+                }}
               >
                 Hoàn thành
               </Button>
             </Badge>
-          </Space>
+          </div>
         </div>
 
-        <Divider />
+        <Divider style={{ margin: isMobile ? "12px 0" : "16px 0" }} />
 
         {/* Table */}
         <Table
           columns={columns}
           dataSource={incidents}
           loading={loading}
-          scroll={{ x: 1400 }}
+          scroll={{ x: isMobile ? 600 : 1000 }}
+          size={isMobile ? "small" : "middle"}
           pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `Tổng số ${total} sự cố`,
-            style: { marginTop: "16px" },
+            pageSize: isMobile ? 5 : 10,
+            showSizeChanger: !isMobile,
+            showTotal: isMobile
+              ? undefined
+              : (total) => `Tổng số ${total} sự cố`,
+            style: {
+              marginTop: isMobile ? "12px" : "16px",
+              fontSize: isMobile ? 12 : 14,
+            },
+            simple: isMobile,
           }}
           style={{ borderRadius: "6px" }}
         />
         {incidents.length === 0 && !loading && (
           <div
-            style={{ textAlign: "center", padding: "40px", color: "#6b7280" }}
+            style={{
+              textAlign: "center",
+              padding: isMobile ? "24px" : "40px",
+              color: "#6b7280",
+              fontSize: isMobile ? 13 : 14,
+            }}
           >
             Không có sự cố nào được giao
           </div>
@@ -644,9 +683,13 @@ const IncidentAssignList = () => {
       <Modal
         title={
           <div
-            style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}
+            style={{
+              fontSize: isMobile ? "16px" : "18px",
+              fontWeight: "600",
+              color: "#283652",
+            }}
           >
-            Ghi nhận thay thế (liên quan sự cố)
+            Ghi nhận thay thế
           </div>
         }
         open={replacementModalVisible}
@@ -655,9 +698,10 @@ const IncidentAssignList = () => {
           setReplacementForIncident(null);
         }}
         footer={null}
-        width={1200}
+        width={isMobile ? "100%" : 1200}
         centered
         destroyOnClose
+        styles={{ body: { padding: isMobile ? 12 : 24 } }}
       >
         <ReplacementCreate
           incidentId={replacementForIncident?.incidentId}
@@ -676,69 +720,89 @@ const IncidentAssignList = () => {
       {/* Detail Modal */}
       <Modal
         title={
-          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: isMobile ? "8px" : "12px",
+            }}
+          >
             <div
               style={{
-                width: "40px",
-                height: "40px",
+                width: isMobile ? "32px" : "40px",
+                height: isMobile ? "32px" : "40px",
                 borderRadius: "50%",
                 backgroundColor: "#283652",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 color: "white",
-                fontSize: "18px",
+                fontSize: isMobile ? "14px" : "18px",
               }}
             >
               <FileTextOutlined />
             </div>
             <div>
-              <div style={{ fontWeight: 600, fontSize: "16px" }}>
+              <div
+                style={{
+                  fontWeight: 600,
+                  fontSize: isMobile ? "14px" : "16px",
+                }}
+              >
                 Chi tiết sự cố
               </div>
               <div
                 style={{
-                  fontSize: "12px",
+                  fontSize: isMobile ? "11px" : "12px",
                   color: "#6b7280",
                   fontWeight: "normal",
                 }}
               >
                 {selectedIncident?.incidentCode} •{" "}
-                {selectedIncident?.equipmentName}
+                {isMobile ? "" : selectedIncident?.equipmentName}
               </div>
             </div>
           </div>
         }
         open={detailModalVisible}
         onCancel={() => setDetailModalVisible(false)}
-        width={1200}
-        centered
+        width={isMobile ? "100%" : 1200}
+        centered={!isMobile}
+        style={isMobile ? { top: 20, margin: 0, paddingBottom: 0 } : {}}
+        styles={{ body: { padding: isMobile ? 12 : 24 } }}
         footer={[
           <Button
             key="close"
             onClick={() => setDetailModalVisible(false)}
             style={{
-              height: "40px",
-              fontSize: "16px",
-              minWidth: "120px",
+              height: isMobile ? "36px" : "40px",
+              fontSize: isMobile ? "14px" : "16px",
+              minWidth: isMobile ? "100px" : "120px",
             }}
           >
             Đóng
-          </Button>
+          </Button>,
         ]}
       >
         {selectedIncident && (
-          <div style={{ maxHeight: "70vh", overflowY: "auto" }}>
+          <div
+            style={{ maxHeight: isMobile ? "60vh" : "70vh", overflowY: "auto" }}
+          >
             <Descriptions
-              column={2}
+              column={isMobile ? 1 : 2}
               bordered
+              size={isMobile ? "small" : "default"}
               labelStyle={{
                 fontWeight: "bold",
-                fontSize: "14px",
+                fontSize: isMobile ? "12px" : "14px",
                 backgroundColor: "#fafafa",
                 borderRight: "1px solid #d9d9d9",
-                padding: "12px 16px",
-                minWidth: "160px",
+                padding: isMobile ? "8px 12px" : "12px 16px",
+                minWidth: isMobile ? "100px" : "160px",
+              }}
+              contentStyle={{
+                fontSize: isMobile ? "12px" : "14px",
+                padding: isMobile ? "8px 12px" : "12px 16px",
               }}
             >
               <Descriptions.Item label="Mã sự cố" span={1}>
@@ -829,7 +893,11 @@ const IncidentAssignList = () => {
       <Modal
         title={
           <div
-            style={{ fontSize: "18px", fontWeight: "600", color: "#283652" }}
+            style={{
+              fontSize: isMobile ? "16px" : "18px",
+              fontWeight: "600",
+              color: "#283652",
+            }}
           >
             Lịch sử thay thế
           </div>
@@ -847,16 +915,17 @@ const IncidentAssignList = () => {
               setHistoryEquipmentId(null);
             }}
             style={{
-              height: "40px",
-              fontSize: "16px",
-              minWidth: "120px",
+              height: isMobile ? "36px" : "40px",
+              fontSize: isMobile ? "14px" : "16px",
+              minWidth: isMobile ? "100px" : "120px",
             }}
           >
             Đóng
           </Button>,
         ]}
-        width={1200}
+        width={isMobile ? "100%" : 1200}
         destroyOnClose
+        styles={{ body: { padding: isMobile ? 12 : 24 } }}
       >
         <ReplacementHistoryList equipmentId={historyEquipmentId} />
       </Modal>
