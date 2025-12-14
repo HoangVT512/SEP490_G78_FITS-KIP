@@ -25,7 +25,10 @@ import {
   Dropdown,
   InputNumber,
   Table as AntTable,
+  Grid,
 } from "antd";
+
+const { useBreakpoint } = Grid;
 import {
   ToolOutlined,
   CheckCircleOutlined,
@@ -40,6 +43,7 @@ import {
   DownOutlined,
   DeleteOutlined,
   PlusOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import {
@@ -77,6 +81,11 @@ const MaintenanceTasks = () => {
 
   const currentUser = authService.getStoredUser();
   const currentUserId = currentUser?.id || currentUser?.userId;
+
+  // Responsive breakpoints
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
+  const isTablet = screens.md && !screens.lg;
 
   useEffect(() => {
     fetchWorkOrders();
@@ -167,15 +176,16 @@ const MaintenanceTasks = () => {
     );
   };
 
-  const columns = [
+  // Base columns for all screens
+  const baseColumns = [
     {
       title: "Mã phiếu",
       dataIndex: "workOrderCode",
       key: "workOrderCode",
-      width: 110,
+      width: isMobile ? 85 : 110,
       fixed: "left",
       render: (text, record) => (
-        <strong>
+        <strong style={{ fontSize: isMobile ? 12 : 14 }}>
           {text || `WO${String(record?.workOrderId || 0).padStart(3, "0")}`}
         </strong>
       ),
@@ -183,73 +193,101 @@ const MaintenanceTasks = () => {
     {
       title: "Thiết bị",
       key: "equipment",
-      width: 180,
+      width: isMobile ? 130 : 180,
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 500, color: "#1890ff" }}>
+          <div
+            style={{
+              fontWeight: 500,
+              color: "#1890ff",
+              fontSize: isMobile ? 12 : 14,
+            }}
+          >
             {record?.equipmentCode || "-"}
           </div>
-          <div style={{ fontSize: "12px", color: "#888" }}>
-            {record?.equipmentName || "-"}
+          <div style={{ fontSize: isMobile ? 11 : 12, color: "#888" }}>
+            {isMobile
+              ? record?.equipmentName?.substring(0, 15) +
+                (record?.equipmentName?.length > 15 ? "..." : "")
+              : record?.equipmentName || "-"}
           </div>
         </div>
       ),
     },
+    // Hide location on mobile
+    ...(!isMobile
+      ? [
+          {
+            title: "Vị trí",
+            key: "location",
+            width: 150,
+            render: (_, record) => (
+              <div>
+                <div style={{ fontSize: "12px" }}>
+                  {record?.lineName || "-"}
+                </div>
+                <div style={{ fontSize: "11px", color: "#888" }}>
+                  {record?.stageName || "-"}
+                </div>
+              </div>
+            ),
+          },
+        ]
+      : []),
+    // Hide taskType on mobile, show compact version on tablet
+    ...(!isMobile
+      ? [
+          {
+            title: isTablet ? "Loại" : "Loại công việc",
+            key: "taskType",
+            width: isTablet ? 80 : 130,
+            render: (_, record) => {
+              if (!record) return <Tag>-</Tag>;
+              const taskType = getMyTaskType(record);
+              if (taskType === "Electrical") {
+                return (
+                  <Tag icon={<ThunderboltOutlined />} color="blue">
+                    {isTablet ? "Điện" : "Điện"}
+                  </Tag>
+                );
+              }
+              if (taskType === "Mechanical") {
+                return (
+                  <Tag icon={<ToolOutlined />} color="green">
+                    {isTablet ? "Cơ khí" : "Cơ khí"}
+                  </Tag>
+                );
+              }
+              if (taskType === "Both") {
+                return (
+                  <Tag color="purple">
+                    {isTablet ? "Cả 2" : "Cả Điện & Cơ khí"}
+                  </Tag>
+                );
+              }
+              return <Tag>-</Tag>;
+            },
+          },
+        ]
+      : []),
     {
-      title: "Vị trí",
-      key: "location",
-      width: 150,
-      render: (_, record) => (
-        <div>
-          <div style={{ fontSize: "12px" }}>{record?.lineName || "-"}</div>
-          <div style={{ fontSize: "11px", color: "#888" }}>
-            {record?.stageName || "-"}
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Loại công việc",
-      key: "taskType",
-      width: 130,
-      render: (_, record) => {
-        if (!record) return <Tag>-</Tag>;
-        const taskType = getMyTaskType(record);
-        if (taskType === "Electrical") {
-          return (
-            <Tag icon={<ThunderboltOutlined />} color="blue">
-              Điện
-            </Tag>
-          );
-        }
-        if (taskType === "Mechanical") {
-          return (
-            <Tag icon={<ToolOutlined />} color="green">
-              Cơ khí
-            </Tag>
-          );
-        }
-        if (taskType === "Both") {
-          return <Tag color="purple">Cả Điện & Cơ khí</Tag>;
-        }
-        return <Tag>Không xác định</Tag>;
-      },
-    },
-    {
-      title: "Ngày thực hiện",
+      title: isMobile ? "Ngày" : "Ngày thực hiện",
       dataIndex: "scheduledDate",
       key: "scheduledDate",
-      width: 130,
+      width: isMobile ? 85 : 130,
       render: (text, record) => {
         const displayDate = record.rescheduledDate || record.scheduledDate;
         if (!displayDate) return "-";
         const scheduledDate = dayjs(displayDate);
         const today = dayjs();
         const myStatus = getMyStatus(record);
-        
+
         // Không hiển thị màu sắc/badge cho các trạng thái đã hoàn thành, đã hủy
-        const isCompletedOrCancelled = myStatus === "Hoàn thành" || myStatus === "Đã hủy" || myStatus === "Đã đóng";
-        
+        const isCompletedOrCancelled =
+          myStatus === "Hoàn thành" ||
+          myStatus === "Đã hủy" ||
+          myStatus === "Đã đóng";
+
         if (isCompletedOrCancelled) {
           return (
             <div
@@ -263,7 +301,7 @@ const MaintenanceTasks = () => {
             </div>
           );
         }
-        
+
         // Chỉ hiển thị màu sắc cho các trạng thái chưa hoàn thành
         const isPast = scheduledDate.isBefore(today, "day");
         const isToday = scheduledDate.isSame(today, "day");
@@ -282,32 +320,37 @@ const MaintenanceTasks = () => {
         );
       },
     },
+    // Hide progress on mobile
+    ...(!isMobile
+      ? [
+          {
+            title: "Tiến độ",
+            key: "progress",
+            width: 120,
+            render: (_, record) => {
+              if (!record) return "-";
+              const myItems = getMyChecklistItems(record);
+              const total = myItems.length;
+              const completed = myItems.filter((item) => item.isChecked).length;
+              return (
+                <div>
+                  <Text style={{ fontSize: 12 }}>
+                    <strong>
+                      {completed}/{total}
+                    </strong>{" "}
+                    công việc
+                  </Text>
+                </div>
+              );
+            },
+          },
+        ]
+      : []),
     {
-      title: "Tiến độ",
-      key: "progress",
-      width: 120,
-      render: (_, record) => {
-        if (!record) return "-";
-        const myItems = getMyChecklistItems(record);
-        const total = myItems.length;
-        const completed = myItems.filter((item) => item.isChecked).length;
-        return (
-          <div>
-            <Text style={{ fontSize: 12 }}>
-              <strong>
-                {completed}/{total}
-              </strong>{" "}
-              công việc
-            </Text>
-          </div>
-        );
-      },
-    },
-    {
-      title: "Trạng thái",
+      title: isMobile ? "TT" : "Trạng thái",
       dataIndex: "status",
       key: "status",
-      width: 130,
+      width: isMobile ? 90 : 130,
       render: (status, record) => {
         // ✅ Lấy trạng thái riêng của KTV hiện tại
         const myStatus = getMyStatus(record);
@@ -319,22 +362,22 @@ const MaintenanceTasks = () => {
         if (myStatus === "Đang thực hiện") {
           color = "processing";
           icon = <PlayCircleOutlined />;
-          text = "Đang thực hiện";
+          text = isMobile ? "Đang XL" : "Đang thực hiện";
         } else if (myStatus === "Chờ xử lý") {
           color = "warning";
           icon = <ClockCircleOutlined />;
-          text = "Chờ xử lý";
+          text = isMobile ? "Chờ" : "Chờ xử lý";
         } else if (myStatus === "Hoàn thành") {
           color = "success";
           icon = <CheckCircleOutlined />;
-          text = "Đã hoàn thành";
+          text = isMobile ? "Xong" : "Đã hoàn thành";
         } else if (myStatus === "Đã hủy") {
           color = "error";
           icon = <StopOutlined />;
-          text = "Đã hủy";
+          text = isMobile ? "Hủy" : "Đã hủy";
         } else if (myStatus === "N/A") {
           color = "default";
-          text = "Không giao";
+          text = isMobile ? "N/A" : "Không giao";
         }
 
         return (
@@ -345,19 +388,20 @@ const MaintenanceTasks = () => {
       },
     },
     {
-      title: "Thao tác",
+      title: "",
       key: "action",
-      width: 100,
+      width: isMobile ? 50 : 100,
       fixed: "right",
       render: (_, record) => {
         if (!record) return null;
 
         // ✅ Validation 2 & 4: Cho phép làm bình thường khi quá hạn, bỏ reschedule
         const myStatus = getMyStatus(record);
-        const canExecute = myStatus === "Chờ xử lý" || 
-                          myStatus === "Đang thực hiện" || 
-                          myStatus === "Quá hạn" ||  // ✅ Cho phép làm khi quá hạn
-                          record.status === "Hoãn";
+        const canExecute =
+          myStatus === "Chờ xử lý" ||
+          myStatus === "Đang thực hiện" ||
+          myStatus === "Quá hạn" || // ✅ Cho phép làm khi quá hạn
+          record.status === "Hoãn";
 
         const items = [
           {
@@ -582,7 +626,7 @@ const MaintenanceTasks = () => {
         console.error("❌ Lỗi API:", errorData);
         throw new Error(
           errorData.message ||
-          `API Error: ${response.status} ${response.statusText}`
+            `API Error: ${response.status} ${response.statusText}`
         );
       }
 
@@ -628,13 +672,15 @@ const MaintenanceTasks = () => {
       );
       if (updatedWorkOrder) {
         setSelectedWorkOrder(updatedWorkOrder);
-        
+
         // Kiểm tra nếu đây là bước cuối cùng
         if (checked) {
           const myItems = getMyChecklistItems(updatedWorkOrder);
           const allCompleted = myItems.every((item) => item.isChecked);
           if (allCompleted) {
-            message.success("Công việc hoàn thành. Tất cả mục kiểm tra đã xong.");
+            message.success(
+              "Công việc hoàn thành. Tất cả mục kiểm tra đã xong."
+            );
           } else {
             message.success("Đã hoàn thành bước này!");
           }
@@ -715,72 +761,150 @@ const MaintenanceTasks = () => {
 
   return (
     <div className={styles.maintenanceTasks}>
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
-            <div style={{ textAlign: "center" }}>
+      <Row
+        gutter={[isMobile ? 8 : 16, isMobile ? 8 : 16]}
+        style={{ marginBottom: isMobile ? 12 : 16 }}
+      >
+        <Col xs={12} sm={12} lg={6}>
+          <Card
+            bordered={false}
+            size={isMobile ? "small" : "default"}
+            style={{ height: "100%" }}
+          >
+            <div
+              style={{
+                textAlign: "center",
+                height: isMobile ? 70 : 100,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
               <div
                 style={{
-                  fontSize: "32px",
+                  fontSize: isMobile ? "24px" : "32px",
                   fontWeight: "bold",
                   color: "#1890ff",
+                  lineHeight: 1.2,
                 }}
               >
                 {workOrders.length}
               </div>
-              <div style={{ fontSize: "14px", color: "#888", marginTop: 8 }}>
+              <div
+                style={{
+                  fontSize: isMobile ? "12px" : "14px",
+                  color: "#888",
+                  marginTop: isMobile ? 4 : 8,
+                }}
+              >
                 Tổng nhiệm vụ
               </div>
             </div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
-            <div style={{ textAlign: "center" }}>
+        <Col xs={12} sm={12} lg={6}>
+          <Card
+            bordered={false}
+            size={isMobile ? "small" : "default"}
+            style={{ height: "100%" }}
+          >
+            <div
+              style={{
+                textAlign: "center",
+                height: isMobile ? 70 : 100,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
               <div
                 style={{
-                  fontSize: "32px",
+                  fontSize: isMobile ? "24px" : "32px",
                   fontWeight: "bold",
                   color: "#52c41a",
+                  lineHeight: 1.2,
                 }}
               >
                 {getStatusCount("Hoàn thành")}
               </div>
-              <div style={{ fontSize: "14px", color: "#888", marginTop: 8 }}>
-                Đã hoàn thành
+              <div
+                style={{
+                  fontSize: isMobile ? "12px" : "14px",
+                  color: "#888",
+                  marginTop: isMobile ? 4 : 8,
+                }}
+              >
+                {isMobile ? "Hoàn thành" : "Đã hoàn thành"}
               </div>
             </div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
-            <div style={{ textAlign: "center" }}>
+        <Col xs={12} sm={12} lg={6}>
+          <Card
+            bordered={false}
+            size={isMobile ? "small" : "default"}
+            style={{ height: "100%" }}
+          >
+            <div
+              style={{
+                textAlign: "center",
+                height: isMobile ? 70 : 100,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
               <div
                 style={{
-                  fontSize: "32px",
+                  fontSize: isMobile ? "24px" : "32px",
                   fontWeight: "bold",
                   color: "#faad14",
+                  lineHeight: 1.2,
                 }}
               >
                 {getStatusCount("Đang thực hiện")}
               </div>
-              <div style={{ fontSize: "14px", color: "#888", marginTop: 8 }}>
+              <div
+                style={{
+                  fontSize: isMobile ? "12px" : "14px",
+                  color: "#888",
+                  marginTop: isMobile ? 4 : 8,
+                }}
+              >
                 Đang thực hiện
               </div>
             </div>
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card bordered={false}>
-            <div style={{ textAlign: "center" }}>
+        <Col xs={12} sm={12} lg={6}>
+          <Card
+            bordered={false}
+            size={isMobile ? "small" : "default"}
+            style={{ height: "100%" }}
+          >
+            <div
+              style={{
+                textAlign: "center",
+                height: isMobile ? 70 : 100,
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "center",
+              }}
+            >
               <Progress
                 type="circle"
                 percent={getTaskProgress()}
-                width={80}
+                width={isMobile ? 40 : 60}
                 strokeColor="#52c41a"
               />
-              <div style={{ fontSize: "14px", color: "#888", marginTop: 8 }}>
-                Tiến độ hoàn thành
+              <div
+                style={{
+                  fontSize: isMobile ? "12px" : "14px",
+                  color: "#888",
+                  marginTop: isMobile ? 4 : 8,
+                }}
+              >
+                Tiến độ
               </div>
             </div>
           </Card>
@@ -789,76 +913,140 @@ const MaintenanceTasks = () => {
 
       <Card
         title={
-          <Space>
+          <Space size={isMobile ? "small" : "middle"}>
             <ToolOutlined />
-            <span>Danh sách nhiệm vụ bảo trì</span>
+            <span style={{ fontSize: isMobile ? 14 : 16 }}>
+              {isMobile ? "Nhiệm vụ bảo trì" : "Danh sách nhiệm vụ bảo trì"}
+            </span>
           </Space>
         }
         extra={
-          <Space>
-            <Button onClick={fetchWorkOrders} loading={loading}>
-              Làm mới
-            </Button>
-          </Space>
+          <Button
+            onClick={fetchWorkOrders}
+            loading={loading}
+            size={isMobile ? "small" : "middle"}
+            icon={isMobile ? <ReloadOutlined /> : null}
+          >
+            {isMobile ? "" : "Làm mới"}
+          </Button>
         }
         bordered={false}
+        size={isMobile ? "small" : "default"}
       >
         <div className={styles.filterTabs}>
-          <Space size="middle">
+          <div
+            style={{
+              display: "flex",
+              gap: isMobile ? 8 : 12,
+              overflowX: "auto",
+              paddingBottom: 8,
+              paddingTop: 12,
+              WebkitOverflowScrolling: "touch",
+            }}
+          >
             <Button
               type={filterStatus === "all" ? "primary" : "default"}
               onClick={() => setFilterStatus("all")}
+              size={isMobile ? "middle" : "middle"}
+              style={{
+                borderRadius: "6px",
+                fontWeight: "500",
+                fontSize: isMobile ? 12 : 14,
+                whiteSpace: "nowrap",
+              }}
             >
               Tất cả ({getStatusCount("all")})
             </Button>
-            <Badge count={getStatusCount("Chờ xử lý")} color="orange">
+            <Badge
+              count={getStatusCount("Chờ xử lý")}
+              color="orange"
+              offset={[-5, 0]}
+              overflowCount={99}
+            >
               <Button
                 type={filterStatus === "Chờ xử lý" ? "primary" : "default"}
                 onClick={() => setFilterStatus("Chờ xử lý")}
+                size={isMobile ? "middle" : "middle"}
+                style={{
+                  borderRadius: "6px",
+                  fontWeight: "500",
+                  fontSize: isMobile ? 12 : 14,
+                  whiteSpace: "nowrap",
+                }}
               >
-                Chờ xử lý
+                {isMobile ? "Chờ XL" : "Chờ xử lý"}
               </Button>
             </Badge>
-            <Badge count={getStatusCount("Đang thực hiện")} color="blue">
+            <Badge
+              count={getStatusCount("Đang thực hiện")}
+              color="blue"
+              offset={[-5, 0]}
+              overflowCount={99}
+            >
               <Button
                 type={filterStatus === "Đang thực hiện" ? "primary" : "default"}
                 onClick={() => setFilterStatus("Đang thực hiện")}
+                size={isMobile ? "middle" : "middle"}
+                style={{
+                  borderRadius: "6px",
+                  fontWeight: "500",
+                  fontSize: isMobile ? 12 : 14,
+                  whiteSpace: "nowrap",
+                }}
               >
-                Đang thực hiện
+                {isMobile ? "Đang XL" : "Đang thực hiện"}
               </Button>
             </Badge>
-            <Badge count={getStatusCount("Hoàn thành")} color="green">
+            <Badge
+              count={getStatusCount("Hoàn thành")}
+              color="green"
+              offset={[-5, 0]}
+              overflowCount={99}
+            >
               <Button
                 type={filterStatus === "Hoàn thành" ? "primary" : "default"}
                 onClick={() => setFilterStatus("Hoàn thành")}
+                size={isMobile ? "middle" : "middle"}
+                style={{
+                  borderRadius: "6px",
+                  fontWeight: "500",
+                  fontSize: isMobile ? 12 : 14,
+                  whiteSpace: "nowrap",
+                }}
               >
                 Hoàn thành
               </Button>
             </Badge>
-          </Space>
+          </div>
         </div>
 
-        <Divider />
+        <Divider style={{ margin: isMobile ? "8px 0" : "16px 0" }} />
 
         <Table
-          columns={columns}
+          columns={baseColumns}
           dataSource={getFilteredWorkOrders()}
           rowKey="workOrderId"
           loading={loading}
-          scroll={{ x: 1500 }}
+          scroll={{ x: isMobile ? 500 : 1200 }}
+          size={isMobile ? "small" : "middle"}
           pagination={{
-            pageSize: 10,
-            showSizeChanger: true,
-            showTotal: (total) => `Tổng số ${total} nhiệm vụ`,
+            pageSize: isMobile ? 8 : 10,
+            showSizeChanger: !isMobile,
+            showTotal: isMobile
+              ? undefined
+              : (total) => `Tổng số ${total} nhiệm vụ`,
+            simple: isMobile,
           }}
         />
       </Card>
 
       <Modal
         title={
-          <Space>
+          <Space size={isMobile ? "small" : "middle"}>
             <CheckCircleOutlined />
-            <span>Thực hiện công việc bảo trì</span>
+            <span style={{ fontSize: isMobile ? 14 : 16 }}>
+              {isMobile ? "Thực hiện bảo trì" : "Thực hiện công việc bảo trì"}
+            </span>
           </Space>
         }
         open={checklistModalVisible}
@@ -874,9 +1062,9 @@ const MaintenanceTasks = () => {
               setChecklistNotes({});
             }}
             style={{
-              height: "40px",
-              fontSize: "16px",
-              minWidth: "120px",
+              height: isMobile ? "36px" : "40px",
+              fontSize: isMobile ? "14px" : "16px",
+              minWidth: isMobile ? "80px" : "120px",
             }}
           >
             Đóng
@@ -896,51 +1084,79 @@ const MaintenanceTasks = () => {
               backgroundColor: "#283652",
               borderColor: "#283652",
               color: "#fff",
-              height: "40px",
-              fontSize: "16px",
-              minWidth: "120px",
+              height: isMobile ? "36px" : "40px",
+              fontSize: isMobile ? "14px" : "16px",
+              minWidth: isMobile ? "100px" : "120px",
             }}
           >
-            Hoàn thành công việc
+            {isMobile ? "Hoàn thành" : "Hoàn thành công việc"}
           </Button>,
         ]}
-        width={1200}
+        width={isMobile ? "100%" : 1200}
+        centered={!isMobile}
+        style={isMobile ? { top: 20, margin: 0 } : {}}
+        styles={{ body: { padding: isMobile ? 12 : 24 } }}
       >
         {selectedWorkOrder && (
-          <div>
+          <div
+            style={{
+              maxHeight: isMobile ? "60vh" : "auto",
+              overflowY: isMobile ? "auto" : "visible",
+            }}
+          >
             <Alert
               message={
                 <div>
-                  <Row gutter={16}>
-                    <Col span={12}>
-                      <div>
+                  <Row gutter={isMobile ? 8 : 16}>
+                    <Col xs={24} sm={12}>
+                      <div style={{ fontSize: isMobile ? 12 : 14 }}>
                         <strong>Thiết bị:</strong>{" "}
-                        {selectedWorkOrder.equipmentCode} -{" "}
-                        {selectedWorkOrder.equipmentName}
+                        {selectedWorkOrder.equipmentCode}
+                        {isMobile
+                          ? ""
+                          : " - " + selectedWorkOrder.equipmentName}
                       </div>
-                      <div>
-                        <strong>Vị trí:</strong> {selectedWorkOrder.lineName} /{" "}
-                        {selectedWorkOrder.stageName}
+                      <div style={{ fontSize: isMobile ? 12 : 14 }}>
+                        <strong>Vị trí:</strong> {selectedWorkOrder.lineName}
+                        {isMobile ? "" : " / " + selectedWorkOrder.stageName}
                       </div>
                     </Col>
-                    <Col span={12}>
-                      <div>
-                        <strong>Loại công việc:</strong>{" "}
+                    <Col xs={24} sm={12}>
+                      <div
+                        style={{
+                          fontSize: isMobile ? 12 : 14,
+                          marginTop: isMobile ? 4 : 0,
+                        }}
+                      >
+                        <strong>Loại:</strong>{" "}
                         {getMyTaskType(selectedWorkOrder) === "Electrical" ? (
-                          <Tag icon={<ThunderboltOutlined />} color="blue">
+                          <Tag
+                            icon={<ThunderboltOutlined />}
+                            color="blue"
+                            style={{ fontSize: isMobile ? 10 : 12 }}
+                          >
                             Điện
                           </Tag>
                         ) : getMyTaskType(selectedWorkOrder) ===
                           "Mechanical" ? (
-                          <Tag icon={<ToolOutlined />} color="green">
+                          <Tag
+                            icon={<ToolOutlined />}
+                            color="green"
+                            style={{ fontSize: isMobile ? 10 : 12 }}
+                          >
                             Cơ khí
                           </Tag>
                         ) : (
-                          <Tag color="purple">Cả Điện & Cơ khí</Tag>
+                          <Tag
+                            color="purple"
+                            style={{ fontSize: isMobile ? 10 : 12 }}
+                          >
+                            Cả 2
+                          </Tag>
                         )}
                       </div>
-                      <div>
-                        <strong>Ngày thực hiện:</strong>{" "}
+                      <div style={{ fontSize: isMobile ? 12 : 14 }}>
+                        <strong>Ngày:</strong>{" "}
                         {dayjs(selectedWorkOrder.scheduledDate).format(
                           "DD/MM/YYYY"
                         )}
@@ -950,7 +1166,7 @@ const MaintenanceTasks = () => {
                 </div>
               }
               type="info"
-              style={{ marginBottom: 16 }}
+              style={{ marginBottom: isMobile ? 12 : 16 }}
             />
 
             {(() => {
@@ -967,8 +1183,8 @@ const MaintenanceTasks = () => {
                       percent === 100
                         ? "success"
                         : completed > 0
-                          ? "active"
-                          : "normal"
+                        ? "active"
+                        : "normal"
                     }
                   />
                   <div
@@ -1191,7 +1407,10 @@ const MaintenanceTasks = () => {
                                     >
                                       <Text
                                         type="secondary"
-                                        style={{ fontSize: 11, whiteSpace: "pre-wrap" }}
+                                        style={{
+                                          fontSize: 11,
+                                          whiteSpace: "pre-wrap",
+                                        }}
                                       >
                                         📝 Ghi chú: {item.notes}
                                       </Text>
@@ -1235,7 +1454,7 @@ const MaintenanceTasks = () => {
                             style={{
                               backgroundColor:
                                 getMyTaskType(selectedWorkOrder) ===
-                                  "Electrical"
+                                "Electrical"
                                   ? "#1890ff"
                                   : "#52c41a",
                             }}
@@ -1302,7 +1521,10 @@ const MaintenanceTasks = () => {
                                 >
                                   <Text
                                     type="secondary"
-                                    style={{ fontSize: 11, whiteSpace: "pre-wrap" }}
+                                    style={{
+                                      fontSize: 11,
+                                      whiteSpace: "pre-wrap",
+                                    }}
                                   >
                                     📝 Ghi chú: {item.notes}
                                   </Text>
@@ -1333,9 +1555,11 @@ const MaintenanceTasks = () => {
 
       <Modal
         title={
-          <Space>
+          <Space size={isMobile ? "small" : "middle"}>
             <FileTextOutlined />
-            <span>Chi tiết phiếu bảo trì</span>
+            <span style={{ fontSize: isMobile ? 14 : 16 }}>
+              {isMobile ? "Chi tiết phiếu" : "Chi tiết phiếu bảo trì"}
+            </span>
           </Space>
         }
         open={detailModalVisible}
@@ -1345,19 +1569,41 @@ const MaintenanceTasks = () => {
             key="close"
             onClick={() => setDetailModalVisible(false)}
             style={{
-              height: "40px",
-              fontSize: "16px",
-              minWidth: "120px",
+              height: isMobile ? "36px" : "40px",
+              fontSize: isMobile ? "14px" : "16px",
+              minWidth: isMobile ? "80px" : "120px",
             }}
           >
             Đóng
           </Button>,
         ]}
-        width={900}
+        width={isMobile ? "100%" : 900}
+        centered={!isMobile}
+        style={isMobile ? { top: 20, margin: 0 } : {}}
+        styles={{ body: { padding: isMobile ? 12 : 24 } }}
       >
         {selectedWorkOrder && (
-          <div>
-            <Descriptions bordered column={2} size="small">
+          <div
+            style={{
+              maxHeight: isMobile ? "60vh" : "auto",
+              overflowY: isMobile ? "auto" : "visible",
+            }}
+          >
+            <Descriptions
+              bordered
+              column={isMobile ? 1 : 2}
+              size="small"
+              labelStyle={{
+                fontWeight: "bold",
+                fontSize: isMobile ? 12 : 14,
+                backgroundColor: "#fafafa",
+                padding: isMobile ? "8px 10px" : "12px 16px",
+              }}
+              contentStyle={{
+                fontSize: isMobile ? 12 : 14,
+                padding: isMobile ? "8px 10px" : "12px 16px",
+              }}
+            >
               <Descriptions.Item label="Mã phiếu" span={1}>
                 <strong>
                   {selectedWorkOrder.workOrderCode ||
@@ -1406,7 +1652,9 @@ const MaintenanceTasks = () => {
               </Descriptions.Item>
               <Descriptions.Item label="Ngày phân công" span={1}>
                 {selectedWorkOrder.assignedDate
-                  ? dayjs(selectedWorkOrder.assignedDate).format("DD/MM/YYYY HH:mm")
+                  ? dayjs(selectedWorkOrder.assignedDate).format(
+                      "DD/MM/YYYY HH:mm"
+                    )
                   : "-"}
               </Descriptions.Item>
               <Descriptions.Item label="Ngày thực hiện" span={1}>
@@ -1464,12 +1712,12 @@ const MaintenanceTasks = () => {
                               style={{
                                 backgroundColor:
                                   getMyTaskType(selectedWorkOrder) ===
-                                    "Electrical"
+                                  "Electrical"
                                     ? "#1890ff"
                                     : getMyTaskType(selectedWorkOrder) ===
                                       "Mechanical"
-                                      ? "#52c41a"
-                                      : "#722ed1",
+                                    ? "#52c41a"
+                                    : "#722ed1",
                               }}
                             />
                           }
@@ -1510,9 +1758,11 @@ const MaintenanceTasks = () => {
 
       <Modal
         title={
-          <Space>
+          <Space size={isMobile ? "small" : "middle"}>
             <FileTextOutlined />
-            <span>Lịch sử linh kiện</span>
+            <span style={{ fontSize: isMobile ? 14 : 16 }}>
+              Lịch sử linh kiện
+            </span>
           </Space>
         }
         open={historyModalVisible}
@@ -1528,25 +1778,51 @@ const MaintenanceTasks = () => {
               setReplacementHistories([]);
             }}
             style={{
-              height: "40px",
-              fontSize: "16px",
-              minWidth: "120px",
+              height: isMobile ? "36px" : "40px",
+              fontSize: isMobile ? "14px" : "16px",
+              minWidth: isMobile ? "80px" : "120px",
             }}
           >
             Đóng
           </Button>,
         ]}
-        width={1000}
+        width={isMobile ? "100%" : 1000}
+        centered={!isMobile}
+        style={isMobile ? { top: 20, margin: 0 } : {}}
+        styles={{ body: { padding: isMobile ? 12 : 24 } }}
       >
         {selectedWorkOrder && (
-          <div>
+          <div
+            style={{
+              maxHeight: isMobile ? "60vh" : "auto",
+              overflowY: isMobile ? "auto" : "visible",
+            }}
+          >
             <Alert
-              message={`Phiếu bảo trì: ${selectedWorkOrder.workOrderCode ||
-                `WO${String(selectedWorkOrder.workOrderId).padStart(3, "0")}`
-                } - ${selectedWorkOrder.equipmentCode} (${selectedWorkOrder.equipmentName
-                })`}
+              message={
+                isMobile
+                  ? `${
+                      selectedWorkOrder.workOrderCode ||
+                      `WO${String(selectedWorkOrder.workOrderId).padStart(
+                        3,
+                        "0"
+                      )}`
+                    } - ${selectedWorkOrder.equipmentCode}`
+                  : `Phiếu bảo trì: ${
+                      selectedWorkOrder.workOrderCode ||
+                      `WO${String(selectedWorkOrder.workOrderId).padStart(
+                        3,
+                        "0"
+                      )}`
+                    } - ${selectedWorkOrder.equipmentCode} (${
+                      selectedWorkOrder.equipmentName
+                    })`
+              }
               type="info"
-              style={{ marginBottom: 16 }}
+              style={{
+                marginBottom: isMobile ? 12 : 16,
+                fontSize: isMobile ? 12 : 14,
+              }}
             />
 
             {replacementHistories && replacementHistories.length > 0 ? (
