@@ -308,4 +308,30 @@
     padding: 8px 0;
     font-size: 12px;
   }
+
+  /* Modal improvements for small screens */
+  .scheduleModal :global(.ant-modal-footer) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-end;
+    padding: 12px;
+  }
+
+  .scheduleModal :global(.ant-modal-footer .ant-btn) {
+    flex: 1;
+    min-width: auto;
+  }
+
+  /* Timeline improvements */
+  .timelineItem :global(.ant-space) {
+    flex-wrap: wrap;
+    gap: 4px !important;
+  }
+
+  /* List item actions */
+  .scheduleListItem :global(.ant-list-item-action) {
+    margin-left: 0;
+    margin-top: 8px;
+  }
 }
