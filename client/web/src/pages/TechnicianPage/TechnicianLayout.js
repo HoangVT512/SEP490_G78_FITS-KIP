@@ -30,6 +30,7 @@ import {
   EditOutlined,
   CheckCircleOutlined,
   DeleteOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -46,6 +47,7 @@ import MaintenanceSchedule from "./MaintenanceSchedule";
 import MaintenanceChecklist from "./MaintenanceChecklist";
 import ReplacementCreate from "./ReplacementCreate";
 // SparePartRequest is embedded inside IncidentAssignList; remove standalone route/menu
+import TechnicianUserGuide from "../GuidePage/TechnicianUserGuide";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -81,6 +83,8 @@ const TechnicianLayout = () => {
       setSelectedKey("maintenance-schedule");
     } else if (path.includes("/checklist")) {
       setSelectedKey("checklist");
+    } else if (path.includes("/user-guide")) {
+      setSelectedKey("user-guide");
     } else {
       setSelectedKey("dashboard");
     }
@@ -258,6 +262,8 @@ const TechnicianLayout = () => {
       return <MaintenanceChecklist />;
     } else if (path === "/technician" || path.includes("/dashboard")) {
       return <TechnicianDashboard />;
+    } else if (path.includes("/user-guide")) {
+      return <TechnicianUserGuide />;
     }
 
     // Default to dashboard
@@ -284,6 +290,11 @@ const TechnicianLayout = () => {
       key: "maintenance-schedule",
       icon: <CalendarOutlined />,
       label: "Lịch bảo trì",
+    }, 
+    {
+      key: "user-guide",
+      icon: <BookOutlined />,
+      label: "Hướng dẫn sử dụng",
     },
     // {
     //   key: "checklist",
@@ -309,6 +320,9 @@ const TechnicianLayout = () => {
         break;
       case "checklist":
         navigate("/technician/checklist");
+        break;
+      case "user-guide":
+        navigate("/technician/user-guide");
         break;
       default:
         navigate("/technician/dashboard");

@@ -29,6 +29,7 @@ import {
   SafetyOutlined,
   EditOutlined,
   ShoppingOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -50,6 +51,7 @@ import ManagerIncidentList from "./ManagerIncidentList";
 import NotificationsList from "./NotificationsList";
 import OEEDashboard from "./OEEDashboard";
 import DowntimeChartDashboard from "./DowntimeChartDashboard";
+import ManagerUserGuide from "../GuidePage/ManagerUserGuide";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -164,6 +166,8 @@ const ManagerLayout = () => {
       setSelectedKey("oee");
     } else if (path.includes("/incidents")) {
       setSelectedKey("incidents");
+    } else if (path.includes("/user-guide")) {
+      setSelectedKey("user-guide");
     } else {
       setSelectedKey("dashboard");
     }
@@ -200,6 +204,8 @@ const ManagerLayout = () => {
       return <ManagerIncidentList />;
     } else if (path === "/manager" || path.includes("/dashboard")) {
       return <ManagerDashboard />;
+    } else if (path.includes("/user-guide")) {
+      return <ManagerUserGuide />;
     }
 
     // Default to dashboard
@@ -262,6 +268,11 @@ const ManagerLayout = () => {
       icon: <FileTextOutlined />,
       label: "Báo cáo sản lượng",
     },
+    {
+      key: "user-guide",
+      icon: <BookOutlined />,
+      label: "Hướng dẫn sử dụng",
+    },
     // {
     //   key: "incidents",
     //   icon: <WarningOutlined />,
@@ -308,6 +319,9 @@ const ManagerLayout = () => {
         break;
       case "incidents":
         navigate("/manager/incidents");
+        break;
+      case "user-guide":
+        navigate("/manager/user-guide");
         break;
       default:
         navigate("/manager/dashboard");

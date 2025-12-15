@@ -25,6 +25,7 @@ import {
   SafetyOutlined,
   EditOutlined,
   CheckCircleOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -40,6 +41,7 @@ import NotificationsList from "./NotificationsList";
 import ReplacementReturnPage from "./ReplacementReturnPage";
 import ReplacementHistoryPage from "./ReplacementHistoryPage";
 import KtvReturnConfirmPage from "../TechnicianPage/KtvReturnConfirmPage";
+import TechnicalManagerUserGuide from "../GuidePage/TechnicalManagerUserGuide";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -174,7 +176,13 @@ const TechnicianManagerLayout = () => {
       icon: <SafetyOutlined />,
       label: "Kế hoạch bảo trì",
       onClick: () => navigate("/technician-manager/maintenance-plans"),
-    },
+    }, 
+    {
+      key: "guide",
+      icon: <BookOutlined />,
+      label: "Hướng dẫn sử dụng",
+      onClick: () => navigate("/technician-manager/user-guide"),
+    }
     // {
     //   key: "replacement-history",
     //   icon: <FileTextOutlined />,
@@ -228,6 +236,8 @@ const TechnicianManagerLayout = () => {
       return <KtvReturnConfirmPage />;
     } else if (path.includes("notifications")) {
       return <NotificationsList />;
+    } else if (path.includes("user-guide")) {
+      return <TechnicalManagerUserGuide />;
     }
 
     return <TechnicianManagerDashboard />;

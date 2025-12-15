@@ -24,6 +24,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   BellOutlined,
+  BookOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
@@ -42,6 +43,7 @@ import TransactionHistory from "./TransactionHistory";
 import NotificationsList from "./NotificationsList";
 import IncidentSparePartsDistribution from "./IncidentSparePartsDistribution";
 import IncidentSparePartsReturn from "./IncidentSparePartsReturn";
+import WarehouseManagerUserGuide from "../GuidePage/WarehouseManagerUserGuide";
 
 const { Header, Sider, Content } = AntLayout;
 const { Title, Text } = Typography;
@@ -138,6 +140,8 @@ const WarehouseManagerLayout = () => {
       setSelectedKey("reports");
     } else if (path.includes("/history")) {
       setSelectedKey("history");
+    } else if (path.includes("/user-guide")) {
+      setSelectedKey("user-guide");
     } else {
       setSelectedKey("dashboard");
     }
@@ -163,6 +167,8 @@ const WarehouseManagerLayout = () => {
       return <InventoryReports />;
     } else if (path.includes("/history")) {
       return <TransactionHistory />;
+    } else if (path.includes("/user-guide")) {
+      return <WarehouseManagerUserGuide />;
     } else if (path === "/warehouse-manager" || path.includes("/dashboard")) {
       return <WarehouseManagerDashboard />;
     }
@@ -211,6 +217,11 @@ const WarehouseManagerLayout = () => {
       key: "purchase-requests",
       icon: <ShoppingOutlined />,
       label: "Yêu cầu mua hàng",
+    }, 
+    {
+      key: "user-guide",
+      icon: <BookOutlined />,
+      label: "Hướng dẫn sử dụng",
     },
     // {
     //   key: "reports",
@@ -248,6 +259,9 @@ const WarehouseManagerLayout = () => {
         break;
       case "history":
         navigate("/warehouse-manager/history");
+        break;
+      case "user-guide":
+        navigate("/warehouse-manager/user-guide");
         break;
       default:
         navigate("/warehouse-manager/dashboard");
