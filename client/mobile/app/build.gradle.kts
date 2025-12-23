@@ -26,8 +26,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     buildFeatures {
         viewBinding = true
@@ -46,12 +46,16 @@ dependencies {
     annotationProcessor(libs.room.compiler)
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
+    implementation(libs.logging.interceptor)
     implementation(libs.gson)
+    implementation(libs.okhttp)
     implementation(libs.lifecycleViewmodel)
     implementation(libs.lifecycleLivedata)
     implementation(libs.recyclerview)
     implementation(libs.zxingEmbedded)
     implementation(libs.zxingCore)
+    implementation(libs.glide)
+    annotationProcessor("com.github.bumptech.glide:compiler:4.16.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

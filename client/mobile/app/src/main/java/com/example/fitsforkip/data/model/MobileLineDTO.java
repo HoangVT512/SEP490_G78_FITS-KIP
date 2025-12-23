@@ -6,6 +6,7 @@ import android.os.Parcelable;
 public class MobileLineDTO implements Parcelable {
     private int lineId;
     private String lineName;
+    private String lineCode;
     private int departmentId;
     private boolean isActive;
 
@@ -58,6 +59,13 @@ public class MobileLineDTO implements Parcelable {
 
     public void setLineName(String lineName) {
         this.lineName = lineName;
+    }
+
+    public String getLineCode() {
+        return lineCode;
+    }
+    public void setLineCode(String lineCode) {
+        this.lineCode = lineCode;
     }
 
     public int getDepartmentId() {

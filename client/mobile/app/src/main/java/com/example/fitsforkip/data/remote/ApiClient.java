@@ -10,8 +10,16 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
+import java.security.cert.CertificateException;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
@@ -30,22 +38,70 @@ public class ApiClient {
         GsonBuilder gsonBuilder = new GsonBuilder();
         gsonBuilder.registerTypeAdapter(Boolean.class, new BooleanTypeAdapter());
         gsonBuilder.registerTypeAdapter(boolean.class, new BooleanTypeAdapter());
-        // THÊM DateTypeAdapter
         gsonBuilder.registerTypeAdapter(Date.class, new DateTypeAdapter());
         return gsonBuilder.create();
     }
 
+    // --- QUAN TRỌNG: Hàm tạo OkHttpClient bỏ qua lỗi SSL ---
+    private static OkHttpClient getUnsafeOkHttpClient(Interceptor authInterceptor) {
+        try {
+            // 1. Tạo TrustManager tin tưởng mọi chứng chỉ
+            final TrustManager[] trustAllCerts = new TrustManager[]{
+                    new X509TrustManager() {
+                        @Override
+                        public void checkClientTrusted(java.security.cert.X509Certificate[] chain, String authType) throws CertificateException {
+                        }
+
+                        @Override
+                        public void checkServerTrusted(java.security.cert.X509Certificate[] chain, String authType) throws CertificateException {
+                        }
+
+                        @Override
+                        public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                            return new java.security.cert.X509Certificate[]{};
+                        }
+                    }
+            };
+
+            // 2. Cài đặt SSL Context
+            final SSLContext sslContext = SSLContext.getInstance("SSL");
+            sslContext.init(null, trustAllCerts, new java.security.SecureRandom());
+            final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+
+            HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
+            loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+
+            OkHttpClient.Builder builder = new OkHttpClient.Builder();
+            builder.sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0]);
+
+            // 3. Cho phép mọi Hostname (bỏ qua check domain)
+            builder.hostnameVerifier(new HostnameVerifier() {
+                @Override
+                public boolean verify(String hostname, SSLSession session) {
+                    return true;
+                }
+            });
+
+            builder.addInterceptor(loggingInterceptor);
+
+            if (authInterceptor != null) {
+                builder.addInterceptor(authInterceptor);
+            }
+
+            builder.connectTimeout(TIMEOUT, TimeUnit.SECONDS)
+                    .readTimeout(TIMEOUT, TimeUnit.SECONDS)
+                    .writeTimeout(TIMEOUT, TimeUnit.SECONDS);
+
+            return builder.build();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public static Retrofit getClient() {
         if (retrofit == null) {
-            HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
-            interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-
-            OkHttpClient client = new OkHttpClient.Builder()
-                    .addInterceptor(interceptor)
-                    .connectTimeout(TIMEOUT, TimeUnit.SECONDS)
-                    .readTimeout(TIMEOUT, TimeUnit.SECONDS)
-                    .writeTimeout(TIMEOUT, TimeUnit.SECONDS)
-                    .build();
+            // SỬ DỤNG Unsafe Client thay vì Client thường
+            OkHttpClient client = getUnsafeOkHttpClient(null);
 
             retrofit = new Retrofit.Builder()
                     .baseUrl(Constants.BASE_URL)
@@ -58,9 +114,6 @@ public class ApiClient {
 
     public static Retrofit getAuthenticatedClient(Context context) {
         if (authenticatedRetrofit == null) {
-            HttpLoggingInterceptor loggingInterceptor = new HttpLoggingInterceptor();
-            loggingInterceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
-
             Interceptor authInterceptor = new Interceptor() {
                 @Override
                 public Response intercept(Chain chain) throws IOException {
@@ -79,13 +132,8 @@ public class ApiClient {
                 }
             };
 
-            OkHttpClient client = new OkHttpClient.Builder()
-                    .addInterceptor(authInterceptor)
-                    .addInterceptor(loggingInterceptor)
-                    .connectTimeout(TIMEOUT, TimeUnit.SECONDS)
-                    .readTimeout(TIMEOUT, TimeUnit.SECONDS)
-                    .writeTimeout(TIMEOUT, TimeUnit.SECONDS)
-                    .build();
+            // SỬ DỤNG Unsafe Client thay vì Client thường
+            OkHttpClient client = getUnsafeOkHttpClient(authInterceptor);
 
             authenticatedRetrofit = new Retrofit.Builder()
                     .baseUrl(Constants.BASE_URL)

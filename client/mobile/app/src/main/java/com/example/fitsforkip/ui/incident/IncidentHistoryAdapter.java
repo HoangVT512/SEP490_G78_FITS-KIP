@@ -29,7 +29,7 @@ public class IncidentHistoryAdapter extends RecyclerView.Adapter<IncidentHistory
     private OnDeleteClickListener onDeleteClickListener;
 
     public interface OnDeleteClickListener {
-        void onDelete(int position);
+        void onDelete(IncidentHistoryEntity entity);
     }
 
 //    public IncidentHistoryAdapter(List<IncidentHistoryEntity> incidentList, List<Equipment> equipmentList, OnDeleteClickListener onDeleteClickListener) {
@@ -198,15 +198,16 @@ public class IncidentHistoryAdapter extends RecyclerView.Adapter<IncidentHistory
         }
 
         // === CÁC TRƯỜNG KHÁC (giữ nguyên hoặc thêm tiền tố) ===
-        holder.tvIssue.setText("Vấn đề: " + (incident.getIssue() != null ? incident.getIssue() : ""));
-        holder.tvStartTime.setText("BD: " + formatTime(incident.getStartTime()));
-        holder.tvEndTime.setText("KT: " + formatTime(incident.getEndTime()));
-        holder.tvDuration.setText("Thời lượng: " + (incident.getDuration() != null ? String.format("%.2f phút", incident.getDuration()) : ""));
+        holder.tvIssue.setText((incident.getIssue() != null ? incident.getIssue() : ""));
+        holder.tvStartTime.setText(formatTime(incident.getStartTime()));
+        holder.tvEndTime.setText(formatTime(incident.getEndTime()));
+        holder.tvDuration.setText((incident.getDuration() != null ? String.format("%.2f phút", incident.getDuration()) : ""));
 
-        String typeName = getTypeName(incident.getTypeId());
-        holder.tvIssueType.setText("Loại: " + typeName);
+        String typeName = getTypeName(incident.getTypeId() != null ? incident.getTypeId() : -1);
+        holder.tvIssueType.setText(typeName);
 
-        holder.tvSynced.setText("Đồng bộ: " + (incident.isSynced() ? "Đã đồng bộ" : "Chưa đồng bộ"));
+        //holder.tvSynced.setText("Đồng bộ: " + (incident.isSynced() ? "Đã đồng bộ" : "Chưa đồng bộ"));
+        holder.tvSynced.setText(incident.isSynced() ? "Đã đồng bộ" : "Chưa đồng bộ");
         holder.tvSynced.setTextColor(incident.isSynced()
                 ? holder.itemView.getContext().getColor(android.R.color.holo_green_dark)
                 : holder.itemView.getContext().getColor(android.R.color.holo_red_dark));
@@ -232,7 +233,7 @@ public class IncidentHistoryAdapter extends RecyclerView.Adapter<IncidentHistory
             holder.llImages.setVisibility(View.GONE);
         }
 
-        holder.btnDelete.setOnClickListener(v -> onDeleteClickListener.onDelete(position));
+        holder.btnDelete.setOnClickListener(v -> onDeleteClickListener.onDelete(incident));
     }
 
     private Equipment findEquipmentById(Integer equipmentId) {

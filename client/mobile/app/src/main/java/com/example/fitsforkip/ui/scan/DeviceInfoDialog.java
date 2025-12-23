@@ -30,6 +30,7 @@ public class DeviceInfoDialog extends Dialog {
 
     private Equipment equipment;
     private OnOptionsSelectedListener listener;
+    private boolean isConfirmed = false; // Track if OK was pressed
 
     public interface OnOptionsSelectedListener {
         void onOptionsSelected(List<String> selectedOptions);
@@ -63,7 +64,12 @@ public class DeviceInfoDialog extends Dialog {
 
         // Options list
         ListView listOptions = view.findViewById(R.id.list_options);
-        List<String> options = new ArrayList<>(Arrays.asList("Phế phẩm", "Vệ sinh đầu/cuối ca", "Đổi mã", "Cần hỗ trợ kỹ thuật"));
+        //List<String> options = new ArrayList<>(Arrays.asList("Phế phẩm", "Vệ sinh đầu/cuối ca", "Đổi mã", "Cần hỗ trợ kỹ thuật"));
+        // ← THÊM: Danh sách options - BỎ ĐI "Vệ sinh đầu/cuối ca" và "Đổi mã"
+        List<String> options = new ArrayList<>(java.util.Arrays.asList(
+                "Phế phẩm",
+                "Cần hỗ trợ kỹ thuật"
+        ));
         // Add issues from equipment
         if (equipment.getIssue() != null && !equipment.getIssue().trim().isEmpty()) {
             String[] issueArray = equipment.getIssue().split(";");
@@ -121,33 +127,63 @@ public class DeviceInfoDialog extends Dialog {
 
         // Buttons
         Button btnClose = view.findViewById(R.id.btn_close);
-        btnClose.setOnClickListener(v -> dismiss());
-
-        Button btnOk = view.findViewById(R.id.btn_ok);
-        btnOk.setOnClickListener(v -> {
-            // Handle OK - show selected options
-            List<String> selected = adapter.getSelectedOptions();
-            if (!selected.isEmpty()) {
-                listener.onOptionsSelected(selected);
-            } else {
-                Toast.makeText(getContext(), "Không có tùy chọn nào được chọn", Toast.LENGTH_SHORT).show();
+        btnClose.setOnClickListener(v -> {
+            // ← SỬA: Bấm "Đóng" → gọi callback với ArrayList<>() để báo hủy
+            isConfirmed = false;
+            if (listener != null) {
+                listener.onOptionsSelected(new ArrayList<>());
             }
             dismiss();
         });
 
-        setCancelable(false);
+//        Button btnOk = view.findViewById(R.id.btn_ok);
+//        btnOk.setOnClickListener(v -> {
+//            // Handle OK - show selected options
+//            List<String> selected = adapter.getSelectedOptions();
+//            if (!selected.isEmpty()) {
+//                isConfirmed = true; // ← THÊM: Đánh dấu OK được bấm
+//                listener.onOptionsSelected(selected);
+//                dismiss();
+//            } else {
+//                Toast.makeText(getContext(), "Không có tùy chọn nào được chọn", Toast.LENGTH_SHORT).show();
+//            }
+//        });
+
+        Button btnOk = view.findViewById(R.id.btn_ok);
+        btnOk.setOnClickListener(v -> {
+            // Handle OK - show selected options (cho phép rỗng, giống logic handleSpecialQRCode)
+            List<String> selected = adapter.getSelectedOptions();
+            isConfirmed = true; // ← SỬA: Luôn đánh dấu OK được bấm, cho dù rỗng
+            listener.onOptionsSelected(selected); // ← SỬA: Gửi callback ngay, dù selected rỗng
+            dismiss();
+        });
+
+        // ← THÊM: Handle khi dialog bị đóng (bấm X hoặc back)
+        setOnDismissListener(dialog -> {
+            if (!isConfirmed && listener != null) {
+                // Nếu chưa confirm, gọi callback với ArrayList<>()
+                listener.onOptionsSelected(new ArrayList<>());
+            }
+        });
+
+        setCancelable(true); // ← ĐỔI: Cho phép cancel để bấm X
     }
 
     private class OptionAdapter extends BaseAdapter implements Filterable {
         private List<String> originalOptions;
         private List<String> filteredOptions;
-        private List<Boolean> checkedStates;private List<Boolean> enabledStates;  // THÊM: Track enable/disable state
+        private List<Boolean> checkedStates;
+        private List<Boolean> enabledStates;
 
-        // 4 option chính
-        private final List<String> MAIN_OPTIONS = Arrays.asList(
+        //private final List<String> MAIN_OPTIONS = Arrays.asList(
+        //        "Phế phẩm",
+        //        "Vệ sinh đầu/cuối ca",
+        //        "Đổi mã",
+        //        "Cần hỗ trợ kỹ thuật"
+        //);
+        // ← THÊM: Chỉ 2 main options (BỎ "Vệ sinh đầu/cuối ca" và "Đổi mã")
+        private final List<String> MAIN_OPTIONS = java.util.Arrays.asList(
                 "Phế phẩm",
-                "Vệ sinh đầu/cuối ca",
-                "Đổi mã",
                 "Cần hỗ trợ kỹ thuật"
         );
 
@@ -155,10 +191,10 @@ public class DeviceInfoDialog extends Dialog {
             this.originalOptions = new ArrayList<>(options);
             this.filteredOptions = new ArrayList<>(options);
             this.checkedStates = new ArrayList<>();
-            this.enabledStates = new ArrayList<>();  // THÊM
+            this.enabledStates = new ArrayList<>();
             for (int i = 0; i < options.size(); i++) {
                 checkedStates.add(false);
-                enabledStates.add(true);  // Ban đầu tất cả enable
+                enabledStates.add(true);
             }
         }
 
@@ -189,17 +225,14 @@ public class DeviceInfoDialog extends Dialog {
             String option = filteredOptions.get(position);
             tvOption.setText(option);
 
-            // Find the original index to get checked state
             int originalIndex = originalOptions.indexOf(option);
             if (originalIndex != -1) {
                 cbOption.setChecked(checkedStates.get(originalIndex));
 
-                // THÊM: Set enable/disable state
                 boolean isEnabled = enabledStates.get(originalIndex);
                 cbOption.setEnabled(isEnabled);
                 tvOption.setEnabled(isEnabled);
 
-                // Đổi màu nếu disable
                 if (!isEnabled) {
                     tvOption.setAlpha(0.5f);
                     cbOption.setAlpha(0.5f);
@@ -214,12 +247,9 @@ public class DeviceInfoDialog extends Dialog {
                 if (origIndex != -1) {
                     checkedStates.set(origIndex, isChecked);
 
-                    // THÊM: Kiểm tra nếu là 1 trong 4 option chính
                     if (isChecked && MAIN_OPTIONS.contains(originalOptions.get(origIndex))) {
-                        // Nếu chọn 1 option chính, disable các option chính khác
                         disableOtherMainOptions(origIndex);
                     } else if (!isChecked) {
-                        // Nếu bỏ chọn, kiểm tra có option chính nào còn được chọn không
                         boolean hasMainOptionSelected = false;
                         for (int i = 0; i < originalOptions.size(); i++) {
                             if (checkedStates.get(i) && MAIN_OPTIONS.contains(originalOptions.get(i))) {
@@ -227,7 +257,6 @@ public class DeviceInfoDialog extends Dialog {
                                 break;
                             }
                         }
-                        // Nếu không có option chính nào được chọn, enable lại tất cả
                         if (!hasMainOptionSelected) {
                             enableAllOptions();
                         }
@@ -239,18 +268,15 @@ public class DeviceInfoDialog extends Dialog {
             return convertView;
         }
 
-        // THÊM: Method để disable các option chính khác
         private void disableOtherMainOptions(int selectedIndex) {
             for (int i = 0; i < originalOptions.size(); i++) {
                 String option = originalOptions.get(i);
-                // Disable nếu là 1 trong 4 option chính và không phải option được chọn
                 if (MAIN_OPTIONS.contains(option) && i != selectedIndex) {
                     enabledStates.set(i, false);
                 }
             }
         }
 
-        // THÊM: Method để enable lại tất cả options
         private void enableAllOptions() {
             for (int i = 0; i < enabledStates.size(); i++) {
                 enabledStates.set(i, true);
@@ -302,10 +328,8 @@ public class DeviceInfoDialog extends Dialog {
             originalOptions.add(option);
             filteredOptions.add(option);
             checkedStates.add(isChecked);
-            enabledStates.add(true);  // THÊM: option mới luôn enable
+            enabledStates.add(true);
             notifyDataSetChanged();
         }
     }
 }
-
-

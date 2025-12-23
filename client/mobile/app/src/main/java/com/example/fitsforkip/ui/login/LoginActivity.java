@@ -208,6 +208,7 @@ public class LoginActivity extends AppCompatActivity {
                             editor.putString("user_id", loginResponse.getUser().getId());
                             editor.putString("employee_id", loginResponse.getUser().getEmployeeCode());
                             editor.putString("production_line", loginResponse.getLine().getLineName());
+                            editor.putString("line_code", loginResponse.getLine().getLineCode());
                             editor.putInt("line_id", loginResponse.getLine().getLineId());
                             editor.commit();
 
