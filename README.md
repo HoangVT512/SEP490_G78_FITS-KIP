@@ -33,4 +33,4 @@ This document provides instructions for setting up the environment and running t
 - Open terminal and run:
   npm install -g expo-cli
 - Verify installation:
-  expo --version
+  expo --version"# System-Manage-Maintenance-And-Repair-For-Factory" 
